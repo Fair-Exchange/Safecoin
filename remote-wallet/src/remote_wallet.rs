@@ -403,7 +403,7 @@ impl fmt::Debug for DerivationPath {
         } else {
             "".to_string()
         };
-        write!(f, "m/44'/501'{}{}", account, change)
+        write!(f, "m/44'/19165'{}{}", account, change)
     }
 }
 
@@ -669,13 +669,13 @@ mod tests {
     #[test]
     fn test_derivation_path_debug() {
         let mut path = DerivationPath::default();
-        assert_eq!(format!("{:?}", path), "m/44'/501'".to_string());
+        assert_eq!(format!("{:?}", path), "m/44'/19165'".to_string());
 
         path.account = Some(1.into());
-        assert_eq!(format!("{:?}", path), "m/44'/501'/1'".to_string());
+        assert_eq!(format!("{:?}", path), "m/44'/19165'/1'".to_string());
 
         path.change = Some(2.into());
-        assert_eq!(format!("{:?}", path), "m/44'/501'/1'/2'".to_string());
+        assert_eq!(format!("{:?}", path), "m/44'/19165'/1'/2'".to_string());
     }
 
     #[test]
