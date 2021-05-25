@@ -1235,7 +1235,7 @@ fn wait_for_supermajority(
     for i in 1.. {
         if i % 10 == 1 {
             info!(
-                "Waiting for 80% of activated stake at slot {} to be in gossip...",
+                "Waiting for 50% of activated stake at slot {} to be in gossip...",
                 bank.slot()
             );
         }
