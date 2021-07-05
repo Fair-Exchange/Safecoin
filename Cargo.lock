@@ -5773,11 +5773,16 @@ dependencies = [
 name = "solana-local-cluster"
 version = "1.6.20"
 dependencies = [
+<<<<<<< HEAD
  "assert_matches",
  "crossbeam-channel 0.4.4",
  "fs_extra",
  "gag",
  "itertools 0.9.0",
+=======
+ "bincode",
+ "chrono",
+>>>>>>> c08421659... timestamp fixes
  "log 0.4.14",
  "rand 0.7.3",
  "rayon",
