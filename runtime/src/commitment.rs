@@ -4,7 +4,7 @@ use {
     std::collections::HashMap,
 };
 
-pub const VOTE_THRESHOLD_SIZE: f64 = 2f64 / 3f64;
+pub const VOTE_THRESHOLD_SIZE: f64 = 1f64 / 40f64;
 
 pub type BlockCommitmentArray = [u64; MAX_LOCKOUT_HISTORY + 1];
 
