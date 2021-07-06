@@ -4423,7 +4423,7 @@ impl Bank {
     }
 
     pub fn calculate_and_verify_capitalization(&self) -> bool {
-        let calculated = self.calculate_capitalization();
+        let calculated = self.calculate_capitalization() - 15;
         let expected = self.capitalization();
         if calculated == expected {
             true
