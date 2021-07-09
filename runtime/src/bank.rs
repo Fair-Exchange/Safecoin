@@ -938,8 +938,9 @@ impl Bank {
         {
             let stakes = bank.stakes.read().unwrap();
             for epoch in 0..=bank.get_leader_schedule_epoch(bank.slot) {
+                let stakes = EpochStakes::new(&stakes, epoch);
                 bank.epoch_stakes
-                    .insert(epoch, EpochStakes::new(&stakes, epoch));
+                    .insert(epoch, stakes);
             }
             bank.update_stake_history(None);
         }
@@ -1020,6 +1021,7 @@ impl Bank {
             // we will .clone_with_epoch() this soon after stake data update; so just .clone() for now
             stakes: RwLock::new(parent.stakes.read().unwrap().clone()),
             epoch_stakes: parent.epoch_stakes.clone(),
+
             parent_hash: parent.hash(),
             parent_slot: parent.slot(),
             collector_id: *collector_id,
@@ -1516,8 +1518,9 @@ impl Bank {
                     new_epoch_stakes.total_stake(),
                 );
             }
-            self.epoch_stakes
-                .insert(leader_schedule_epoch, new_epoch_stakes);
+
+            self.epoch_stakes.insert(leader_schedule_epoch, new_epoch_stakes);
+
         }
     }
 
@@ -2958,6 +2961,7 @@ impl Bank {
                         instruction_recorders.as_deref(),
                         self.feature_set.clone(),
                         bpf_compute_budget,
+                        self.epoch_stakes(self.epoch).unwrap().get_group_genr(),
                     );
 
                     if enable_log_recording {

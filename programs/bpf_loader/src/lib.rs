@@ -849,23 +849,7 @@ mod tests {
         bank_client::BankClient,
         message_processor::{Executors, ThisInvokeContext},
     };
-    use solana_sdk::{
-        account::{create_account, Account},
-        account_utils::StateMut,
-        client::SyncClient,
-        clock::Clock,
-        feature_set::FeatureSet,
-        genesis_config::create_genesis_config,
-        instruction::Instruction,
-        instruction::{AccountMeta, InstructionError},
-        message::Message,
-        process_instruction::{BpfComputeBudget, MockInvokeContext},
-        pubkey::Pubkey,
-        rent::Rent,
-        signature::{Keypair, Signer},
-        system_program, sysvar,
-        transaction::TransactionError,
-    };
+    use solana_sdk::{account::{create_account, Account}, account_utils::StateMut, client::SyncClient, clock::Clock, feature_set::FeatureSet, genesis_config::create_genesis_config, instruction::Instruction, instruction::{AccountMeta, InstructionError}, message::Message, process_instruction::{BpfComputeBudget, MockInvokeContext}, pubkey::Pubkey, rent::Rent, signature::{Keypair, Signer}, system_program, sysvar, transaction::TransactionError, vote_group_gen::VoteGroupGenerator};
     use std::{cell::RefCell, fs::File, io::Read, ops::Range, rc::Rc, sync::Arc};
 
     struct TestInstructionMeter {
@@ -1091,6 +1075,8 @@ mod tests {
 
         // Case: limited budget
         let program_id = Pubkey::default();
+        let vgg =            VoteGroupGenerator::new_dummy();
+
         let mut invoke_context = ThisInvokeContext::new(
             &program_id,
             Rent::default(),
@@ -1115,6 +1101,7 @@ mod tests {
             Rc::new(RefCell::new(Executors::default())),
             None,
             Arc::new(FeatureSet::default()),
+    &vgg,
         );
         assert_eq!(
             Err(InstructionError::ProgramFailedToComplete),

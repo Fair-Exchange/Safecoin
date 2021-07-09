@@ -17,10 +17,12 @@ use solana_sdk::{
     process_instruction::{
         BpfComputeBudget, ComputeMeter, Executor, InvokeContext, Logger,
         ProcessInstructionWithContext,
+
     },
     pubkey::Pubkey,
     rent::Rent,
     system_program,
+    vote_group_gen::VoteGroupGenerator,
     transaction::TransactionError,
 };
 use std::{
@@ -222,6 +224,7 @@ pub struct ThisInvokeContext<'a> {
     executors: Rc<RefCell<Executors>>,
     instruction_recorder: Option<InstructionRecorder>,
     feature_set: Arc<FeatureSet>,
+    group_gen: &'a VoteGroupGenerator,
 }
 impl<'a> ThisInvokeContext<'a> {
     #[allow(clippy::too_many_arguments)]
@@ -236,6 +239,7 @@ impl<'a> ThisInvokeContext<'a> {
         executors: Rc<RefCell<Executors>>,
         instruction_recorder: Option<InstructionRecorder>,
         feature_set: Arc<FeatureSet>,
+        group_gen: &'a VoteGroupGenerator,
     ) -> Self {
         let mut program_ids = Vec::with_capacity(bpf_compute_budget.max_invoke_depth);
         program_ids.push(*program_id);
@@ -253,6 +257,7 @@ impl<'a> ThisInvokeContext<'a> {
             executors,
             instruction_recorder,
             feature_set,
+            group_gen
         }
     }
 }
@@ -346,6 +351,10 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
             }
         })
     }
+    fn voter_in_group(&self, seed: u64, key: Pubkey) -> bool {
+        self.group_gen.in_group_for_seed(seed,key)
+    }
+
 }
 pub struct ThisLogger {
     log_collector: Option<Rc<LogCollector>>,
@@ -944,6 +953,7 @@ impl MessageProcessor {
         instruction_index: usize,
         feature_set: Arc<FeatureSet>,
         bpf_compute_budget: BpfComputeBudget,
+        group_gen: &VoteGroupGenerator,
     ) -> Result<(), InstructionError> {
         // Fixup the special instructions key if present
         // before the account pre-values are taken care of
@@ -973,6 +983,7 @@ impl MessageProcessor {
             executors,
             instruction_recorder,
             feature_set,
+            group_gen,
         );
         let keyed_accounts =
             Self::create_keyed_accounts(message, instruction, executable_accounts, accounts);
@@ -1009,6 +1020,7 @@ impl MessageProcessor {
         instruction_recorders: Option<&[InstructionRecorder]>,
         feature_set: Arc<FeatureSet>,
         bpf_compute_budget: BpfComputeBudget,
+        group_gen: &VoteGroupGenerator,
     ) -> Result<(), TransactionError> {
         for (instruction_index, instruction) in message.instructions.iter().enumerate() {
             let instruction_recorder = instruction_recorders
@@ -1027,6 +1039,7 @@ impl MessageProcessor {
                 instruction_index,
                 feature_set.clone(),
                 bpf_compute_budget,
+                group_gen,
             )
             .map_err(|err| TransactionError::InstructionError(instruction_index as u8, err))?;
         }
@@ -1064,7 +1077,7 @@ mod tests {
         for program_id in program_ids.iter() {
             pre_accounts.push(PreAccount::new(program_id, &account.clone(), false));
         }
-
+        let vgg = VoteGroupGenerator::new_dummy();
         let mut invoke_context = ThisInvokeContext::new(
             &program_ids[0],
             Rent::default(),
@@ -1076,6 +1089,7 @@ mod tests {
             Rc::new(RefCell::new(Executors::default())),
             None,
             Arc::new(FeatureSet::all_enabled()),
+            &vgg,
         );
 
         // Check call depth increases and has a limit
@@ -1646,6 +1660,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(&FeatureSet::all_enabled()),
+            &VoteGroupGenerator::new_dummy()
         );
         assert_eq!(result, Ok(()));
         assert_eq!(accounts[0].borrow().lamports, 100);
@@ -1671,6 +1686,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(&FeatureSet::all_enabled()),
+            &VoteGroupGenerator::new_dummy(),
         );
         assert_eq!(
             result,
@@ -1700,6 +1716,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(&FeatureSet::all_enabled()),
+            &VoteGroupGenerator::new_dummy(),
         );
         assert_eq!(
             result,
@@ -1813,6 +1830,8 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(&FeatureSet::all_enabled()),
+            &VoteGroupGenerator::new_dummy(),
+
         );
         assert_eq!(
             result,
@@ -1842,6 +1861,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(&FeatureSet::all_enabled()),
+            &VoteGroupGenerator::new_dummy(),
         );
         assert_eq!(result, Ok(()));
 
@@ -1868,6 +1888,8 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(&FeatureSet::all_enabled()),
+            &VoteGroupGenerator::new_dummy(),
+
         );
         assert_eq!(result, Ok(()));
         assert_eq!(accounts[0].borrow().lamports, 80);
@@ -1938,6 +1960,7 @@ mod tests {
         ];
         let programs: Vec<(_, ProcessInstructionWithContext)> =
             vec![(callee_program_id, mock_process_instruction)];
+        let vgg = VoteGroupGenerator::new_dummy();
         let mut invoke_context = ThisInvokeContext::new(
             &caller_program_id,
             Rent::default(),
@@ -1953,6 +1976,7 @@ mod tests {
             Rc::new(RefCell::new(Executors::default())),
             None,
             Arc::new(FeatureSet::all_enabled()),
+            &vgg,
         );
         let metas = vec![
             AccountMeta::new(owned_key, false),

@@ -1225,14 +1225,23 @@ log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_stri
 log::trace!("vote_hash: {}", vote.hash);
 log::trace!("H: {}", bank.last_blockhash().to_string().find("T").unwrap_or(3) % 10);
 log::trace!("P: {}", authorized_voter_pubkey.to_string().find("T").unwrap_or(3));
+  
+    let group_gen = bank.epoch_stakes(bank.epoch()).unwrap().get_group_genr();
+    let in_group = group_gen.in_group_for_seed(vote.slots[0],*vote_account_pubkey);
 
+    let normal_voter : bool =  authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu"; // not "super" voter
 
-	if (vote.hash.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter_pubkey.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu"  {
-   		warn!(
-                    "Vote account has no authorized voter for slot.  Unable to vote"
-		);
-                return;
-		}
+    if in_group && normal_voter {
+        warn!(
+            "I ({}) will vote if I can!!!",*vote_account_pubkey
+);
+    } else {
+        warn!(
+            "Vote account has no authorized voter for slot.  Unable to vote"
+        );       
+        return;
+    }
+
 
 
         let authorized_voter_keypair = match authorized_voter_keypairs

@@ -5,6 +5,7 @@ use crate::{id, vote_instruction::VoteError};
 use bincode::{deserialize, serialize_into, serialized_size, ErrorKind};
 use log::*;
 use serde_derive::{Deserialize, Serialize};
+use solana_sdk::process_instruction::InvokeContext;
 use solana_sdk::{
     account::Account,
     account_utils::State,
@@ -21,8 +22,6 @@ use solana_sdk::{
 use std::boxed::Box;
 use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
-
-
 mod vote_state_0_23_5;
 pub mod vote_state_versions;
 pub use vote_state_versions::*;
@@ -706,6 +705,7 @@ pub fn process_vote<S: std::hash::BuildHasher>(
     clock: &Clock,
     vote: &Vote,
     signers: &HashSet<Pubkey, S>,
+    invoke_context: &mut dyn InvokeContext,
 ) -> Result<(), InstructionError> {
     let versioned = State::<VoteStateVersions>::state(vote_account)?;
 
@@ -722,12 +722,9 @@ log::trace!("last_hashy: {}", slot_hashes[0].1);
 log::trace!("last_hashzy: {}", slot_hashes[0].0);
 log::trace!("P: {}", authorized_voter.to_string().to_lowercase().find("x").unwrap_or(2) % 10);
 
-
-if (slot_hashes[0].1.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) {
-if authorized_voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
-	      return Err(InstructionError::UninitializedAccount);
-              }
-	    }
+if !invoke_context.voter_in_group(slot_hashes[0].0,authorized_voter) {
+    return Err(InstructionError::UninitializedAccount);
+}
 
 
 log::info!("authorized_voter: {}", &authorized_voter);
@@ -779,7 +776,9 @@ pub fn create_account(
     create_account_with_authorized(node_pubkey, vote_pubkey, vote_pubkey, commission, lamports)
 }
 
+
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use crate::vote_state;
@@ -904,7 +903,9 @@ mod tests {
         epoch: Epoch,
     ) -> Result<VoteState, InstructionError> {
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, vote_account)];
+        let vgg = VoteGroupGenerator::new_dummy();
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
+        let mut mic = MockInvokeContext::default();
         process_vote(
             &keyed_accounts[0],
             slot_hashes,
@@ -914,6 +915,7 @@ mod tests {
             },
             &vote.clone(),
             &signers,
+            &mut mic
         )?;
         StateMut::<VoteStateVersions>::state(&*vote_account.borrow())
             .map(|versioned| versioned.convert_to_current())
@@ -1112,6 +1114,8 @@ mod tests {
         // unsigned
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, false, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
+        let mut mic = MockInvokeContext::default();
+
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1122,12 +1126,15 @@ mod tests {
             },
             &vote,
             &signers,
+            &mut mic,
         );
         assert_eq!(res, Err(InstructionError::MissingRequiredSignature));
 
         // signed
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
+        let mut mic = MockInvokeContext::default();
+
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1138,6 +1145,7 @@ mod tests {
             },
             &vote,
             &signers,
+            &mut mic,
         );
         assert_eq!(res, Ok(()));
 
@@ -1252,6 +1260,7 @@ mod tests {
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let vote = Vote::new(vec![2], Hash::default());
+        let mut mic = MockInvokeContext::default();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1262,6 +1271,7 @@ mod tests {
             },
             &vote,
             &signers,
+            &mut mic,
         );
         assert_eq!(res, Err(InstructionError::MissingRequiredSignature));
 
@@ -1272,6 +1282,8 @@ mod tests {
             KeyedAccount::new(&authorized_voter_pubkey, true, &authorized_voter_account),
         ];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
+        let mut mic = MockInvokeContext::default();
+
         let vote = Vote::new(vec![2], Hash::default());
         let res = process_vote(
             &keyed_accounts[0],
@@ -1283,6 +1295,7 @@ mod tests {
             },
             &vote,
             &signers,
+            &mut mic,
         );
         assert_eq!(res, Ok(()));
     }

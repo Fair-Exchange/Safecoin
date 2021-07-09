@@ -64,8 +64,9 @@ pub trait InvokeContext {
     fn is_feature_active(&self, feature_id: &Pubkey) -> bool;
     /// Get an account from a pre-account
     fn get_account(&self, pubkey: &Pubkey) -> Option<RefCell<Account>>;
-}
 
+    fn voter_in_group(&self, seed: u64,key: Pubkey) -> bool;
+}
 /// Convenience macro to log a message with an `Rc<RefCell<dyn Logger>>`
 #[macro_export]
 macro_rules! ic_logger_msg {
@@ -370,5 +371,8 @@ impl InvokeContext for MockInvokeContext {
     }
     fn get_account(&self, _pubkey: &Pubkey) -> Option<RefCell<Account>> {
         None
+    }
+    fn voter_in_group(&self, _: u64,_: Pubkey) -> bool {
+        true
     }
 }
