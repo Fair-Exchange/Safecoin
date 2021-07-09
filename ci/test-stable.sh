@@ -39,7 +39,7 @@ test-stable)
   _ "$cargo" stable test --jobs "$NPROC" --all --exclude solana-local-cluster ${V:+--verbose} -- --nocapture
   ;;
 test-stable-perf)
-  # solana-keygen required when building C programs
+  # safecoin-keygen required when building C programs
   _ "$cargo" build --manifest-path=keygen/Cargo.toml
   export PATH="$PWD/target/debug":$PATH
 
@@ -65,7 +65,7 @@ test-stable-perf)
     export TEST_PERF_LIBS_CUDA=1
 
     # Force CUDA in ci/localnet-sanity.sh
-    export SOLANA_CUDA=1
+    export SAFECOIN_CUDA=1
   fi
 
   _ "$cargo" stable build --bins ${V:+--verbose}

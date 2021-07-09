@@ -121,7 +121,7 @@ impl Pubkey {
     /// Create a program address
     ///
     /// Program addresses are account keys that only the program has the
-    /// authority to sign.  The address is of the same form as a Solana
+    /// authority to sign.  The address is of the same form as a Safecoin
     /// `Pubkey`, except they are ensured to not be on the ed25519 curve and
     /// thus have no associated private key.  When performing cross-program
     /// invocations the program can "sign" for the key by calling

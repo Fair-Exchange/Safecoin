@@ -74,7 +74,7 @@ const PerformanceContext = React.createContext<PerformanceState | undefined>(
 );
 
 type Props = { children: React.ReactNode };
-export function SolanaClusterStatsProvider({ children }: Props) {
+export function SafecoinClusterStatsProvider({ children }: Props) {
   const { cluster, url } = useCluster();
   const [active, setActive] = React.useState(false);
   const [dashboardInfo, dispatchDashboardInfo] = React.useReducer(

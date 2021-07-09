@@ -1,8 +1,8 @@
 ---
-title: Add Solana to Your Exchange
+title: Add Safecoin to Your Exchange
 ---
 
-This guide describes how to add Solana's native token SOL to your cryptocurrency
+This guide describes how to add Safecoin's native token SAFE to your cryptocurrency
 exchange.
 
 ## Node Setup
@@ -12,26 +12,26 @@ instances, upgrading to newer versions promptly, and keeping an eye on service
 operations with a bundled monitoring tool.
 
 This setup enables you:
-- to have a trusted gateway to the Solana mainnet-beta cluster to get data and
+- to have a trusted gateway to the Safecoin mainnet-beta cluster to get data and
   submit withdrawal transactions
 - to have full control over how much historical block data is retained
 - to maintain your service availability even if one node fails
 
-Solana nodes demand relatively high computing power to handle our fast blocks
+Safecoin nodes demand relatively high computing power to handle our fast blocks
 and high TPS.  For specific requirements, please see
 [hardware recommendations](../running-validator/validator-reqs.md).
 
 To run an api node:
 
-1. [Install the Solana command-line tool suite](../cli/install-solana-cli-tools.md)
+1. [Install the Safecoin command-line tool suite](../cli/install-solana-cli-tools.md)
 2. Start the validator with at least the following parameters:
 
 ```bash
-solana-validator \
+safecoin-validator \
   --ledger <LEDGER_PATH> \
   --entrypoint <CLUSTER_ENTRYPOINT> \
   --expected-genesis-hash <EXPECTED_GENESIS_HASH> \
-  --rpc-port 8899 \
+  --rpc-port 8328 \
   --no-voting \
   --enable-rpc-transaction-history \
   --limit-ledger-size \
@@ -42,14 +42,14 @@ solana-validator \
 Customize `--ledger` to your desired ledger storage location, and `--rpc-port` to the port you want to expose.
 
 The `--entrypoint` and `--expected-genesis-hash` parameters are all specific to the cluster you are joining.
-[Current parameters for Mainnet Beta](../clusters.md#example-solana-validator-command-line-2)
+[Current parameters for Mainnet Beta](../clusters.md#example-safecoin-validator-command-line-2)
 
 The `--limit-ledger-size` parameter allows you to specify how many ledger
 [shreds](../terminology.md#shred) your node retains on disk. If you do not
 include this parameter, the validator will keep the entire ledger until it runs
 out of disk space.  The default value attempts to keep the ledger disk usage
 under 500GB.  More or less disk usage may be requested by adding an argument to
-`--limit-ledger-size` if desired. Check `solana-validator --help` for the
+`--limit-ledger-size` if desired. Check `safecoin-validator --help` for the
 default limit value used by `--limit-ledger-size`.  More information about
 selecting a custom limit value is [available
 here](https://github.com/solana-labs/solana/blob/583cec922b6107e0f85c7e14cb5e642bc7dfb340/core/src/ledger_cleanup_service.rs#L15-L26).
@@ -64,17 +64,17 @@ Optional parameters to consider:
 ### Automatic Restarts and Monitoring
 
 We recommend configuring each of your nodes to restart automatically on exit, to
-ensure you miss as little data as possible. Running the solana software as a
+ensure you miss as little data as possible. Running the safecoin software as a
 systemd service is one great option.
 
 For monitoring, we provide
-[`solana-watchtower`](https://github.com/solana-labs/solana/blob/master/watchtower/README.md),
-which can monitor your validator and detect with the `solana-validator` process
+[`safecoin-watchtower`](https://github.com/solana-labs/solana/blob/master/watchtower/README.md),
+which can monitor your validator and detect with the `safecoin-validator` process
 is unhealthy. It can directly be configured to alert you via Slack, Telegram,
-Discord, or Twillio. For details, run `solana-watchtower --help`.
+Discord, or Twillio. For details, run `safecoin-watchtower --help`.
 
 ```bash
-solana-watchtower --validator-identity <YOUR VALIDATOR IDENTITY>
+safecoin-watchtower --validator-identity <YOUR VALIDATOR IDENTITY>
 ```
 
 #### New Software Release Announcements
@@ -99,7 +99,7 @@ trusted validators. This snapshot reflects the current state of the chain, but
 does not contain the complete historical ledger. If one of your node exits and
 boots from a new snapshot, there may be a gap in the ledger on that node. In
 order to prevent this issue, add the `--no-snapshot-fetch` parameter to your
-`solana-validator` command to receive historical ledger data instead of a
+`safecoin-validator` command to receive historical ledger data instead of a
 snapshot.
 
 Do not pass the `--no-snapshot-fetch` parameter on your initial boot as it's not
@@ -117,9 +117,9 @@ historical ledger data that cannot be filled.
 ### Minimizing Validator Port Exposure
 
 The validator requires that various UDP and TCP ports be open for inbound
-traffic from all other Solana validators.   While this is the most efficient mode of
+traffic from all other Safecoin validators.   While this is the most efficient mode of
 operation, and is strongly recommended, it is possible to restrict the
-validator to only require inbound traffic from one other Solana validator.
+validator to only require inbound traffic from one other Safecoin validator.
 
 First add the `--restricted-repair-only-mode` argument.  This will cause the
 validator to operate in a restricted mode where it will not receive pushes from
@@ -146,20 +146,20 @@ validators and only on the *Gossip*, *Repair* and *ServeR* ports.
 
 ## Setting up Deposit Accounts
 
-Solana accounts do not require any on-chain initialization; once they contain
-some SOL, they exist. To set up a deposit account for your exchange, simply
-generate a Solana keypair using any of our [wallet tools](../wallet-guide/cli.md).
+Safecoin accounts do not require any on-chain initialization; once they contain
+some SAFE, they exist. To set up a deposit account for your exchange, simply
+generate a Safecoin keypair using any of our [wallet tools](../wallet-guide/cli.md).
 
 We recommend using a unique deposit account for each of your users.
 
-Solana accounts are charged [rent](developing/programming-model/accounts.md#rent) on creation and once per
+Safecoin accounts are charged [rent](developing/programming-model/accounts.md#rent) on creation and once per
 epoch, but they can be made rent-exempt if they contain 2-years worth of rent in
-SOL. In order to find the minimum rent-exempt balance for your deposit accounts,
+SAFE. In order to find the minimum rent-exempt balance for your deposit accounts,
 query the
 [`getMinimumBalanceForRentExemption` endpoint](developing/clients/jsonrpc-api.md#getminimumbalanceforrentexemption):
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getMinimumBalanceForRentExemption","params":[0]}' localhost:8899
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getMinimumBalanceForRentExemption","params":[0]}' localhost:8328
 
 {"jsonrpc":"2.0","result":890880,"id":1}
 ```
@@ -167,25 +167,25 @@ curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"m
 ### Offline Accounts
 
 You may wish to keep the keys for one or more collection accounts offline for
-greater security. If so, you will need to move SOL to hot accounts using our
+greater security. If so, you will need to move SAFE to hot accounts using our
 [offline methods](../offline-signing.md).
 
 ## Listening for Deposits
 
-When a user wants to deposit SOL into your exchange, instruct them to send a
+When a user wants to deposit SAFE into your exchange, instruct them to send a
 transfer to the appropriate deposit address.
 
 ### Poll for Blocks
 
 To track all the deposit accounts for your exchange, poll for each confirmed
 block and inspect for addresses of interest, using the JSON-RPC service of your
-Solana API node.
+Safecoin API node.
 
 - To identify which blocks are available, send a [`getConfirmedBlocks` request](developing/clients/jsonrpc-api.md#getconfirmedblocks),
   passing the last block you have already processed as the start-slot parameter:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getConfirmedBlocks","params":[5]}' localhost:8899
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getConfirmedBlocks","params":[5]}' localhost:8328
 
 {"jsonrpc":"2.0","result":[5,6,8,9,11],"id":1}
 ```
@@ -195,7 +195,7 @@ Not every slot produces a block, so there may be gaps in the sequence of integer
 - For each block, request its contents with a [`getConfirmedBlock` request](developing/clients/jsonrpc-api.md#getconfirmedblock):
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getConfirmedBlock","params":[5, "json"]}' localhost:8899
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getConfirmedBlock","params":[5, "json"]}' localhost:8328
 
 {
   "jsonrpc": "2.0",
@@ -264,7 +264,7 @@ list the starting and ending balances of each account in
 [lamports](../terminology.md#lamport), indexed to the `accountKeys` list. For
 example, if the deposit address if interest is
 `47Sbuv6jL7CViK9F2NMW51aQGhfdpUu7WNvKyH645Rfi`, this transaction represents a
-transfer of 218099990000 - 207099990000 = 11000000000 lamports = 11 SOL
+transfer of 218099990000 - 207099990000 = 11000000000 lamports = 11 SAFE
 
 If you need more information about the transaction type or other specifics, you
 can request the block from RPC in binary format, and parse it using either our
@@ -282,7 +282,7 @@ time.
   request to the api node:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getConfirmedSignaturesForAddress2","params":["6H94zdiaYfRfPfKjYLjyr2VFBg6JHXygy84r3qhc3NsC", {"limit": 3}]}' localhost:8899
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getConfirmedSignaturesForAddress2","params":["6H94zdiaYfRfPfKjYLjyr2VFBg6JHXygy84r3qhc3NsC", {"limit": 3}]}' localhost:8328
 
 {
   "jsonrpc": "2.0",
@@ -314,7 +314,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"m
   [`getConfirmedTransaction`](developing/clients/jsonrpc-api.md#getconfirmedtransaction) request:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getConfirmedTransaction","params":["dhjhJp2V2ybQGVfELWM1aZy98guVVsxRCB5KhNiXFjCBMK5KEyzV8smhkVvs3xwkAug31KnpzJpiNPtcD5bG1t6", "json"]}' localhost:8899
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"method":"getConfirmedTransaction","params":["dhjhJp2V2ybQGVfELWM1aZy98guVVsxRCB5KhNiXFjCBMK5KEyzV8smhkVvs3xwkAug31KnpzJpiNPtcD5bG1t6", "json"]}' localhost:8328
 
 // Result
 {
@@ -373,25 +373,25 @@ curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"m
 
 ## Sending Withdrawals
 
-To accommodate a user's request to withdraw SOL, you must generate a Solana
+To accommodate a user's request to withdraw SAFE, you must generate a Safecoin
 transfer transaction, and send it to the api node to be forwarded to your
 cluster.
 
 ### Synchronous
 
-Sending a synchronous transfer to the Solana cluster allows you to easily ensure
+Sending a synchronous transfer to the Safecoin cluster allows you to easily ensure
 that a transfer is successful and finalized by the cluster.
 
-Solana's command-line tool offers a simple command, `solana transfer`, to
+Safecoin's command-line tool offers a simple command, `safecoin transfer`, to
 generate, submit, and confirm transfer transactions. By default, this method
 will wait and track progress on stderr until the transaction has been finalized
 by the cluster. If the transaction fails, it will report any transaction errors.
 
 ```bash
-solana transfer <USER_ADDRESS> <AMOUNT> --keypair <KEYPAIR> --url http://localhost:8899
+safecoin transfer <USER_ADDRESS> <AMOUNT> --keypair <KEYPAIR> --url http://localhost:8328
 ```
 
-The [Solana Javascript SDK](https://github.com/solana-labs/solana-web3.js)
+The [Safecoin Javascript SDK](https://github.com/solana-labs/solana-web3.js)
 offers a similar approach for the JS ecosystem. Use the `SystemProgram` to build
 a transfer transaction, and submit it using the `sendAndConfirmTransaction`
 method.
@@ -413,14 +413,14 @@ First, get a recent blockhash using the [`getFees` endpoint](developing/clients/
 or the CLI command:
 
 ```bash
-solana fees --url http://localhost:8899
+safecoin fees --url http://localhost:8328
 ```
 
 In the command-line tool, pass the `--no-wait` argument to send a transfer
 asynchronously, and include your recent blockhash with the `--blockhash` argument:
 
 ```bash
-solana transfer <USER_ADDRESS> <AMOUNT> --no-wait --blockhash <RECENT_BLOCKHASH> --keypair <KEYPAIR> --url http://localhost:8899
+safecoin transfer <USER_ADDRESS> <AMOUNT> --no-wait --blockhash <RECENT_BLOCKHASH> --keypair <KEYPAIR> --url http://localhost:8328
 ```
 
 You can also build, sign, and serialize the transaction manually, and fire it off to
@@ -435,7 +435,7 @@ The `confirmations` field reports how many
 transaction was processed. If `confirmations: null`, it is [finalized](../terminology.md#finality).
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0", "id":1, "method":"getSignatureStatuses", "params":[["5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW", "5j7s6NiJS3JAkvgkoc18WVAsiSaci2pxB2A6ueCJP4tprA2TFg9wSyTLeYouxPBJEMzJinENTkpA52YStRW5Dia7"]]}' http://localhost:8899
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0", "id":1, "method":"getSignatureStatuses", "params":[["5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW", "5j7s6NiJS3JAkvgkoc18WVAsiSaci2pxB2A6ueCJP4tprA2TFg9wSyTLeYouxPBJEMzJinENTkpA52YStRW5Dia7"]]}' http://localhost:8328
 
 {
   "jsonrpc": "2.0",
@@ -480,7 +480,7 @@ As withdrawals are irreversible, it may be a good practice to validate a
 user-supplied account address before authorizing a withdrawal in order to
 prevent accidental loss of user funds.
 
-The address of a normal account in Solana is a Base58-encoded string of a
+The address of a normal account in Safecoin is a Base58-encoded string of a
 256-bit ed25519 public key. Not all bit patterns are valid public keys for the
 ed25519 curve, so it is possible to ensure user-supplied account addresses are
 at least correct ed25519 public keys.
@@ -546,9 +546,9 @@ public class PubkeyValidator
 ## Supporting the SPL Token Standard
 
 [SPL Token](https://spl.solana.com/token) is the standard for wrapped/synthetic
-token creation and exchange on the Solana blockchain.
+token creation and exchange on the Safecoin blockchain.
 
-The SPL Token workflow is similar to that of native SOL tokens, but there are a
+The SPL Token workflow is similar to that of native SAFE tokens, but there are a
 few differences which will be discussed in this section.
 
 ### Token Mints
@@ -596,8 +596,8 @@ deposited.   Token accounts can be created explicitly with the
 `spl-token transfer --fund-recipient ...` command.
 1. SPL Token accounts must remain [rent-exempt](developing/programming-model/accounts.md#rent-exemption)
 for the duration of their existence and therefore require a small amount of
-native SOL tokens be deposited at account creation. For SPL Token v2 accounts,
-this amount is 0.00203928 SOL (2,039,280 lamports).
+native SAFE tokens be deposited at account creation. For SPL Token v2 accounts,
+this amount is 0.00203928 SAFE (2,039,280 lamports).
 
 #### Command Line
 To create an SPL Token account with the following properties:
@@ -617,7 +617,7 @@ Signature: 4JsqZEPra2eDTHtHpB4FMWSfk3UgcCVmkKkP7zESZeMrKmFFkDkNd91pKP3vPVVZZPiu5
 
 Or to create an SPL Token account with a specific keypair:
 ```
-$ solana-keygen new -o token-account.json
+$ safecoin-keygen new -o token-account.json
 $ spl-token create-account AkUFCWTXb3w9nY2n6SFJvBV6VwvFUCe4KBMCcgLsa2ir token-account.json
 Creating account 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
 Signature: 4JsqZEPra2eDTHtHpB4FMWSfk3UgcCVmkKkP7zESZeMrKmFFkDkNd91pKP3vPVVZZPiu5XxyJwS73Vi5WsZL88D7
@@ -632,7 +632,7 @@ spl-token balance <TOKEN_ACCOUNT_ADDRESS>
 
 #### Example
 ```
-$ solana balance 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
+$ safecoin balance 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
 0
 ```
 
@@ -680,7 +680,7 @@ fields to include SPL Token balance transfers.
 
 ### Withdrawing
 The withdrawal address a user provides should be the same address used for
-regular SOL withdrawal.
+regular SAFE withdrawal.
 
 Before executing a withdrawal [transfer](#token-transfers),
 the exchange should check the address as
@@ -690,7 +690,7 @@ From the withdrawal address, the associated token account for the correct mint
 determined and the transfer issued to that account.  Note that it's possible
 that the associated token account does not yet exist, at which point the
 exchange should fund the account on behalf of the user.  For SPL Token v2
-accounts, funding the withdrawal account will require 0.00203928 SOL (2,039,280
+accounts, funding the withdrawal account will require 0.00203928 SAFE (2,039,280
 lamports).
 
 Template `spl-token transfer` command for a withdrawal:
@@ -710,8 +710,8 @@ the SPL Token's mint account.
 
 ## Testing the Integration
 
-Be sure to test your complete workflow on Solana devnet and testnet
+Be sure to test your complete workflow on Safecoin devnet and testnet
 [clusters](../clusters.md) before moving to production on mainnet-beta. Devnet
 is the most open and flexible, and ideal for initial development, while testnet
 offers more realistic cluster configuration. Both devnet and testnet support a faucet,
-run `solana airdrop 10` to obtain some devnet or testnet SOL for developement and testing.
+run `safecoin airdrop 10` to obtain some devnet or testnet SAFE for developement and testing.

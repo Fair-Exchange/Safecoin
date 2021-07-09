@@ -1,6 +1,6 @@
 [package]
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-description = "Solana Program Test Framework"
+description = "Safecoin Program Test Framework"
 edition = "2018"
 license = "Apache-2.0"
 name = "solana-program-test"

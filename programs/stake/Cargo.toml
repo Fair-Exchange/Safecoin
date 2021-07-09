@@ -1,7 +1,7 @@
 [package]
 name = "solana-stake-program"
 version = "1.6.0"
-description = "Solana Stake program"
+description = "Safecoin Stake program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"

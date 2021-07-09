@@ -1,7 +1,7 @@
 [package]
 name = "solana-vest-program"
 version = "1.6.0"
-description = "Solana Vest program"
+description = "Safecoin Vest program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"

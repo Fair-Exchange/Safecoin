@@ -2,12 +2,12 @@
 title: "Developing with Rust"
 ---
 
-Solana supports writing on-chain programs using the
+Safecoin supports writing on-chain programs using the
 [Rust](https://www.rust-lang.org/) programming language.
 
 ## Project Layout
 
-Solana Rust programs follow the typical [Rust project
+Safecoin Rust programs follow the typical [Rust project
 layout](https://doc.rust-lang.org/cargo/guide/project-layout.html):
 
 ```
@@ -26,7 +26,7 @@ Which must contain:
 features = []
 ```
 
-Solana Rust programs may depend directly on each other in order to gain access
+Safecoin Rust programs may depend directly on each other in order to gain access
 to instruction helpers when making [cross-program
 invocations](developing/../../programming-model/calling-between-programs.md#cross-program-invocations).
 When doing so it's important to not pull in the dependent program's entrypoint
@@ -46,17 +46,17 @@ using the `exclude_entrypoint` feature.
 
 ## Project Dependencies
 
-At a minimum, Solana Rust programs must pull in the
+At a minimum, Safecoin Rust programs must pull in the
 [solana-program](https://crates.io/crates/solana-program) crate.
 
-Solana BPF programs have some [restrictions](#Restrictions) that may prevent the
+Safecoin BPF programs have some [restrictions](#Restrictions) that may prevent the
 inclusion of some crates as dependencies or require special handling.
 
 For example:
 - Crates that require the architecture be a subset of the ones supported by the
   official toolchain.  There is no workaround for this unless that crate is
   forked and BPF added to that those architecture checks.
-- Crates may depend on `rand` which is not supported in Solana's deterministic
+- Crates may depend on `rand` which is not supported in Safecoin's deterministic
   program environment.  To include a `rand` dependent crate refer to [Depending
   on Rand](#depending-on-rand).
 - Crates may overflow the stack even if the stack overflowing code isn't
@@ -67,7 +67,7 @@ For example:
 
 First setup the environment:
 - Install the latest Rust stable from https://rustup.rs/
-- Install the latest Solana command-line tools from
+- Install the latest Safecoin command-line tools from
   https://docs.solana.com/cli/install-solana-cli-tools
 
 The normal cargo build is available for building programs against your host
@@ -77,7 +77,7 @@ machine which can be used for unit testing:
 $ cargo build
 ```
 
-To build a specific program, such as SPL Token, for the Solana BPF target which
+To build a specific program, such as SPL Token, for the Safecoin BPF target which
 can be deployed to the cluster:
 
 ```bash
@@ -87,7 +87,7 @@ $ cargo build-bpf
 
 ## How to Test
 
-Solana programs can be unit tested via the traditional `cargo test` mechanism by
+Safecoin programs can be unit tested via the traditional `cargo test` mechanism by
 exercising program functions directly.
 
 To help facilitate testing in an environment that more closely matches a live
@@ -103,8 +103,8 @@ program.
 
 ## Program Entrypoint
 
-Programs export a known entrypoint symbol which the Solana runtime looks up and
-calls when invoking a program.  Solana supports multiple [versions of the BPF
+Programs export a known entrypoint symbol which the Safecoin runtime looks up and
+calls when invoking a program.  Safecoin supports multiple [versions of the BPF
 loader](overview.md#versions) and the entrypoints may vary between them.
 Programs must be written for and deployed to the same loader.  For more details
 see the [overview](overview#loaders).
@@ -239,7 +239,7 @@ single-threaded environment, and must be deterministic:
   and should be avoided
 - String formatting should be avoided since it is also computationally
   expensive.
-- No support for `println!`, `print!`, the Solana [logging helpers](#logging)
+- No support for `println!`, `print!`, the Safecoin [logging helpers](#logging)
   should be used instead.
 - The runtime enforces a limit on the number of instructions a program can
   execute during the processing of one instruction.  See [computation
@@ -252,7 +252,7 @@ Programs are constrained to run deterministically, so random numbers are not
 available. Sometimes a program may depend on a crate that depends itself on
 `rand` even if the program does not use any of the random number functionality.
 If a program depends on `rand`, the compilation will fail because there is no
-`get-random` support for Solana. The error will typically look like this:
+`get-random` support for Safecoin. The error will typically look like this:
 
 ```
 error: target is not supported, for more information see: https://docs.rs/getrandom/#unsupported-targets
@@ -388,6 +388,6 @@ $ cargo build-bpf --dump
 
 ## Examples
 
-The [Solana Program Library
+The [Safecoin Program Library
 github](https://github.com/solana-labs/solana-program-library/tree/master/examples/rust)
 repo contains a collection of Rust examples.

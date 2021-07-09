@@ -84,14 +84,14 @@ up)
       --detach
       --name solana-localnet
       --rm
-      --publish 8001:8001/tcp # entrypoint
-      --publish 8899:8899/tcp # rpc http
-      --publish 8900:8900/tcp # rpc pubsub
+      --publish 10015:10015/tcp # entrypoint
+      --publish 8328:8328/tcp # rpc http
+      --publish 8329:8329/tcp # rpc pubsub
       --publish 8901:8901/tcp # (future) bank service
       --publish 8902:8902/tcp # bank service
       --publish 9900:9900/tcp # faucet
       --publish 8000:8000/udp # tvu
-      --publish 8001:8001/udp # gossip
+      --publish 10015:10015/udp # gossip
       --publish 8002:8002/udp # tvu_forwards
       --publish 8003:8003/udp # tpu
       --publish 8004:8004/udp # tpu_forwards
@@ -114,7 +114,7 @@ up)
           -X POST \
           -H "Content-Type: application/json" \
           -d '{"jsonrpc":"2.0","id":1, "method":"getTransactionCount"}' \
-          http://localhost:8899; then
+          http://localhost:8328; then
         break;
       fi
       sleep 1

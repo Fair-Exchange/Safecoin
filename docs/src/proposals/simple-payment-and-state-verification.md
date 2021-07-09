@@ -2,7 +2,7 @@
 title: Simple Payment and State Verification
 ---
 
-It is often useful to allow low resourced clients to participate in a Solana
+It is often useful to allow low resourced clients to participate in a Safecoin
 cluster. Be this participation economic or contract execution, verification
 that a client's activity has been accepted by the network is typically
 expensive. This proposal lays out a mechanism for such clients to confirm that

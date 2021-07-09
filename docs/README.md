@@ -1,6 +1,6 @@
 # Docs Readme
 
-Solana's Docs are built using [Docusaurus 2](https://v2.docusaurus.io/) with `npm`.
+Safecoin's Docs are built using [Docusaurus 2](https://v2.docusaurus.io/) with `npm`.
 Static content delivery is handled using `vercel`.
 
 ### Installing Docusaurus

@@ -22,7 +22,7 @@ import { SerumMarketRegistry } from "serumMarketRegistry";
 export type ProgramName = typeof PROGRAM_IDS[keyof typeof PROGRAM_IDS];
 
 export const PROGRAM_IDS = {
-  BrEAK7zGZ6dM71zUDACDqJnekihmwF15noTddWTsknjC: "Break Solana Program",
+  CtY5L6mdBzRUakZFJ3NXkhy8ufGkDteBJvgawdAVgWVv: "Break Safecoin Program",
   Budget1111111111111111111111111111111111111: "Budget Program",
   Config1111111111111111111111111111111111111: "Config Program",
   Exchange11111111111111111111111111111111111: "Exchange Program",
@@ -31,11 +31,11 @@ export const PROGRAM_IDS = {
   [SystemProgram.programId.toBase58()]: "System Program",
   Vest111111111111111111111111111111111111111: "Vest Program",
   [VOTE_PROGRAM_ID.toBase58()]: "Vote Program",
-  TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA: "SPL Token Program",
-  ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL:
+  HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1: "SPL Token Program",
+  PUFQTv9BK3ax6bKPFnyjBTbVa3782mcfvb22TZovvrm:
     "SPL Associated Token Account Program",
-  Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo: "Memo Program",
-  SwaPpA9LAaLfeLi3a68M4DjnLqgtticKg6CnyNwgAC8: "Token Swap Program",
+  4DDUJ1rA8Vd7e6SFWanf4V8JnsfapjCGNutQYw8Vtt45: "Memo Program",
+  6RWe1TGwvojnbAynyWrHzm3GgHf7AmX7kLQTJG7vHCfb: "Token Swap Program",
 } as const;
 
 export type LoaderName = typeof LOADER_IDS[keyof typeof LOADER_IDS];

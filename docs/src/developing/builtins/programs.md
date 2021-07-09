@@ -2,7 +2,7 @@
 title: "Builtin Programs"
 ---
 
-Solana contains a small handful of builtin programs, which are required to run
+Safecoin contains a small handful of builtin programs, which are required to run
 validator nodes. Unlike third-party programs, the builtin programs are part of
 the validator implementation and can be upgraded as part of cluster upgrades.
 Upgrades may occur to add features, fix bugs, or improve performance. Interface
@@ -57,7 +57,7 @@ Add programs to the chain and execute them.
 
 The BPF Loader marks itself as its "owner" of the executable account it
 creates to store your program. When a user invokes an instruction via a
-program id, the Solana runtime will load both your executable account and its
+program id, the Safecoin runtime will load both your executable account and its
 owner, the BPF Loader. The runtime then passes your program to the BPF Loader
 to process the instruction.
 

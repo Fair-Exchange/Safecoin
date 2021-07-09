@@ -132,7 +132,7 @@ where
     T: Into<OsString> + Clone,
 {
     let default_config_file = CONFIG_FILE.as_ref().unwrap();
-    App::new("solana-stake-accounts")
+    App::new("safecoin-stake-accounts")
         .about("about")
         .version("version")
         .arg(
@@ -149,7 +149,7 @@ where
                 .global(true)
                 .takes_value(true)
                 .value_name("URL")
-                .help("RPC entrypoint address. i.e. http://devnet.solana.com"),
+                .help("RPC entrypoint address. i.e. http://devnet.safecoin.org"),
         )
         .subcommand(
             SubCommand::with_name("new")
@@ -172,7 +172,7 @@ where
                         .takes_value(true)
                         .value_name("AMOUNT")
                         .validator(is_amount)
-                        .help("Amount to move into the new stake accounts, in SOL"),
+                        .help("Amount to move into the new stake accounts, in SAFE"),
                 )
                 .arg(
                     Arg::with_name("stake_authority")

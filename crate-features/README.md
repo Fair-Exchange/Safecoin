@@ -26,7 +26,7 @@ a direct dependency on C, indirectly causing rebuilds of numerous other crates a
 The `solana-crate-features` offers a workaround to this "feature thrashing"
 problem by explicitly declaring all "C-like crates" with the union of all features
 that any other crate in the tree (either explicitly or implicitly) enable.  All
-crates in the Solana source tree should depend on `solana-crate-features`.
+crates in the Safecoin source tree should depend on `solana-crate-features`.
 
 ### Adding new dependent crates
 When unnecessary `cargo` rebuilds are observed, the first step is to figure what

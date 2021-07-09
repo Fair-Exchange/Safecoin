@@ -51,10 +51,10 @@ to block producer failures. When a client sees 55/64, or ~86% confirming
 a block, it can expect that ~24% or `(86 - 66.666.. + 4.666..)%` of
 the network must be slashed for this block to fail full finalization.
 
-## Why Solana?
+## Why Safecoin?
 
 This approach can be built on other networks, but the implementation
-complexity is significantly reduced on Solana because our votes
+complexity is significantly reduced on Safecoin because our votes
 have provable VDF-based timeouts. It’s not clear if switching proofs
 can be easily constructed in networks with weak assumptions about
 time.

@@ -14,7 +14,7 @@
         "unexportedIdentifier": {"enable": false},
         "typeInference": {"enable": true},
         "brand": {
-          "title": "Solana Javascript API",
+          "title": "Safecoin Javascript API",
           "repository": "https://github.com/solana-labs/solana-web3.js",
           "site": "https://solana.com"
         }

@@ -1,10 +1,10 @@
 use serial_test::serial;
-use solana_bench_tps::bench::{do_bench_tps, generate_and_fund_keypairs};
-use solana_bench_tps::cli::Config;
+use safecoin_bench_tps::bench::{do_bench_tps, generate_and_fund_keypairs};
+use safecoin_bench_tps::cli::Config;
 use solana_client::thin_client::create_client;
 use solana_core::cluster_info::VALIDATOR_PORT_RANGE;
 use solana_core::validator::ValidatorConfig;
-use solana_faucet::faucet::run_local_faucet_with_port;
+use safecoin_faucet::faucet::run_local_faucet_with_port;
 use solana_local_cluster::local_cluster::{ClusterConfig, LocalCluster};
 use solana_sdk::signature::{Keypair, Signer};
 use std::sync::{mpsc::channel, Arc};
@@ -17,7 +17,7 @@ fn test_bench_tps_local_cluster(config: Config) {
     const NUM_NODES: usize = 1;
     let cluster = LocalCluster::new(&mut ClusterConfig {
         node_stakes: vec![999_990; NUM_NODES],
-        cluster_lamports: 200_000_000,
+        cluster_lamports: 1_000,
         validator_configs: vec![ValidatorConfig::default(); NUM_NODES],
         native_instruction_processors,
         ..ClusterConfig::default()

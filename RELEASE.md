@@ -1,4 +1,4 @@
-# Solana Release process
+# Safecoin Release process
 
 ## Branches and Tags
 
@@ -141,7 +141,7 @@ Alternatively use the Github UI.
 unresolved issues still in the `X.Y.Z` milestone, then close the `X.Y.Z` milestone.
 
 ### Verify release automation success
-Go to [Solana Releases](https://github.com/solana-labs/solana/releases) and click on the latest release that you just published.
+Go to [Safecoin Releases](https://github.com/solana-labs/solana/releases) and click on the latest release that you just published.
 Verify that all of the build artifacts are present, then the uncheck **"This is a pre-release"** for the release.
 
 Build artifacts can take up to 60 minutes after creating the tag before
@@ -149,8 +149,8 @@ appearing.  To check for progress:
 * The `solana-secondary` Buildkite pipeline handles creating the Linux release artifacts and updated crates.  Look for a job under the tag name of the release: https://buildkite.com/solana-labs/solana-secondary.
 * The macOS and Windows release artifacts are produced by Travis CI: https://travis-ci.com/github/solana-labs/solana/branches
 
-[Crates.io](https://crates.io/crates/solana) should have an updated Solana version.  This can take 2-3 hours, and sometimes fails in the `solana-secondary` job.
+[Crates.io](https://crates.io/crates/solana) should have an updated Safecoin version.  This can take 2-3 hours, and sometimes fails in the `solana-secondary` job.
 If this happens and the error is non-fatal, click "Retry" on the "publish crate" job
 
-### Update software on devnet.solana.com/testnet.solana.com/mainnet-beta.solana.com
+### Update software on devnet.safecoin.org/testnet.safecoin.org/mainnet-beta.safecoin.org
 See the documentation at https://github.com/solana-labs/cluster-ops/

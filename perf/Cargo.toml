@@ -1,7 +1,7 @@
 [package]
 name = "solana-perf"
 version = "1.6.0"
-description = "Solana Performance APIs"
+description = "Safecoin Performance APIs"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"

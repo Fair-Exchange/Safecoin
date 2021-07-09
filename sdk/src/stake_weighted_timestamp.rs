@@ -11,13 +11,13 @@ use std::{
 };
 
 pub const TIMESTAMP_SLOT_RANGE: usize = 32;
-pub const DEPRECATED_TIMESTAMP_SLOT_RANGE: usize = 16; // Deprecated.  Remove in the Solana v1.6.0 timeframe
+pub const DEPRECATED_TIMESTAMP_SLOT_RANGE: usize = 16; // Deprecated.  Remove in the Safecoin v1.6.0 timeframe
 pub const DEPRECATED_MAX_ALLOWABLE_DRIFT_PERCENTAGE: u32 = 25;
 pub const MAX_ALLOWABLE_DRIFT_PERCENTAGE: u32 = 50;
 
 pub enum EstimateType {
     Bounded(u32), // Value represents max allowable drift percentage
-    Unbounded,    // Deprecated.  Remove in the Solana v1.6.0 timeframe
+    Unbounded,    // Deprecated.  Remove in the Safecoin v1.6.0 timeframe
 }
 
 pub fn calculate_stake_weighted_timestamp<I, K, V, T>(
@@ -181,28 +181,28 @@ pub mod tests {
             (
                 pubkey0,
                 (
-                    sol_to_lamports(4_500_000_000.0),
+                    sol_to_lamports(4_33_370_166.0),
                     Account::new(1, 0, &Pubkey::default()),
                 ),
             ),
             (
                 pubkey1,
                 (
-                    sol_to_lamports(4_500_000_000.0),
+                    sol_to_lamports(4_33_370_166.0),
                     Account::new(1, 0, &Pubkey::default()),
                 ),
             ),
             (
                 pubkey2,
                 (
-                    sol_to_lamports(4_500_000_000.0),
+                    sol_to_lamports(4_33_370_166.0),
                     Account::new(1, 0, &Pubkey::default()),
                 ),
             ),
             (
                 pubkey3,
                 (
-                    sol_to_lamports(4_500_000_000.0),
+                    sol_to_lamports(4_33_370_166.0),
                     Account::new(1, 0, &Pubkey::default()),
                 ),
             ),

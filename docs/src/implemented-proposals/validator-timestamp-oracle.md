@@ -2,10 +2,10 @@
 title: Validator Timestamp Oracle
 ---
 
-Third-party users of Solana sometimes need to know the real-world time a block
+Third-party users of Safecoin sometimes need to know the real-world time a block
 was produced, generally to meet compliance requirements for external auditors or
 law enforcement. This proposal describes a validator timestamp oracle that
-would allow a Solana cluster to satisfy this need.
+would allow a Safecoin cluster to satisfy this need.
 
 The general outline of the proposed implementation is as follows:
 
