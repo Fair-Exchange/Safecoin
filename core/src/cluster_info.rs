@@ -79,7 +79,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const VALIDATOR_PORT_RANGE: PortRange = (10_001, 12_000);
+pub const VALIDATOR_PORT_RANGE: PortRange = (8000, 10_000);
 pub const MINIMUM_VALIDATOR_PORT_RANGE_WIDTH: u16 = 10; // VALIDATOR_PORT_RANGE must be at least this wide
 
 /// The Data plane fanout size, also used as the neighborhood size
@@ -1820,7 +1820,7 @@ impl ClusterInfo {
             .build()
             .unwrap();
         Builder::new()
-            .name("safecoin-gossip".to_string())
+            .name("solana-gossip".to_string())
             .spawn(move || {
                 let mut last_push = timestamp();
                 let mut last_contact_info_trace = timestamp();
@@ -1838,7 +1838,7 @@ impl ClusterInfo {
                 let mut generate_pull_requests = true;
                 loop {
                     let start = timestamp();
-                    thread_mem_usage::datapoint("safecoin-gossip");
+                    thread_mem_usage::datapoint("solana-gossip");
                     if self.contact_debug_interval != 0
                         && start - last_contact_info_trace > self.contact_debug_interval
                     {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Builds known downstream projects against local safecoin source
+# Builds known downstream projects against local solana source
 #
 
 set -e
@@ -66,7 +66,7 @@ spl() {
 
     $cargo build
 
-    # Generic `cargo test`/`cargo test-bpf` disabled due to BPF VM interface changes between Safecoin 1.4
+    # Generic `cargo test`/`cargo test-bpf` disabled due to BPF VM interface changes between Solana 1.4
     # and 1.5...
     #$cargo test
     #$cargo_test_bpf

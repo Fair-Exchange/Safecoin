@@ -1,7 +1,7 @@
 [package]
 name = "solana-sdk"
 version = "1.6.0"
-description = "Safecoin SDK"
+description = "Solana SDK"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 homepage = "https://solana.com/"

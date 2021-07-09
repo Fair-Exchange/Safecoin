@@ -22,9 +22,9 @@
 [code-style-prettier-image]: https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square
 [code-style-prettier-url]: https://github.com/prettier/prettier
 
-# Safecoin JavaScript API
+# Solana JavaScript API
 
-This is the Safecoin Javascript API built on the Safecoin [JSON RPC API](https://docs.solana.com/apps/jsonrpc-api)
+This is the Solana Javascript API built on the Solana [JSON RPC API](https://docs.solana.com/apps/jsonrpc-api)
 
 [Latest API Documentation](https://solana-labs.github.io/solana-web3.js/)
 
@@ -50,7 +50,7 @@ $ npm install --save @solana/web3.js
 ### Development Environment Setup
 To build and run tests:
 1. Install Rust from https://rustup.rs/
-2. Install the latest Safecoin release from https://docs.solana.com/cli/install-solana-cli-tools
+2. Install the latest Solana release from https://docs.solana.com/cli/install-solana-cli-tools
 
 ## Usage
 
@@ -103,11 +103,11 @@ minified version of the module suitable for direct use in a browser environment
 
 ### Local Network
 
-**Please use `safecoin-test-validator` from the latest Safecoin release instead of the information in this section**
+**Please use `solana-test-validator` from the latest Solana release instead of the information in this section**
 
-The `solana-localnet` program is provided to easily start a test Safecoin cluster
+The `solana-localnet` program is provided to easily start a test Solana cluster
 locally on your machine.  Docker must be installed.  The JSON RPC endpoint of
-the local cluster is `http://localhost:8328`.
+the local cluster is `http://localhost:8899`.
 
 To start, first fetch the latest Docker image by running:
 ```bash
@@ -131,9 +131,9 @@ $ npx solana-localnet down
 
 ### BPF program development
 
-**Please use `cargo build-bpf` from the latest Safecoin release instead of the information in this section**
+**Please use `cargo build-bpf` from the latest Solana release instead of the information in this section**
 
-The Safecoin BPF SDK is located in the `bpf-sdk/` subdirectory if you installed
+The Solana BPF SDK is located in the `bpf-sdk/` subdirectory if you installed
 solana-web3.js from npmjs.com.
 
 From a git clone, run `npm run bpf-sdk:install` to fetch the latest BPF SDK.

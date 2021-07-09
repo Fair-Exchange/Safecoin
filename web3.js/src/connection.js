@@ -1680,7 +1680,7 @@ export class Connection {
     url.host = '';
     // Only shift the port by +1 as a convention for ws(s) only if given endpoint
     // is explictly specifying the endpoint port (HTTP-based RPC), assuming
-    // we're directly trying to connect to safecoin-validator's ws listening port.
+    // we're directly trying to connect to solana-validator's ws listening port.
     // When the endpoint omits the port, we're connecting to the protocol
     // default ports: http(80) or https(443) and it's assumed we're behind a reverse
     // proxy which manages WebSocket upgrade and backend port redirection.
@@ -2311,7 +2311,7 @@ export class Connection {
       throw new Error(
         `Transaction was not confirmed in ${duration.toFixed(
           2,
-        )} seconds. It is unknown if it succeeded or failed. Check signature ${signature} using the Safecoin Explorer or CLI tools.`,
+        )} seconds. It is unknown if it succeeded or failed. Check signature ${signature} using the Solana Explorer or CLI tools.`,
       );
     }
 

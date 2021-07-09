@@ -29,9 +29,9 @@ use solana_client::{
     rpc_response::RpcKeyedAccount,
 };
 #[cfg(not(test))]
-use safecoin_faucet::faucet::request_airdrop_transaction;
+use solana_faucet::faucet::request_airdrop_transaction;
 #[cfg(test)]
-use safecoin_faucet::faucet_mock::request_airdrop_transaction;
+use solana_faucet::faucet_mock::request_airdrop_transaction;
 use solana_remote_wallet::remote_wallet::RemoteWalletManager;
 use solana_sdk::{
     clock::{Epoch, Slot},
@@ -372,11 +372,11 @@ pub enum CliError {
     ClientError(#[from] ClientError),
     #[error("command not recognized: {0}")]
     CommandNotRecognized(String),
-    #[error("insufficient funds for fee ({0} SAFE)")]
+    #[error("insufficient funds for fee ({0} SOL)")]
     InsufficientFundsForFee(f64),
-    #[error("insufficient funds for spend ({0} SAFE)")]
+    #[error("insufficient funds for spend ({0} SOL)")]
     InsufficientFundsForSpend(f64),
-    #[error("insufficient funds for spend ({0} SAFE) and fee ({1} SAFE)")]
+    #[error("insufficient funds for spend ({0} SOL) and fee ({1} SOL)")]
     InsufficientFundsForSpendAndFee(f64, f64),
     #[error(transparent)]
     InvalidNonce(nonce_utils::Error),
@@ -1684,7 +1684,7 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
 
         // Wallet Commands
 
-        // Request an airdrop from Safecoin Faucet;
+        // Request an airdrop from Solana Faucet;
         CliCommand::Airdrop {
             faucet_host,
             faucet_port,
@@ -1889,7 +1889,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
                         .long("faucet-port")
                         .value_name("PORT_NUMBER")
                         .takes_value(true)
-                        .default_value(safecoin_faucet::faucet::FAUCET_PORT_STR)
+                        .default_value(solana_faucet::faucet::FAUCET_PORT_STR)
                         .help("Faucet port to use"),
                 )
                 .arg(
@@ -1899,7 +1899,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
                         .takes_value(true)
                         .validator(is_amount)
                         .required(true)
-                        .help("The airdrop amount to request, in SAFE"),
+                        .help("The airdrop amount to request, in SOL"),
                 )
                 .arg(
                     pubkey!(Arg::with_name("to")
@@ -1921,7 +1921,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
                     Arg::with_name("lamports")
                         .long("lamports")
                         .takes_value(false)
-                        .help("Display balance in lamports instead of SAFE"),
+                        .help("Display balance in lamports instead of SOL"),
                 ),
         )
         .subcommand(
@@ -2018,7 +2018,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
                     Arg::with_name("allow_excessive_balance")
                         .long("allow-excessive-deploy-account-balance")
                         .takes_value(false)
-                        .help("Use the designated program id, even if the account already holds a large balance of SAFE")
+                        .help("Use the designated program id, even if the account already holds a large balance of SOL")
                 ),
         )
         .subcommand(
@@ -2038,7 +2038,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
                         .takes_value(true)
                         .validator(is_amount_or_all)
                         .required(true)
-                        .help("The amount to send, in SAFE; accepts keyword ALL"),
+                        .help("The amount to send, in SOL; accepts keyword ALL"),
                 )
                 .offline_args()
                 .nonce_args(false)
@@ -2073,7 +2073,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
                         .takes_value(true)
                         .validator(is_amount_or_all)
                         .required(true)
-                        .help("The amount to send, in SAFE; accepts keyword ALL"),
+                        .help("The amount to send, in SOL; accepts keyword ALL"),
                 )
                 .arg(
                     pubkey!(Arg::with_name("from")
@@ -2114,7 +2114,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
                     Arg::with_name("lamports")
                         .long("lamports")
                         .takes_value(false)
-                        .help("Display balance in lamports instead of SAFE"),
+                        .help("Display balance in lamports instead of SOL"),
                 ),
         )
         .validator_info_subcommands()
@@ -2255,7 +2255,7 @@ mod tests {
             CliCommandInfo {
                 command: CliCommand::Airdrop {
                     faucet_host: None,
-                    faucet_port: safecoin_faucet::faucet::FAUCET_PORT,
+                    faucet_port: solana_faucet::faucet::FAUCET_PORT,
                     pubkey: Some(pubkey),
                     lamports: 50_000_000_000,
                 },
@@ -2450,7 +2450,7 @@ mod tests {
         // Success cases
         let mut config = CliConfig {
             rpc_client: Some(RpcClient::new_mock("succeeds".to_string())),
-            json_rpc_url: "http://127.0.0.1:8328".to_string(),
+            json_rpc_url: "http://127.0.0.1:8899".to_string(),
             ..CliConfig::default()
         };
 
@@ -2470,7 +2470,7 @@ mod tests {
             pubkey: None,
             use_lamports_unit: false,
         };
-        assert_eq!(process_command(&config).unwrap(), "0.00000005 SAFE");
+        assert_eq!(process_command(&config).unwrap(), "0.00000005 SOL");
 
         let good_signature = Signature::new(&bs58::decode(SIGNATURE).into_vec().unwrap());
         config.command = CliCommand::Confirm(good_signature);
@@ -2765,7 +2765,7 @@ mod tests {
             arg_name: "".to_string(),
         };
 
-        //Test Transfer Subcommand, SAFE
+        //Test Transfer Subcommand, SOL
         let from_keypair = keypair_from_seed(&[0u8; 32]).unwrap();
         let from_pubkey = from_keypair.pubkey();
         let from_string = from_pubkey.to_string();

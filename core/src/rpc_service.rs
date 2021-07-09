@@ -1,4 +1,4 @@
-//! The `rpc_service` module implements the Safecoin JSON RPC service.
+//! The `rpc_service` module implements the Solana JSON RPC service.
 
 use crate::{
     bigtable_upload_service::BigTableUploadService,
@@ -362,7 +362,7 @@ impl JsonRpcService {
             .name("solana-jsonrpc".to_string())
             .spawn(move || {
                 let mut io = MetaIoHandler::default();
-                let rpc = RpcSafeImpl;
+                let rpc = RpcSolImpl;
                 io.extend_with(rpc.to_delegate());
 
                 let request_middleware = RpcRequestMiddleware::new(

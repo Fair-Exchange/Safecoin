@@ -61,11 +61,11 @@ if [[ $CI_OS_NAME = windows ]]; then
   # yet available on windows
   BINS=(
     solana
-    safecoin-install
-    safecoin-install-init
-    safecoin-keygen
-    safecoin-stake-accounts
-    safecoin-tokens
+    solana-install
+    solana-install-init
+    solana-keygen
+    solana-stake-accounts
+    solana-tokens
   )
 else
   ./fetch-perf-libs.sh
@@ -80,30 +80,30 @@ else
     cargo-build-bpf
     cargo-test-bpf
     solana
-    safecoin-bench-exchange
-    safecoin-bench-tps
-    safecoin-dos
-    safecoin-faucet
-    safecoin-gossip
-    safecoin-install
-    safecoin-install-init
-    safecoin-keygen
-    safecoin-ledger-tool
-    safecoin-log-analyzer
-    safecoin-net-shaper
-    safecoin-stake-accounts
-    safecoin-stake-monitor
-    safecoin-stake-o-matic
-    safecoin-sys-tuner
-    safecoin-test-validator
-    safecoin-tokens
-    safecoin-validator
-    safecoin-watchtower
+    solana-bench-exchange
+    solana-bench-tps
+    solana-dos
+    solana-faucet
+    solana-gossip
+    solana-install
+    solana-install-init
+    solana-keygen
+    solana-ledger-tool
+    solana-log-analyzer
+    solana-net-shaper
+    solana-stake-accounts
+    solana-stake-monitor
+    solana-stake-o-matic
+    solana-sys-tuner
+    solana-test-validator
+    solana-tokens
+    solana-validator
+    solana-watchtower
   )
 
-  #XXX: Ensure `safecoin-genesis` is built LAST!
+  #XXX: Ensure `solana-genesis` is built LAST!
   # See https://github.com/solana-labs/solana/issues/5826
-  BINS+=(safecoin-genesis)
+  BINS+=(solana-genesis)
 fi
 
 binArgs=()

@@ -80,7 +80,6 @@ impl AuthorizedVoters {
         self.authorized_voters.iter()
     }
 
-
     // Returns the authorized voter at the given epoch if the epoch is >= the
     // current epoch, and a bool indicating whether the entry for this epoch
     // exists in the self.authorized_voter map
@@ -104,8 +103,4 @@ impl AuthorizedVoters {
             res.map(|pubkey| (*pubkey, true))
         }
     }
-
-
-
-
 }

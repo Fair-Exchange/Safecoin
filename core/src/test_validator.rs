@@ -265,9 +265,9 @@ impl TestValidator {
         let validator_identity = Keypair::new();
         let validator_vote_account = Keypair::new();
         let validator_stake_account = Keypair::new();
-        let validator_identity_lamports = sol_to_lamports(33_406_471.);
-        let validator_stake_lamports = sol_to_lamports(10_000.);
-        let mint_lamports = sol_to_lamports(500.);
+        let validator_identity_lamports = sol_to_lamports(500.);
+        let validator_stake_lamports = sol_to_lamports(1_000_000.);
+        let mint_lamports = sol_to_lamports(500_000_000.);
 
         let mut accounts = config.accounts.clone();
         for (address, account) in solana_program_test::programs::spl_programs(&config.rent) {
@@ -297,7 +297,7 @@ impl TestValidator {
             validator_identity_lamports,
             config.fee_rate_governor.clone(),
             config.rent,
-            solana_sdk::genesis_config::ClusterType::MainnetBeta,
+            solana_sdk::genesis_config::ClusterType::Development,
             accounts.into_iter().collect(),
         );
         genesis_config.epoch_schedule = solana_sdk::epoch_schedule::EpochSchedule::without_warmup();
@@ -384,7 +384,7 @@ impl TestValidator {
             rpc_config,
             accounts_hash_interval_slots: 100,
             account_paths: vec![ledger_path.join("accounts")],
-            poh_verify: true, // Skip PoH verification of ledger on startup for speed
+            poh_verify: false, // Skip PoH verification of ledger on startup for speed
             snapshot_config: Some(SnapshotConfig {
                 snapshot_interval_slots: 100,
                 snapshot_path: ledger_path.join("snapshot"),

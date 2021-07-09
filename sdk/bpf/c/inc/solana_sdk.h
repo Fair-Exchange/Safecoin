@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Safecoin C-based BPF program utility functions and types
+ * @brief Solana C-based BPF program utility functions and types
  */
 
 #ifdef __cplusplus
@@ -149,7 +149,7 @@ void sol_log_compute_units_();
  */
 typedef struct {
   uint8_t x[SIZE_PUBKEY];
-} SafePubkey;
+} SolPubkey;
 
 /**
  * Compares two public keys
@@ -158,7 +158,7 @@ typedef struct {
  * @param two Second public key
  * @return true if the same
  */
-static bool SafePubkey_same(const SafePubkey *one, const SafePubkey *two) {
+static bool SolPubkey_same(const SolPubkey *one, const SolPubkey *two) {
   for (int i = 0; i < sizeof(*one); i++) {
     if (one->x[i] != two->x[i]) {
       return false;
@@ -171,16 +171,16 @@ static bool SafePubkey_same(const SafePubkey *one, const SafePubkey *two) {
  * Keyed Account
  */
 typedef struct {
-  SafePubkey *key;      /** Public key of the account */
+  SolPubkey *key;      /** Public key of the account */
   uint64_t *lamports;  /** Number of lamports owned by this account */
   uint64_t data_len;   /** Length of data in bytes */
   uint8_t *data;       /** On-chain data within this account */
-  SafePubkey *owner;    /** Program that owns this account */
+  SolPubkey *owner;    /** Program that owns this account */
   uint64_t rent_epoch; /** The epoch at which this account will next owe rent */
   bool is_signer;      /** Transaction was signed by this account's key? */
   bool is_writable;    /** Is the account writable? */
   bool executable;     /** This account's data contains a loaded program (and is now read-only) */
-} SafeAccountInfo;
+} SolAccountInfo;
 
 /**
  * Copies memory
@@ -231,7 +231,7 @@ static size_t sol_strlen(const char *s) {
 /**
  * Computes the number of elements in an array
  */
-#define SAFE_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#define SOL_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 
 /**
@@ -254,9 +254,9 @@ static void sol_free(void *ptr) {
 }
 
 /**
- * The Safecoin runtime provides a memory region that is available to programs at
+ * The Solana runtime provides a memory region that is available to programs at
  * a fixed virtual address and length. The builtin functions `sol_calloc` and
- * `sol_free` call into the Safecoin runtime to allocate from this memory region
+ * `sol_free` call into the Solana runtime to allocate from this memory region
  * for heap operations.  Because the memory region is directly available to
  * programs another option is a program can implement their own heap directly on
  * top of that region.  If a program chooses to implement their own heap they
@@ -288,13 +288,13 @@ if (!(expr)) {          \
  * Structure that the program's entrypoint input data is deserialized into.
  */
 typedef struct {
-  SafeAccountInfo* ka; /** Pointer to an array of SafeAccountInfo, must already
-                          point to an array of SafeAccountInfos */
-  uint64_t ka_num; /** Number of SafeAccountInfo entries in `ka` */
+  SolAccountInfo* ka; /** Pointer to an array of SolAccountInfo, must already
+                          point to an array of SolAccountInfos */
+  uint64_t ka_num; /** Number of SolAccountInfo entries in `ka` */
   const uint8_t *data; /** pointer to the instruction data */
   uint64_t data_len; /** Length in bytes of the instruction data */
-  const SafePubkey *program_id; /** program_id of the currently executing program */
-} SafeParameters;
+  const SolPubkey *program_id; /** program_id of the currently executing program */
+} SolParameters;
 
 /**
  * Maximum number of bytes a program may add to an account during a single realloc
@@ -306,18 +306,18 @@ typedef struct {
  *
  * Use this function to deserialize the buffer passed to the program entrypoint
  * into usable types.  This function does not perform copy deserialization,
- * instead it populates the pointers and lengths in SafeAccountInfo and data so
+ * instead it populates the pointers and lengths in SolAccountInfo and data so
  * that any modification to lamports or account data take place on the original
  * buffer.  Doing so also eliminates the need to serialize back into the buffer
  * at the end of the program.
  *
  * @param input Source buffer containing serialized input parameters
- * @param params Pointer to a SafeParameters structure
+ * @param params Pointer to a SolParameters structure
  * @return Boolean true if successful.
  */
 static bool sol_deserialize(
   const uint8_t *input,
-  SafeParameters *params,
+  SolParameters *params,
   uint64_t ka_num
 ) {
   if (NULL == input || NULL == params) {
@@ -336,8 +336,8 @@ static bool sol_deserialize(
         input += sizeof(uint8_t);
         input += sizeof(uint8_t);
         input += 4; // padding
-        input += sizeof(SafePubkey);
-        input += sizeof(SafePubkey);
+        input += sizeof(SolPubkey);
+        input += sizeof(SolPubkey);
         input += sizeof(uint64_t);
         uint64_t data_len = *(uint64_t *) input;
         input += sizeof(uint64_t);
@@ -364,12 +364,12 @@ static bool sol_deserialize(
       input += 4; // padding
 
       // key
-      params->ka[i].key = (SafePubkey *) input;
-      input += sizeof(SafePubkey);
+      params->ka[i].key = (SolPubkey *) input;
+      input += sizeof(SolPubkey);
 
       // owner
-      params->ka[i].owner = (SafePubkey *) input;
-      input += sizeof(SafePubkey);
+      params->ka[i].owner = (SolPubkey *) input;
+      input += sizeof(SolPubkey);
 
       // lamports
       params->ka[i].lamports = (uint64_t *) input;
@@ -405,8 +405,8 @@ static bool sol_deserialize(
   params->data = input;
   input += params->data_len;
 
-  params->program_id = (SafePubkey *) input;
-  input += sizeof(SafePubkey);
+  params->program_id = (SolPubkey *) input;
+  input += sizeof(SolPubkey);
 
   return true;
 }
@@ -417,7 +417,7 @@ static bool sol_deserialize(
 typedef struct {
   const uint8_t *addr; /** bytes */
   uint64_t len; /** number of bytes*/
-} SafeBytes;
+} SolBytes;
 
 /**
  * Length of a sha256 hash result
@@ -432,7 +432,7 @@ typedef struct {
  * @param result 32 byte array to hold the result
  */
 static uint64_t sol_sha256(
-    const SafeBytes *bytes,
+    const SolBytes *bytes,
     int bytes_len,
     const uint8_t *result
 );
@@ -441,21 +441,21 @@ static uint64_t sol_sha256(
  * Account Meta
  */
 typedef struct {
-  SafePubkey *pubkey; /** An account's public key */
+  SolPubkey *pubkey; /** An account's public key */
   bool is_writable; /** True if the `pubkey` can be loaded as a read-write account */
   bool is_signer; /** True if an Instruction requires a Transaction signature matching `pubkey` */
-} SafeAccountMeta;
+} SolAccountMeta;
 
 /**
  * Instruction
  */
 typedef struct {
-  SafePubkey *program_id; /** Pubkey of the instruction processor that executes this instruction */
-  SafeAccountMeta *accounts; /** Metadata for what accounts should be passed to the instruction processor */
-  uint64_t account_len; /** Number of SafeAccountMetas */
+  SolPubkey *program_id; /** Pubkey of the instruction processor that executes this instruction */
+  SolAccountMeta *accounts; /** Metadata for what accounts should be passed to the instruction processor */
+  uint64_t account_len; /** Number of SolAccountMetas */
   uint8_t *data; /** Opaque data passed to the instruction processor */
   uint64_t data_len; /** Length of the data in bytes */
-} SafeInstruction;
+} SolInstruction;
 
 /**
  * Seed used to create a program address or passed to sol_invoke_signed
@@ -463,16 +463,16 @@ typedef struct {
 typedef struct {
   const uint8_t *addr; /** Seed bytes */
   uint64_t len; /** Length of the seed bytes */
-} SafeSignerSeed;
+} SolSignerSeed;
 
 /**
  * Seeds used by a signer to create a program address or passed to
  * sol_invoke_signed
  */
 typedef struct {
-  const SafeSignerSeed *addr; /** An arry of a signer's seeds */
+  const SolSignerSeed *addr; /** An arry of a signer's seeds */
   uint64_t len; /** Number of seeds */
-} SafeSignerSeeds;
+} SolSignerSeeds;
 
 /**
  * Create a program address
@@ -483,10 +483,10 @@ typedef struct {
  * @param program_address Program address created, filled on return
  */
 static uint64_t sol_create_program_address(
-    const SafeSignerSeed *seeds,
+    const SolSignerSeed *seeds,
     int seeds_len,
-    const SafePubkey *program_id,
-    const SafePubkey *program_address
+    const SolPubkey *program_id,
+    const SolPubkey *program_address
 );
 
 /**
@@ -499,10 +499,10 @@ static uint64_t sol_create_program_address(
  * @param bump_seed Bump seed required to create a valid program address
  */
 static uint64_t sol_try_find_program_address(
-    const SafeSignerSeed *seeds,
+    const SolSignerSeed *seeds,
     int seeds_len,
-    const SafePubkey *program_id,
-    const SafePubkey *program_address,
+    const SolPubkey *program_id,
+    const SolPubkey *program_address,
     const uint8_t *bump_seed
 );
 
@@ -521,17 +521,17 @@ static uint64_t sol_try_find_program_address(
  * @param seeds_len Length of the seeds array
  */
 static uint64_t sol_invoke_signed(
-    const SafeInstruction *instruction,
-    const SafeAccountInfo *account_infos,
+    const SolInstruction *instruction,
+    const SolAccountInfo *account_infos,
     int account_infos_len,
-    const SafeSignerSeeds *signers_seeds,
+    const SolSignerSeeds *signers_seeds,
     int signers_seeds_len
 ) {
   uint64_t sol_invoke_signed_c(
-    const SafeInstruction *instruction,
-    const SafeAccountInfo *account_infos,
+    const SolInstruction *instruction,
+    const SolAccountInfo *account_infos,
     int account_infos_len,
-    const SafeSignerSeeds *signers_seeds,
+    const SolSignerSeeds *signers_seeds,
     int signers_seeds_len
   );
 
@@ -551,11 +551,11 @@ static uint64_t sol_invoke_signed(
  * @param account_infos_len Length of account_infos array
 */
 static uint64_t sol_invoke(
-    const SafeInstruction *instruction,
-    const SafeAccountInfo *account_infos,
+    const SolInstruction *instruction,
+    const SolAccountInfo *account_infos,
     int account_infos_len
 ) {
-  const SafeSignerSeeds signers_seeds[] = {{}};
+  const SolSignerSeeds signers_seeds[] = {{}};
   return sol_invoke_signed(
     instruction,
     account_infos,
@@ -578,7 +578,7 @@ static uint64_t sol_invoke(
  * @param key The public key to print
  */
 void sol_log_pubkey(
-    const SafePubkey *pubkey
+    const SolPubkey *pubkey
 );
 
 /**
@@ -595,9 +595,9 @@ static void sol_log_array(const uint8_t *array, int len) {
 /**
  * Prints the program's input parameters
  *
- * @param params Pointer to a SafeParameters structure
+ * @param params Pointer to a SolParameters structure
  */
-static void sol_log_params(const SafeParameters *params) {
+static void sol_log_params(const SolParameters *params) {
   sol_log("- Program identifier:");
   sol_log_pubkey(params->program_id);
 
@@ -635,7 +635,7 @@ static void sol_log_params(const SafeParameters *params) {
  */
 uint64_t entrypoint(const uint8_t *input);
 
-#ifdef SAFE_TEST
+#ifdef SOL_TEST
 /**
  * Stub functions when building tests
  */
@@ -646,7 +646,7 @@ void sol_log_(const char *s, uint64_t len) {
 void sol_log_64(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) {
   printf("Program log: %llu, %llu, %llu, %llu, %llu\n", arg1, arg2, arg3, arg4, arg5);
 }
-void sol_log_pubkey(const SafePubkey *pubkey) {
+void sol_log_pubkey(const SolPubkey *pubkey) {
   printf("Program log: ");
   for (int i = 0; i < SIZE_PUBKEY; i++) {
     printf("%02 ", pubkey->x[i]);

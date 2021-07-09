@@ -1,4 +1,4 @@
-//! The `rpc` module implements the Safecoin RPC interface.
+//! The `rpc` module implements the Solana RPC interface.
 
 use crate::{
     cluster_info::ClusterInfo,
@@ -33,7 +33,7 @@ use solana_client::{
     rpc_response::Response as RpcResponse,
     rpc_response::*,
 };
-use safecoin_faucet::faucet::request_airdrop_transaction;
+use solana_faucet::faucet::request_airdrop_transaction;
 use solana_ledger::{blockstore::Blockstore, blockstore_db::BlockstoreError, get_tmp_ledger_path};
 use solana_metrics::inc_new_counter_info;
 use solana_perf::packet::PACKET_DATA_SIZE;
@@ -1690,7 +1690,7 @@ fn get_mint_decimals(data: &[u8]) -> Result<u8> {
 }
 
 #[rpc]
-pub trait RpcSafe {
+pub trait RpcSol {
     type Metadata;
 
     // DEPRECATED
@@ -2072,8 +2072,8 @@ fn _send_transaction(
     Ok(signature.to_string())
 }
 
-pub struct RpcSafeImpl;
-impl RpcSafe for RpcSafeImpl {
+pub struct RpcSolImpl;
+impl RpcSol for RpcSolImpl {
     type Metadata = JsonRpcRequestProcessor;
 
     fn confirm_transaction(
@@ -3164,7 +3164,7 @@ pub mod tests {
         ));
 
         let mut io = MetaIoHandler::default();
-        let rpc = RpcSafeImpl;
+        let rpc = RpcSolImpl;
         io.extend_with(rpc.to_delegate());
         RpcHandler {
             io,
@@ -3199,7 +3199,7 @@ pub mod tests {
         let meta = JsonRpcRequestProcessor::new_from_bank(&bank);
 
         let mut io = MetaIoHandler::default();
-        io.extend_with(RpcSafeImpl.to_delegate());
+        io.extend_with(RpcSolImpl.to_delegate());
 
         let req = format!(
             r#"{{"jsonrpc":"2.0","id":1,"method":"getBalance","params":["{}"]}}"#,
@@ -3227,7 +3227,7 @@ pub mod tests {
         let meta = JsonRpcRequestProcessor::new_from_bank(&bank);
 
         let mut io = MetaIoHandler::default();
-        io.extend_with(RpcSafeImpl.to_delegate());
+        io.extend_with(RpcSolImpl.to_delegate());
 
         async fn use_client(client: gen_client::Client, mint_pubkey: Pubkey) -> u64 {
             client
@@ -3368,7 +3368,7 @@ pub mod tests {
         let meta = JsonRpcRequestProcessor::new_from_bank(&bank);
 
         let mut io = MetaIoHandler::default();
-        io.extend_with(RpcSafeImpl.to_delegate());
+        io.extend_with(RpcSolImpl.to_delegate());
 
         let req = r#"{"jsonrpc":"2.0","id":1,"method":"getTransactionCount"}"#;
         let res = io.handle_request_sync(&req, meta);
@@ -4521,7 +4521,7 @@ pub mod tests {
         let meta = JsonRpcRequestProcessor::new_from_bank(&bank);
 
         let mut io = MetaIoHandler::default();
-        let rpc = RpcSafeImpl;
+        let rpc = RpcSolImpl;
         io.extend_with(rpc.to_delegate());
 
         let req = r#"{"jsonrpc":"2.0","id":1,"method":"sendTransaction","params":["37u9WtQpcm6ULa3Vmu7ySnANv"]}"#;
@@ -4545,7 +4545,7 @@ pub mod tests {
         bank_forks.write().unwrap().get(0).unwrap().freeze();
 
         let mut io = MetaIoHandler::default();
-        let rpc = RpcSafeImpl;
+        let rpc = RpcSolImpl;
         io.extend_with(rpc.to_delegate());
         let cluster_info = Arc::new(ClusterInfo::new_with_invalid_keypair(
             ContactInfo::new_with_socketaddr(&socketaddr!("127.0.0.1:1234")),
@@ -6024,7 +6024,7 @@ pub mod tests {
         let owner = Pubkey::new_unique();
         assert_eq!(
             get_spl_token_owner_filter(
-                &Pubkey::from_str("HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1").unwrap(),
+                &Pubkey::from_str("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA").unwrap(),
                 &[
                     RpcFilterType::Memcmp(Memcmp {
                         offset: 32,
@@ -6040,7 +6040,7 @@ pub mod tests {
 
         // Filtering on mint instead of owner
         assert!(get_spl_token_owner_filter(
-            &Pubkey::from_str("HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1").unwrap(),
+            &Pubkey::from_str("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA").unwrap(),
             &[
                 RpcFilterType::Memcmp(Memcmp {
                     offset: 0,
@@ -6117,7 +6117,7 @@ pub mod tests {
         );
 
         let mut io = MetaIoHandler::default();
-        io.extend_with(RpcSafeImpl.to_delegate());
+        io.extend_with(RpcSolImpl.to_delegate());
 
         let req =
             r#"{"jsonrpc":"2.0","id":1,"method":"getSlot","params":[{"commitment":"confirmed"}]}"#;

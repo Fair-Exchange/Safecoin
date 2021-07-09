@@ -3,24 +3,24 @@ title: File System Wallet
 ---
 
 This document describes how to create and use a file system wallet with the
-Safecoin CLI tools. A file system wallet exists as an unencrypted keypair file
+Solana CLI tools. A file system wallet exists as an unencrypted keypair file
 on your computer system's filesystem.
 
-> File system wallets are the **least secure** method of storing SAFE tokens. Storing large amounts of tokens in a file system wallet is **not recommended**.
+> File system wallets are the **least secure** method of storing SOL tokens. Storing large amounts of tokens in a file system wallet is **not recommended**.
 
 ## Before you Begin
 
 Make sure you have
-[installed the Safecoin Command Line Tools](../cli/install-solana-cli-tools.md)
+[installed the Solana Command Line Tools](../cli/install-solana-cli-tools.md)
 
 ## Generate a File System Wallet Keypair
 
-Use Safecoin's command-line tool `safecoin-keygen` to generate keypair files. For
+Use Solana's command-line tool `solana-keygen` to generate keypair files. For
 example, run the following from a command-line shell:
 
 ```bash
 mkdir ~/my-solana-wallet
-safecoin-keygen new --outfile ~/my-solana-wallet/my-keypair.json
+solana-keygen new --outfile ~/my-solana-wallet/my-keypair.json
 ```
 
 This file contains your **unencrypted** keypair. In fact, even if you specify
@@ -30,7 +30,7 @@ to all tokens sent to its public key. Instead, you should share only its public
 key. To display its public key, run:
 
 ```bash
-safecoin-keygen pubkey ~/my-solana-wallet/my-keypair.json
+solana-keygen pubkey ~/my-solana-wallet/my-keypair.json
 ```
 
 It will output a string of characters, such as:
@@ -46,10 +46,10 @@ your _wallet address_.
 ## Verify your Address against your Keypair file
 
 To verify you hold the private key for a given address, use
-`safecoin-keygen verify`:
+`solana-keygen verify`:
 
 ```bash
-safecoin-keygen verify <PUBKEY> ~/my-solana-wallet/my-keypair.json
+solana-keygen verify <PUBKEY> ~/my-solana-wallet/my-keypair.json
 ```
 
 where `<PUBKEY>` is replaced with your wallet address.

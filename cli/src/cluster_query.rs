@@ -200,7 +200,7 @@ impl ClusterQuerySubCommands for App<'_, '_> {
             ),
         )
         .subcommand(
-            SubCommand::with_name("supply").about("Get information about the cluster supply of SAFE")
+            SubCommand::with_name("supply").about("Get information about the cluster supply of SOL")
             .arg(
                 Arg::with_name("print_accounts")
                     .long("print-accounts")
@@ -209,7 +209,7 @@ impl ClusterQuerySubCommands for App<'_, '_> {
             ),
         )
         .subcommand(
-            SubCommand::with_name("total-supply").about("Get total number of SAFE")
+            SubCommand::with_name("total-supply").about("Get total number of SOL")
             .setting(AppSettings::Hidden),
         )
         .subcommand(
@@ -322,7 +322,7 @@ impl ClusterQuerySubCommands for App<'_, '_> {
                     Arg::with_name("lamports")
                         .long("lamports")
                         .takes_value(false)
-                        .help("Display balance in lamports instead of SAFE"),
+                        .help("Display balance in lamports instead of SOL"),
                 ),
         )
         .subcommand(
@@ -333,7 +333,7 @@ impl ClusterQuerySubCommands for App<'_, '_> {
                     Arg::with_name("lamports")
                         .long("lamports")
                         .takes_value(false)
-                        .help("Display balance in lamports instead of SAFE"),
+                        .help("Display balance in lamports instead of SOL"),
                 ),
         )
         .subcommand(
@@ -395,7 +395,7 @@ impl ClusterQuerySubCommands for App<'_, '_> {
                     Arg::with_name("lamports")
                         .long("lamports")
                         .takes_value(false)
-                        .help("Display rent in lamports instead of SAFE"),
+                        .help("Display rent in lamports instead of SOL"),
                 ),
         )
     }
@@ -1203,7 +1203,7 @@ pub fn process_supply(
 
 pub fn process_total_supply(rpc_client: &RpcClient, _config: &CliConfig) -> ProcessResult {
     let total_supply = rpc_client.total_supply()?;
-    Ok(format!("{} SAFE", lamports_to_sol(total_supply)))
+    Ok(format!("{} SOL", lamports_to_sol(total_supply)))
 }
 
 pub fn process_get_transaction_count(rpc_client: &RpcClient, _config: &CliConfig) -> ProcessResult {
@@ -1635,8 +1635,8 @@ pub fn process_show_stakes(
     let stake_history = from_account(&stake_history_account).ok_or_else(|| {
         CliError::RpcRequestError("Failed to deserialize stake history".to_string())
     })?;
-    
-    let stake_program_v2_enabled = true;
+    // At v1.6, this check can be removed and simply passed as `true`
+    let stake_program_v2_enabled = is_stake_program_v2_enabled(rpc_client)?;
 
     let mut stake_accounts: Vec<CliKeyedStakeState> = vec![];
     for (stake_pubkey, stake_account) in all_stake_accounts {

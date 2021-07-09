@@ -1,7 +1,7 @@
 [package]
 name = "solana-ledger"
 version = "1.6.0"
-description = "Safecoin ledger"
+description = "Solana ledger"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
@@ -54,14 +54,12 @@ thiserror = "1.0"
 tokio = { version = "0.3", features = ["full"] }
 trees = "0.2.1"
 
-
 [dependencies.rocksdb]
 # Avoid the vendored bzip2 within rocksdb-sys that can cause linker conflicts
 # when also using the bzip2 crate
-git = "https://github.com/rust-rocksdb/rust-rocksdb"
-branch = "master"
+version = "0.15.0"
 default-features = false
-features = ["lz4","snappy"]
+features = ["lz4"]
 
 [dev-dependencies]
 assert_matches = "1.3.0"

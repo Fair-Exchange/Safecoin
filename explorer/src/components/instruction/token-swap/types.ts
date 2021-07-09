@@ -1,7 +1,8 @@
 import { TransactionInstruction } from "@solana/web3.js";
 
 export const PROGRAM_IDS: string[] = [
-  "6RWe1TGwvojnbAynyWrHzm3GgHf7AmX7kLQTJG7vHCfb", // mainnet / testnet / devnet
+  "SwaPpA9LAaLfeLi3a68M4DjnLqgtticKg6CnyNwgAC8", // mainnet / testnet / devnet
+  "9qvG1zUp8xF1Bi4m6UdRNby1BAAuaDrUxSpv4CmRRMjL", // mainnet - legacy
   "2n2dsFSgmPcZ8jkmBZLGUM2nzuFqcBGQ3JEEj6RJJcEg", // testnet - legacy
   "9tdctNJuFsYZ6VrKfKEuwwbPp4SFdFw3jYBZU8QUtzeX", // testnet - legacy
   "CrRvVBS4Hmj47TPU3cMukurpmCUYUrdHYxTQBxncBGqw", // testnet - legacy

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Fetches the latest SPL programs and produces the safecoin-genesis command-line
+# Fetches the latest SPL programs and produces the solana-genesis command-line
 # arguments needed to install them
 #
 
@@ -38,10 +38,10 @@ fetch_program() {
 
 }
 
-fetch_program token 2.0.6 HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1 BPFLoader2111111111111111111111111111111111
-fetch_program memo  1.0.0 4DDUJ1rA8Vd7e6SFWanf4V8JnsfapjCGNutQYw8Vtt45 BPFLoader1111111111111111111111111111111111
-fetch_program associated-token-account 1.0.1 PUFQTv9BK3ax6bKPFnyjBTbVa3782mcfvb22TZovvrm BPFLoader2111111111111111111111111111111111
-fetch_program feature-proposal 1.0.0 BKCvVdwmY6zQQyWijdMC2vjtYvCq9Q913yvvNLvjVSMv BPFLoader2111111111111111111111111111111111
+fetch_program token 2.0.6 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA BPFLoader2111111111111111111111111111111111
+fetch_program memo  1.0.0 Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo BPFLoader1111111111111111111111111111111111
+fetch_program associated-token-account 1.0.1 ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL BPFLoader2111111111111111111111111111111111
+fetch_program feature-proposal 1.0.0 Feat1YXHhH6t1juaWF74WLcfv4XoNocjXA6sPWHNgAse BPFLoader2111111111111111111111111111111111
 
 echo "${genesis_args[@]}" > spl-genesis-args.sh
 
@@ -50,5 +50,5 @@ echo "Available SPL programs:"
 ls -l spl_*.so
 
 echo
-echo "safecoin-genesis command-line arguments (spl-genesis-args.sh):"
+echo "solana-genesis command-line arguments (spl-genesis-args.sh):"
 cat spl-genesis-args.sh

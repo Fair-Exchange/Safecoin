@@ -1,6 +1,6 @@
 [package]
-name = "safecoin-tokens"
-description = "Safecoin: Enterprise Security for the Community by the Community"
+name = "solana-tokens"
+description = "Blockchain, Rebuilt for Scale"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 version = "1.6.0"

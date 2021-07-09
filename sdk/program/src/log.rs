@@ -1,4 +1,4 @@
-//! @brief Safecoin Rust-based BPF program logging
+//! @brief Solana Rust-based BPF program logging
 
 use crate::account_info::AccountInfo;
 

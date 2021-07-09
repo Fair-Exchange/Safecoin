@@ -73,7 +73,7 @@ impl SwitchForkDecision {
 }
 
 pub const VOTE_THRESHOLD_DEPTH: usize = 8;
-pub const SWITCH_FORK_THRESHOLD: f64 = 0.005;
+pub const SWITCH_FORK_THRESHOLD: f64 = 0.38;
 
 pub type Result<T> = std::result::Result<T, TowerError>;
 
@@ -475,11 +475,9 @@ impl Tower {
     }
 
     pub fn is_locked_out(&self, slot: Slot, ancestors: &HashMap<Slot, HashSet<Slot>>) -> bool {
-    trace!("is_locked_out: Ancestors_contains_key: {}",ancestors.contains_key(&slot));
         assert!(ancestors.contains_key(&slot));
 
         if !self.is_recent(slot) {
-	trace!("is_locked_out: Is Not Recent");
             return true;
         }
 
@@ -490,7 +488,6 @@ impl Tower {
                 continue;
             }
             if !ancestors[&slot].contains(&vote.slot) {
-	      trace!("is_locked_out: Ancestors doesn't contain vote slot");
                 return true;
             }
         }
@@ -696,14 +693,6 @@ impl Tower {
                     }
                 }
 
-
-
-                trace!(
-                    "switch_fork_threshold: SWITCH_FORK_THRESHOLD: {}, locked_out_stake: {} total_stake: {}",
-                    SWITCH_FORK_THRESHOLD, locked_out_stake, total_stake
-                );
-
-
                 if (locked_out_stake as f64 / total_stake as f64) > SWITCH_FORK_THRESHOLD {
                     SwitchForkDecision::SwitchProof(switch_proof)
                 } else {
@@ -752,14 +741,6 @@ impl Tower {
         voted_stakes: &VotedStakes,
         total_stake: Stake,
     ) -> bool {
-
-        trace!(
-            "check_vote_stake_threshold_init (Slot: {} total_stake: {} threshold_depth {}",
-            slot,
-            total_stake,
-	    self.threshold_depth
-        );
-
         let mut lockouts = self.lockouts.clone();
         lockouts.process_slot_vote_unchecked(slot);
         let vote = lockouts.nth_recent_vote(self.threshold_depth);
@@ -767,8 +748,8 @@ impl Tower {
             if let Some(fork_stake) = voted_stakes.get(&vote.slot) {
                 let lockout = *fork_stake as f64 / total_stake as f64;
                 trace!(
-                    "check_vote_stake_threshold_mid fork_stake slot: {}, vote slot: {}, lockout: {} fork_stake: {} total_stake: {} confirmation_count: {} threshold_size {}",
-                    slot, vote.slot, lockout, fork_stake, total_stake, vote.confirmation_count, self.threshold_size
+                    "fork_stake slot: {}, vote slot: {}, lockout: {} fork_stake: {} total_stake: {}",
+                    slot, vote.slot, lockout, fork_stake, total_stake
                 );
                 if vote.confirmation_count as usize > self.threshold_depth {
                     for old_vote in &self.lockouts.votes {

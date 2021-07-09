@@ -8,7 +8,7 @@ use {
     solana_sdk::{
         clock::{Slot, DEFAULT_TICKS_PER_SLOT, MS_PER_TICK},
         commitment_config::CommitmentConfig,
-        native_token::Safe,
+        native_token::Sol,
         pubkey::Pubkey,
     },
     std::{
@@ -119,7 +119,7 @@ impl Dashboard {
         fn get_validator_stats(
             rpc_client: &RpcClient,
             identity: &Pubkey,
-        ) -> client_error::Result<(Slot, Slot, Slot, u64, Safe, String)> {
+        ) -> client_error::Result<(Slot, Slot, Slot, u64, Sol, String)> {
             let processed_slot =
                 rpc_client.get_slot_with_commitment(CommitmentConfig::processed())?;
             let confirmed_slot =
@@ -158,7 +158,7 @@ impl Dashboard {
                 confirmed_slot,
                 finalized_slot,
                 transaction_count,
-                Safe(identity_balance),
+                Sol(identity_balance),
                 health,
             ))
         }

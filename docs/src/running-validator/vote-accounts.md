@@ -3,7 +3,7 @@ title: Vote Account Management
 ---
 
 This page describes how to set up an on-chain _vote account_.  Creating a vote
-account is needed if you plan to run a validator node on Safecoin.
+account is needed if you plan to run a validator node on Solana.
 
 ## Create a Vote Account
 A vote account can be created with the
@@ -49,7 +49,7 @@ stored as a "hot wallet" in a keypair file on the same system the validator
 process is running.
 
 Because a hot wallet is generally less secure than an offline or "cold" wallet,
-the validator operator may choose to store only enough SAFE on the identity
+the validator operator may choose to store only enough SOL on the identity
 account to cover voting fees for a limited amount of time, such as a few weeks
 or months.  The validator identity account could be periodically topped off
 from a more secure wallet.
@@ -73,7 +73,7 @@ validator process.
 The vote authority can be set to the same address as the validator identity.
 If the validator identity is also the vote authority, only one
 signature per vote transaction is needed in order to both sign the vote and pay
-the transaction fee.  Because transaction fees on Safecoin are assessed
+the transaction fee.  Because transaction fees on Solana are assessed
 per-signature, having one signer instead of two will result in half the transaction
 fee paid compared to setting the vote authority and validator identity to two
 different accounts.
@@ -87,7 +87,7 @@ The vote authority can be changed at most once per epoch.  If the authority is
 changed with [vote-authorize-voter](../cli/usage.md#solana-vote-authorize-voter),
 this will not take effect until the beginning of the next epoch.
 To support a smooth transition of the vote signing,
-`safecoin-validator` allows the `--authorized-voter` argument to be specified
+`solana-validator` allows the `--authorized-voter` argument to be specified
 multiple times.  This allows the validator process to keep voting successfully
 when the network reaches an epoch boundary at which the validator's vote
 authority account changes.
@@ -155,35 +155,35 @@ You will need access to the _withdraw authority_ keypair for the vote account to
 change the validator identity.  The follow steps assume that
 `~/withdraw-authority.json` is that keypair.
 
-1. Create the new validator identity keypair, `safecoin-keygen new -o ~/new-validator-keypair.json`.
-2. Ensure that the new identity account has been funded, `safecoin transfer ~/new-validator-keypair.json 500`.
-3. Run `safecoin vote-update-validator ~/vote-account-keypair.json ~/new-validator-keypair.json ~/withdraw-authority.json`
+1. Create the new validator identity keypair, `solana-keygen new -o ~/new-validator-keypair.json`.
+2. Ensure that the new identity account has been funded, `solana transfer ~/new-validator-keypair.json 500`.
+3. Run `solana vote-update-validator ~/vote-account-keypair.json ~/new-validator-keypair.json ~/withdraw-authority.json`
    to modify the validator identity in your vote account
 4. Restart your validator with the new identity keypair for the `--identity` argument
 
 ### Vote Account Authorized Voter
 The _vote authority_ keypair may only be changed at epoch boundaries and
-requires some additional arguments to `safecoin-validator` for a seamless
+requires some additional arguments to `solana-validator` for a seamless
 migration.
 
-1. Run `safecoin epoch-info`.  If there is not much time remaining time in the
+1. Run `solana epoch-info`.  If there is not much time remaining time in the
    current epoch, consider waiting for the next epoch to allow your validator
    plenty of time to restart and catch up.
-2. Create the new vote authority keypair, `safecoin-keygen new -o ~/new-vote-authority.json`.
+2. Create the new vote authority keypair, `solana-keygen new -o ~/new-vote-authority.json`.
 3. Determine the current _vote authority_ keypair by running `solana
    vote-account ~/vote-account-keypair.json`.  It may be validator's
    identity account (the default) or some other keypair.  The following steps
    assume that ` ~/validator-keypair.json` is that keypair.
-4. Run `safecoin vote-authorize-voter ~/vote-account-keypair.json ~/validator-keypair.json ~/new-vote-authority.json`.
+4. Run `solana vote-authorize-voter ~/vote-account-keypair.json ~/validator-keypair.json ~/new-vote-authority.json`.
    The new vote authority is scheduled to become active starting at the next epoch.
-5. `safecoin-validator` now needs to be restarted with the old and new vote
+5. `solana-validator` now needs to be restarted with the old and new vote
    authority keypairs, so that it can smoothly transition at the next epoch. Add
    the two arguments on restart: `--authorized-voter ~/validator-keypair.json
    --authorized-voter ~/new-vote-authority.json`
 6. After the cluster reaches the next epoch, remove the
    `--authorized-voter ~/validator-keypair.json` argument and restart
-   `safecoin-validator`, as the old vote authority keypair is no longer required.
+   `solana-validator`, as the old vote authority keypair is no longer required.
 
 
 ### Vote Account Authorized Withdrawer
-No special handling is required.  Use the `safecoin vote-authorize-withdrawer` command as needed.
+No special handling is required.  Use the `solana vote-authorize-withdrawer` command as needed.

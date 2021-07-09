@@ -1,7 +1,7 @@
 [package]
 name = "solana-exchange-program"
 version = "1.6.0"
-description = "Safecoin Exchange program"
+description = "Solana Exchange program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"

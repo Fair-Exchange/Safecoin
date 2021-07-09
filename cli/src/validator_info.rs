@@ -70,7 +70,7 @@ fn verify_keybase(
 ) -> Result<(), Box<dyn error::Error>> {
     if let Some(keybase_username) = keybase_username.as_str() {
         let url = format!(
-            "https://keybase.pub/{}/safecoin/validator-{:?}",
+            "https://keybase.pub/{}/solana/validator-{:?}",
             keybase_username, validator_pubkey
         );
         let client = Client::new();
@@ -135,11 +135,11 @@ impl ValidatorInfoSubCommands for App<'_, '_> {
     fn validator_info_subcommands(self) -> Self {
         self.subcommand(
             SubCommand::with_name("validator-info")
-                .about("Publish/get Validator info on Safecoin")
+                .about("Publish/get Validator info on Solana")
                 .setting(AppSettings::SubcommandRequiredElseHelp)
                 .subcommand(
                     SubCommand::with_name("publish")
-                        .about("Publish Validator info on Safecoin")
+                        .about("Publish Validator info on Solana")
                         .arg(
                             Arg::with_name("info_pubkey")
                                 .short("p")
@@ -195,7 +195,7 @@ impl ValidatorInfoSubCommands for App<'_, '_> {
                 )
                 .subcommand(
                     SubCommand::with_name("get")
-                        .about("Get and parse Safecoin Validator info")
+                        .about("Get and parse Solana Validator info")
                         .arg(
                             Arg::with_name("info_pubkey")
                                 .index(1)

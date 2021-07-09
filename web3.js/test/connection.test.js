@@ -9,7 +9,7 @@ import {
   SystemProgram,
   Transaction,
   sendAndConfirmTransaction,
-  LAMPORTS_PER_SAFE,
+  LAMPORTS_PER_SOL,
   Lockup,
   PublicKey,
   StakeProgram,
@@ -99,7 +99,7 @@ test('get program accounts', async () => {
     url,
     {
       method: 'requestAirdrop',
-      params: [account0.publicKey.toBase58(), LAMPORTS_PER_SAFE],
+      params: [account0.publicKey.toBase58(), LAMPORTS_PER_SOL],
     },
     {
       error: null,
@@ -112,7 +112,7 @@ test('get program accounts', async () => {
   );
   let signature = await connection.requestAirdrop(
     account0.publicKey,
-    LAMPORTS_PER_SAFE,
+    LAMPORTS_PER_SOL,
   );
   await connection.confirmTransaction(signature);
 
@@ -120,7 +120,7 @@ test('get program accounts', async () => {
     url,
     {
       method: 'requestAirdrop',
-      params: [account1.publicKey.toBase58(), 0.5 * LAMPORTS_PER_SAFE],
+      params: [account1.publicKey.toBase58(), 0.5 * LAMPORTS_PER_SOL],
     },
     {
       error: null,
@@ -133,7 +133,7 @@ test('get program accounts', async () => {
   );
   signature = await connection.requestAirdrop(
     account1.publicKey,
-    0.5 * LAMPORTS_PER_SAFE,
+    0.5 * LAMPORTS_PER_SOL,
   );
   await connection.confirmTransaction(signature);
 
@@ -241,7 +241,7 @@ test('get program accounts', async () => {
           account: {
             data: ['', 'base64'],
             executable: false,
-            lamports: LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
+            lamports: LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
             owner: programId.publicKey.toBase58(),
             rentEpoch: 20,
           },
@@ -252,7 +252,7 @@ test('get program accounts', async () => {
             data: ['', 'base64'],
             executable: false,
             lamports:
-              0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
+              0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
             owner: programId.publicKey.toBase58(),
             rentEpoch: 20,
           },
@@ -269,11 +269,11 @@ test('get program accounts', async () => {
   programAccounts.forEach(function (element) {
     if (element.pubkey.equals(account0.publicKey)) {
       expect(element.account.lamports).toBe(
-        LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
+        LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
       );
     } else if (element.pubkey.equals(account1.publicKey)) {
       expect(element.account.lamports).toBe(
-        0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
+        0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
       );
     } else {
       expect(element.pubkey.equals(account1.publicKey)).toBe(true);
@@ -289,11 +289,11 @@ test('get program accounts', async () => {
     programAccounts.forEach(function (element) {
       if (element.pubkey.equals(account0.publicKey)) {
         expect(element.account.lamports).toBe(
-          LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
+          LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
         );
       } else if (element.pubkey.equals(account1.publicKey)) {
         expect(element.account.lamports).toBe(
-          0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
+          0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
         );
       } else {
         expect(element.pubkey.equals(account1.publicKey)).toBe(true);
@@ -1042,7 +1042,7 @@ test('get parsed confirmed transaction coerces public keys of inner instructions
                 accounts: ['va12u4o9DipLEB2z4fuoHszroq1U9NcAB9aooFDPJSf'],
                 data:
                   '37u9WtQpcm6ULa3VtWDFAWoQc1hUvybPrA3dtx99tgHvvcE7pKRZjuGmn7VX2tC3JmYDYGG7',
-                programId: 'HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1',
+                programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
               },
             ],
             recentBlockhash: 'GeyAFFRY3WGpmam2hbgrKw4rbU2RKzfVLm5QLSeZwTZE',
@@ -1078,7 +1078,7 @@ test('get parsed confirmed transaction coerces public keys of inner instructions
     getMockData({
       parsed: {},
       program: 'spl-token',
-      programId: 'HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1',
+      programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
     }),
   ]);
 
@@ -1109,7 +1109,7 @@ test('get parsed confirmed transaction coerces public keys of inner instructions
         '6tVrjJhFm5SAvvdh6tysjotQurCSELpxuW3JaAAYeC1m',
       ],
       data: 'ai3535',
-      programId: 'HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1',
+      programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
     }),
   ]);
 
@@ -1467,7 +1467,7 @@ test('get performance samples limit too high', async () => {
 });
 
 const TOKEN_PROGRAM_ID = new PublicKey(
-  'HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1',
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
 );
 
 describe('token methods', () => {
@@ -1743,7 +1743,7 @@ test('stake activation should return activating for new accounts', async () => {
   const authorized = new Account();
   let signature = await connection.requestAirdrop(
     authorized.publicKey,
-    2 * LAMPORTS_PER_SAFE,
+    2 * LAMPORTS_PER_SOL,
   );
   await connection.confirmTransaction(signature);
 
@@ -2457,11 +2457,11 @@ test('multi-instruction transaction', async () => {
 
   let signature = await connection.requestAirdrop(
     accountFrom.publicKey,
-    LAMPORTS_PER_SAFE,
+    LAMPORTS_PER_SOL,
   );
   await connection.confirmTransaction(signature, 'singleGossip');
   expect(await connection.getBalance(accountFrom.publicKey)).toBe(
-    LAMPORTS_PER_SAFE,
+    LAMPORTS_PER_SOL,
   );
 
   const minimumAmount = await connection.getMinimumBalanceForRentExemption(
@@ -2511,11 +2511,11 @@ test('multi-instruction transaction', async () => {
     expect(response).not.toBeNull();
   }
 
-  // accountFrom may have less than LAMPORTS_PER_SAFE due to transaction fees
+  // accountFrom may have less than LAMPORTS_PER_SOL due to transaction fees
   expect(await connection.getBalance(accountFrom.publicKey)).toBeGreaterThan(0);
   expect(
     await connection.getBalance(accountFrom.publicKey),
-  ).toBeLessThanOrEqual(LAMPORTS_PER_SAFE);
+  ).toBeLessThanOrEqual(LAMPORTS_PER_SOL);
 
   expect(await connection.getBalance(accountTo.publicKey)).toBe(
     minimumAmount + 21,
@@ -2547,7 +2547,7 @@ test('account change notification', async () => {
 
   let signature = await connection.requestAirdrop(
     owner.publicKey,
-    LAMPORTS_PER_SAFE,
+    LAMPORTS_PER_SOL,
   );
   await connection.confirmTransaction(signature);
   try {
@@ -2619,7 +2619,7 @@ test('program account change notification', async () => {
 
   let signature = await connection.requestAirdrop(
     owner.publicKey,
-    LAMPORTS_PER_SAFE,
+    LAMPORTS_PER_SOL,
   );
   await connection.confirmTransaction(signature);
   try {
@@ -2719,7 +2719,7 @@ test('https request', async () => {
     return;
   }
 
-  const connection = new Connection('https://devnet.safecoin.org');
+  const connection = new Connection('https://devnet.solana.com');
   const version = await connection.getVersion();
   expect(version['solana-core']).toBeTruthy();
 });

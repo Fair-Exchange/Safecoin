@@ -1,7 +1,7 @@
 [package]
 name = "solana-logger"
 version = "1.6.0"
-description = "Safecoin Logger"
+description = "Solana Logger"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"

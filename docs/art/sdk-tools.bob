@@ -1,6 +1,6 @@
 
                  .-------------------------------------.
-                 | Safecoin Runtime                      |
+                 | Solana Runtime                      |
                  |                                     |
   .----------.   |   .------------.   .------------.   |
   | Program  |   |   | BPF        |   | Executable |   |

@@ -1,6 +1,6 @@
 use clap::{crate_description, crate_name, App, Arg};
 use solana_clap_utils::input_parsers::{lamports_of_sol, value_of};
-use safecoin_faucet::{
+use solana_faucet::{
     faucet::{run_faucet, Faucet, FAUCET_PORT},
     socketaddr,
 };
@@ -43,14 +43,14 @@ async fn main() {
                 .alias("cap")
                 .value_name("NUM")
                 .takes_value(true)
-                .help("Request limit for time slice, in SAFE"),
+                .help("Request limit for time slice, in SOL"),
         )
         .arg(
             Arg::with_name("per_request_cap")
                 .long("per-request-cap")
                 .value_name("NUM")
                 .takes_value(true)
-                .help("Request limit for a single request, in SAFE"),
+                .help("Request limit for a single request, in SOL"),
         )
         .get_matches();
 

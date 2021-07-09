@@ -1,6 +1,6 @@
-//! The `faucet` module provides an object for launching a Safecoin Faucet,
+//! The `faucet` module provides an object for launching a Solana Faucet,
 //! which is the custodian of any remaining lamports in a mint.
-//! The Safecoin Faucet builds and send airdrop transactions,
+//! The Solana Faucet builds and send airdrop transactions,
 //! checking requests against a request cap for a given time time_slice
 //! and (to come) an IP rate limit.
 
@@ -43,7 +43,7 @@ macro_rules! socketaddr {
 }
 
 pub const TIME_SLICE: u64 = 60;
-pub const REQUEST_CAP: u64 = solana_sdk::native_token::LAMPORTS_PER_SAFE * 10_000_000;
+pub const REQUEST_CAP: u64 = solana_sdk::native_token::LAMPORTS_PER_SOL * 10_000_000;
 pub const FAUCET_PORT: u16 = 9900;
 pub const FAUCET_PORT_STR: &str = "9900";
 

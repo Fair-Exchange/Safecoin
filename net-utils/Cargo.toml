@@ -1,7 +1,7 @@
 [package]
 name = "solana-net-utils"
 version = "1.6.0"
-description = "Safecoin Network Utilities"
+description = "Solana Network Utilities"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
@@ -27,11 +27,11 @@ url = "2.1.1"
 name = "solana_net_utils"
 
 [[bin]]
-name = "safecoin-ip-address"
+name = "solana-ip-address"
 path = "src/bin/ip_address.rs"
 
 [[bin]]
-name = "safecoin-ip-address-server"
+name = "solana-ip-address-server"
 path = "src/bin/ip_address_server.rs"
 
 [package.metadata.docs.rs]

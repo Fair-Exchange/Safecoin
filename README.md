@@ -1,10 +1,13 @@
 <p align="center">
   <a href="https://solana.com">
-    <img alt="Safecoin" src="https://raw.githubusercontent.com/Fair-Exchange/safecoinwiki/master/Logos/SafeCoin/SafeCoin-Logo-with-text.png"/>
+    <img alt="Solana" src="https://i.imgur.com/OMnvVEz.png" width="250" />
   </a>
 </p>
 
-[![twitter](https://img.shields.io/twitter/follow/safecoins?style=social)](https://twitter.com/safecoins)
+[![Solana crate](https://img.shields.io/crates/v/solana-core.svg)](https://crates.io/crates/solana-core)
+[![Solana documentation](https://docs.rs/solana-core/badge.svg)](https://docs.rs/solana-core)
+[![Build status](https://badge.buildkite.com/8cc350de251d61483db98bdfc895b9ea0ac8ffa4a32ee850ed.svg?branch=master)](https://buildkite.com/solana-labs/solana/builds?branch=master)
+[![codecov](https://codecov.io/gh/solana-labs/solana/branch/master/graph/badge.svg)](https://codecov.io/gh/solana-labs/solana)
 
 # Building
 
@@ -32,8 +35,8 @@ $ sudo apt-get install libssl-dev libudev-dev pkg-config zlib1g-dev llvm clang m
 ## **2. Download the source code.**
 
 ```bash
-$ git clone https://github.com/Fair-Exchange/SAFECOIN.git
-$ cd SAFECOIN
+$ git clone https://github.com/solana-labs/solana.git
+$ cd solana
 ```
 
 ## **3. Build.**
@@ -60,7 +63,7 @@ Start your own testnet locally, instructions are in the [online docs](https://do
 
 ### Accessing the remote development cluster
 * `devnet` - stable public cluster for development accessible via
-devnet.safecoin.org. Runs 24/7. Learn more about the [public clusters](https://docs.solana.com/clusters)
+devnet.solana.com. Runs 24/7. Learn more about the [public clusters](https://docs.solana.com/clusters)
 
 # Benchmarking
 
@@ -114,7 +117,7 @@ investment.
 Any content produced by SF or developer resources that SF provides, are
 for educational and inspiration purposes only. SF does not encourage,
 induce or sanction the deployment, integration or use of any such
-applications (including the code comprising the Safecoin blockchain
+applications (including the code comprising the Solana blockchain
 protocol) in violation of applicable laws or regulations and hereby
 prohibits any such deployment, integration or use. This includes use of
 any such applications by the reader (a) in violation of export control
@@ -131,14 +134,14 @@ prohibit U.S. persons (and other persons that are subject to such laws)
 from transacting with persons in certain countries and territories or
 that are on the SDN list. As a project based primarily on open-source
 software, it is possible that such sanctioned persons may nevertheless
-bypass prohibitions, obtain the code comprising the Safecoin blockchain
+bypass prohibitions, obtain the code comprising the Solana blockchain
 protocol (or other project code or applications) and deploy, integrate,
 or otherwise use it. Accordingly, there is a risk to individuals that
-other persons using the Safecoin blockchain protocol may be sanctioned
+other persons using the Solana blockchain protocol may be sanctioned
 persons and that transactions with such persons would be a violation of
 U.S. export controls and sanctions law. This risk applies to
 individuals, organizations, and other ecosystem participants that
-deploy, integrate, or use the Safecoin blockchain protocol code directly
-(e.g., as a node operator), and individuals that transact on the Safecoin
+deploy, integrate, or use the Solana blockchain protocol code directly
+(e.g., as a node operator), and individuals that transact on the Solana
 blockchain through light clients, third party interfaces, and/or wallet
 software.

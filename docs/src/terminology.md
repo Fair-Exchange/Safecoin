@@ -10,7 +10,7 @@ A persistent file addressed by [public key](terminology.md#public-key) and with 
 
 ## app
 
-A front-end application that interacts with a Safecoin cluster.
+A front-end application that interacts with a Solana cluster.
 
 ## bank state
 
@@ -116,7 +116,7 @@ A digital fingerprint of a sequence of bytes.
 
 ## inflation
 
-An increase in token supply over time used to fund rewards for validation and to fund continued development of Safecoin.
+An increase in token supply over time used to fund rewards for validation and to fund continued development of Solana.
 
 ## instruction
 
@@ -235,7 +235,7 @@ A set of constraints that once satisfied, signal to a program that some predefin
 
 ## sol
 
-The [native token](terminology.md#native-token) tracked by a [cluster](terminology.md#cluster) recognized by the company Safecoin.
+The [native token](terminology.md#native-token) tracked by a [cluster](terminology.md#cluster) recognized by the company Solana.
 
 ## stake
 

@@ -65,7 +65,7 @@ export function SearchBar() {
 }
 
 const SEARCHABLE_PROGRAMS: ProgramName[] = [
-  "Break Safecoin Program",
+  "Break Solana Program",
   "Config Program",
   "Stake Program",
   "System Program",

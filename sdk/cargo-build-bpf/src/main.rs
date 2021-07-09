@@ -213,7 +213,7 @@ fn build_bpf_package(config: &Config, target_directory: &Path, package: &cargo_m
 
         println!();
         println!("To deploy this program:");
-        println!("  $ safecoin program deploy {}", program_so.display());
+        println!("  $ solana program deploy {}", program_so.display());
     } else if config.dump {
         println!("Note: --dump is only available for crates with a cdylib target");
     }
@@ -276,7 +276,7 @@ fn main() {
                 .value_name("PATH")
                 .takes_value(true)
                 .default_value(&default_bpf_sdk)
-                .help("Path to the Safecoin BPF SDK"),
+                .help("Path to the Solana BPF SDK"),
         )
         .arg(
             Arg::with_name("dump")

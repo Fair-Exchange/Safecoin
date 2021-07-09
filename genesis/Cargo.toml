@@ -1,8 +1,8 @@
 [package]
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
-name = "safecoin-genesis"
-description = "Safecoin: Enterprise Security for the Community by the Community"
+name = "solana-genesis"
+description = "Blockchain, Rebuilt for Scale"
 version = "1.6.0"
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
@@ -30,11 +30,11 @@ solana-vote-program = { path = "../programs/vote", version = "1.6.0" }
 tempfile = "3.1.0"
 
 [[bin]]
-name = "safecoin-genesis"
+name = "solana-genesis"
 path = "src/main.rs"
 
 [lib]
-name = "safecoin_genesis"
+name = "solana_genesis"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

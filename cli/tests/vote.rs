@@ -8,7 +8,7 @@ use solana_client::{
     rpc_client::RpcClient,
 };
 use solana_core::test_validator::TestValidator;
-use safecoin_faucet::faucet::run_local_faucet;
+use solana_faucet::faucet::run_local_faucet;
 use solana_sdk::{
     account_utils::StateMut,
     commitment_config::CommitmentConfig,
@@ -64,7 +64,7 @@ fn test_vote_authorize_and_withdraw() {
         .max(1);
     check_recent_balance(expected_balance, &rpc_client, &vote_account_pubkey);
 
-    // Transfer in some more SAFE
+    // Transfer in some more SOL
     config.signers = vec![&default_signer];
     config.command = CliCommand::Transfer {
         amount: SpendAmount::Some(1_000),

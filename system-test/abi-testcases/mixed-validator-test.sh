@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
 # Basic empirical ABI system test - can validators on all supported versions of
-# Safecoin talk to each other?
+# Solana talk to each other?
 #
 
 set -e
 cd "$(dirname "$0")"
-SAFECOIN_ROOT="$(cd ../..; pwd)"
+SOLANA_ROOT="$(cd ../..; pwd)"
 
 logDir="$PWD"/logs
 ledgerDir="$PWD"/config
@@ -26,28 +26,28 @@ solanaInstallGlobalOpts=(
   --no-modify-path
 )
 
-# Install all the safecoin versions
+# Install all the solana versions
 bootstrapInstall() {
   declare v=$1
   if [[ ! -h $solanaInstallDataDir/active_release ]]; then
-    sh "$SAFECOIN_ROOT"/install/safecoin-install-init.sh "$v" "${solanaInstallGlobalOpts[@]}"
+    sh "$SOLANA_ROOT"/install/solana-install-init.sh "$v" "${solanaInstallGlobalOpts[@]}"
   fi
   export PATH="$solanaInstallDataDir/active_release/bin/:$PATH"
 }
 
 bootstrapInstall "$baselineVersion"
 for v in "${otherVersions[@]}"; do
-  safecoin-install-init "${solanaInstallGlobalOpts[@]}" "$v"
-  safecoin -V
+  solana-install-init "${solanaInstallGlobalOpts[@]}" "$v"
+  solana -V
 done
 
 
 ORIGINAL_PATH=$PATH
 solanaInstallUse() {
   declare version=$1
-  echo "--- Now using safecoin $version"
-  SAFECOIN_BIN="$solanaInstallDataDir/releases/$version/solana-release/bin"
-  export PATH="$SAFECOIN_BIN:$ORIGINAL_PATH"
+  echo "--- Now using solana $version"
+  SOLANA_BIN="$solanaInstallDataDir/releases/$version/solana-release/bin"
+  export PATH="$SOLANA_BIN:$ORIGINAL_PATH"
 }
 
 killSession() {
@@ -80,7 +80,7 @@ killSession
     fi
   done
 
-  safecoin --url http://127.0.0.1:8328 show-validators
+  solana --url http://127.0.0.1:8899 show-validators
 )
 
 # Ensure all versions can see the bootstrap validator
@@ -89,8 +89,8 @@ for v in "${otherVersions[@]}"; do
   echo "--- Looking for bootstrap validator on gossip"
   (
     set -x
-    "$SAFECOIN_BIN"/safecoin-gossip spy \
-      --entrypoint 127.0.0.1:10015 \
+    "$SOLANA_BIN"/solana-gossip spy \
+      --entrypoint 127.0.0.1:8001 \
       --num-nodes-exactly 1 \
       --timeout 30
   )
@@ -113,14 +113,14 @@ for v in "${otherVersions[@]}"; do
   (
     set -x
     tmux new-window -t abi -n "$v" " \
-      $SAFECOIN_BIN/safecoin-validator \
+      $SOLANA_BIN/solana-validator \
       --ledger $ledger \
       --no-snapshot-fetch \
-      --entrypoint 127.0.0.1:10015 \
+      --entrypoint 127.0.0.1:8001 \
       -o - 2>&1 | tee $logDir/$v.log \
     "
-    "$SAFECOIN_BIN"/safecoin-gossip spy \
-      --entrypoint 127.0.0.1:10015 \
+    "$SOLANA_BIN"/solana-gossip spy \
+      --entrypoint 127.0.0.1:8001 \
       --num-nodes-exactly $nodeCount \
       --timeout 30
 

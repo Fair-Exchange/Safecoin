@@ -32,7 +32,7 @@ use solana_sdk::{
     instruction::Instruction,
     loader_instruction,
     message::Message,
-    native_token::Safe,
+    native_token::Sol,
     pubkey::Pubkey,
     signature::{keypair_from_seed, read_keypair_file, Keypair, Signer},
     signers::Signers,
@@ -158,7 +158,7 @@ impl ProgramSubCommands for App<'_, '_> {
                             Arg::with_name("allow_excessive_balance")
                                 .long("allow-excessive-deploy-account-balance")
                                 .takes_value(false)
-                                .help("Use the designated program id even if the account already holds a large balance of SAFE")
+                                .help("Use the designated program id even if the account already holds a large balance of SOL")
                         ),
                 )
                 .subcommand(
@@ -1423,7 +1423,7 @@ fn complete_partial_program_init(
     {
         return Err(format!(
             "Buffer account has a balance: {:?}; it may already be in use",
-            Safe(account.lamports)
+            Sol(account.lamports)
         )
         .into());
     }
@@ -1553,11 +1553,11 @@ fn report_ephemeral_mnemonic(words: usize, mnemonic: bip39::Mnemonic) {
         divider
     );
     eprintln!(
-        "`safecoin-keygen recover` and the following {}-word seed phrase,",
+        "`solana-keygen recover` and the following {}-word seed phrase,",
         words
     );
     eprintln!(
-        "then pass it as the [BUFFER_SIGNER] argument to `safecoin deploy` or `safecoin write-buffer`\n{}\n{}\n{}",
+        "then pass it as the [BUFFER_SIGNER] argument to `solana deploy` or `solana write-buffer`\n{}\n{}\n{}",
         divider, phrase, divider
     );
 }

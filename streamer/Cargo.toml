@@ -1,7 +1,7 @@
 [package]
 name = "solana-streamer"
 version = "1.6.0"
-description = "Safecoin Streamer"
+description = "Solana Streamer"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"

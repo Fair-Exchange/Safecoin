@@ -2,7 +2,7 @@
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "solana-cli"
-description = "Safecoin: Enterprise Security for the Community by the Community"
+description = "Blockchain, Rebuilt for Scale"
 version = "1.6.0"
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
@@ -34,7 +34,7 @@ solana-cli-config = { path = "../cli-config", version = "1.6.0" }
 solana-cli-output = { path = "../cli-output", version = "1.6.0" }
 solana-client = { path = "../client", version = "1.6.0" }
 solana-config-program = { path = "../programs/config", version = "1.6.0" }
-safecoin-faucet = { path = "../faucet", version = "1.6.0" }
+solana-faucet = { path = "../faucet", version = "1.6.0" }
 solana-logger = { path = "../logger", version = "1.6.0" }
 solana-net-utils = { path = "../net-utils", version = "1.6.0" }
 solana_rbpf = "=0.2.4"
@@ -53,7 +53,7 @@ solana-core = { path = "../core", version = "1.6.0" }
 tempfile = "3.1.0"
 
 [[bin]]
-name = "safecoin"
+name = "solana"
 path = "src/main.rs"
 
 [package.metadata.docs.rs]

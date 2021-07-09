@@ -56,7 +56,7 @@ function analyze_packet_loss {
     done
 
     execution_step "Analyzing Packet Loss"
-    "${REPO_ROOT}"/solana-release/bin/safecoin-log-analyzer analyze -f ./iftop-logs/ | sort -k 2 -g
+    "${REPO_ROOT}"/solana-release/bin/solana-log-analyzer analyze -f ./iftop-logs/ | sort -k 2 -g
   )
 }
 
@@ -71,13 +71,13 @@ function wait_for_bootstrap_validator_stake_drop {
 
   # shellcheck disable=SC2154
   # shellcheck disable=SC2029
-  ssh "${sshOptions[@]}" "${validatorIpList[0]}" "RUST_LOG=info \$HOME/.cargo/bin/safecoin wait-for-max-stake $max_stake --url http://127.0.0.1:8328"
+  ssh "${sshOptions[@]}" "${validatorIpList[0]}" "RUST_LOG=info \$HOME/.cargo/bin/solana wait-for-max-stake $max_stake --url http://127.0.0.1:8899"
 }
 
 function get_slot {
   source "${REPO_ROOT}"/net/common.sh
   loadConfigFile
-  ssh "${sshOptions[@]}" "${validatorIpList[0]}" '$HOME/.cargo/bin/safecoin --url http://127.0.0.1:8328 slot'
+  ssh "${sshOptions[@]}" "${validatorIpList[0]}" '$HOME/.cargo/bin/solana --url http://127.0.0.1:8899 slot'
 }
 
 function get_bootstrap_validator_ip_address {
@@ -175,7 +175,7 @@ function upload_results_to_slack() {
     BUILDKITE_BUILD_URL="https://buildkite.com/solana-labs/"
   fi
 
-  GRAFANA_URL="https://metrics.safecoin.org:3000/d/monitor-${CHANNEL:-edge}/cluster-telemetry-${CHANNEL:-edge}?var-testnet=${TESTNET_TAG:-testnet-automation}&from=${TESTNET_START_UNIX_MSECS:-0}&to=${TESTNET_FINISH_UNIX_MSECS:-0}"
+  GRAFANA_URL="https://metrics.solana.com:3000/d/monitor-${CHANNEL:-edge}/cluster-telemetry-${CHANNEL:-edge}?var-testnet=${TESTNET_TAG:-testnet-automation}&from=${TESTNET_START_UNIX_MSECS:-0}&to=${TESTNET_FINISH_UNIX_MSECS:-0}"
 
   [[ -n $RESULT_DETAILS ]] || RESULT_DETAILS="Undefined"
   [[ -n $TEST_CONFIGURATION ]] || TEST_CONFIGURATION="Undefined"

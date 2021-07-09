@@ -298,7 +298,7 @@ fn check_env_path_for_bin_dir(config: &Config) {
 
     if !found {
         println!(
-            "\nPlease update your PATH environment variable to include the safecoin programs:\n    PATH=\"{}:$PATH\"\n",
+            "\nPlease update your PATH environment variable to include the solana programs:\n    PATH=\"{}:$PATH\"\n",
             config.active_release_bin_dir().to_str().unwrap()
         );
     }
@@ -528,7 +528,7 @@ pub fn init(
     explicit_release: Option<ExplicitRelease>,
 ) -> Result<(), String> {
     let config = {
-        // Write new config file only if different, so that running |safecoin-install init|
+        // Write new config file only if different, so that running |solana-install init|
         // repeatedly doesn't unnecessarily re-download
         let mut current_config = Config::load(config_file).unwrap_or_default();
         current_config.current_update_manifest = None;
@@ -591,7 +591,7 @@ pub fn info(
 
     if eval {
         println!(
-            "SAFECOIN_INSTALL_ACTIVE_RELEASE={}",
+            "SOLANA_INSTALL_ACTIVE_RELEASE={}",
             &config.active_release_dir().to_str().unwrap_or("")
         );
         config
@@ -601,7 +601,7 @@ pub fn info(
                 ExplicitRelease::Channel(channel) => channel,
             })
             .and_then(|channel| {
-                println!("SAFECOIN_INSTALL_ACTIVE_CHANNEL={}", channel,);
+                println!("SOLANA_INSTALL_ACTIVE_CHANNEL={}", channel,);
                 Option::<String>::None
             });
         return Ok(None);

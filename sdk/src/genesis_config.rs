@@ -61,7 +61,7 @@ impl FromStr for ClusterType {
     }
 }
 
-#[frozen_abi(digest = "Bj6E2ZCpEUuNFM7HREcL5Dg3CPsbndNuCR1aVmBBFFU4")]
+#[frozen_abi(digest = "FX48h9vjJZPvka4J9UvcPQkVcMdYLQujhbvUmVFq6qLx")]
 #[derive(Serialize, Deserialize, Debug, Clone, AbiExample)]
 pub struct GenesisConfig {
     /// when the network (bootstrap validator) was started relative to the UNIX Epoch
@@ -77,7 +77,7 @@ pub struct GenesisConfig {
     /// network speed configuration
     pub poh_config: PohConfig,
     /// this field exists only to ensure that the binary layout of GenesisConfig remains compatible
-    /// with the Safecoin v0.23 release line
+    /// with the Solana v0.23 release line
     pub __backwards_compat_with_v0_23: u64,
     /// transaction fee config
     pub fee_rate_governor: FeeRateGovernor,
@@ -246,7 +246,7 @@ impl fmt::Display for GenesisConfig {
              {:?}\n\
              {:?}\n\
              {:?}\n\
-             Capitalization: {} SAFE in {} accounts\n\
+             Capitalization: {} SOL in {} accounts\n\
              Native instruction processors: {:#?}\n\
              Rewards pool: {:#?}\n\
              ",
