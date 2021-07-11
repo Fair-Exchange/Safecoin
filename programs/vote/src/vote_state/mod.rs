@@ -778,7 +778,6 @@ pub fn create_account(
 
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use crate::vote_state;
@@ -787,6 +786,8 @@ mod tests {
         account_utils::StateMut,
         hash::hash,
         keyed_account::{get_signers, next_keyed_account},
+        vote_group_gen::VoteGroupGenerator,
+        process_instruction::{MockInvokeContext},
     };
     use std::cell::RefCell;
 

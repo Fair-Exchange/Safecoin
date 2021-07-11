@@ -1229,9 +1229,7 @@ log::trace!("P: {}", authorized_voter_pubkey.to_string().find("T").unwrap_or(3))
     let group_gen = bank.epoch_stakes(bank.epoch()).unwrap().get_group_genr();
     let in_group = group_gen.in_group_for_seed(vote.slots[0],*vote_account_pubkey);
 
-    let normal_voter : bool =  authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu"; // not "super" voter
-
-    if in_group && normal_voter {
+    if in_group {
         warn!(
             "I ({}) will vote if I can!!!",*vote_account_pubkey
 );
