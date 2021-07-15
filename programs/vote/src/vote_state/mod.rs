@@ -736,6 +736,8 @@ pub fn process_vote<S: std::hash::BuildHasher>(
 
 
     if clock.unix_timestamp > 1623922388 {
+     log::trace!("authorized_voter {}", authorized_voter);
+     log::trace!("authorized_voter_string {}", authorized_voter.to_string());
      log::trace!("slot: {}", clock.slot);
      log::trace!("last_hashy: {}", slot_hashes[0].1);
      log::trace!("last_hashzy: {}", slot_hashes[0].0);
