@@ -1509,13 +1509,8 @@ impl ReplayStage {
             };
 
 
-log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
-log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
-log::trace!("vote_hash: {}", vote.hash);
-log::trace!("H: {}", bank.last_blockhash().to_string().find("T").unwrap_or(3) % 10);
-log::trace!("P: {}", authorized_voter_pubkey.to_string().find("T").unwrap_or(3));
-
     let dt = Local::now();
+    log::trace!("timestamp_millis: {}", dt.timestamp_millis());
     if dt.timestamp_millis() > 1626222605000 {
     log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
     log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
