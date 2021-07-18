@@ -32,7 +32,7 @@ $ sudo apt-get install libssl-dev libudev-dev pkg-config zlib1g-dev llvm clang
 ## **2. Download the source code.**
 
 ```bash
-$ git clone https://github.com/Fair-Exchange/solana.git
+$ git clone https://github.com/Fair-Exchange/Safecoin.git
 $ cd solana
 ```
 

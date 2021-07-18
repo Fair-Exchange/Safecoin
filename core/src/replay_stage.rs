@@ -2,7 +2,6 @@
 use chrono::prelude::*;
 extern crate chrono;
 
-
 use crate::{
     broadcast_stage::RetransmitSlotsSender,
     cache_block_time_service::CacheBlockTimeSender,
@@ -75,8 +74,6 @@ pub(crate) enum HeaviestForkFailures {
 struct Finalizer {
     exit_sender: Arc<AtomicBool>,
 }
-
-
 
 impl Finalizer {
     fn new(exit_sender: Arc<AtomicBool>) -> Self {
@@ -207,13 +204,6 @@ impl ReplayTiming {
         }
     }
 }
-
-
-
-
-
-
-
 
 pub struct ReplayStage {
     t_replay: JoinHandle<Result<()>>,
@@ -1141,7 +1131,6 @@ impl ReplayStage {
         if authorized_voter_keypairs.is_empty() {
             return;
         }
-
         let vote_account = match bank.get_vote_account(vote_account_pubkey) {
             None => {
                 warn!(
@@ -1176,31 +1165,34 @@ impl ReplayStage {
             };
 
 
-log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
-log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
-log::trace!("vote_hash: {}", vote.hash);
-log::trace!("H: {}", bank.last_blockhash().to_string().find("T").unwrap_or(3) % 10);
-log::trace!("P: {}", authorized_voter_pubkey.to_string().find("T").unwrap_or(3));
-
     let dt = Local::now();
+    log::trace!("timestamp_millis: {}", dt.timestamp_millis());
     if dt.timestamp_millis() > 1626222605000 {
-	if ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) / 10 ) as usize !=  ( ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) % 10 as usize ) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
+    log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
+    log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
+    log::trace!("vote_hash: {}", vote.hash);
+    log::trace!("H_vote: {}", ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 10 ));
+    log::trace!("P_vote: {}", ( ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) % 10 as usize );
+
+	if ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize !=  ( ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) % 10 as usize ) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
    		warn!(
-                   "Vote account {} has no authorized voter for epoch {}.  Unable to vote",
+                   "Vote account {} not selected for slot {}.",
                     vote_account_pubkey,
-                    bank.epoch()
+                    bank.slot()
 		);
                 return;
 		}
     }else{ 
 	if (vote.hash.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter_pubkey.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu"  {
    		warn!(
-                    "Vote account has no authorized voter for slot.  Unable to vote"
+                   "Vote account {} not selected for slot {}.",
+                    vote_account_pubkey,
+                    bank.slot()
 		);
                 return;
-		}	    
+		}
+     }
 
-    }
 
         let authorized_voter_keypair = match authorized_voter_keypairs
             .iter()
@@ -2000,11 +1992,6 @@ log::trace!("P: {}", authorized_voter_pubkey.to_string().find("T").unwrap_or(3))
         self.t_replay.join().map(|_| ())
     }
 }
-
-
-
-
-
 
 #[cfg(test)]
 pub(crate) mod tests {
