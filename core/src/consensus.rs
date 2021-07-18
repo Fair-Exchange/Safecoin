@@ -735,14 +735,12 @@ impl Tower {
         voted_stakes: &VotedStakes,
         total_stake: Stake,
     ) -> bool {
-
         trace!(
             "check_vote_stake_threshold_init (Slot: {} total_stake: {} threshold_depth {}",
             slot,
             total_stake,
 	    self.threshold_depth
         );
-
         let mut lockouts = self.lockouts.clone();
         lockouts.process_slot_vote_unchecked(slot);
         let vote = lockouts.nth_recent_vote(self.threshold_depth);
