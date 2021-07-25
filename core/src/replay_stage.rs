@@ -50,6 +50,7 @@ use solana_sdk::{
     signature::Signature,
     signature::{Keypair, Signer},
     timing::timestamp,
+    instruction::VoterGroup,
     transaction::Transaction,
 };
 use solana_vote_program::vote_state::Vote;
@@ -1470,6 +1471,23 @@ impl ReplayStage {
         has_new_vote_been_rooted: bool,
     ) -> Option<Transaction> {
         if authorized_voter_keypairs.is_empty() {
+            return None;
+        }
+
+        log::trace!("authorized_voter_pubkey {}", vote_account_pubkey);
+        log::trace!("authorized_voter_pubkey_string {}", vote_account_pubkey.to_string());
+        log::trace!("vote_hash: {}", vote.hash);
+  
+        let in_group = bank.in_group(vote.slots[0],vote.hash,*vote_account_pubkey);
+
+        if in_group {
+            warn!(
+                "I ({}) will vote if I can!!!",*vote_account_pubkey
+            );
+        } else {
+            warn!(
+                "Vote account has no authorized voter for slot.  Unable to vote"
+            );       
             return None;
         }
 

@@ -1,11 +1,14 @@
 //! Defines a composable Instruction type and a memory-efficient CompiledInstruction.
 
 use crate::sanitize::Sanitize;
-use crate::{pubkey::Pubkey, short_vec};
+use crate::{pubkey::Pubkey, short_vec,clock::Slot,hash::Hash};
 use bincode::serialize;
 use borsh::BorshSerialize;
 use serde::Serialize;
 use thiserror::Error;
+pub trait VoterGroup {
+    fn in_group(&self,slot: Slot,hash : Hash, test_key: Pubkey) -> bool ;
+}
 
 /// Reasons the runtime might have rejected an instruction.
 #[derive(

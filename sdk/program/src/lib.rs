@@ -45,6 +45,8 @@ pub mod slot_history;
 pub mod stake_history;
 pub mod system_instruction;
 pub mod system_program;
+pub mod vote_group_gen;
+
 pub mod sysvar;
 
 pub mod config {
