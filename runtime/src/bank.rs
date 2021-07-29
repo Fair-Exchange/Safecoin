@@ -4421,7 +4421,7 @@ impl Bank {
     }
 
     pub fn calculate_and_verify_capitalization(&self) -> bool {
-        let calculated = self.calculate_capitalization() - 15;
+        let calculated = self.calculate_capitalization() ;// - 15; this hack is.... a temp hack
         let expected = self.capitalization();
         if calculated == expected {
             true
