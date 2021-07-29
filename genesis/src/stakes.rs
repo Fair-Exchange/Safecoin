@@ -68,7 +68,7 @@ pub fn create_and_add_stakes(
     // staker is a system account
     let staker_rent_reserve = genesis_config.rent.minimum_balance(0).max(1);
     let staker_fees = calculate_staker_fees(genesis_config, 1.0);
-
+    print!("adding :\n{:?}",staker_info);
     let mut stakes_lamports = total_lamports - staker_fees;
 
     // lamports required to run staking operations for one year
