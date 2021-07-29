@@ -462,6 +462,8 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
         self.voter_grp
     }
 }
+
+
 pub struct ThisLogger {
     log_collector: Option<Rc<LogCollector>>,
 }

@@ -39,6 +39,7 @@ fn get_highest_confirmed_root(mut rooted_stake: Vec<(Slot, u64)>, total_stake: u
     for (root, stake) in rooted_stake {
         stake_sum += stake;
         if (stake_sum as f64 / total_stake as f64) > VOTE_THRESHOLD_SIZE {
+             log::warn!("cme root confirmed {} with {} votes vs {} stake",root,stake_sum, total_stake);
             return root;
         }
     }

@@ -17,6 +17,7 @@ use solana_sdk::{
     rent::Rent,
     slot_hashes::SlotHash,
     sysvar::clock::Clock,
+    instruction::VoterGroup,
 };
 use std::boxed::Box;
 use std::cmp::Ordering;
@@ -723,9 +724,10 @@ pub fn process_vote<S: std::hash::BuildHasher>(
     clock: &Clock,
     vote: &Vote,
     signers: &HashSet<Pubkey, S>,
+    group: &dyn VoterGroup,
 ) -> Result<(), InstructionError> {
     let versioned = State::<VoteStateVersions>::state(vote_account)?;
-
+    log::warn!("cme process_vote");
     if versioned.is_uninitialized() {
         return Err(InstructionError::UninitializedAccount);
     }
@@ -733,9 +735,6 @@ pub fn process_vote<S: std::hash::BuildHasher>(
     let mut vote_state = versioned.convert_to_current();
     let authorized_voter = vote_state.get_and_update_authorized_voter(clock.epoch)?;
 
-
-
-    if clock.unix_timestamp > 1623922388 {
      log::trace!("authorized_voter {}", authorized_voter);
      log::trace!("authorized_voter_string {}", authorized_voter.to_string());
      log::trace!("slot: {}", clock.slot);
@@ -745,19 +744,14 @@ pub fn process_vote<S: std::hash::BuildHasher>(
      log::trace!("P: {}", ( ( ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter.to_string().chars().last().unwrap() as usize + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter.to_string().chars().last().unwrap() as usize + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) % 10 as usize);
      log::trace!("unix_timestamp: {}", clock.unix_timestamp);
 
-if  ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize != ( ( ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter.to_string().chars().last().unwrap() as usize + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter.to_string().chars().last().unwrap() as usize + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) % 10 as usize {
-
-if authorized_voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
-	      return Err(InstructionError::UninitializedAccount);
-              }
-	    }
-      }else{
-if (slot_hashes[0].1.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) {
-	if authorized_voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
-	      return Err(InstructionError::UninitializedAccount);
-              }
-	    }
-      }
+     let hash = slot_hashes[0].1;
+     if !group.in_group(vote.slots[0],hash,authorized_voter) {
+         log::warn!("cme not in group for slot {}",vote.slots[0]);
+         //return Err(InstructionError::UninitializedAccount);
+     } else {
+         log::warn!("cme in group for slot {}",vote.slots[0]);
+     }
+     vote_state.process_vote(vote, slot_hashes, clock.epoch)?;
 
 log::info!("authorized_voter: {}", &authorized_voter);
     verify_authorized_signer(&authorized_voter, signers)?;
