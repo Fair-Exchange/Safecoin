@@ -1,6 +1,4 @@
 //! The `replay_stage` replays transactions broadcast by the leader.
-use chrono::prelude::*;
-extern crate chrono;
 
 use crate::{
     broadcast_stage::RetransmitSlotsSender,
@@ -50,8 +48,8 @@ use solana_sdk::{
     signature::Signature,
     signature::{Keypair, Signer},
     timing::timestamp,
-    instruction::VoterGroup,
     transaction::Transaction,
+    instruction::VoterGroup,
 };
 use solana_vote_program::vote_state::Vote;
 use std::{
@@ -87,8 +85,6 @@ pub(crate) enum HeaviestForkFailures {
 struct Finalizer {
     exit_sender: Arc<AtomicBool>,
 }
-
-
 
 impl Finalizer {
     fn new(exit_sender: Arc<AtomicBool>) -> Self {
@@ -286,13 +282,6 @@ impl ReplayTiming {
         }
     }
 }
-
-
-
-
-
-
-
 
 pub struct ReplayStage {
     t_replay: JoinHandle<Result<()>>,
@@ -1440,7 +1429,6 @@ impl ReplayStage {
         Self::update_commitment_cache(
             bank.clone(),
             bank_forks.read().unwrap().root(),
-            progress.get_fork_stats(bank.slot()).unwrap().total_stake,
             lockouts_sender,
         );
         update_commitment_cache_time.stop();
@@ -1473,7 +1461,6 @@ impl ReplayStage {
         if authorized_voter_keypairs.is_empty() {
             return None;
         }
-
         log::trace!("authorized_voter_pubkey {}", vote_account_pubkey);
         log::trace!("authorized_voter_pubkey_string {}", vote_account_pubkey.to_string());
         log::trace!("vote_hash: {}", vote.hash);
@@ -1523,35 +1510,6 @@ impl ReplayStage {
                 );
                 return None;
             };
-
-
-    let dt = Local::now();
-    log::trace!("timestamp_millis: {}", dt.timestamp_millis());
-    if dt.timestamp_millis() > 1626222605000 {
-    log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
-    log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
-    log::trace!("vote_hash: {}", vote.hash);
-    log::trace!("H_vote: {}", ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 10 ));
-    log::trace!("P_vote: {}", ( ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) % 10 as usize );
-
-	if ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize !=  ( ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) % 10 as usize ) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
-   		warn!(
-                   "Vote account {} not selected for slot {}.",
-                    vote_account_pubkey,
-                    bank.slot()
-		);
-                return None;
-		}
-    }else{ 
-	if (vote.hash.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter_pubkey.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu"  {
-   		warn!(
-	           "Vote account {} not selected for slot {}.",
-                    vote_account_pubkey,
-                    bank.slot()
-		);
-                return None;
-		}	    
-	}
 
         let authorized_voter_keypair = match authorized_voter_keypairs
             .iter()
@@ -1708,11 +1666,10 @@ impl ReplayStage {
     fn update_commitment_cache(
         bank: Arc<Bank>,
         root: Slot,
-        total_stake: Stake,
         lockouts_sender: &Sender<CommitmentAggregationData>,
     ) {
         if let Err(e) =
-            lockouts_sender.send(CommitmentAggregationData::new(bank, root, total_stake))
+            lockouts_sender.send(CommitmentAggregationData::new(bank, root ))
         {
             trace!("lockouts_sender failed: {:?}", e);
         }
@@ -2596,7 +2553,7 @@ impl ReplayStage {
             // Epoch 63
             ClusterType::Testnet => 21_692_256,
             // 400_000 slots into epoch 61
-            ClusterType::MainnetBeta => 100,
+            ClusterType::MainnetBeta => 26_752_000,
         }
     }
 
@@ -2605,11 +2562,6 @@ impl ReplayStage {
         self.t_replay.join().map(|_| ())
     }
 }
-
-
-
-
-
 
 #[cfg(test)]
 pub(crate) mod tests {
@@ -3399,7 +3351,6 @@ pub(crate) mod tests {
             ReplayStage::update_commitment_cache(
                 arc_bank.clone(),
                 0,
-                leader_lamports,
                 &lockouts_sender,
             );
             arc_bank.freeze();

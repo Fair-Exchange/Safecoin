@@ -27,6 +27,7 @@ use crate::{
     system_instruction_processor::{get_system_account_kind, SystemAccountKind},
     transaction_batch::TransactionBatch,
     vote_account::ArcVoteAccount,
+        commitment::{VOTE_GROUP_COUNT,VOTE_THRESHOLD_SIZE},
 };
 use byteorder::{ByteOrder, LittleEndian};
 use itertools::Itertools;
@@ -911,21 +912,6 @@ pub struct Bank {
 impl Default for BlockhashQueue {
     fn default() -> Self {
         Self::new(MAX_RECENT_BLOCKHASHES)
-    }
-}
-
-impl VoterGroup for Bank {
-        
-    /// determine if a voter is in the group for a given slot
-    fn in_group(&self, slot : Slot, hash: Hash, voter: Pubkey) -> bool {
-        let epoch = self.epoch_schedule.get_epoch(slot);
-        match self.epoch_stakes.get(&epoch){
-            None => panic!("No epoch"),
-            Some(stakes) =>{
-                let vgr = stakes.get_group_genr();
-                return vgr.in_group_for_hash(hash, voter) 
-            }
-        }
     }
 }
 
@@ -3207,7 +3193,7 @@ impl Bank {
         let fee_config = FeeConfig {
             secp256k1_program_enabled: self.secp256k1_program_enabled(),
         };
-
+        
         let results = txs
             .zip(executed)
             .map(|(tx, (res, nonce_rollback))| {
@@ -4421,7 +4407,7 @@ impl Bank {
     }
 
     pub fn calculate_and_verify_capitalization(&self) -> bool {
-        let calculated = self.calculate_capitalization() - 15;
+        let calculated = self.calculate_capitalization(); // - 15;
         let expected = self.capitalization();
         if calculated == expected {
             true
@@ -4467,7 +4453,7 @@ impl Bank {
                 &self.ancestors,
                 Some(self.capitalization()),
             );
-        if total_lamports - 15 != self.capitalization() {
+        if total_lamports != self.capitalization() {
             datapoint_info!(
                 "capitalization_mismatch",
                 ("slot", self.slot(), i64),
@@ -5081,6 +5067,49 @@ impl Bank {
             ClusterType::MainnetBeta => self
                 .feature_set
                 .is_active(&feature_set::consistent_recent_blockhashes_sysvar::id()),
+        }
+    }
+
+    ///  This simply returns _me_ but in the limited capacity of
+    ///  providing the vote threshold:
+    ///  sort of a hack to get around the fact that the banks are shared
+    ///  with everything and *between threads* but I don't want to test everything.
+    pub fn threshold_delegate(&self) -> &dyn BankVoteThreshold {
+        self
+    }
+}
+
+pub trait BankVoteThreshold {
+    fn epoch_vote_threshold(&self) -> Option<f64>;
+}
+
+impl BankVoteThreshold for Bank {
+
+    /// The stake weight necessary to root a block in a given epoch 
+    /// and to be pedantic it is defined as:
+    /// the average stake for each authorized voter
+    /// multiplied by the expected number of voters (a subset of all authorized voters)
+    /// multiplied by the majority ratio (aka VOTE_THRESHOLD_SIZE)
+    fn epoch_vote_threshold(&self) -> Option<f64> {
+        if let Some(epoch_stakes) = self.epoch_stakes(self.epoch()){
+            let avg_stake : f64 = epoch_stakes.total_stake() as f64 / epoch_stakes.epoch_authorized_voters().len() as f64;
+            let res = avg_stake * VOTE_GROUP_COUNT as f64 * VOTE_THRESHOLD_SIZE as f64;
+            return Some(res);
+        }
+        None
+    }
+}
+impl VoterGroup for Bank {
+        
+    /// determine if a voter is in the group for a given slot
+    fn in_group(&self, slot : Slot, hash: Hash, voter: Pubkey) -> bool {
+        let epoch = self.epoch_schedule.get_epoch(slot);
+        match self.epoch_stakes.get(&epoch){
+            None => panic!("No epoch"),
+            Some(stakes) =>{
+                let vgr = stakes.get_group_genr();
+                return vgr.in_group_for_hash(hash, voter) 
+            }
         }
     }
 }
@@ -7060,10 +7089,10 @@ pub(crate) mod tests {
         // not being eagerly-collected for exact rewards calculation
         bank0.restore_old_behavior_for_fragile_tests();
 
-        let sysvar_and_native_proram_delta0 = 10;
+        let sysvar_and_native_program_delta0 = 10;
         assert_eq!(
             bank0.capitalization(),
-            42 * 1_000_000_000 + sysvar_and_native_proram_delta0
+            42 * 1_000_000_000 + sysvar_and_native_program_delta0
         );
         assert!(bank0.rewards.read().unwrap().is_empty());
 

@@ -1,10 +1,11 @@
 use solana_sdk::{
     account::AccountSharedData,
-    instruction::{CompiledInstruction, Instruction, InstructionError,VoterGroup},
+    instruction::{CompiledInstruction, Instruction, InstructionError},
     keyed_account::KeyedAccount,
     message::Message,
     pubkey::Pubkey,
     sysvar::Sysvar,
+    instruction::VoterGroup,
     hash::Hash,
     clock::Slot,
 };
@@ -74,7 +75,7 @@ pub trait InvokeContext {
     /// Get sysvar data
     fn get_sysvar_data(&self, id: &Pubkey) -> Option<Rc<Vec<u8>>>;
 
-    fn voter_group(&self) -> & dyn VoterGroup ;
+    fn voter_group(&self) -> & dyn VoterGroup;
 }
 
 /// Convenience macro to log a message with an `Rc<RefCell<dyn Logger>>`
@@ -338,13 +339,6 @@ pub fn mock_set_sysvar<T: Sysvar>(
     Ok(())
 }
 
-impl VoterGroup for MockInvokeContext {
-
-    fn in_group(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
-        true
-    }
-}
-
 impl InvokeContext for MockInvokeContext {
     fn push(&mut self, _key: &Pubkey) -> Result<(), InstructionError> {
         self.invoke_depth = self.invoke_depth.saturating_add(1);
@@ -415,3 +409,9 @@ impl InvokeContext for MockInvokeContext {
     }
 }
 
+impl VoterGroup for MockInvokeContext {
+
+    fn in_group(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
+        true
+    }
+}

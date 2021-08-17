@@ -457,7 +457,7 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
             None
         }
     }
-
+    
     fn voter_group(&self) -> & dyn VoterGroup {
         self.voter_grp
     }
@@ -1085,8 +1085,7 @@ impl MessageProcessor {
         demote_sysvar_write_locks: bool,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
-        voter_grp: &dyn VoterGroup,
-
+        voter_grp : &dyn VoterGroup,
     ) -> Result<(), InstructionError> {
         // Fixup the special instructions key if present
         // before the account pre-values are taken care of
@@ -1170,7 +1169,7 @@ impl MessageProcessor {
         timings: &mut ExecuteDetailsTimings,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
-        voter_grp: & dyn VoterGroup,
+        voter_grp: &dyn VoterGroup,
     ) -> Result<(), TransactionError> {
         let demote_sysvar_write_locks = feature_set.is_active(&demote_sysvar_write_locks::id());
         for (instruction_index, instruction) in message.instructions.iter().enumerate() {
@@ -1210,18 +1209,23 @@ mod tests {
         instruction::{AccountMeta, Instruction, InstructionError},
         message::Message,
         native_loader::create_loadable_account_for_test,
-        clock::Slot,
-        hash::Hash,
     };
-    pub struct MockVoterGrp {
-        pub ok : bool,
+
+    struct MockVoterGroup {
+        in_group: bool,
     }
-    
-    impl VoterGroup for MockVoterGrp {
-        fn in_group(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
-            self.ok
+    impl MockVoterGroup {
+        pub fn new() -> Self {
+            Self {
+                in_group: true,
+            }
         }
     }
+    impl VoterGroup for MockVoterGroup {
+        fn in_group(&self, _: solana_sdk::clock::Slot, _: solana_sdk::hash::Hash, _: solana_sdk::pubkey::Pubkey) -> bool {
+            self.in_group
+        }
+    }    
     #[test]
     fn test_invoke_context() {
         const MAX_DEPTH: usize = 10;
@@ -1245,7 +1249,7 @@ mod tests {
         }
 
         let ancestors = Ancestors::default();
-        let mock_vg = MockVoterGrp{ok: true};
+        let mvg = MockVoterGroup::new();
         let mut invoke_context = ThisInvokeContext::new(
             &program_ids[0],
             Rent::default(),
@@ -1260,7 +1264,7 @@ mod tests {
             Arc::new(FeatureSet::all_enabled()),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mock_vg,
+            &mvg,
         );
 
         // Check call depth increases and has a limit
@@ -1828,7 +1832,8 @@ mod tests {
             )],
             Some(&from_pubkey),
         );
-        let mock_vg = MockVoterGrp{ok: true};
+
+        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -1843,7 +1848,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mock_vg,
+            &mvg,
         );
         assert_eq!(result, Ok(()));
         assert_eq!(accounts[0].borrow().lamports, 100);
@@ -1858,6 +1863,7 @@ mod tests {
             Some(&from_pubkey),
         );
 
+        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -1872,7 +1878,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mock_vg,
+            &mvg,
         );
         assert_eq!(
             result,
@@ -1891,6 +1897,7 @@ mod tests {
             Some(&from_pubkey),
         );
 
+        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -1905,7 +1912,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mock_vg,
+            &mvg,
         );
         assert_eq!(
             result,
@@ -2011,7 +2018,7 @@ mod tests {
             )],
             Some(&from_pubkey),
         );
-        let mock_vg = MockVoterGrp{ok: true};
+        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2026,7 +2033,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mock_vg,
+            &mvg,
         );
         assert_eq!(
             result,
@@ -2045,6 +2052,7 @@ mod tests {
             )],
             Some(&from_pubkey),
         );
+        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2059,7 +2067,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mock_vg,
+            &mvg,
         );
         assert_eq!(result, Ok(()));
 
@@ -2076,6 +2084,7 @@ mod tests {
             Some(&from_pubkey),
         );
         let ancestors = Ancestors::default();
+        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2090,7 +2099,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mock_vg,
+            &mvg,
         );
         assert_eq!(result, Ok(()));
         assert_eq!(accounts[0].borrow().lamports, 80);
@@ -2165,7 +2174,7 @@ mod tests {
         let programs: Vec<(_, ProcessInstructionWithContext)> =
             vec![(callee_program_id, mock_process_instruction)];
         let ancestors = Ancestors::default();
-        let mock_vg = MockVoterGrp{ok: true};
+        let mvg = MockVoterGroup::new();
         let mut invoke_context = ThisInvokeContext::new(
             &caller_program_id,
             Rent::default(),
@@ -2184,7 +2193,7 @@ mod tests {
             Arc::new(FeatureSet::all_enabled()),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mock_vg,
+            &mvg,
         );
         let metas = vec![
             AccountMeta::new(owned_key, false),

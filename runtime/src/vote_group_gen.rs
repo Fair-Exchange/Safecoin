@@ -4,13 +4,14 @@
 //! and iteratively selects the rest of the group by shifting that distance
 //! its treating the set of voters as a ring
 
-use crate::{pubkey::Pubkey};
-use crate::hash::Hash;
+use solana_sdk::{
+    pubkey::Pubkey,
+    hash::Hash,
+};
 use std::collections::HashMap;
-
 use std::convert::TryInto;
+use std::str::FromStr;
 
-pub static OPTIMAL_VOTE_GROUP_SIZE: usize = 11;
 pub static SAFECOIN_NEVER_VOTER: &str = "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
 
 //#[derive(Clone, Debug, Serialize, Deserialize, AbiExample, PartialEq)]
@@ -25,6 +26,10 @@ pub struct VoteGroupGenerator {
 }
 
 impl VoteGroupGenerator {
+    pub fn never_voter() -> Pubkey {
+         solana_sdk::pubkey::Pubkey::from_str(SAFECOIN_NEVER_VOTER).unwrap()
+    }
+
     pub fn new(map: &HashMap<Pubkey, Pubkey>, size: usize) -> VoteGroupGenerator {
         let collected: Vec<_> = map.into_iter().collect();
         let mut temp = Vec::new();
@@ -92,7 +97,7 @@ impl VoteGroupGenerator {
 
 
 
-    fn in_group_for_seed(&self, seed: u64, test_key: Pubkey) -> bool {
+    pub fn in_group_for_seed(&self, seed: u64, test_key: Pubkey) -> bool {
    
         let voters_len = self.possible_voters.len();
         let mut loc = (seed % voters_len as u64) as usize;
@@ -115,7 +120,6 @@ impl VoteGroupGenerator {
         false
     }
 }
-
 
     #[test]
     fn test_vgg_multi() {
@@ -156,8 +160,7 @@ impl VoteGroupGenerator {
 
     #[test]
     fn test_vgg_magic() {
-        use std::str::FromStr;
-        let magic = Pubkey::from_str(SAFECOIN_NEVER_VOTER).unwrap();
+        let magic = solana_sdk::pubkey::Pubkey::from_str(SAFECOIN_NEVER_VOTER).unwrap();
         let mut hm: HashMap<Pubkey, Pubkey> = HashMap::new();
         hm.insert(magic, Pubkey::new_unique());
 

@@ -6,8 +6,31 @@ use bincode::serialize;
 use borsh::BorshSerialize;
 use serde::Serialize;
 use thiserror::Error;
+
 pub trait VoterGroup {
     fn in_group(&self,slot: Slot,hash : Hash, test_key: Pubkey) -> bool ;
+}
+#[derive(Debug, Clone)]
+pub struct MockVoterGrp {
+    pub a : u8,
+}
+
+impl VoterGroup for MockVoterGrp {
+    fn in_group(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
+        true
+    }
+}
+impl Default for MockVoterGrp {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl MockVoterGrp {
+    pub fn new() -> Self {
+        MockVoterGrp {
+            a: 1,
+        }
+    }
 }
 
 /// Reasons the runtime might have rejected an instruction.

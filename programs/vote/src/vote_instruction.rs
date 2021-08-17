@@ -329,6 +329,7 @@ pub fn process_instruction(
                 &from_keyed_account::<Clock>(next_keyed_account(keyed_accounts)?)?,
                 &vote,
                 &signers,
+                invoke_context.voter_group(),
             )
         }
         VoteInstruction::Withdraw(lamports) => {
@@ -341,6 +342,7 @@ pub fn process_instruction(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bincode::serialize;
     use solana_sdk::{
         account::{self, Account, AccountSharedData},
         process_instruction::MockInvokeContext,
@@ -490,6 +492,7 @@ mod tests {
             Err(InstructionError::InvalidAccountData),
         );
     }
+
 
     #[test]
     fn test_minimum_balance() {
