@@ -340,7 +340,7 @@ fn feature_activation_allowed(rpc_client: &RpcClient, quiet: bool) -> Result<boo
                  stake_percent,
                  rpc_nodes_percent,
                  ..
-             }| (*stake_percent >= 95., *rpc_nodes_percent >= 95.),
+             }| (*stake_percent >= 60., *rpc_nodes_percent >= 60.),
         )
         .unwrap_or((false, false));
 
