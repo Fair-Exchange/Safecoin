@@ -44,6 +44,8 @@ solana-measure = { path = "../measure", version = "=1.6.16" }
 solana-metrics = { path = "../metrics", version = "=1.6.16" }
 solana-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.6.16" }
 solana-sdk = { path = "../sdk", version = "=1.6.16" }
+solana-exchange-program = { path = "../programs/exchange", version = "=1.6.16" }
+solana-budget-program = { path = "../programs/budget", version = "=1.6.16" }
 solana-stake-program = { path = "../programs/stake", version = "=1.6.16" }
 solana-vote-program = { path = "../programs/vote", version = "=1.6.16" }
 solana-secp256k1-program = { path = "../programs/secp256k1", version = "=1.6.16" }
