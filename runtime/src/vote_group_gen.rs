@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str::FromStr;
 
-pub static SAFECOIN_NEVER_VOTER: &str = "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
+pub static SAFECOIN_ALWAYS_VOTER: &str = "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
 
 //#[derive(Clone, Debug, Serialize, Deserialize, AbiExample, PartialEq)]
 //pub struct ArcPubkey(std::sync::Arc<Pubkey>);
@@ -21,23 +21,27 @@ pub static SAFECOIN_NEVER_VOTER: &str = "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee
 pub struct VoteGroupGenerator {
     possible_voters: Vec<Pubkey>,
     all_distance: Vec<u32>, // a list of primes that are not factors of the possible voters group size
-
-    group_size: usize,
+    pub has_ringer: bool,
+    pub group_size: usize,
 }
 
 impl VoteGroupGenerator {
-    pub fn never_voter() -> Pubkey {
-         solana_sdk::pubkey::Pubkey::from_str(SAFECOIN_NEVER_VOTER).unwrap()
+    pub fn always_voter() -> Pubkey {
+         solana_sdk::pubkey::Pubkey::from_str(SAFECOIN_ALWAYS_VOTER).unwrap()
     }
 
     pub fn new(map: &HashMap<Pubkey, Pubkey>, size: usize) -> VoteGroupGenerator {
+        let mut grp_size = size;
         let collected: Vec<_> = map.into_iter().collect();
         let mut temp = Vec::new();
         for x in collected {
             let key = x.0;
-            if key.to_string() != SAFECOIN_NEVER_VOTER {
+            if key.to_string() != SAFECOIN_ALWAYS_VOTER {
                 let cloned: Pubkey = Pubkey::new_from_array(key.to_bytes());
                 temp.push(cloned);
+            }
+            else {
+                grp_size = grp_size - 1;
             }
         }
         let len = temp.len() as u32;
@@ -56,7 +60,8 @@ impl VoteGroupGenerator {
         Self {
             possible_voters: temp,
             all_distance: initial.to_owned(),
-            group_size: size,
+            group_size: grp_size,
+            has_ringer: grp_size < size,
         }
     }
 
@@ -98,7 +103,9 @@ impl VoteGroupGenerator {
 
 
     pub fn in_group_for_seed(&self, seed: u64, test_key: Pubkey) -> bool {
-   
+        if test_key.to_string() == SAFECOIN_ALWAYS_VOTER {
+           return true;
+        }
         let voters_len = self.possible_voters.len();
         let mut loc = (seed % voters_len as u64) as usize;
         let first_key = Pubkey::new(&self.possible_voters[loc].to_bytes());
@@ -160,7 +167,7 @@ impl VoteGroupGenerator {
 
     #[test]
     fn test_vgg_magic() {
-        let magic = solana_sdk::pubkey::Pubkey::from_str(SAFECOIN_NEVER_VOTER).unwrap();
+        let magic = solana_sdk::pubkey::Pubkey::from_str(SAFECOIN_ALWAYS_VOTER).unwrap();
         let mut hm: HashMap<Pubkey, Pubkey> = HashMap::new();
         hm.insert(magic, Pubkey::new_unique());
 
@@ -170,11 +177,12 @@ impl VoteGroupGenerator {
             println!("insert {}", it);
         }
         let vgg = VoteGroupGenerator::new(&hm, hm.len());
+        assert_eq!(vgg.has_ringer,true);
         for h in hm.keys() {
             let found = vgg.in_group_for_seed(0, *h);
-            let result = h.to_string() != SAFECOIN_NEVER_VOTER;
+            let result = h.to_string() != SAFECOIN_ALWAYS_VOTER;
             assert_eq!(found, result);
         }
-        assert_eq!(vgg.in_group_for_seed(0, magic), false);
+        assert_eq!(vgg.in_group_for_seed(0, magic), true);
     }
 
