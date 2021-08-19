@@ -651,6 +651,107 @@ mod tests {
     }
 
     #[test]
+    fn test_vote_authorize_checked() {
+        let vote_pubkey = Pubkey::new_unique();
+        let authorized_pubkey = Pubkey::new_unique();
+        let new_authorized_pubkey = Pubkey::new_unique();
+
+        // Test with vanilla authorize accounts
+        let mut instruction = authorize_checked(
+            &vote_pubkey,
+            &authorized_pubkey,
+            &new_authorized_pubkey,
+            VoteAuthorize::Voter,
+        );
+        instruction.accounts = instruction.accounts[0..2].to_vec();
+        assert_eq!(
+            process_instruction(&instruction),
+            Err(InstructionError::NotEnoughAccountKeys),
+        );
+
+        let mut instruction = authorize_checked(
+            &vote_pubkey,
+            &authorized_pubkey,
+            &new_authorized_pubkey,
+            VoteAuthorize::Withdrawer,
+        );
+        instruction.accounts = instruction.accounts[0..2].to_vec();
+        assert_eq!(
+            process_instruction(&instruction),
+            Err(InstructionError::NotEnoughAccountKeys),
+        );
+
+        // Test with non-signing new_authorized_pubkey
+        let mut instruction = authorize_checked(
+            &vote_pubkey,
+            &authorized_pubkey,
+            &new_authorized_pubkey,
+            VoteAuthorize::Voter,
+        );
+        instruction.accounts[3] = AccountMeta::new_readonly(new_authorized_pubkey, false);
+        assert_eq!(
+            process_instruction(&instruction),
+            Err(InstructionError::MissingRequiredSignature),
+        );
+
+        let mut instruction = authorize_checked(
+            &vote_pubkey,
+            &authorized_pubkey,
+            &new_authorized_pubkey,
+            VoteAuthorize::Withdrawer,
+        );
+        instruction.accounts[3] = AccountMeta::new_readonly(new_authorized_pubkey, false);
+        assert_eq!(
+            process_instruction(&instruction),
+            Err(InstructionError::MissingRequiredSignature),
+        );
+
+        // Test with new_authorized_pubkey signer
+        let vote_account = AccountSharedData::new_ref(100, VoteState::size_of(), &id());
+        let clock_address = sysvar::clock::id();
+        let clock_account = RefCell::new(account::create_account_shared_data_for_test(
+            &Clock::default(),
+        ));
+        let default_authorized_pubkey = Pubkey::default();
+        let authorized_account = create_default_account();
+        let new_authorized_account = create_default_account();
+        let keyed_accounts = vec![
+            KeyedAccount::new(&vote_pubkey, false, &vote_account),
+            KeyedAccount::new(&clock_address, false, &clock_account),
+            KeyedAccount::new(&default_authorized_pubkey, true, &authorized_account),
+            KeyedAccount::new(&new_authorized_pubkey, true, &new_authorized_account),
+        ];
+        assert_eq!(
+            super::process_instruction(
+                &Pubkey::default(),
+                &keyed_accounts,
+                &serialize(&VoteInstruction::AuthorizeChecked(VoteAuthorize::Voter)).unwrap(),
+                &mut MockInvokeContext::default()
+            ),
+            Ok(())
+        );
+
+        let keyed_accounts = vec![
+            KeyedAccount::new(&vote_pubkey, false, &vote_account),
+            KeyedAccount::new(&clock_address, false, &clock_account),
+            KeyedAccount::new(&default_authorized_pubkey, true, &authorized_account),
+            KeyedAccount::new(&new_authorized_pubkey, true, &new_authorized_account),
+        ];
+        assert_eq!(
+            super::process_instruction(
+                &Pubkey::default(),
+                &keyed_accounts,
+                &serialize(&VoteInstruction::AuthorizeChecked(
+                    VoteAuthorize::Withdrawer
+                ))
+                .unwrap(),
+                &mut MockInvokeContext::default()
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
     fn test_minimum_balance() {
         let rent = solana_sdk::rent::Rent::default();
         let minimum_balance = rent.minimum_balance(VoteState::size_of());
