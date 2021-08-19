@@ -1,10 +1,10 @@
 use crate::cli::Config;
 use log::*;
 use rayon::prelude::*;
-use solana_client::perf_utils::{sample_txs, SampleStats};
+use safecoin_client::perf_utils::{sample_txs, SampleStats};
 use solana_core::gen_keys::GenKeys;
 use safecoin_faucet::faucet::request_airdrop_transaction;
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_metrics::{self, datapoint_info};
 use solana_sdk::{
     client::Client,
@@ -98,7 +98,7 @@ where
     let maxes = maxes.clone();
     let client = client.clone();
     Builder::new()
-        .name("solana-client-sample".to_string())
+        .name("safecoin-client-sample".to_string())
         .spawn(move || {
             sample_txs(&exit_signal, &maxes, sample_period, &client);
         })
@@ -179,7 +179,7 @@ where
             let total_tx_sent_count = total_tx_sent_count.clone();
             let client = client.clone();
             Builder::new()
-                .name("solana-client-sender".to_string())
+                .name("safecoin-client-sender".to_string())
                 .spawn(move || {
                     do_tx_transfers(
                         &exit_signal,

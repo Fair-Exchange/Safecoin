@@ -4,7 +4,7 @@
 
 use crate::rpc_subscriptions::RpcSubscriptions;
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender};
-use solana_client::rpc_response::{SlotTransactionStats, SlotUpdate};
+use safecoin_client::rpc_response::{SlotTransactionStats, SlotUpdate};
 use solana_runtime::{bank::Bank, bank_forks::BankForks};
 use solana_sdk::{clock::Slot, timing::timestamp};
 use std::{
@@ -191,7 +191,7 @@ impl OptimisticallyConfirmedBankTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
+    use safecoin_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
     use solana_runtime::{
         accounts_background_service::AbsRequestSender, commitment::BlockCommitmentCache,
     };

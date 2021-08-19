@@ -1,4 +1,4 @@
-use solana_client::thin_client::ThinClient;
+use safecoin_client::thin_client::ThinClient;
 use solana_core::contact_info::ContactInfo;
 use solana_core::validator::Validator;
 use solana_core::validator::ValidatorConfig;

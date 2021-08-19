@@ -6,8 +6,8 @@ channel=$(
   node -p '
     let p = [
       "../../package.json",
-      "../lib/node_modules/@solana/web3.js/package.json",
-      "../@solana/web3.js/package.json",
+      "../lib/node_modules/@safecoin/web3.js/package.json",
+      "../@safecoin/web3.js/package.json",
       "../package.json"
     ].find(require("fs").existsSync);
     if (!p) throw new Error("Unable to locate package.json");

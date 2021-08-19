@@ -1,12 +1,12 @@
 [package]
-name = "solana-notifier"
-version = "1.6.16"
+name = "safecoin-notifier"
+version = "1.6.18"
 description = "Safecoin Notifier"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-notifier"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-notifier"
 edition = "2018"
 
 [dependencies]

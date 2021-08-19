@@ -8,7 +8,7 @@ title: Rust 客户端
 
 ## 拟定的解决方案
 
-代替实现`客户端`特征，应使用其实现来构造`ThinClient`。 这样，当前具有`客户端`特征的所有实用程序功能都可以移至`ThinClient`中。 然后，`ThinClient`可以移至`solana-sdk`中，因为它的所有网络相关性都在`Client`的实现中。 然后，我们将添加一个名为`Client`的新实现，称为`ClusterClient`，并将其存在于`ThinClient`当前所在的`Safecoin-client`工具箱中。
+代替实现`客户端`特征，应使用其实现来构造`ThinClient`。 这样，当前具有`客户端`特征的所有实用程序功能都可以移至`ThinClient`中。 然后，`ThinClient`可以移至`safecoin-sdk`中，因为它的所有网络相关性都在`Client`的实现中。 然后，我们将添加一个名为`Client`的新实现，称为`ClusterClient`，并将其存在于`ThinClient`当前所在的`Safecoin-client`工具箱中。
 
 重组之后，任何需要客户端的代码都将以`ThinClient`的形式编写。 在单元测试中，将使用`ThinClient<BankClient>`调用该功能，而`main()`函数、基准测试和集成测试将通过`ThinClient<ClusterClient>`调用该功能。
 
@@ -20,9 +20,9 @@ title: Rust 客户端
 
 ### 实施战略
 
-1. 在`solana-sdk`、`RpcClientTng`中添加新对象，其中`Tng`后缀是临时的，代表“TheNextGeneration”
+1. 在`safecoin-sdk`、`RpcClientTng`中添加新对象，其中`Tng`后缀是临时的，代表“TheNextGeneration”
 2. 用`SyncClient`的实现来初始化`RpcClientTng`。
-3. 将新对象添加到`solana-sdk`、`ThinClientTng`中；使用`RpcClientTng`和`AsyncClient`实现对其进行初始化
+3. 将新对象添加到`safecoin-sdk`、`ThinClientTng`中；使用`RpcClientTng`和`AsyncClient`实现对其进行初始化
 4. 将所有单元测试从`BankClient`移至`ThinClientTng<BankClient>`
 5. 添加`ClusterClient`
 6. 将`ThinClient`用户移到`ThinClientTng<ClusterClient>`

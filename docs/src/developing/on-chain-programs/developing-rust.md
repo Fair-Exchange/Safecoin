@@ -37,20 +37,20 @@ programs should define an `exclude_entrypoint` feature in `Cargo.toml` and use
 to exclude the entrypoint.
 
 - [Define the
-  feature](https://github.com/solana-labs/solana-program-library/blob/a5babd6cbea0d3f29d8c57d2ecbbd2a2bd59c8a9/token/program/Cargo.toml#L12)
+  feature](https://github.com/fair-exchange/safecoin-program-library/blob/a5babd6cbea0d3f29d8c57d2ecbbd2a2bd59c8a9/token/program/Cargo.toml#L12)
 - [Exclude the
-  entrypoint](https://github.com/solana-labs/solana-program-library/blob/a5babd6cbea0d3f29d8c57d2ecbbd2a2bd59c8a9/token/program/src/lib.rs#L12)
+  entrypoint](https://github.com/fair-exchange/safecoin-program-library/blob/a5babd6cbea0d3f29d8c57d2ecbbd2a2bd59c8a9/token/program/src/lib.rs#L12)
 
 Then when other programs include this program as a dependency, they should do so
 using the `exclude_entrypoint` feature.
 
 - [Include without
-  entrypoint](https://github.com/solana-labs/solana-program-library/blob/a5babd6cbea0d3f29d8c57d2ecbbd2a2bd59c8a9/token-swap/program/Cargo.toml#L19)
+  entrypoint](https://github.com/fair-exchange/safecoin-program-library/blob/a5babd6cbea0d3f29d8c57d2ecbbd2a2bd59c8a9/token-swap/program/Cargo.toml#L19)
 
 ## Project Dependencies
 
 At a minimum, Safecoin Rust programs must pull in the
-[solana-program](https://crates.io/crates/solana-program) crate.
+[safecoin-program](https://crates.io/crates/safecoin-program) crate.
 
 Safecoin BPF programs have some [restrictions](#restrictions) that may prevent the
 inclusion of some crates as dependencies or require special handling.
@@ -97,12 +97,12 @@ exercising program functions directly.
 
 To help facilitate testing in an environment that more closely matches a live
 cluster, developers can use the
-[`program-test`](https://crates.io/crates/solana-program-test) crate. The
+[`program-test`](https://crates.io/crates/safecoin-program-test) crate. The
 `program-test` crate starts up a local instance of the runtime and allows tests
 to send multiple transactions while keeping state for the duration of the test.
 
 For more information the [test in sysvar
-example](https://github.com/solana-labs/solana-program-library/blob/master/examples/rust/sysvar/tests/functional.rs)
+example](https://github.com/fair-exchange/safecoin-program-library/blob/master/examples/rust/sysvar/tests/functional.rs)
 shows how an instruction containing syavar account is sent and processed by the
 program.
 
@@ -115,9 +115,9 @@ Programs must be written for and deployed to the same loader. For more details
 see the [overview](overview#loaders).
 
 Currently there are two supported loaders [BPF
-Loader](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader.rs#L17)
+Loader](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader.rs#L17)
 and [BPF loader
-deprecated](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader_deprecated.rs#L14)
+deprecated](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader_deprecated.rs#L14)
 
 They both have the same raw entrypoint definition, the following is the raw
 symbol that the runtime looks up and calls:
@@ -136,9 +136,9 @@ processing function, and returns the results.
 You can find the entrypoint macros here:
 
 - [BPF Loader's entrypoint
-  macro](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/entrypoint.rs#L46)
+  macro](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/entrypoint.rs#L46)
 - [BPF Loader deprecated's entrypoint
-  macro](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/entrypoint_deprecated.rs#L37)
+  macro](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/entrypoint_deprecated.rs#L37)
 
 The program defined instruction processing function that the entrypoint macros
 call must be of this form:
@@ -159,9 +159,9 @@ parameters into Rust types. The entrypoint macros automatically calls the
 deserialization helper:
 
 - [BPF Loader
-  deserialization](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/entrypoint.rs#L104)
+  deserialization](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/entrypoint.rs#L104)
 - [BPF Loader deprecated
-  deserialization](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/entrypoint_deprecated.rs#L56)
+  deserialization](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/entrypoint_deprecated.rs#L56)
 
 Some programs may want to perform deserialization themselves and they can by
 providing their own implementation of the [raw entrypoint](#program-entrypoint).
@@ -190,7 +190,7 @@ The program id is the public key of the currently executing program.
 
 The accounts is an ordered slice of the accounts referenced by the instruction
 and represented as an
-[AccountInfo](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/account_info.rs#L10)
+[AccountInfo](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/account_info.rs#L10)
 structures. An account's place in the array signifies its meaning, for example,
 when transferring lamports an instruction may define the first account as the
 source and the second as the destination.
@@ -214,7 +214,7 @@ being processed.
 ## Heap
 
 Rust programs implement the heap directly by defining a custom
-[`global_allocator`](https://github.com/solana-labs/solana/blob/8330123861a719cd7a79af0544617896e7f00ce3/sdk/program/src/entrypoint.rs#L50)
+[`global_allocator`](https://github.com/fair-exchange/safecoin/blob/8330123861a719cd7a79af0544617896e7f00ce3/sdk/program/src/entrypoint.rs#L50)
 
 Programs may implement their own `global_allocator` based on its specific needs.
 Refer to the [custom heap example](#examples) for more information.
@@ -288,7 +288,7 @@ getrandom = { version = "0.2.2", features = ["custom"] }
 
 Rust's `println!` macro is computationally expensive and not supported. Instead
 the helper macro
-[`msg!`](https://github.com/solana-labs/solana/blob/6705b5a98c076ac08f3991bb8a6f9fcb280bf51e/sdk/program/src/log.rs#L33)
+[`msg!`](https://github.com/fair-exchange/safecoin/blob/6705b5a98c076ac08f3991bb8a6f9fcb280bf51e/sdk/program/src/log.rs#L33)
 is provided.
 
 `msg!` has two forms:
@@ -375,7 +375,7 @@ fn custom_panic(info: &core::panic::PanicInfo<'_>) {
 ## Compute Budget
 
 Use the system call
-[`sol_log_compute_units()`](https://github.com/solana-labs/solana/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/program/src/log.rs#L102)
+[`sol_log_compute_units()`](https://github.com/fair-exchange/safecoin/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/program/src/log.rs#L102)
 to log a message containing the remaining number of compute units the program
 may consume before execution is halted
 
@@ -402,5 +402,5 @@ $ cargo build-bpf --dump
 ## Examples
 
 The [Safecoin Program Library
-github](https://github.com/solana-labs/solana-program-library/tree/master/examples/rust)
+github](https://github.com/fair-exchange/safecoin-program-library/tree/master/examples/rust)
 repo contains a collection of Rust examples.

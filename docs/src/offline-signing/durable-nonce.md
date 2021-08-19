@@ -118,7 +118,7 @@ Withdraw funds from a nonce account with
 - Command
 
 ```bash
-safecoin withdraw-from-nonce-account nonce-keypair.json ~/.config/solana/id.json 0.5
+safecoin withdraw-from-nonce-account nonce-keypair.json ~/.config/safecoin/id.json 0.5
 ```
 
 - Output

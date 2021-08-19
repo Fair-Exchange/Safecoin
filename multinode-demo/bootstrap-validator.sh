@@ -8,12 +8,12 @@ here=$(dirname "$0")
 # shellcheck source=multinode-demo/common.sh
 source "$here"/common.sh
 
-if [[ "$SAFECOIN_GPU_MISSING" -eq 1 ]]; then
+if [[ "$SAFEANA_GPU_MISSING" -eq 1 ]]; then
   echo "Testnet requires GPUs, but none were found!  Aborting..."
   exit 1
 fi
 
-if [[ -n $SAFECOIN_CUDA ]]; then
+if [[ -n $SAFEANA_CUDA ]]; then
   program=$safecoin_validator_cuda
 else
   program=$safecoin_validator
@@ -85,10 +85,10 @@ while [[ -n $1 ]]; do
 done
 
 # These keypairs are created by ./setup.sh and included in the genesis config
-identity=$SAFECOIN_CONFIG_DIR/bootstrap-validator/identity.json
-vote_account="$SAFECOIN_CONFIG_DIR"/bootstrap-validator/vote-account.json
+identity=$SAFEANA_CONFIG_DIR/bootstrap-validator/identity.json
+vote_account="$SAFEANA_CONFIG_DIR"/bootstrap-validator/vote-account.json
 
-ledger_dir="$SAFECOIN_CONFIG_DIR"/bootstrap-validator
+ledger_dir="$SAFEANA_CONFIG_DIR"/bootstrap-validator
 [[ -d "$ledger_dir" ]] || {
   echo "$ledger_dir does not exist"
   echo

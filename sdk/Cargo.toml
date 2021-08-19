@@ -1,18 +1,21 @@
 [package]
-name = "solana-sdk"
-version = "1.6.16"
+name = "safecoin-sdk"
+version = "1.6.18"
 description = "Safecoin SDK"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-sdk"
+repository = "https://github.com/fair-exchange/safecoin"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-sdk"
 license = "Apache-2.0"
 edition = "2018"
+
+[lib]
+name = "solana_sdk"
 
 [features]
 # "program" feature is a legacy feature retained to support v1.3 and older
 # programs.  New development should not use this feature.  Instead use the
-# solana-program crate
+# safecoin-program crate
 program = []
 
 default = [
@@ -29,8 +32,8 @@ full = [
     "serde_json",
     "ed25519-dalek",
     "ed25519-dalek-bip32",
-    "solana-logger",
-    "solana-crate-features",
+    "safecoin-logger",
+    "safecoin-crate-features",
     "libsecp256k1",
     "sha3",
     "digest",
@@ -53,7 +56,7 @@ hex = "0.4.2"
 hmac = "0.10.1"
 itertools =  "0.9.0"
 lazy_static = "1.4.0"
-libsecp256k1 = { version = "0.3.5", optional = true }
+libsecp256k1 = { version = "0.5.0", optional = true }
 log = "0.4.11"
 memmap2 = { version = "0.1.0", optional = true }
 num-derive = "0.3"
@@ -70,12 +73,12 @@ serde_derive = "1.0.103"
 serde_json = { version = "1.0.56", optional = true }
 sha2 = "0.9.2"
 sha3 = { version = "0.9.1", optional = true }
-solana-crate-features = { path = "../crate-features", version = "=1.6.16", optional = true }
-solana-logger = { path = "../logger", version = "=1.6.16", optional = true }
-solana-frozen-abi = { path = "../frozen-abi", version = "=1.6.16" }
-solana-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.6.16" }
-solana-program = { path = "program", version = "=1.6.16" }
-solana-sdk-macro = { path = "macro", version = "=1.6.16" }
+safecoin-crate-features = { path = "../crate-features", version = ">=1.6.18", optional = true }
+safecoin-logger = { path = "../logger", version = ">=1.6.18", optional = true }
+safecoin-frozen-abi = { path = "../frozen-abi", version = ">=1.6.18" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = ">=1.6.18" }
+safecoin-program = { path = "program", version = ">=1.6.18" }
+safecoin-sdk-macro = { path = "macro", version = ">=1.6.18" }
 thiserror = "1.0"
 uriparse = "0.6.3"
 

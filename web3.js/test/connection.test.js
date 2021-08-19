@@ -1,7 +1,7 @@
 // @flow
 import bs58 from 'bs58';
 import {Buffer} from 'buffer';
-import {Token, u64} from '@solana/spl-token';
+import {Token, u64} from '@solana/safe-token';
 import {expect, use} from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
@@ -814,7 +814,7 @@ describe('Connection', () => {
                   accounts: ['va12u4o9DipLEB2z4fuoHszroq1U9NcAB9aooFDPJSf'],
                   data:
                     '37u9WtQpcm6ULa3VtWDFAWoQc1hUvybPrA3dtx99tgHvvcE7pKRZjuGmn7VX2tC3JmYDYGG7',
-                  programId: 'HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1',
+                  programId: '7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD',
                 },
               ],
               recentBlockhash: 'GeyAFFRY3WGpmam2hbgrKw4rbU2RKzfVLm5QLSeZwTZE',
@@ -845,8 +845,8 @@ describe('Connection', () => {
         params: [confirmedTransaction, 'jsonParsed'],
         value: getMockData({
           parsed: {},
-          program: 'spl-token',
-          programId: 'HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1',
+          program: 'safe-token',
+          programId: '7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD',
         }),
       });
 
@@ -874,7 +874,7 @@ describe('Connection', () => {
             '6tVrjJhFm5SAvvdh6tysjotQurCSELpxuW3JaAAYeC1m',
           ],
           data: 'ai3535',
-          programId: 'HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1',
+          programId: '7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD',
         }),
       });
 
@@ -1125,7 +1125,7 @@ describe('Connection', () => {
   });
 
   const TOKEN_PROGRAM_ID = new PublicKey(
-    'HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1',
+    '7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD',
   );
 
   if (process.env.TEST_LIVE) {
@@ -1231,7 +1231,7 @@ describe('Connection', () => {
         expect(signatures[0]).to.eq(testSignature);
         const ix = message.instructions[0];
         if (ix.parsed) {
-          expect(ix.program).to.eq('spl-token');
+          expect(ix.program).to.eq('safe-token');
           expect(ix.programId).to.eql(TOKEN_PROGRAM_ID);
         } else {
           expect('parsed' in ix).to.be.true;
@@ -1267,7 +1267,7 @@ describe('Connection', () => {
           if (data instanceof Buffer) {
             expect(data instanceof Buffer).to.eq(false);
           } else {
-            expect(data.program).to.eq('spl-token');
+            expect(data.program).to.eq('safe-token');
             expect(data.parsed).to.be.ok;
           }
         }
@@ -1284,7 +1284,7 @@ describe('Connection', () => {
             expect(data instanceof Buffer).to.eq(false);
           } else {
             expect(data.parsed).to.be.ok;
-            expect(data.program).to.eq('spl-token');
+            expect(data.program).to.eq('safe-token');
           }
         });
       });
@@ -1302,7 +1302,7 @@ describe('Connection', () => {
             expect(data instanceof Buffer).to.eq(false);
           } else {
             expect(data.parsed).to.be.ok;
-            expect(data.program).to.eq('spl-token');
+            expect(data.program).to.eq('safe-token');
           }
         });
       });
@@ -1492,11 +1492,11 @@ describe('Connection', () => {
     await mockRpcResponse({
       method: 'getVersion',
       params: [],
-      value: {'solana-core': '0.20.4'},
+      value: {'safecoin-core': '0.20.4'},
     });
 
     const version = await connection.getVersion();
-    expect(version['solana-core']).to.be.ok;
+    expect(version['safecoin-core']).to.be.ok;
   });
 
   it('request airdrop', async () => {
@@ -1987,7 +1987,7 @@ describe('Connection', () => {
     it('https request', async () => {
       const connection = new Connection('https://devnet.safecoin.org');
       const version = await connection.getVersion();
-      expect(version['solana-core']).to.be.ok;
+      expect(version['safecoin-core']).to.be.ok;
     });
   }
 });

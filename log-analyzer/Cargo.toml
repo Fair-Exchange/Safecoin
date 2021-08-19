@@ -3,10 +3,10 @@ authors = ["Solana Maintainers <maintainers@solana.com>"]
 edition = "2018"
 name = "safecoin-log-analyzer"
 description = "The safecoin cluster network analysis tool"
-version = "1.6.16"
-repository = "https://github.com/solana-labs/solana"
+version = "1.6.18"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
+homepage = "https://safecoin.org/"
 publish = false
 
 [dependencies]
@@ -14,9 +14,9 @@ byte-unit = "4.0.9"
 clap = "2.33.1"
 serde = "1.0.122"
 serde_json = "1.0.56"
-solana-clap-utils = { path = "../clap-utils", version = "=1.6.16" }
-solana-logger = { path = "../logger", version = "=1.6.16" }
-solana-version = { path = "../version", version = "=1.6.16" }
+safecoin-clap-utils = { path = "../clap-utils", version = ">=1.6.18" }
+safecoin-logger = { path = "../logger", version = ">=1.6.18" }
+safecoin-version = { path = "../version", version = ">=1.6.18" }
 
 [[bin]]
 name = "safecoin-log-analyzer"

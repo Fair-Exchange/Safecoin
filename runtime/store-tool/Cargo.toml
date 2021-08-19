@@ -3,19 +3,19 @@ authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "safecoin-store-tool"
 description = "Tool to inspect append vecs"
-version = "1.6.16"
-repository = "https://github.com/solana-labs/solana"
+version = "1.6.18"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
+homepage = "https://safecoin.org/"
 publish = false
 
 [dependencies]
 log = { version = "0.4.11" }
-solana-logger = { path = "../../logger", version = "=1.6.16" }
-solana-version = { path = "../../version", version = "=1.6.16" }
-solana-measure = { path = "../../measure", version = "=1.6.16" }
-solana-runtime = { path = "..", version = "=1.6.16" }
-solana-sdk = { path = "../../sdk", version = "=1.6.16" }
+safecoin-logger = { path = "../../logger", version = ">=1.6.18" }
+safecoin-version = { path = "../../version", version = ">=1.6.18" }
+safecoin-measure = { path = "../../measure", version = ">=1.6.18" }
+safecoin-runtime = { path = "..", version = ">=1.6.18" }
+safecoin-sdk = { path = "../../sdk", version = ">=1.6.18" }
 clap = "2.33.1"
 
 [package.metadata.docs.rs]

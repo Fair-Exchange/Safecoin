@@ -11,7 +11,7 @@ use crate::{
 use crossbeam_channel::{Receiver, SendError, Sender};
 use log::*;
 use rand::{thread_rng, Rng};
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_sdk::{clock::Slot, hash::Hash};
 use std::{
     boxed::Box,

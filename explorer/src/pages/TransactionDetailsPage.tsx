@@ -11,7 +11,7 @@ import {
   TransactionSignature,
   SystemProgram,
   SystemInstruction,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { lamportsToSafeString } from "utils";
 import { ErrorCard } from "components/common/ErrorCard";
 import { LoadingCard } from "components/common/LoadingCard";

@@ -28,7 +28,7 @@ title: 简单支付和状态验证
 
 #### 交易 Merkle
 
-Entry-Merkle 是 Merkle根，包括了给定条目中按签名排序的所有交易。 条目中的每个交易都已经在这里进行了合并：https://github.com/solana-labs/solana/blob/b6bfed64cb159ee67bb6bdbaefc7f833bbed3563/ledger/src/entry.rs#L205。 这意味着我们可以显示条目`E`中包含了交易`T`。
+Entry-Merkle 是 Merkle根，包括了给定条目中按签名排序的所有交易。 条目中的每个交易都已经在这里进行了合并：https://github.com/fair-exchange/safecoin/blob/b6bfed64cb159ee67bb6bdbaefc7f833bbed3563/ledger/src/entry.rs#L205。 这意味着我们可以显示条目`E`中包含了交易`T`。
 
 Block-Merkle 是在该块中排序的所有 Entry-Merkles 的 Merkle 根。
 
@@ -53,7 +53,7 @@ Bank-Hash 是上面 `Transaction Merkle` 章节所述的 Block-Merkle 和 Accoun
 
 代码：
 
-https://github.com/solana-labs/solana/blob/b6bfed64cb159ee67b6bdbdbaefc7f833bbbed3563/runtime/src/bank.rs#L3468-L3473
+https://github.com/fair-exchange/safecoin/blob/b6bfed64cb159ee67b6bdbdbaefc7f833bbbed3563/runtime/src/bank.rs#L3468-L3473
 
 ```
         let mut hash = hashv(&[
@@ -68,11 +68,11 @@ https://github.com/solana-labs/solana/blob/b6bfed64cb159ee67b6bdbdbaefc7f833bbbe
         ]);
 ```
 
-在验证程序的重播逻辑中沿现有流逻辑来实现是一种好方法：https://github.com/solana-labs/solana/blob/b6bfed64cb159ee67b6bb6bdbaefc7f833bbbbed3563/core/src/replay_stage.rs#L1092-L1096
+在验证程序的重播逻辑中沿现有流逻辑来实现是一种好方法：https://github.com/fair-exchange/safecoin/blob/b6bfed64cb159ee67b6bb6bdbaefc7f833bbbbed3563/core/src/replay_stage.rs#L1092-L1096
 
 #### 乐观确认证明
 
-目前前，通过监听八卦和重播管道的侦听器可以检测到投票的乐观确认：https://github.com/solana-labs/solana/blob/b6bfed64cb159ee67bb6bdbaefc7f833bbed3563/core/src/cluster_info_vote_listener.rs#L604-L614。
+目前前，通过监听八卦和重播管道的侦听器可以检测到投票的乐观确认：https://github.com/fair-exchange/safecoin/blob/b6bfed64cb159ee67bb6bdbaefc7f833bbed3563/core/src/cluster_info_vote_listener.rs#L604-L614。
 
 每次投票都是一项签名交易，其中包括验证节点投票的区块银行哈希值，即上面的`Transaction Merkle`部分的`B`。 一旦网络的某个阈值`T`已对一个区块进行投票，就认为该区块是乐观确定的。 需要由这组`T`验证节点的投票才能证明乐观确认了带有银行哈希`B`的区块。
 

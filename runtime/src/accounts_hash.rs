@@ -1,6 +1,6 @@
 use log::*;
 use rayon::prelude::*;
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_sdk::{
     clock::Slot,
     hash::{Hash, Hasher},

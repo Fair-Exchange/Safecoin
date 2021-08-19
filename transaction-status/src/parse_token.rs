@@ -2,14 +2,14 @@ use crate::parse_instruction::{
     check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
 };
 use serde_json::{json, Map, Value};
-use solana_account_decoder::parse_token::{pubkey_from_spl_token_v2_0, token_amount_to_ui_amount};
+use safecoin_account_decoder::parse_token::{pubkey_from_spl_token_v2_0, token_amount_to_ui_amount};
 use solana_sdk::{
     instruction::{AccountMeta, CompiledInstruction, Instruction},
     pubkey::Pubkey,
 };
 use spl_token_v2_0::{
     instruction::{AuthorityType, TokenInstruction},
-    solana_program::{instruction::Instruction as SplTokenInstruction, program_option::COption},
+    solana_program::{instruction::Instruction as SafeTokenInstruction, program_option::COption},
 };
 
 pub fn parse_token(
@@ -17,13 +17,13 @@ pub fn parse_token(
     account_keys: &[Pubkey],
 ) -> Result<ParsedInstructionEnum, ParseInstructionError> {
     let token_instruction = TokenInstruction::unpack(&instruction.data)
-        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SplToken))?;
+        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeToken))?;
     match instruction.accounts.iter().max() {
         Some(index) if (*index as usize) < account_keys.len() => {}
         _ => {
             // Runtime should prevent this from ever happening
             return Err(ParseInstructionError::InstructionKeyMismatch(
-                ParsableProgram::SplToken,
+                ParsableProgram::SafeToken,
             ));
         }
     }
@@ -422,10 +422,10 @@ fn parse_signers(
 }
 
 fn check_num_token_accounts(accounts: &[u8], num: usize) -> Result<(), ParseInstructionError> {
-    check_num_accounts(accounts, num, ParsableProgram::SplToken)
+    check_num_accounts(accounts, num, ParsableProgram::SafeToken)
 }
 
-pub fn spl_token_v2_0_instruction(instruction: SplTokenInstruction) -> Instruction {
+pub fn spl_token_v2_0_instruction(instruction: SafeTokenInstruction) -> Instruction {
     Instruction {
         program_id: pubkey_from_spl_token_v2_0(&instruction.program_id),
         accounts: instruction
@@ -448,18 +448,18 @@ mod test {
     use spl_token_v2_0::{
         instruction::*,
         solana_program::{
-            instruction::CompiledInstruction as SplTokenCompiledInstruction, message::Message,
-            pubkey::Pubkey as SplTokenPubkey,
+            instruction::CompiledInstruction as SafeTokenCompiledInstruction, message::Message,
+            pubkey::Pubkey as SafeTokenPubkey,
         },
     };
     use std::str::FromStr;
 
-    fn convert_pubkey(pubkey: Pubkey) -> SplTokenPubkey {
-        SplTokenPubkey::from_str(&pubkey.to_string()).unwrap()
+    fn convert_pubkey(pubkey: Pubkey) -> SafeTokenPubkey {
+        SafeTokenPubkey::from_str(&pubkey.to_string()).unwrap()
     }
 
     fn convert_compiled_instruction(
-        instruction: &SplTokenCompiledInstruction,
+        instruction: &SafeTokenCompiledInstruction,
     ) -> CompiledInstruction {
         CompiledInstruction {
             program_id_index: instruction.program_id_index,

@@ -61,7 +61,7 @@ have not made any errors.
 safecoin-keygen new --no-outfile
 ```
 
-> If the `--no-outfile` flag is **omitted**, the default behavior is to write the keypair to `~/.config/solana/id.json`, resulting in a [file system wallet](file-system-wallet.md)
+> If the `--no-outfile` flag is **omitted**, the default behavior is to write the keypair to `~/.config/safecoin/id.json`, resulting in a [file system wallet](file-system-wallet.md)
 
 The output of this command will display a line like this:
 

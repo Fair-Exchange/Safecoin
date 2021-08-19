@@ -1,5 +1,5 @@
 import React from "react";
-import { Connection } from "@solana/web3.js";
+import { Connection } from "@safecoin/web3.js";
 import { useCluster, Cluster } from "providers/cluster";
 import {
   DashboardInfo,

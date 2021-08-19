@@ -144,9 +144,9 @@ if [[ -n $DO_NOT_PUBLISH_TAR ]]; then
   echo "Skipping publishing install wrapper"
 elif [[ -n $BUILDKITE ]]; then
   cat > release.solana.com-install <<EOF
-SAFECOIN_RELEASE=$CHANNEL_OR_TAG
-SAFECOIN_INSTALL_INIT_ARGS=$CHANNEL_OR_TAG
-SAFECOIN_DOWNLOAD_ROOT=http://release.solana.com
+SAFEANA_RELEASE=$CHANNEL_OR_TAG
+SAFEANA_INSTALL_INIT_ARGS=$CHANNEL_OR_TAG
+SAFEANA_DOWNLOAD_ROOT=http://release.solana.com
 EOF
   cat install/safecoin-install-init.sh >> release.solana.com-install
 

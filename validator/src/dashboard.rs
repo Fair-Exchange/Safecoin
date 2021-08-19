@@ -1,7 +1,7 @@
 use {
     crate::{admin_rpc_service, new_spinner_progress_bar, println_name_value, ProgressBar},
     console::style,
-    solana_client::{
+    safecoin_client::{
         client_error, rpc_client::RpcClient, rpc_request, rpc_response::RpcContactInfo,
     },
     solana_core::validator::ValidatorStartProgress,

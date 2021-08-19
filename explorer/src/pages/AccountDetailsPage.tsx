@@ -1,5 +1,5 @@
 import React from "react";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 import { FetchStatus } from "providers/cache";
 import {
   useFetchAccountInfo,
@@ -32,7 +32,7 @@ import { UpgradeableProgramSection } from "components/account/UpgradeableProgram
 import { useTokenRegistry } from "providers/mints/token-registry";
 
 const TABS_LOOKUP: { [id: string]: Tab } = {
-  "spl-token:mint": {
+  "safe-token:mint": {
     slug: "largest",
     title: "Distribution",
     path: "/largest",
@@ -60,7 +60,7 @@ const TABS_LOOKUP: { [id: string]: Tab } = {
 };
 
 const TOKEN_TABS_HIDDEN = [
-  "spl-token:mint",
+  "safe-token:mint",
   "config",
   "vote",
   "sysvar",
@@ -192,7 +192,7 @@ function InfoSection({ account }: { account: Account }) {
         stakeAccountType={data.parsed.type}
       />
     );
-  } else if (data && data.program === "spl-token") {
+  } else if (data && data.program === "safe-token") {
     return <TokenAccountSection account={account} tokenAccount={data.parsed} />;
   } else if (data && data.program === "nonce") {
     return <NonceAccountSection account={account} nonceAccount={data.parsed} />;

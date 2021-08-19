@@ -14,7 +14,7 @@ testnet participants, [https://discord.gg/pquxPsq](https://discord.gg/pquxPsq).
   - [\#tourdesol](https://discord.gg/BdujK2) Discussion and support channel for Tour de SAFE participants ([What is Tour de SAFE?](https://solana.com/tds/)).
   - [\#tourdesol-announcements](https://discord.gg/Q5TxEC) The single source of truth for critical information relating to Tour de SAFE
   - [\#tourdesol-stage0](https://discord.gg/Xf8tES) Discussion for events within Tour de SAFE Stage 0. Stage 0 includes all the dry-run
-- [Core software repo](https://github.com/solana-labs/solana)
+- [Core software repo](https://github.com/fair-exchange/safecoin)
 - [Tour de SAFE Docs](https://docs.solana.com/tour-de-sol)
 - [TdS repo](https://github.com/solana-labs/tour-de-sol)
 - [TdS metrics dashboard](https://metrics.safecoin.org:3000/d/monitor-edge/cluster-telemetry-edge?refresh=1m&from=now-15m&to=now&var-testnet=tds)

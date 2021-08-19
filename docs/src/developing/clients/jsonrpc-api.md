@@ -5,7 +5,7 @@ title: JSON RPC API
 Safecoin nodes accept HTTP requests using the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification.
 
 To interact with a Safecoin node inside a JavaScript application, use the
-[solana-web3.js](https://github.com/solana-labs/solana-web3.js) library, which
+[solana-web3.js](https://github.com/fair-exchange/safecoin-web3.js) library, which
 gives a convenient interface for the RPC methods.
 
 ## RPC HTTP Endpoint
@@ -613,7 +613,7 @@ The result field will be an object with the following fields:
   - `transactions: <array>` - present if "full" transaction details are requested; an array of JSON objects containing:
     - `transaction: <object|[string,encoding]>` - [Transaction](#transaction-structure) object, either in JSON format or encoded binary data, depending on encoding parameter
     - `meta: <object>` - transaction status metadata object, containing `null` or:
-      - `err: <object | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/solana-labs/solana/blob/master/sdk/src/transaction.rs#L24)
+      - `err: <object | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/fair-exchange/safecoin/blob/master/sdk/src/transaction.rs#L24)
       - `fee: <u64>` - fee this transaction was charged, as u64 integer
       - `preBalances: <array>` - array of u64 account balances from before the transaction was processed
       - `postBalances: <array>` - array of u64 account balances after the transaction was processed
@@ -630,6 +630,7 @@ The result field will be an object with the following fields:
     - `lamports: <i64>`- number of reward lamports credited or debited by the account, as a i64
     - `postBalance: <u64>` - account balance in lamports after the reward was applied
     - `rewardType: <string|undefined>` - type of reward: "fee", "rent", "voting", "staking"
+    - `commission: <u8|undefined>` - vote account commission when the reward was credited, only present for voting and staking rewards
   - `blockTime: <i64 | null>` - estimated production time, as Unix timestamp (seconds since the Unix epoch). null if not available
   - `blockHeight: <u64 | null>` - the number of blocks beneath this block
 
@@ -950,7 +951,7 @@ from newest to oldest transaction:
 * `<object>`
   * `signature: <string>` - transaction signature as base-58 encoded string
   * `slot: <u64>` - The slot that contains the block with the transaction
-  * `err: <object | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/solana-labs/solana/blob/master/sdk/src/transaction.rs#L24)
+  * `err: <object | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/fair-exchange/safecoin/blob/master/sdk/src/transaction.rs#L24)
   * `memo: <string |null>` - Memo associated with the transaction, null if no memo is present
   * `blockTime: <i64 | null>` - estimated production time, as Unix timestamp (seconds since the Unix epoch) of when transaction was processed. null if not available.
 
@@ -1009,7 +1010,7 @@ Returns transaction details for a confirmed transaction
   - `transaction: <object|[string,encoding]>` - [Transaction](#transaction-structure) object, either in JSON format or encoded binary data, depending on encoding parameter
   - `blockTime: <i64 | null>` - estimated production time, as Unix timestamp (seconds since the Unix epoch) of when the transaction was processed. null if not available
   - `meta: <object | null>` - transaction status metadata object:
-    - `err: <object | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/solana-labs/solana/blob/master/sdk/src/transaction.rs#L24)
+    - `err: <object | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/fair-exchange/safecoin/blob/master/sdk/src/transaction.rs#L24)
     - `fee: <u64>` - fee this transaction was charged, as u64 integer
     - `preBalances: <array>` - array of u64 account balances from before the transaction was processed
     - `postBalances: <array>` - array of u64 account balances after the transaction was processed
@@ -1025,6 +1026,7 @@ Returns transaction details for a confirmed transaction
       - `lamports: <i64>`- number of reward lamports credited or debited by the account, as a i64
       - `postBalance: <u64>` - account balance in lamports after the reward was applied
       - `rewardType: <string>` - type of reward: currently only "rent", other types may be added in the future
+      - `commission: <u8|undefined>` - vote account commission when the reward was credited, only present for voting and staking rewards
 
 #### Example:
 Request:
@@ -1633,6 +1635,7 @@ The result field will be a JSON array with the following fields:
 - `effectiveSlot: <u64>`, the slot in which the rewards are effective
 - `amount: <u64>`, reward amount in lamports
 - `postBalance: <u64>`, post balance of the account in lamports
+- `commission: <u8|undefined>` - vote account commission when the reward was credited
 
 #### Example
 
@@ -2345,7 +2348,7 @@ An array of:
 - `<object>`
   - `slot: <u64>` - The slot the transaction was processed
   - `confirmations: <usize | null>` - Number of blocks since signature confirmation, null if rooted, as well as finalized by a supermajority of the cluster
-  - `err: <object | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/solana-labs/solana/blob/master/sdk/src/transaction.rs#L24)
+  - `err: <object | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/fair-exchange/safecoin/blob/master/sdk/src/transaction.rs#L24)
   - `confirmationStatus: <string | null>` - The transaction's cluster confirmation status; either `processed`, `confirmed`, or `finalized`. See [Commitment](jsonrpc-api.md#configuring-state-commitment) for more on optimistic confirmation.
   - DEPRECATED: `status: <object>` - Transaction status
     - `"Ok": <null>` - Transaction was successful
@@ -2737,7 +2740,7 @@ curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
     "params": [
       "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
       {
-        "programId": "HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1"
+        "programId": "7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD"
       },
       {
         "encoding": "jsonParsed"
@@ -2758,7 +2761,7 @@ Result:
     "value": [
       {
         "data": {
-          "program": "spl-token",
+          "program": "safe-token",
           "parsed": {
             "accountType": "account",
             "info": {
@@ -2779,7 +2782,7 @@ Result:
         },
         "executable": false,
         "lamports": 1726080,
-        "owner": "HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1",
+        "owner": "7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD",
         "rentEpoch": 4
       }
     ]
@@ -2848,7 +2851,7 @@ Result:
     "value": [
       {
         "data": {
-          "program": "spl-token",
+          "program": "safe-token",
           "parsed": {
             "accountType": "account",
             "info": {
@@ -2869,7 +2872,7 @@ Result:
         },
         "executable": false,
         "lamports": 1726080,
-        "owner": "HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1",
+        "owner": "7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD",
         "rentEpoch": 4
       }
     ]
@@ -3017,7 +3020,7 @@ None
 
 The result field will be a JSON object with the following fields:
 
-- `solana-core`, software version of solana-core
+- `safecoin-core`, software version of safecoin-core
 - `feature-set`, unique identifier of the current software's feature set
 
 #### Example:
@@ -3031,7 +3034,7 @@ curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
 
 Result:
 ```json
-{"jsonrpc":"2.0","result":{"solana-core": "1.6.16"},"id":1}
+{"jsonrpc":"2.0","result":{"safecoin-core": "1.6.18"},"id":1}
 ```
 
 ### getVoteAccounts
@@ -3043,6 +3046,8 @@ Returns the account info and associated stake for all the voting accounts in the
 - `<object>` - (optional) Configuration object containing the following field:
   - (optional) [Commitment](jsonrpc-api.md#configuring-state-commitment)
   - (optional) `votePubkey: <string>` - Only return results for this validator vote address (base-58 encoded)
+  - (optional) `keepUnstakedDelinquents: <bool>` - Do not filter out delinquent validators with no stake
+  - (optional) `delinquentSlotDistance: <u64>` - Specify the number of slots behind the tip that a validator must fall to be considered delinquent. **NOTE:** For the sake of consistency between ecosystem products, _it is **not** recommended that this argument be specified._
 
 #### Results:
 
@@ -3285,7 +3290,7 @@ Simulate sending a transaction
 An RpcResponse containing a TransactionStatus object
 The result will be an RpcResponse JSON object with `value` set to a JSON object with the following fields:
 
-- `err: <object | string | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/solana-labs/solana/blob/master/sdk/src/transaction.rs#L24)
+- `err: <object | string | null>` - Error if transaction failed, null if transaction succeeded. [TransactionError definitions](https://github.com/fair-exchange/safecoin/blob/master/sdk/src/transaction.rs#L24)
 - `logs: <array | null>` - Array of log messages the transaction instructions output during execution, null if simulation failed before the transaction was able to execute (for example due to an invalid blockhash or signature verification failure)
 - `accounts: <array> | null>` - array of accounts with the same length as the `accounts.addresses` array in the request
   - `<null>` - if the account doesn't exist or if `err` is not null

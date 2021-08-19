@@ -11,10 +11,10 @@ use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressStyle};
 use pickledb::PickleDb;
 use serde::{Deserialize, Serialize};
-use solana_account_decoder::parse_token::{
+use safecoin_account_decoder::parse_token::{
     pubkey_from_spl_token_v2_0, real_number_string, spl_token_v2_0_pubkey,
 };
-use solana_client::{
+use safecoin_client::{
     client_error::{ClientError, Result as ClientResult},
     rpc_client::RpcClient,
     rpc_config::RpcSendTransactionConfig,
@@ -34,8 +34,8 @@ use solana_stake_program::{
     stake_instruction::{self, LockupArgs},
     stake_state::{Authorized, Lockup, StakeAuthorize},
 };
-use solana_transaction_status::TransactionStatus;
-use spl_associated_token_account_v1_0::get_associated_token_address;
+use safecoin_transaction_status::TransactionStatus;
+use safe_associated_token_account_v1_0::get_associated_token_address;
 use spl_token_v2_0::solana_program::program_error::ProgramError;
 use std::{
     cmp::{self},
@@ -58,7 +58,7 @@ pub struct Allocation {
 #[derive(Debug, PartialEq)]
 pub enum FundingSource {
     FeePayer,
-    SplTokenAccount,
+    SafeTokenAccount,
     StakeAccount,
     SystemAccount,
 }
@@ -1038,7 +1038,7 @@ mod tests {
     use solana_core::test_validator::TestValidator;
     use solana_sdk::signature::{read_keypair_file, write_keypair_file, Signer};
     use solana_stake_program::stake_instruction::StakeInstruction;
-    use solana_transaction_status::TransactionConfirmationStatus;
+    use safecoin_transaction_status::TransactionConfirmationStatus;
 
     #[test]
     fn test_process_token_allocations() {

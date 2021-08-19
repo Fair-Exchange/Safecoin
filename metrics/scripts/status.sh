@@ -46,6 +46,6 @@ cat <<EOF
      password: $INFLUXDB_ADMIN_PASSWORD
 
 * Enable metric collection per shell by running:
-     export SAFECOIN_METRICS_CONFIG="host=http://localhost:10016,db=testnet,u=$INFLUXDB_WRITE_USER,p=$INFLUXDB_WRITE_PASSWORD"
+     export SAFEANA_METRICS_CONFIG="host=http://localhost:10016,db=testnet,u=$INFLUXDB_WRITE_USER,p=$INFLUXDB_WRITE_PASSWORD"
 
 EOF

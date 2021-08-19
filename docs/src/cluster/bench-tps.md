@@ -6,16 +6,16 @@ The Safecoin git repository contains all the scripts you might need to spin up y
 
 For all four variations, you'd need the latest Rust toolchain and the Safecoin source code:
 
-First, setup Rust, Cargo and system packages as described in the Safecoin [README](https://github.com/solana-labs/solana#1-install-rustc-cargo-and-rustfmt)
+First, setup Rust, Cargo and system packages as described in the Safecoin [README](https://github.com/fair-exchange/safecoin#1-install-rustc-cargo-and-rustfmt)
 
 Now checkout the code from github:
 
 ```bash
-git clone https://github.com/solana-labs/solana.git
+git clone https://github.com/fair-exchange/safecoin.git
 cd solana
 ```
 
-The demo code is sometimes broken between releases as we add new low-level features, so if this is your first time running the demo, you'll improve your odds of success if you check out the [latest release](https://github.com/solana-labs/solana/releases) before proceeding:
+The demo code is sometimes broken between releases as we add new low-level features, so if this is your first time running the demo, you'll improve your odds of success if you check out the [latest release](https://github.com/fair-exchange/safecoin/releases) before proceeding:
 
 ```bash
 TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
@@ -71,8 +71,8 @@ To run a performance-enhanced validator on Linux, [CUDA 10.0](https://developer.
 
 ```bash
 ./fetch-perf-libs.sh
-NDEBUG=1 SAFECOIN_CUDA=1 ./multinode-demo/bootstrap-validator.sh
-NDEBUG=1 SAFECOIN_CUDA=1 ./multinode-demo/validator.sh
+NDEBUG=1 SAFEANA_CUDA=1 ./multinode-demo/bootstrap-validator.sh
+NDEBUG=1 SAFEANA_CUDA=1 ./multinode-demo/validator.sh
 ```
 
 ### Testnet Client Demo

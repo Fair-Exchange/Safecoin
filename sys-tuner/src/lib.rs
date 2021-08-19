@@ -1,11 +1,11 @@
 use log::*;
 
-pub const SAFECOIN_SYS_TUNER_PATH: &str = "/tmp/safecoin-sys-tuner";
+pub const SAFEANA_SYS_TUNER_PATH: &str = "/tmp/safecoin-sys-tuner";
 
 #[cfg(unix)]
 pub fn request_realtime_poh() {
     info!("Sending tuning request");
-    let status = unix_socket::UnixStream::connect(SAFECOIN_SYS_TUNER_PATH);
+    let status = unix_socket::UnixStream::connect(SAFEANA_SYS_TUNER_PATH);
     match status {
         Ok(_) => info!("Successfully sent tuning request"),
         Err(err) => warn!(

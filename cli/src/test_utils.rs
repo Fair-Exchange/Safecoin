@@ -1,4 +1,4 @@
-use solana_client::rpc_client::RpcClient;
+use safecoin_client::rpc_client::RpcClient;
 use solana_sdk::{clock::DEFAULT_MS_PER_SLOT, commitment_config::CommitmentConfig, pubkey::Pubkey};
 use std::{thread::sleep, time::Duration};
 

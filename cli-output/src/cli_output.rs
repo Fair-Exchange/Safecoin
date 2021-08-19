@@ -12,9 +12,9 @@ use {
     inflector::cases::titlecase::to_title_case,
     serde::{Deserialize, Serialize},
     serde_json::{Map, Value},
-    solana_account_decoder::parse_token::UiTokenAccount,
-    solana_clap_utils::keypair::SignOnly,
-    solana_client::rpc_response::{
+    safecoin_account_decoder::parse_token::UiTokenAccount,
+    safecoin_clap_utils::keypair::SignOnly,
+    safecoin_client::rpc_response::{
         RpcAccountBalance, RpcContactInfo, RpcInflationGovernor, RpcInflationRate, RpcKeyedAccount,
         RpcSupply, RpcVoteAccountInfo,
     },
@@ -29,7 +29,7 @@ use {
         transaction::{Transaction, TransactionError},
     },
     solana_stake_program::stake_state::{Authorized, Lockup},
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         EncodedConfirmedBlock, EncodedTransaction, TransactionConfirmationStatus,
         UiTransactionStatusMeta,
     },
@@ -771,6 +771,7 @@ pub struct CliEpochReward {
     pub post_balance: u64, // lamports
     pub percent_change: f64,
     pub apr: Option<f64>,
+    pub commission: Option<u8>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -815,23 +816,27 @@ impl fmt::Display for CliKeyedEpochRewards {
         writeln!(f, "Epoch Rewards:")?;
         writeln!(
             f,
-            "  {:<44}  {:<18}  {:<18}  {:>14}  {:>14}",
-            "Address", "Amount", "New Balance", "Percent Change", "APR"
+            "  {:<44}  {:<18}  {:<18}  {:>14}  {:>14}  {:>10}",
+            "Address", "Amount", "New Balance", "Percent Change", "APR", "Commission"
         )?;
         for keyed_reward in &self.rewards {
             match &keyed_reward.reward {
                 Some(reward) => {
                     writeln!(
                         f,
-                        "  {:<44}  ◎{:<17.9}  ◎{:<17.9}  {:>13.2}%  {}",
+                        "  {:<44}  ◎{:<17.9}  ◎{:<17.9}  {:>13.9}%  {:>14}  {:>10}",
                         keyed_reward.address,
                         lamports_to_sol(reward.amount),
                         lamports_to_sol(reward.post_balance),
                         reward.percent_change,
                         reward
                             .apr
-                            .map(|apr| format!("{:>13.2}%", apr))
+                            .map(|apr| format!("{:.2}%", apr))
                             .unwrap_or_default(),
+                        reward
+                            .commission
+                            .map(|commission| format!("{}%", commission))
+                            .unwrap_or_else(|| "-".to_string())
                     )?;
                 }
                 None => {
@@ -948,13 +953,13 @@ fn show_epoch_rewards(
         writeln!(f, "Epoch Rewards:")?;
         writeln!(
             f,
-            "  {:<6}  {:<11}  {:<18}  {:<18}  {:>14}  {:>14}",
-            "Epoch", "Reward Slot", "Amount", "New Balance", "Percent Change", "APR"
+            "  {:<6}  {:<11}  {:<18}  {:<18}  {:>14}  {:>14}  {:>10}",
+            "Epoch", "Reward Slot", "Amount", "New Balance", "Percent Change", "APR", "Commission"
         )?;
         for reward in epoch_rewards {
             writeln!(
                 f,
-                "  {:<6}  {:<11}  ◎{:<17.9}  ◎{:<17.9}  {:>13.2}%  {}",
+                "  {:<6}  {:<11}  ◎{:<17.9}  ◎{:<17.9}  {:>13.9}%  {:>14}  {:>10}",
                 reward.epoch,
                 reward.effective_slot,
                 lamports_to_sol(reward.amount),
@@ -962,8 +967,12 @@ fn show_epoch_rewards(
                 reward.percent_change,
                 reward
                     .apr
-                    .map(|apr| format!("{:>13.2}%", apr))
+                    .map(|apr| format!("{:.2}%", apr))
                     .unwrap_or_default(),
+                reward
+                    .commission
+                    .map(|commission| format!("{}%", commission))
+                    .unwrap_or_else(|| "-".to_string())
             )?;
         }
     }
@@ -1707,6 +1716,7 @@ pub struct CliFeesInner {
     pub blockhash: String,
     pub lamports_per_signature: u64,
     pub last_valid_slot: Option<Slot>,
+    pub last_valid_block_height: Option<Slot>,
 }
 
 impl QuietDisplay for CliFeesInner {}
@@ -1720,11 +1730,11 @@ impl fmt::Display for CliFeesInner {
             "Lamports per signature:",
             &self.lamports_per_signature.to_string(),
         )?;
-        let last_valid_slot = self
-            .last_valid_slot
+        let last_valid_block_height = self
+            .last_valid_block_height
             .map(|s| s.to_string())
             .unwrap_or_default();
-        writeln_name_value(f, "Last valid slot:", &last_valid_slot)
+        writeln_name_value(f, "Last valid block height:", &last_valid_block_height)
     }
 }
 
@@ -1753,6 +1763,7 @@ impl CliFees {
         blockhash: Hash,
         lamports_per_signature: u64,
         last_valid_slot: Option<Slot>,
+        last_valid_block_height: Option<Slot>,
     ) -> Self {
         Self {
             inner: Some(CliFeesInner {
@@ -1760,6 +1771,7 @@ impl CliFees {
                 blockhash: blockhash.to_string(),
                 lamports_per_signature,
                 last_valid_slot,
+                last_valid_block_height,
             }),
         }
     }
@@ -2174,8 +2186,8 @@ impl fmt::Display for CliBlock {
             writeln!(f, "Rewards:")?;
             writeln!(
                 f,
-                "  {:<44}  {:^15}  {:<15}  {:<20}  {:>14}",
-                "Address", "Type", "Amount", "New Balance", "Percent Change"
+                "  {:<44}  {:^15}  {:<15}  {:<20}  {:>14}  {:>10}",
+                "Address", "Type", "Amount", "New Balance", "Percent Change", "Commission"
             )?;
             for reward in rewards {
                 let sign = if reward.lamports < 0 { "-" } else { "" };
@@ -2183,7 +2195,7 @@ impl fmt::Display for CliBlock {
                 total_rewards += reward.lamports;
                 writeln!(
                     f,
-                    "  {:<44}  {:^15}  {:>15}  {}",
+                    "  {:<44}  {:^15}  {:>15}  {}  {}",
                     reward.pubkey,
                     if let Some(reward_type) = reward.reward_type {
                         format!("{}", reward_type)
@@ -2205,7 +2217,11 @@ impl fmt::Display for CliBlock {
                                 / (reward.post_balance as f64 - reward.lamports as f64))
                                 * 100.0
                         )
-                    }
+                    },
+                    reward
+                        .commission
+                        .map(|commission| format!("{:>9}%", commission))
+                        .unwrap_or_else(|| "    -".to_string())
                 )?;
             }
 
@@ -2445,6 +2461,10 @@ mod tests {
 
             fn try_sign_message(&self, _message: &[u8]) -> Result<Signature, SignerError> {
                 Ok(Signature::new(&[1u8; 64]))
+            }
+
+            fn is_interactive(&self) -> bool {
+                false
             }
         }
 

@@ -1,16 +1,16 @@
 /**
- * Flow Library definition for @solana/web3.js
+ * Flow Library definition for @safecoin/web3.js
  *
  * This file is manually maintained
  *
  * Usage: add the following line under the [libs] section of your project's
  * .flowconfig:
  * [libs]
- * node_modules/@solana/web3.js/module.flow.js
+ * node_modules/@safecoin/web3.js/module.flow.js
  *
  */
 
-declare module '@solana/web3.js' {
+declare module '@safecoin/web3.js' {
   import typeof {Buffer} from 'buffer';
   import typeof * as BufferLayout from 'buffer-layout';
 
@@ -280,7 +280,7 @@ declare module '@solana/web3.js' {
   };
 
   declare export type Version = {
-    'solana-core': string,
+    'safecoin-core': string,
     'feature-set': ?number,
   };
 

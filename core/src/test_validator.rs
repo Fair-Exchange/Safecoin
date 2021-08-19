@@ -5,8 +5,8 @@ use {
         rpc::JsonRpcConfig,
         validator::{Validator, ValidatorConfig, ValidatorExit, ValidatorStartProgress},
     },
-    solana_client::rpc_client::RpcClient,
-    solana_ledger::{blockstore::create_new_ledger, create_new_tmp_ledger},
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_ledger::{blockstore::create_new_ledger, create_new_tmp_ledger},
     solana_net_utils::PortRange,
     solana_runtime::{
         bank_forks::{ArchiveFormat, SnapshotConfig, SnapshotVersion},
@@ -395,7 +395,7 @@ impl TestValidator {
                     ledger_path,
                     &genesis_config,
                     MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
-                    solana_ledger::blockstore_db::AccessType::PrimaryOnly,
+                    safecoin_ledger::blockstore_db::AccessType::PrimaryOnly,
                 )
                 .map_err(|err| {
                     format!(

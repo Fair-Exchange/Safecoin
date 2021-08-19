@@ -15,10 +15,10 @@
 
 { # this ensures the entire script is downloaded #
 
-if [ -z "$SAFECOIN_DOWNLOAD_ROOT" ]; then
-    SAFECOIN_DOWNLOAD_ROOT="https://github.com/solana-labs/solana/releases/download/"
+if [ -z "$SAFEANA_DOWNLOAD_ROOT" ]; then
+    SAFEANA_DOWNLOAD_ROOT="https://github.com/fair-exchange/safecoin/releases/download/"
 fi
-GH_LATEST_RELEASE="https://api.github.com/repos/solana-labs/solana/releases/latest"
+GH_LATEST_RELEASE="https://api.github.com/repos/fair-exchange/safecoin/releases/latest"
 
 set -e
 
@@ -77,10 +77,10 @@ main() {
     temp_dir="$(mktemp -d 2>/dev/null || ensure mktemp -d -t safecoin-install-init)"
     ensure mkdir -p "$temp_dir"
 
-    # Check for SAFECOIN_RELEASE environment variable override.  Otherwise fetch
+    # Check for SAFEANA_RELEASE environment variable override.  Otherwise fetch
     # the latest release tag from github
-    if [ -n "$SAFECOIN_RELEASE" ]; then
-      release="$SAFECOIN_RELEASE"
+    if [ -n "$SAFEANA_RELEASE" ]; then
+      release="$SAFEANA_RELEASE"
     else
       release_file="$temp_dir/release"
       printf 'looking for latest release\n' 1>&2
@@ -94,7 +94,7 @@ main() {
       fi
     fi
 
-    download_url="$SAFECOIN_DOWNLOAD_ROOT/$release/safecoin-install-init-$TARGET"
+    download_url="$SAFEANA_DOWNLOAD_ROOT/$release/safecoin-install-init-$TARGET"
     safecoin_install_init="$temp_dir/safecoin-install-init"
 
     printf 'downloading %s installer\n' "$release" 1>&2
@@ -110,7 +110,7 @@ main() {
 
     if [ -z "$1" ]; then
       #shellcheck disable=SC2086
-      ignore "$safecoin_install_init" $SAFECOIN_INSTALL_INIT_ARGS
+      ignore "$safecoin_install_init" $SAFEANA_INSTALL_INIT_ARGS
     else
       ignore "$safecoin_install_init" "$@"
     fi

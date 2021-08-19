@@ -1,5 +1,5 @@
 import React from "react";
-import { PublicKey, Connection, StakeActivationData } from "@solana/web3.js";
+import { PublicKey, Connection, StakeActivationData } from "@safecoin/web3.js";
 import { useCluster, Cluster } from "../cluster";
 import { HistoryProvider } from "./history";
 import { TokensProvider } from "./tokens";
@@ -40,7 +40,7 @@ export type UpgradeableProgramAccountData = {
 };
 
 export type TokenProgramData = {
-  program: "spl-token";
+  program: "safe-token";
   parsed: TokenAccount;
 };
 
@@ -226,7 +226,7 @@ async function fetchAccountInfo(
               };
               break;
 
-            case "spl-token":
+            case "safe-token":
               data = {
                 program: result.data.program,
                 parsed: create(info, TokenAccount),
@@ -294,7 +294,7 @@ export function useMintAccountInfo(
     try {
       const data = accountInfo?.data?.details?.data;
       if (!data) return;
-      if (data.program !== "spl-token" || data.parsed.type !== "mint") {
+      if (data.program !== "safe-token" || data.parsed.type !== "mint") {
         return;
       }
 
@@ -314,7 +314,7 @@ export function useTokenAccountInfo(
   try {
     const data = accountInfo?.data?.details?.data;
     if (!data) return;
-    if (data.program !== "spl-token" || data.parsed.type !== "account") {
+    if (data.program !== "safe-token" || data.parsed.type !== "account") {
       return;
     }
 

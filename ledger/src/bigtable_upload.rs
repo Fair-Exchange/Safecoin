@@ -1,6 +1,6 @@
 use crate::blockstore::Blockstore;
 use log::*;
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_sdk::clock::Slot;
 use std::{
     collections::HashSet,

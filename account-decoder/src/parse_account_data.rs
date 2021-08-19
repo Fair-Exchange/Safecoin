@@ -29,7 +29,7 @@ lazy_static! {
         );
         m.insert(*CONFIG_PROGRAM_ID, ParsableAccount::Config);
         m.insert(*SYSTEM_PROGRAM_ID, ParsableAccount::Nonce);
-        m.insert(*TOKEN_PROGRAM_ID, ParsableAccount::SplToken);
+        m.insert(*TOKEN_PROGRAM_ID, ParsableAccount::SafeToken);
         m.insert(*STAKE_PROGRAM_ID, ParsableAccount::Stake);
         m.insert(*SYSVAR_PROGRAM_ID, ParsableAccount::Sysvar);
         m.insert(*VOTE_PROGRAM_ID, ParsableAccount::Vote);
@@ -69,7 +69,7 @@ pub enum ParsableAccount {
     BpfUpgradeableLoader,
     Config,
     Nonce,
-    SplToken,
+    SafeToken,
     Stake,
     Sysvar,
     Vote,
@@ -96,7 +96,7 @@ pub fn parse_account_data(
         }
         ParsableAccount::Config => serde_json::to_value(parse_config(data, pubkey)?)?,
         ParsableAccount::Nonce => serde_json::to_value(parse_nonce(data)?)?,
-        ParsableAccount::SplToken => {
+        ParsableAccount::SafeToken => {
             serde_json::to_value(parse_token(data, additional_data.spl_token_decimals)?)?
         }
         ParsableAccount::Stake => serde_json::to_value(parse_stake(data)?)?,

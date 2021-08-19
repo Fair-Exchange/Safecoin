@@ -18,7 +18,7 @@ The affected RPC endpoints are:
 - [getSignatureStatuses](developing/clients/jsonrpc-api.md#getsignaturestatuses)
 
 Note that [getBlockTime](developing/clients/jsonrpc-api.md#getblocktime)
-is not supported, as once https://github.com/solana-labs/solana/issues/10089 is
+is not supported, as once https://github.com/fair-exchange/safecoin/issues/10089 is
 fixed then `getBlockTime` can be removed.
 
 Some system design constraints:

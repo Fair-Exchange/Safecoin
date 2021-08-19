@@ -38,8 +38,8 @@ use log::*;
 use rand::{prelude::SliceRandom, thread_rng, Rng};
 use rayon::{prelude::*, ThreadPool};
 use serde::{Deserialize, Serialize};
-use solana_measure::measure::Measure;
-use solana_rayon_threadlimit::get_thread_count;
+use safecoin_measure::measure::Measure;
+use safecoin_rayon_threadlimit::get_thread_count;
 use solana_sdk::{
     account::{AccountSharedData, ReadableAccount},
     clock::{Epoch, Slot},
@@ -1044,7 +1044,7 @@ pub fn make_min_priority_thread_pool() -> ThreadPool {
 }
 
 #[cfg(all(test, RUSTC_WITH_SPECIALIZATION))]
-impl solana_frozen_abi::abi_example::AbiExample for AccountsDb {
+impl safecoin_frozen_abi::abi_example::AbiExample for AccountsDb {
     fn example() -> Self {
         let accounts_db = AccountsDb::new_single();
         let key = Pubkey::default();
@@ -2110,8 +2110,8 @@ impl AccountsDb {
     {
         let key = match &index_key {
             IndexKey::ProgramId(key) => key,
-            IndexKey::SplTokenMint(key) => key,
-            IndexKey::SplTokenOwner(key) => key,
+            IndexKey::SafeTokenMint(key) => key,
+            IndexKey::SafeTokenOwner(key) => key,
         };
         if !self.account_indexes.include_key(key) {
             // the requested key was not indexed in the secondary index, so do a normal scan
@@ -6060,7 +6060,7 @@ pub mod tests {
 
         // Secondary index should still find both pubkeys
         let mut found_accounts = HashSet::new();
-        let index_key = IndexKey::SplTokenMint(mint_key);
+        let index_key = IndexKey::SafeTokenMint(mint_key);
         accounts
             .accounts_index
             .index_scan_accounts(&HashMap::new(), index_key, |key, _| {
@@ -6124,7 +6124,7 @@ pub mod tests {
         let mut found_accounts = vec![];
         accounts.accounts_index.index_scan_accounts(
             &HashMap::new(),
-            IndexKey::SplTokenMint(mint_key),
+            IndexKey::SafeTokenMint(mint_key),
             |key, _| found_accounts.push(*key),
         );
         assert_eq!(found_accounts, vec![pubkey2]);

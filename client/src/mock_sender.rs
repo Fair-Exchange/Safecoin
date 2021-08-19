@@ -13,7 +13,7 @@ use {
         signature::Signature,
         transaction::{self, Transaction, TransactionError},
     },
-    solana_transaction_status::{TransactionConfirmationStatus, TransactionStatus},
+    safecoin_transaction_status::{TransactionConfirmationStatus, TransactionStatus},
     solana_version::Version,
     std::{collections::HashMap, sync::RwLock},
 };

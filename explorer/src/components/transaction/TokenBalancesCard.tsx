@@ -4,7 +4,7 @@ import {
   PublicKey,
   TokenAmount,
   TokenBalance,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { BigNumber } from "bignumber.js";
 import { Address } from "components/common/Address";
 import { BalanceDelta } from "components/common/BalanceDelta";

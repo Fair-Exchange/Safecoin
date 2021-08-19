@@ -66,4 +66,4 @@ TVU运行时确保在运行时处理任何事务之前进行PoH验证。
 
 ## 未来的工作
 
-- [长时间运行交易的延续和信号](https://github.com/solana-labs/solana/issues/1485)
+- [长时间运行交易的延续和信号](https://github.com/fair-exchange/safecoin/issues/1485)

@@ -6,16 +6,16 @@ Safecoin git 仓库涵盖了配置本地测试网可能用到的所有脚本。 
 
 对于上述的四种变型，您可能需要最新的 Rust 工具链和 Safecoin 源代码：
 
-首先，请设置 Safecoin [README](https://github.com/solana-labs/solana#1-install-rustc-cargo-and-rustfmt) 中提到的 Rust、Cargo 和系统安装包。
+首先，请设置 Safecoin [README](https://github.com/fair-exchange/safecoin#1-install-rustc-cargo-and-rustfmt) 中提到的 Rust、Cargo 和系统安装包。
 
 请检查 github 代码：
 
 ```bash
-git clone https://github.com/solana-labs/solana.git
+git clone https://github.com/fair-exchange/safecoin.git
 cd solana
 ```
 
-演示代码有时在我们添加新的低级功能时会失败，所以如果这是您第一次运行 demo，为了提高成功的概率，请在继续操作之前先查看 [latest release](https://github.com/solana-labs/solana/releases) ：
+演示代码有时在我们添加新的低级功能时会失败，所以如果这是您第一次运行 demo，为了提高成功的概率，请在继续操作之前先查看 [latest release](https://github.com/fair-exchange/safecoin/releases) ：
 
 ```bash
 TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
@@ -70,8 +70,8 @@ NDEBUG=1 ./multinode-demo/validator-x.sh
 
 ```bash
 ./fetch-perf-libs.sh
-NDEBUG=1 SAFECOIN_CUDA=1 ./multinode-demo/bootstrap-validator.sh
-NDEBUG=1 SAFECOIN_CUDA=1 ./multinode-demo/validator.sh
+NDEBUG=1 SAFEANA_CUDA=1 ./multinode-demo/bootstrap-validator.sh
+NDEBUG=1 SAFEANA_CUDA=1 ./multinode-demo/validator.sh
 ```
 
 ### 测试网客户端演示

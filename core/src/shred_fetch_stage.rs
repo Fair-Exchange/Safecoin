@@ -2,7 +2,7 @@
 
 use crate::packet_hasher::PacketHasher;
 use lru::LruCache;
-use solana_ledger::shred::{get_shred_slot_index_type, ShredFetchStats};
+use safecoin_ledger::shred::{get_shred_slot_index_type, ShredFetchStats};
 use solana_perf::cuda_runtime::PinnedVec;
 use solana_perf::packet::{Packet, PacketsRecycler};
 use solana_perf::recycler::Recycler;
@@ -225,8 +225,8 @@ impl ShredFetchStage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_ledger::blockstore::MAX_DATA_SHREDS_PER_SLOT;
-    use solana_ledger::shred::Shred;
+    use safecoin_ledger::blockstore::MAX_DATA_SHREDS_PER_SLOT;
+    use safecoin_ledger::shred::Shred;
 
     #[test]
     fn test_data_code_same_index() {
@@ -264,7 +264,7 @@ mod tests {
             &hasher,
         );
         assert!(!packet.meta.discard);
-        let coding = solana_ledger::shred::Shredder::generate_coding_shreds(
+        let coding = safecoin_ledger::shred::Shredder::generate_coding_shreds(
             &[shred],
             false, // is_last_in_slot
         );

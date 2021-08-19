@@ -4,7 +4,7 @@
 extern crate solana_bpf_loader_program;
 
 use itertools::izip;
-use solana_account_decoder::parse_bpf_loader::{
+use safecoin_account_decoder::parse_bpf_loader::{
     parse_bpf_upgradeable_loader, BpfUpgradeableLoaderAccountType,
 };
 use solana_bpf_loader_program::{
@@ -13,7 +13,7 @@ use solana_bpf_loader_program::{
     syscalls::register_syscalls,
     ThisInstructionMeter,
 };
-use solana_cli_output::display::println_transaction;
+use safecoin_cli_output::display::println_transaction;
 use solana_rbpf::vm::{Config, Executable, Tracer};
 use solana_runtime::{
     bank::{Bank, ExecuteTimings, NonceRollbackInfo, TransactionBalancesSet, TransactionResults},
@@ -43,7 +43,7 @@ use solana_sdk::{
     },
     transaction::{Transaction, TransactionError},
 };
-use solana_transaction_status::{
+use safecoin_transaction_status::{
     token_balances::collect_token_balances, ConfirmedTransaction, InnerInstructions,
     TransactionStatusMeta, TransactionWithStatusMeta, UiTransactionEncoding,
 };

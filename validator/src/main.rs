@@ -8,7 +8,7 @@ use {
     fd_lock::FdLock,
     log::*,
     rand::{seq::SliceRandom, thread_rng, Rng},
-    solana_clap_utils::{
+    safecoin_clap_utils::{
         input_parsers::{keypair_of, keypairs_of, pubkey_of, value_of},
         input_validators::{
             is_keypair, is_keypair_or_ask_keyword, is_parsable, is_pubkey, is_pubkey_or_keypair,
@@ -16,7 +16,7 @@ use {
         },
         keypair::SKIP_SEED_PHRASE_VALIDATION_ARG,
     },
-    solana_client::{
+    safecoin_client::{
         rpc_client::RpcClient, rpc_config::RpcLeaderScheduleConfig,
         rpc_request::MAX_MULTIPLE_ACCOUNTS,
     },
@@ -36,7 +36,7 @@ use {
         },
     },
     solana_download_utils::{download_genesis_if_missing, download_snapshot},
-    solana_ledger::blockstore_db::BlockstoreRecoveryMode,
+    safecoin_ledger::blockstore_db::BlockstoreRecoveryMode,
     solana_perf::recycler::enable_recycler_warming,
     solana_runtime::{
         accounts_index::{
@@ -1721,7 +1721,7 @@ pub fn main() {
                 .long("account-index")
                 .takes_value(true)
                 .multiple(true)
-                .possible_values(&["program-id", "spl-token-owner", "spl-token-mint"])
+                .possible_values(&["program-id", "safe-token-owner", "safe-token-mint"])
                 .value_name("INDEX")
                 .help("Enable an accounts index, indexed by the selected account field"),
         )
@@ -2120,7 +2120,7 @@ pub fn main() {
                 SocketAddr::new(rpc_bind_address, rpc_port + 1),
                 // If additional ports are added, +2 needs to be skipped to avoid a conflict with
                 // the websocket port (which is +2) in web3.js This odd port shifting is tracked at
-                // https://github.com/solana-labs/solana/issues/12250
+                // https://github.com/fair-exchange/safecoin/issues/12250
             )
         }),
         pubsub_config: PubSubConfig {
@@ -2481,7 +2481,7 @@ pub fn main() {
         solana_perf::perf_libs::init_cuda();
         enable_recycler_warming();
     }
-    solana_ledger::entry::init_poh();
+    safecoin_ledger::entry::init_poh();
     solana_runtime::snapshot_utils::remove_tmp_snapshot_archives(&snapshot_output_dir);
 
     let should_check_duplicate_instance = !matches.is_present("no_duplicate_instance_check");
@@ -2539,8 +2539,8 @@ fn process_account_indexes(matches: &ArgMatches) -> AccountSecondaryIndexes {
         .unwrap_or_default()
         .map(|value| match value {
             "program-id" => AccountIndex::ProgramId,
-            "spl-token-mint" => AccountIndex::SplTokenMint,
-            "spl-token-owner" => AccountIndex::SplTokenOwner,
+            "safe-token-mint" => AccountIndex::SafeTokenMint,
+            "safe-token-owner" => AccountIndex::SafeTokenOwner,
             _ => unreachable!(),
         })
         .collect();

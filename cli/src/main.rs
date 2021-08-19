@@ -3,7 +3,7 @@ use clap::{
     SubCommand,
 };
 use console::style;
-use solana_clap_utils::{
+use safecoin_clap_utils::{
     input_validators::{is_url, is_url_or_moniker, normalize_to_url_if_moniker},
     keypair::{CliSigners, DefaultSigner, SKIP_SEED_PHRASE_VALIDATION_ARG},
     DisplayError,
@@ -12,10 +12,10 @@ use solana_cli::cli::{
     app, parse_command, process_command, CliCommandInfo, CliConfig, SettingType,
     DEFAULT_CONFIRM_TX_TIMEOUT_SECONDS, DEFAULT_RPC_TIMEOUT_SECONDS,
 };
-use solana_cli_config::{Config, CONFIG_FILE};
-use solana_cli_output::{display::println_name_value, OutputFormat};
-use solana_client::rpc_config::RpcSendTransactionConfig;
-use solana_remote_wallet::remote_wallet::RemoteWalletManager;
+use safecoin_cli_config::{Config, CONFIG_FILE};
+use safecoin_cli_output::{display::println_name_value, OutputFormat};
+use safecoin_client::rpc_config::RpcSendTransactionConfig;
+use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
 use std::{collections::HashMap, error, path::PathBuf, sync::Arc, time::Duration};
 
 pub fn println_name_value_or(name: &str, value: &str, setting_type: SettingType) {

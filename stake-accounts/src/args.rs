@@ -1,6 +1,6 @@
 use clap::ArgMatches;
-use solana_clap_utils::keypair::{pubkey_from_path, signer_from_path};
-use solana_remote_wallet::remote_wallet::RemoteWalletManager;
+use safecoin_clap_utils::keypair::{pubkey_from_path, signer_from_path};
+use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
 use solana_sdk::{
     clock::{Epoch, UnixTimestamp},
     pubkey::Pubkey,

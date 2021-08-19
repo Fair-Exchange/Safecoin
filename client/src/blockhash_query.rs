@@ -1,7 +1,7 @@
 use {
     crate::{nonce_utils, rpc_client::RpcClient},
     clap::ArgMatches,
-    solana_clap_utils::{
+    safecoin_clap_utils::{
         input_parsers::{pubkey_of, value_of},
         nonce::*,
         offline::*,
@@ -126,7 +126,7 @@ mod tests {
     };
     use clap::App;
     use serde_json::{self, json, Value};
-    use solana_account_decoder::{UiAccount, UiAccountEncoding};
+    use safecoin_account_decoder::{UiAccount, UiAccountEncoding};
     use solana_sdk::{account::Account, hash::hash, nonce, system_program};
     use std::collections::HashMap;
 

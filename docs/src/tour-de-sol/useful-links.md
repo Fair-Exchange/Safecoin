@@ -5,8 +5,8 @@ description: Where to go after you've read this guide
 
 - [Network Explorer](http://explorer.solana.com/)
 - [TdS metrics dashboard](https://metrics.safecoin.org:3000/d/monitor-edge/cluster-telemetry-edge?refresh=1m&from=now-15m&to=now&var-testnet=tds)
-- [Core software repo](https://github.com/solana-labs/solana)
-- [Submit bugs and feedback in this repo](https://github.com/solana-labs/solana/issues)
+- [Core software repo](https://github.com/fair-exchange/safecoin)
+- [Submit bugs and feedback in this repo](https://github.com/fair-exchange/safecoin/issues)
 
 ### Validator Discussions
 

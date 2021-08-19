@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-declare -r SAFECOIN_LOCK_FILE="/home/solana/.solana.lock"
+declare -r SAFEANA_LOCK_FILE="/home/solana/.solana.lock"
 
 __colo_here="$(dirname "${BASH_SOURCE[0]}")"
 
@@ -123,26 +123,26 @@ colo_whoami() {
         echo "Found conflicting username \"${SAFE_USER}\" on ${IP}, expected \"${ME}\"" 1>&2
       fi
     fi
-  done < <(colo_instance_run_foreach "[ -n \"\${SAFECOIN_USER}\" ] && echo -e \"\${SAFECOIN_USER}\\x1fEOL\"")
+  done < <(colo_instance_run_foreach "[ -n \"\${SAFEANA_USER}\" ] && echo -e \"\${SAFEANA_USER}\\x1fEOL\"")
   echo "${ME}"
 }
 
-COLO_SAFECOIN_USER=""
+COLO_SAFEANA_USER=""
 colo_get_solana_user() {
-  if [ -z "${COLO_SAFECOIN_USER}" ]; then
-    COLO_SAFECOIN_USER=$(colo_whoami)
+  if [ -z "${COLO_SAFEANA_USER}" ]; then
+    COLO_SAFEANA_USER=$(colo_whoami)
   fi
-  echo "${COLO_SAFECOIN_USER}"
+  echo "${COLO_SAFEANA_USER}"
 }
 
 __colo_node_status_script() {
   cat <<EOF
   exec 3>&2
   exec 2>/dev/null  # Suppress stderr as the next call to exec fails most of
-                    # the time due to ${SAFECOIN_LOCK_FILE} not existing and is running from a
+                    # the time due to ${SAFEANA_LOCK_FILE} not existing and is running from a
                     # subshell where normal redirection doesn't work
-  exec 9<"${SAFECOIN_LOCK_FILE}" && flock -s 9 && . "${SAFECOIN_LOCK_FILE}" && exec 9>&-
-  echo -e "\${SAFECOIN_LOCK_USER}\\x1f\${SAFECOIN_LOCK_INSTANCENAME}\\x1f\${PREEMPTIBLE}\\x1fEOL"
+  exec 9<"${SAFEANA_LOCK_FILE}" && flock -s 9 && . "${SAFEANA_LOCK_FILE}" && exec 9>&-
+  echo -e "\${SAFEANA_LOCK_USER}\\x1f\${SAFEANA_LOCK_INSTANCENAME}\\x1f\${PREEMPTIBLE}\\x1fEOL"
   exec 2>&3 # Restore stderr
 EOF
 }
@@ -195,7 +195,7 @@ colo_node_requisition() {
   declare RC=false
 
   colo_instance_run "${IP}" "$(cat <<EOF
-SAFECOIN_LOCK_FILE="${SAFECOIN_LOCK_FILE}"
+SAFEANA_LOCK_FILE="${SAFEANA_LOCK_FILE}"
 INSTANCE_NAME="${INSTANCE_NAME}"
 PREEMPTIBLE="${PREEMPTIBLE}"
 SSH_AUTHORIZED_KEYS='$("${__colo_here}"/add-datacenter-solana-user-authorized_keys.sh 2> /dev/null)'
@@ -242,7 +242,7 @@ colo_node_free() {
   declare IP=${1}
   declare FORCE_DELETE=${2}
   colo_instance_run "${IP}" "$(cat <<EOF
-SAFECOIN_LOCK_FILE="${SAFECOIN_LOCK_FILE}"
+SAFEANA_LOCK_FILE="${SAFEANA_LOCK_FILE}"
 SECONDARY_DISK_MOUNT_POINT="${SECONDARY_DISK_MOUNT_POINT}"
 SSH_AUTHORIZED_KEYS='$("${__colo_here}"/add-datacenter-solana-user-authorized_keys.sh 2> /dev/null)'
 FORCE_DELETE="${FORCE_DELETE}"

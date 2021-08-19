@@ -4,7 +4,7 @@ use clap::{
     crate_description, crate_name, value_t, value_t_or_exit, values_t_or_exit, App, AppSettings,
     Arg, ArgMatches, SubCommand,
 };
-use solana_clap_utils::{
+use safecoin_clap_utils::{
     input_validators::{is_parsable, is_prompt_signer_source},
     keypair::{
         keypair_from_path, keypair_from_seed_phrase, prompt_passphrase, signer_from_path,
@@ -12,8 +12,8 @@ use solana_clap_utils::{
     },
     ArgConstant, DisplayError,
 };
-use solana_cli_config::{Config, CONFIG_FILE};
-use solana_remote_wallet::remote_wallet::RemoteWalletManager;
+use safecoin_cli_config::{Config, CONFIG_FILE};
+use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     message::Message,
@@ -140,7 +140,7 @@ fn get_keypair_from_matches(
     } else if !config.keypair_path.is_empty() {
         &config.keypair_path
     } else {
-        path.extend(&[".config", "solana", "id.json"]);
+        path.extend(&[".config", "safecoin", "id.json"]);
         path.to_str().unwrap()
     };
     signer_from_path(matches, path, "pubkey recovery", wallet_manager)
@@ -545,7 +545,7 @@ fn do_main(matches: &ArgMatches<'_>) -> Result<(), Box<dyn error::Error>> {
             } else if matches.is_present(NO_OUTFILE_ARG.name) {
                 None
             } else {
-                path.extend(&[".config", "solana", "id.json"]);
+                path.extend(&[".config", "safecoin", "id.json"]);
                 Some(path.to_str().unwrap())
             };
 
@@ -588,7 +588,7 @@ fn do_main(matches: &ArgMatches<'_>) -> Result<(), Box<dyn error::Error>> {
             let outfile = if matches.is_present("outfile") {
                 matches.value_of("outfile").unwrap()
             } else {
-                path.extend(&[".config", "solana", "id.json"]);
+                path.extend(&[".config", "safecoin", "id.json"]);
                 path.to_str().unwrap()
             };
 

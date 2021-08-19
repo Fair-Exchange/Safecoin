@@ -4,7 +4,7 @@ use crossbeam_channel::{unbounded, Receiver};
 use gag::BufferRedirect;
 use log::*;
 use serial_test::serial;
-use solana_client::{
+use safecoin_client::{
     pubsub_client::PubsubClient,
     rpc_client::RpcClient,
     rpc_config::{RpcProgramAccountsConfig, RpcSignatureSubscribeConfig},
@@ -20,7 +20,7 @@ use solana_core::{
     validator::ValidatorConfig,
 };
 use solana_download_utils::download_snapshot;
-use solana_ledger::{
+use safecoin_ledger::{
     ancestor_iterator::AncestorIterator,
     blockstore::{Blockstore, PurgeType},
     blockstore_db::AccessType,

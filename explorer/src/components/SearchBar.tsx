@@ -12,7 +12,7 @@ import {
 } from "utils/tx";
 import { Cluster, useCluster } from "providers/cluster";
 import { useTokenRegistry } from "providers/mints/token-registry";
-import { TokenInfoMap } from "@solana/spl-token-registry";
+import { TokenInfoMap } from "@solana/safe-token-registry";
 
 export function SearchBar() {
   const [search, setSearch] = React.useState("");

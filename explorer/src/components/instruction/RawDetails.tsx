@@ -1,5 +1,5 @@
 import React from "react";
-import { TransactionInstruction } from "@solana/web3.js";
+import { TransactionInstruction } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 
 export function RawDetails({ ix }: { ix: TransactionInstruction }) {

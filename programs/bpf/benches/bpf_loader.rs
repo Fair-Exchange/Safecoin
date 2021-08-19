@@ -10,7 +10,7 @@ use solana_bpf_loader_program::{
     create_vm, serialization::serialize_parameters, syscalls::register_syscalls, BpfError,
     ThisInstructionMeter,
 };
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_rbpf::vm::{Config, Executable, InstructionMeter};
 use solana_runtime::{
     bank::Bank,

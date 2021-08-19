@@ -8,7 +8,7 @@ pub struct DistributeTokensArgs {
     pub sender_keypair: Box<dyn Signer>,
     pub fee_payer: Box<dyn Signer>,
     pub stake_args: Option<StakeArgs>,
-    pub spl_token_args: Option<SplTokenArgs>,
+    pub spl_token_args: Option<SafeTokenArgs>,
     pub transfer_amount: Option<u64>,
 }
 
@@ -21,7 +21,7 @@ pub struct StakeArgs {
 }
 
 #[derive(Default)]
-pub struct SplTokenArgs {
+pub struct SafeTokenArgs {
     pub token_account_address: Pubkey,
     pub mint: Pubkey,
     pub decimals: u8,
@@ -29,7 +29,7 @@ pub struct SplTokenArgs {
 
 pub struct BalancesArgs {
     pub input_csv: String,
-    pub spl_token_args: Option<SplTokenArgs>,
+    pub spl_token_args: Option<SafeTokenArgs>,
 }
 
 pub struct TransactionLogArgs {

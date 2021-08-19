@@ -15,7 +15,7 @@ use crate::{
     syscalls::SyscallError,
 };
 use log::{log_enabled, trace, Level::Trace};
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_rbpf::{
     aligned_memory::AlignedMemory,
     ebpf::{HOST_ALIGN, MM_HEAP_START},

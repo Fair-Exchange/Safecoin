@@ -6,14 +6,14 @@ use {
     },
     log::*,
     reqwest::StatusCode,
-    solana_clap_utils::{
+    safecoin_clap_utils::{
         input_parsers::{keypair_of, pubkey_of},
         input_validators::{
             is_amount, is_keypair, is_pubkey_or_keypair, is_url, is_valid_percentage,
         },
     },
-    solana_cli_output::display::format_labeled_address,
-    solana_client::{
+    safecoin_cli_output::display::format_labeled_address,
+    safecoin_client::{
         client_error, rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig,
         rpc_request::MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS, rpc_response::RpcVoteAccountInfo,
     },
@@ -277,7 +277,7 @@ fn get_config() -> Config {
                 .takes_value(true)
                 .global(true)
                 .help("Configuration file to use");
-            if let Some(ref config_file) = *solana_cli_config::CONFIG_FILE {
+            if let Some(ref config_file) = *safecoin_cli_config::CONFIG_FILE {
                 arg.default_value(&config_file)
             } else {
                 arg
@@ -451,9 +451,9 @@ fn get_config() -> Config {
         .get_matches();
 
     let config = if let Some(config_file) = matches.value_of("config_file") {
-        solana_cli_config::Config::load(config_file).unwrap_or_default()
+        safecoin_cli_config::Config::load(config_file).unwrap_or_default()
     } else {
-        solana_cli_config::Config::default()
+        safecoin_cli_config::Config::default()
     };
 
     let source_stake_address = pubkey_of(&matches, "source_stake_address").unwrap();

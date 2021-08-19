@@ -16,7 +16,7 @@ use crate::{
 };
 use itertools::Itertools;
 use rayon::ThreadPool;
-use solana_ledger::shred::Shred;
+use safecoin_ledger::shred::Shred;
 use solana_sdk::{
     hash::Hash,
     pubkey::Pubkey,

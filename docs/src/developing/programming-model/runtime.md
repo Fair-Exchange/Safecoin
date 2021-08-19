@@ -65,7 +65,7 @@ parent. If an invoked program consume the budget or exceeds a bound the entire
 invocation chain and the parent are halted.
 
 The current [compute
-budget](https://github.com/solana-labs/solana/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/src/process_instruction.rs#L65)
+budget](https://github.com/fair-exchange/safecoin/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/src/process_instruction.rs#L65)
 can be found in the Safecoin SDK.
 
 For example, if the current budget is:
@@ -100,7 +100,7 @@ for more information.
 
 The budget values are conditional on feature enablement, take a look the compute
 budget's
-[new](https://github.com/solana-labs/solana/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/src/process_instruction.rs#L97)
+[new](https://github.com/fair-exchange/safecoin/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/src/process_instruction.rs#L97)
 function to find out how the budget is constructed. An understanding of how
 [features](runtime.md#features) work and what features are enabled on the
 cluster being used are required to determine the current budget's values.

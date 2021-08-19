@@ -3,8 +3,8 @@ use crate::{
     cli::CliError,
 };
 use clap::ArgMatches;
-use solana_clap_utils::{input_parsers::lamports_of_sol, offline::SIGN_ONLY_ARG};
-use solana_client::rpc_client::RpcClient;
+use safecoin_clap_utils::{input_parsers::lamports_of_sol, offline::SIGN_ONLY_ARG};
+use safecoin_client::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig, fee_calculator::FeeCalculator, message::Message,
     native_token::lamports_to_sol, pubkey::Pubkey,

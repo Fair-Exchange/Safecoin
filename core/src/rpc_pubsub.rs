@@ -4,8 +4,8 @@ use crate::rpc_subscriptions::{RpcSubscriptions, RpcVote};
 use jsonrpc_core::{Error, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use jsonrpc_pubsub::{typed::Subscriber, Session, SubscriptionId};
-use solana_account_decoder::UiAccount;
-use solana_client::{
+use safecoin_account_decoder::UiAccount;
+use safecoin_client::{
     rpc_config::{
         RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSignatureSubscribeConfig,
         RpcTransactionLogsConfig, RpcTransactionLogsFilter,
@@ -563,8 +563,8 @@ mod tests {
     use jsonrpc_core::{futures::channel::mpsc, Response};
     use jsonrpc_pubsub::{PubSubHandler, Session};
     use serial_test::serial;
-    use solana_account_decoder::{parse_account_data::parse_account_data, UiAccountEncoding};
-    use solana_client::rpc_response::{ProcessedSignatureResult, ReceivedSignatureResult};
+    use safecoin_account_decoder::{parse_account_data::parse_account_data, UiAccountEncoding};
+    use safecoin_client::rpc_response::{ProcessedSignatureResult, ReceivedSignatureResult};
     use solana_runtime::{
         bank::Bank,
         bank_forks::BankForks,

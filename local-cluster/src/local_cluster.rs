@@ -5,14 +5,14 @@ use crate::{
 };
 use itertools::izip;
 use log::*;
-use solana_client::thin_client::{create_client, ThinClient};
+use safecoin_client::thin_client::{create_client, ThinClient};
 use solana_core::{
     cluster_info::{Node, VALIDATOR_PORT_RANGE},
     contact_info::ContactInfo,
     gossip_service::discover_cluster,
     validator::{Validator, ValidatorConfig, ValidatorStartProgress},
 };
-use solana_ledger::create_new_tmp_ledger;
+use safecoin_ledger::create_new_tmp_ledger;
 use solana_runtime::genesis_utils::{
     create_genesis_config_with_vote_accounts_and_cluster_type, GenesisConfigInfo,
     ValidatorVoteKeypairs,

@@ -1,5 +1,5 @@
 use super::*;
-use solana_ledger::shred::Shredder;
+use safecoin_ledger::shred::Shredder;
 use solana_sdk::hash::Hash;
 use solana_sdk::signature::Keypair;
 use std::{thread::sleep, time::Duration};

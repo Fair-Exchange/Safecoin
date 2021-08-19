@@ -1,4 +1,4 @@
-//! The solana-program-test provides a BanksClient-based test framework BPF programs
+//! The safecoin-program-test provides a BanksClient-based test framework BPF programs
 #![allow(clippy::integer_arithmetic)]
 
 use {
@@ -6,7 +6,7 @@ use {
     chrono_humanize::{Accuracy, HumanTime, Tense},
     log::*,
     solana_banks_client::start_client,
-    solana_banks_server::banks_server::start_local_server,
+    safecoin_banks_server::banks_server::start_local_server,
     solana_runtime::{
         bank::{Bank, Builtin, ExecuteTimings},
         bank_forks::BankForks,
@@ -160,7 +160,7 @@ pub fn builtin_process_instruction(
     Ok(())
 }
 
-/// Converts a `solana-program`-style entrypoint into the runtime's entrypoint style, for
+/// Converts a `safecoin-program`-style entrypoint into the runtime's entrypoint style, for
 /// use with `ProgramTest::add_program`
 #[macro_export]
 macro_rules! processor {

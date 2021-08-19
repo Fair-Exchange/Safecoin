@@ -3,17 +3,17 @@ use crate::args::{
     SetLockupArgs,
 };
 use clap::{value_t, value_t_or_exit, App, Arg, ArgMatches, SubCommand};
-use solana_clap_utils::{
+use safecoin_clap_utils::{
     input_parsers::unix_timestamp_from_rfc3339_datetime,
     input_validators::{is_amount, is_rfc3339_datetime, is_valid_pubkey, is_valid_signer},
 };
-use solana_cli_config::CONFIG_FILE;
+use safecoin_cli_config::CONFIG_FILE;
 use solana_sdk::native_token::sol_to_lamports;
 use std::ffi::OsString;
 use std::process::exit;
 
 fn fee_payer_arg<'a, 'b>() -> Arg<'a, 'b> {
-    solana_clap_utils::fee_payer::fee_payer_arg().required(true)
+    safecoin_clap_utils::fee_payer::fee_payer_arg().required(true)
 }
 
 fn funding_keypair_arg<'a, 'b>() -> Arg<'a, 'b> {

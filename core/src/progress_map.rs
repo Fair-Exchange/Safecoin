@@ -4,7 +4,7 @@ use crate::{
     replay_stage::SUPERMINORITY_THRESHOLD,
     {consensus::Stake, consensus::VotedStakes},
 };
-use solana_ledger::blockstore_processor::{ConfirmationProgress, ConfirmationTiming};
+use safecoin_ledger::blockstore_processor::{ConfirmationProgress, ConfirmationTiming};
 use solana_runtime::{bank::Bank, bank_forks::BankForks, vote_account::ArcVoteAccount};
 use solana_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey};
 use std::{

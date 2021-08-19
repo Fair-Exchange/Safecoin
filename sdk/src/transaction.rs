@@ -8,6 +8,7 @@ use crate::{
     hash::Hash,
     instruction::{CompiledInstruction, Instruction, InstructionError},
     message::Message,
+    nonce::NONCED_TX_MARKER_IX_INDEX,
     program_utils::limited_deserialize,
     pubkey::Pubkey,
     short_vec,
@@ -387,7 +388,7 @@ impl Transaction {
             .collect()
     }
 
-    pub fn verify_precompiles(&self) -> Result<()> {
+    pub fn verify_precompiles(&self, libsecp256k1_0_5_upgrade_enabled: bool) -> Result<()> {
         for instruction in &self.message().instructions {
             // The Transaction may not be sanitized at this point
             if instruction.program_id_index as usize >= self.message().account_keys.len() {
@@ -402,7 +403,11 @@ impl Transaction {
                     .map(|instruction| instruction.data.as_ref())
                     .collect();
                 let data = &instruction.data;
-                let e = verify_eth_addresses(data, &instruction_datas);
+                let e = verify_eth_addresses(
+                    data,
+                    &instruction_datas,
+                    libsecp256k1_0_5_upgrade_enabled,
+                );
                 e.map_err(|_| TransactionError::InvalidAccountIndex)?;
             }
         }
@@ -455,7 +460,7 @@ pub fn uses_durable_nonce(tx: &Transaction) -> Option<&CompiledInstruction> {
     let message = tx.message();
     message
         .instructions
-        .get(0)
+        .get(NONCED_TX_MARKER_IX_INDEX as usize)
         .filter(|maybe_ix| {
             let prog_id_idx = maybe_ix.program_id_index as usize;
             match message.account_keys.get(prog_id_idx) {

@@ -412,10 +412,10 @@ const SignatureStatusResult = pick({
  * Version info for a node
  *
  * @typedef {Object} Version
- * @property {string} solana-core Version of solana-core
+ * @property {string} safecoin-core Version of safecoin-core
  */
 const Version = pick({
-  'solana-core': string(),
+  'safecoin-core': string(),
   'feature-set': optional(nullable(number())),
 });
 

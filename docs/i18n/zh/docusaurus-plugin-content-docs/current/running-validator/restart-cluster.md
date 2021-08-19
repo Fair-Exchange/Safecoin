@@ -3,7 +3,7 @@
 ### 步骤1。 确定集群将在以下位置重新启动的插槽
 
 
-乐观确认的最高插槽是开始的最佳插槽，可通过查找[这里](https://github.com/solana-labs/solana/blob/0264147d42d506fb888f5c4c021a998e231a3e74/core/src/optimistic_confirmation_verifier.rs#L71)的性能指标数据。  否则，请使用最后一个根。
+乐观确认的最高插槽是开始的最佳插槽，可通过查找[这里](https://github.com/fair-exchange/safecoin/blob/0264147d42d506fb888f5c4c021a998e231a3e74/core/src/optimistic_confirmation_verifier.rs#L71)的性能指标数据。  否则，请使用最后一个根。
 
 调用这个插槽 `SLOT_X`
 
@@ -38,7 +38,7 @@ $ safecoin-ledger-tool -l ledger create-snapshot SLOT_X ledger --硬分叉 SLOT_
 >
 > We've released v1.1.12 and are ready to get testnet back up again.
 >
-> Steps: 1. Install the v1.1.12 release: https://github.com/solana-labs/solana/releases/tag/v1.1.12 2. a. Preferred method, start from your local ledger with:
+> Steps: 1. Install the v1.1.12 release: https://github.com/fair-exchange/safecoin/releases/tag/v1.1.12 2. a. Preferred method, start from your local ledger with:
 >
 > ```bash
 safecoin-validator

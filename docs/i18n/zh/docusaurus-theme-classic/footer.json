@@ -33,7 +33,7 @@
   },
   "link.item.label.GitHub": {
     "message": "GitHub",
-    "description": "The label of footer link with label=GitHub linking to https://github.com/solana-labs/solana"
+    "description": "The label of footer link with label=GitHub linking to https://github.com/fair-exchange/safecoin"
   },
   "copyright": {
     "message": "Copyright © 2021 Solana Foundation",

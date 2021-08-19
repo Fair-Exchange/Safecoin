@@ -1,19 +1,19 @@
 [package]
-name = "solana-measure"
+name = "safecoin-measure"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.6.16"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-measure"
+version = "1.6.18"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-measure"
 readme = "../README.md"
-repository = "https://github.com/solana-labs/solana"
+repository = "https://github.com/fair-exchange/safecoin"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
 log = "0.4.11"
-solana-sdk = { path = "../sdk", version = "=1.6.16" }
-solana-metrics = { path = "../metrics", version = "=1.6.16" }
+safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
+safecoin-metrics = { path = "../metrics", version = ">=1.6.18" }
 
 [target."cfg(unix)".dependencies]
 jemallocator = "0.3.2"

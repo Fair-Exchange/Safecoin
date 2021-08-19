@@ -40,7 +40,7 @@ title: "常见问题解答"
 
 尝试反序列化指令时，可能会发生此程序错误，请检查传入的结构是否与指令完全匹配。 字段之间可能会有一些填充。 如果程序实现了Rust的`Pack`特性，则尝试打包和解压缩指令类型`T`以确定程序期望的确切编码：
 
-https://github.com/solana-labs/solana/blob/v1.4/sdk/program/src/program_pack.rs
+https://github.com/fair-exchange/safecoin/blob/v1.4/sdk/program/src/program_pack.rs
 
 ## MissingRequiredSignature
 

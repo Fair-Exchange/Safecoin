@@ -7,9 +7,9 @@ use crate::arg_parser::parse_args;
 use crate::args::{
     resolve_command, AuthorizeArgs, Command, MoveArgs, NewArgs, RebaseArgs, SetLockupArgs,
 };
-use solana_cli_config::Config;
-use solana_client::client_error::ClientError;
-use solana_client::rpc_client::RpcClient;
+use safecoin_cli_config::Config;
+use safecoin_client::client_error::ClientError;
+use safecoin_client::rpc_client::RpcClient;
 use solana_sdk::{
     message::Message,
     native_token::lamports_to_sol,

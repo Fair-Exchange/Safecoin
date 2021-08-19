@@ -166,7 +166,7 @@ function upload_results_to_slack() {
 
   COMMIT=$(git rev-parse HEAD)
   COMMIT_BUTTON_TEXT="$(echo "$COMMIT" | head -c 8)"
-  COMMIT_URL="https://github.com/solana-labs/solana/commit/${COMMIT}"
+  COMMIT_URL="https://github.com/fair-exchange/safecoin/commit/${COMMIT}"
 
   if [[ -n $BUILDKITE_BUILD_URL ]] ; then
     BUILD_BUTTON_TEXT="Build Kite Job"

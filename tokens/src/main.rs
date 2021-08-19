@@ -1,5 +1,5 @@
-use solana_cli_config::{Config, CONFIG_FILE};
-use solana_client::rpc_client::RpcClient;
+use safecoin_cli_config::{Config, CONFIG_FILE};
+use safecoin_client::rpc_client::RpcClient;
 use safecoin_tokens::{arg_parser::parse_args, args::Command, commands, spl_token};
 use std::{
     env,

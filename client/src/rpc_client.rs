@@ -13,7 +13,7 @@ use {
     indicatif::{ProgressBar, ProgressStyle},
     log::*,
     serde_json::{json, Value},
-    solana_account_decoder::{
+    safecoin_account_decoder::{
         parse_token::{TokenAccountType, UiTokenAccount, UiTokenAmount},
         UiAccount, UiAccountData, UiAccountEncoding,
     },
@@ -29,7 +29,7 @@ use {
         signature::Signature,
         transaction::{self, uses_durable_nonce, Transaction},
     },
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         EncodedConfirmedBlock, EncodedConfirmedTransaction, TransactionStatus, UiConfirmedBlock,
         UiTransactionEncoding,
     },
@@ -1090,6 +1090,34 @@ impl RpcClient {
             RpcRequest::GetTransactionCount,
             json!([self.maybe_map_commitment(commitment_config)?]),
         )
+    }
+
+    pub fn get_fees(&self) -> ClientResult<Fees> {
+        Ok(self.get_fees_with_commitment(self.commitment())?.value)
+    }
+
+    pub fn get_fees_with_commitment(&self, commitment_config: CommitmentConfig) -> RpcResult<Fees> {
+        let Response {
+            context,
+            value: fees,
+        } = self.send::<Response<RpcFees>>(
+            RpcRequest::GetFees,
+            json!([self.maybe_map_commitment(commitment_config)?]),
+        )?;
+        let blockhash = fees.blockhash.parse().map_err(|_| {
+            ClientError::new_with_request(
+                RpcError::ParseError("Hash".to_string()).into(),
+                RpcRequest::GetFees,
+            )
+        })?;
+        Ok(Response {
+            context,
+            value: Fees {
+                blockhash,
+                fee_calculator: fees.fee_calculator,
+                last_valid_block_height: fees.last_valid_block_height,
+            },
+        })
     }
 
     pub fn get_recent_blockhash(&self) -> ClientResult<(Hash, FeeCalculator)> {

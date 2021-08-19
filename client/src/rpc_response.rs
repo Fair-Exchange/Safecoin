@@ -1,13 +1,14 @@
 use {
     crate::client_error,
-    solana_account_decoder::{parse_token::UiTokenAmount, UiAccount},
+    safecoin_account_decoder::{parse_token::UiTokenAmount, UiAccount},
     solana_sdk::{
         clock::{Epoch, Slot, UnixTimestamp},
         fee_calculator::{FeeCalculator, FeeRateGovernor},
+        hash::Hash,
         inflation::Inflation,
         transaction::{Result, TransactionError},
     },
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         ConfirmedTransactionStatusWithSignature, TransactionConfirmationStatus,
     },
     std::{collections::HashMap, fmt, net::SocketAddr},
@@ -55,6 +56,14 @@ pub struct DeprecatedRpcFees {
     pub blockhash: String,
     pub fee_calculator: FeeCalculator,
     pub last_valid_slot: Slot,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Fees {
+    pub blockhash: Hash,
+    pub fee_calculator: FeeCalculator,
+    pub last_valid_block_height: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -240,7 +249,7 @@ pub struct RpcBlockProduction {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct RpcVersionInfo {
-    /// The current version of solana-core
+    /// The current version of safecoin-core
     pub solana_core: String,
     /// first 4 bytes of the FeatureSet identifier
     pub feature_set: Option<u32>,
@@ -394,8 +403,9 @@ pub struct RpcPerfSample {
 pub struct RpcInflationReward {
     pub epoch: Epoch,
     pub effective_slot: Slot,
-    pub amount: u64,       // lamports
-    pub post_balance: u64, // lamports
+    pub amount: u64,            // lamports
+    pub post_balance: u64,      // lamports
+    pub commission: Option<u8>, // Vote account commission when the reward was credited
 }
 
 impl From<ConfirmedTransactionStatusWithSignature> for RpcConfirmedTransactionStatusWithSignature {

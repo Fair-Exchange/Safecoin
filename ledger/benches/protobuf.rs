@@ -3,14 +3,14 @@
 extern crate test;
 
 use bincode::{deserialize, serialize};
-use solana_ledger::{
+use safecoin_ledger::{
     blockstore::Blockstore,
     blockstore_db::{columns as cf, LedgerColumn},
     get_tmp_ledger_path,
 };
 use solana_runtime::bank::RewardType;
 use solana_sdk::{clock::Slot, pubkey};
-use solana_transaction_status::{Reward, Rewards};
+use safecoin_transaction_status::{Reward, Rewards};
 use std::path::Path;
 use test::Bencher;
 
@@ -21,6 +21,7 @@ fn create_rewards() -> Rewards {
             lamports: 42 + i,
             post_balance: std::u64::MAX,
             reward_type: Some(RewardType::Fee),
+            commission: None,
         })
         .collect()
 }

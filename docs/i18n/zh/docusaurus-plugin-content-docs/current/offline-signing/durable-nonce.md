@@ -103,7 +103,7 @@ nonce: DZar6t2EaCFQTbUP4DHKwZ1wT8gCPW2aRfkVWhydkBvS
 - 命令
 
 ```bash
-safecoin withdraw-from-nonce-account nonce-keypair.json ~/.config/solana/id.json 0.5
+safecoin withdraw-from-nonce-account nonce-keypair.json ~/.config/safecoin/id.json 0.5
 ```
 
 - 输出

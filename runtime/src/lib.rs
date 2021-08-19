@@ -46,4 +46,4 @@ extern crate solana_metrics;
 extern crate serde_derive;
 
 #[macro_use]
-extern crate solana_frozen_abi_macro;
+extern crate safecoin_frozen_abi_macro;

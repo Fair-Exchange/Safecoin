@@ -1,14 +1,14 @@
 #![allow(clippy::integer_arithmetic)]
 use log::*;
 use serde::{Deserialize, Serialize};
-use solana_client::{client_error::Result as ClientResult, rpc_client::RpcClient};
+use safecoin_client::{client_error::Result as ClientResult, rpc_client::RpcClient};
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{
     clock::Slot, native_token::LAMPORTS_PER_SAFE, program_utils::limited_deserialize,
     pubkey::Pubkey, signature::Signature, transaction::Transaction,
 };
 use solana_stake_program::{stake_instruction::StakeInstruction, stake_state::Lockup};
-use solana_transaction_status::{
+use safecoin_transaction_status::{
     EncodedConfirmedBlock, UiTransactionEncoding, UiTransactionStatusMeta,
 };
 use std::{collections::HashMap, thread::sleep, time::Duration};
@@ -359,7 +359,7 @@ pub fn process_slots(rpc_client: &RpcClient, accounts_info: &mut AccountsInfo, b
 mod test {
     use super::*;
     use serial_test::serial;
-    use solana_client::rpc_config::RpcSendTransactionConfig;
+    use safecoin_client::rpc_config::RpcSendTransactionConfig;
     use solana_core::{rpc::JsonRpcConfig, validator::ValidatorConfig};
     use solana_local_cluster::local_cluster::{ClusterConfig, LocalCluster};
     use solana_sdk::{

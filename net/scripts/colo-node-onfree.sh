@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 
 # These variable must be set before the main body is called
-SAFECOIN_LOCK_FILE="${SAFECOIN_LOCK_FILE:?}"
+SAFEANA_LOCK_FILE="${SAFEANA_LOCK_FILE:?}"
 SECONDARY_DISK_MOUNT_POINT="${SECONDARY_DISK_MOUNT_POINT:?}"
 SSH_AUTHORIZED_KEYS="${SSH_AUTHORIZED_KEYS:?}"
 FORCE_DELETE="${FORCE_DELETE}"
 
 RC=false
-if [[ -f "${SAFECOIN_LOCK_FILE}" ]]; then
-  exec 9<>"${SAFECOIN_LOCK_FILE}"
+if [[ -f "${SAFEANA_LOCK_FILE}" ]]; then
+  exec 9<>"${SAFEANA_LOCK_FILE}"
   flock -x -n 9 || ( echo "Failed to acquire lock!" 1>&2 && exit 1 )
   # shellcheck disable=SC1090
-  . "${SAFECOIN_LOCK_FILE}"
-  if [[ "${SAFECOIN_LOCK_USER}" = "${SAFECOIN_USER}"  || -n "${FORCE_DELETE}" ]]; then
+  . "${SAFEANA_LOCK_FILE}"
+  if [[ "${SAFEANA_LOCK_USER}" = "${SAFEANA_USER}"  || -n "${FORCE_DELETE}" ]]; then
     # Begin running process cleanup
     CLEANUP_PID=$$
     CLEANUP_PIDS=()
@@ -105,7 +105,7 @@ EOAK
     # End filesystem cleanup
     RC=true
   else
-    echo "Invalid user: expected \"${SAFECOIN_LOCK_USER}\" got \"${SAFECOIN_USER}\"" 1>&2
+    echo "Invalid user: expected \"${SAFEANA_LOCK_USER}\" got \"${SAFEANA_USER}\"" 1>&2
   fi
   exec 9>&-
 fi

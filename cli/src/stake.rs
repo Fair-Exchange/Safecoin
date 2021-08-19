@@ -9,25 +9,25 @@ use crate::{
     spend_utils::{resolve_spend_tx_and_check_account_balances, SpendAmount},
 };
 use clap::{value_t, App, Arg, ArgGroup, ArgMatches, SubCommand};
-use solana_clap_utils::{
+use safecoin_clap_utils::{
     fee_payer::{fee_payer_arg, FEE_PAYER_ARG},
     input_parsers::*,
     input_validators::*,
     keypair::{DefaultSigner, SignerIndex},
-    memo::MEMO_ARG,
+    memo::{memo_arg, MEMO_ARG},
     nonce::*,
     offline::*,
     ArgConstant,
 };
-use solana_cli_output::{
+use safecoin_cli_output::{
     return_signers_with_config, CliEpochReward, CliStakeHistory, CliStakeHistoryEntry,
     CliStakeState, CliStakeType, OutputFormat, ReturnSignersConfig,
 };
-use solana_client::{
+use safecoin_client::{
     blockhash_query::BlockhashQuery, nonce_utils, rpc_client::RpcClient,
     rpc_request::DELINQUENT_VALIDATOR_SLOT_DISTANCE, rpc_response::RpcInflationReward,
 };
-use solana_remote_wallet::remote_wallet::RemoteWalletManager;
+use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
 use solana_sdk::{
     account::from_account,
     account_utils::StateMut,
@@ -178,6 +178,7 @@ impl StakeSubCommands for App<'_, '_> {
                 .offline_args()
                 .nonce_args(false)
                 .arg(fee_payer_arg())
+                .arg(memo_arg())
         )
         .subcommand(
             SubCommand::with_name("delegate-stake")
@@ -207,6 +208,7 @@ impl StakeSubCommands for App<'_, '_> {
                 .offline_args()
                 .nonce_args(false)
                 .arg(fee_payer_arg())
+                .arg(memo_arg())
         )
         .subcommand(
             SubCommand::with_name("stake-authorize")
@@ -238,6 +240,7 @@ impl StakeSubCommands for App<'_, '_> {
                 .nonce_args(false)
                 .arg(fee_payer_arg())
                 .arg(custodian_arg())
+                .arg(memo_arg())
         )
         .subcommand(
             SubCommand::with_name("deactivate-stake")
@@ -261,6 +264,7 @@ impl StakeSubCommands for App<'_, '_> {
                 .offline_args()
                 .nonce_args(false)
                 .arg(fee_payer_arg())
+                .arg(memo_arg())
         )
         .subcommand(
             SubCommand::with_name("split-stake")
@@ -302,6 +306,7 @@ impl StakeSubCommands for App<'_, '_> {
                 .offline_args()
                 .nonce_args(false)
                 .arg(fee_payer_arg())
+                .arg(memo_arg())
         )
         .subcommand(
             SubCommand::with_name("merge-stake")
@@ -325,6 +330,7 @@ impl StakeSubCommands for App<'_, '_> {
                 .offline_args()
                 .nonce_args(false)
                 .arg(fee_payer_arg())
+                .arg(memo_arg())
         )
         .subcommand(
             SubCommand::with_name("withdraw-stake")
@@ -365,6 +371,7 @@ impl StakeSubCommands for App<'_, '_> {
                 .nonce_args(false)
                 .arg(fee_payer_arg())
                 .arg(custodian_arg())
+                .arg(memo_arg())
         )
         .subcommand(
             SubCommand::with_name("stake-set-lockup")
@@ -412,6 +419,7 @@ impl StakeSubCommands for App<'_, '_> {
                 .offline_args()
                 .nonce_args(false)
                 .arg(fee_payer_arg())
+                .arg(memo_arg())
         )
         .subcommand(
             SubCommand::with_name("stake-account")
@@ -1814,6 +1822,7 @@ pub fn make_cli_reward(
             post_balance: reward.post_balance,
             percent_change: rate_change * 100.0,
             apr: Some(apr * 100.0),
+            commission: reward.commission,
         })
     } else {
         None
@@ -2083,7 +2092,7 @@ pub fn is_stake_program_v2_enabled(
 mod tests {
     use super::*;
     use crate::cli::{app, parse_command};
-    use solana_client::blockhash_query;
+    use safecoin_client::blockhash_query;
     use solana_sdk::{
         hash::Hash,
         signature::{

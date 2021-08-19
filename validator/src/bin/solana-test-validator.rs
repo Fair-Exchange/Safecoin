@@ -1,14 +1,14 @@
 use {
     clap::{value_t, value_t_or_exit, App, Arg},
     fd_lock::FdLock,
-    solana_clap_utils::{
+    safecoin_clap_utils::{
         input_parsers::{pubkey_of, pubkeys_of, value_of},
         input_validators::{
             is_pubkey, is_pubkey_or_keypair, is_slot, is_url_or_moniker,
             normalize_to_url_if_moniker,
         },
     },
-    solana_client::rpc_client::RpcClient,
+    safecoin_client::rpc_client::RpcClient,
     solana_core::rpc::JsonRpcConfig,
     safecoin_faucet::faucet::{run_local_faucet_with_port, FAUCET_PORT},
     solana_sdk::{
@@ -68,7 +68,7 @@ fn main() {
                 .value_name("PATH")
                 .takes_value(true)
                 .help("Configuration file to use");
-            if let Some(ref config_file) = *solana_cli_config::CONFIG_FILE {
+            if let Some(ref config_file) = *safecoin_cli_config::CONFIG_FILE {
                 arg.default_value(&config_file)
             } else {
                 arg
@@ -282,9 +282,9 @@ fn main() {
         .get_matches();
 
     let cli_config = if let Some(config_file) = matches.value_of("config_file") {
-        solana_cli_config::Config::load(config_file).unwrap_or_default()
+        safecoin_cli_config::Config::load(config_file).unwrap_or_default()
     } else {
-        solana_cli_config::Config::default()
+        safecoin_cli_config::Config::default()
     };
 
     let cluster_rpc_client = value_t!(matches, "json_rpc_url", String)

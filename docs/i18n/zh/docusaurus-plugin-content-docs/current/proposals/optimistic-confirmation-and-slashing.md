@@ -4,7 +4,7 @@ title: 乐观确认与罚没
 
 乐观确认的进展可以在这里追踪
 
-https://github.com/solana-labs/solana/projects/52
+https://github.com/fair-exchange/safecoin/projects/52
 
 5月底，mainnetbeta移至1.1版本，而testnet移至1.2版本。 在1.2版本中，只要至少不超过4.66％的验证节点作恶，testnet就能获得乐观的终结性。 应用程序可以假设，在八卦中观察到的超过 2/3 的投票确认了某个区块，或者至少有4.66％的网络违反了该协议。
 

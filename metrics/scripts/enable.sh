@@ -14,8 +14,8 @@ echoSafecoinMetricsConfig() {
   )
 }
 
-SAFECOIN_METRICS_CONFIG=$(echoSafecoinMetricsConfig)
-export SAFECOIN_METRICS_CONFIG
+SAFEANA_METRICS_CONFIG=$(echoSafecoinMetricsConfig)
+export SAFEANA_METRICS_CONFIG
 unset -f echoSafecoinMetricsConfig
 
 __configure_metrics_sh="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. || true; pwd)"/scripts/configure-metrics.sh

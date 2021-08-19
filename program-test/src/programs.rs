@@ -5,30 +5,30 @@ use solana_sdk::{
 };
 
 mod spl_token {
-    solana_sdk::declare_id!("HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1");
+    solana_sdk::declare_id!("7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD");
 }
-mod spl_memo_1_0 {
+mod safe_memo_1_0 {
     solana_sdk::declare_id!("4DDUJ1rA8Vd7e6SFWanf4V8JnsfapjCGNutQYw8Vtt45");
 }
-mod spl_memo_3_0 {
-    solana_sdk::declare_id!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+mod safe_memo_3_0 {
+    solana_sdk::declare_id!("9h7wfE8nxQ6YsRedqNHwroEZbA5bMAmNsh8GdxwBTtaV");
 }
-mod spl_associated_token_account {
-    solana_sdk::declare_id!("PUFQTv9BK3ax6bKPFnyjBTbVa3782mcfvb22TZovvrm");
+mod safe_associated_token_account {
+    solana_sdk::declare_id!("CWyEp7dp1Cv3334j6gCci2UrrjA8Q98bYa7AwGBpZ6iJ");
 }
 
 static SPL_PROGRAMS: &[(Pubkey, &[u8])] = &[
     (spl_token::ID, include_bytes!("programs/spl_token-3.1.0.so")),
     (
-        spl_memo_1_0::ID,
-        include_bytes!("programs/spl_memo-1.0.0.so"),
+        safe_memo_1_0::ID,
+        include_bytes!("programs/safe_memo-3.0.3.so"),
     ),
     (
-        spl_memo_3_0::ID,
-        include_bytes!("programs/spl_memo-3.0.0.so"),
+        safe_memo_3_0::ID,
+        include_bytes!("programs/safe_memo-3.0.3.so"),
     ),
     (
-        spl_associated_token_account::ID,
+        safe_associated_token_account::ID,
         include_bytes!("programs/spl_associated-token-account-1.0.1.so"),
     ),
 ];

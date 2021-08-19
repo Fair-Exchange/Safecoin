@@ -26,7 +26,7 @@ EOF
 }
 
 function get_cluster_version {
-  clusterVersion="$(curl -s -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1, "method":"getVersion"}' "$url" | jq '.result | ."solana-core" ')"
+  clusterVersion="$(curl -s -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1, "method":"getVersion"}' "$url" | jq '.result | ."safecoin-core" ')"
   echo Cluster software version: "$clusterVersion"
 }
 

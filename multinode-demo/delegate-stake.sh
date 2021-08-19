@@ -88,7 +88,7 @@ if [[ -n ${positional_args[0]} ]]; then
   stake_sol=${positional_args[0]}
 fi
 
-VALIDATOR_KEYS_DIR=$SAFECOIN_CONFIG_DIR/validator$label
+VALIDATOR_KEYS_DIR=$SAFEANA_CONFIG_DIR/validator$label
 vote_account="${vote_account:-$VALIDATOR_KEYS_DIR/vote-account.json}"
 stake_account="${stake_account:-$VALIDATOR_KEYS_DIR/stake-account.json}"
 
@@ -103,7 +103,7 @@ if ((airdrops_enabled)); then
     exit 1
   fi
   $solana_cli \
-    "${common_args[@]}" --keypair "$SAFECOIN_CONFIG_DIR/faucet.json" \
+    "${common_args[@]}" --keypair "$SAFEANA_CONFIG_DIR/faucet.json" \
     transfer --allow-unfunded-recipient "$keypair" "$stake_sol"
 fi
 

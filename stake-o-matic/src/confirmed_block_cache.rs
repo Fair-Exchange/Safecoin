@@ -1,7 +1,7 @@
 use crate::retry_rpc_operation;
 use log::*;
 use serde::{Deserialize, Serialize};
-use solana_client::rpc_client::RpcClient;
+use safecoin_client::rpc_client::RpcClient;
 use solana_sdk::{
     clock::{Slot, DEFAULT_SLOTS_PER_EPOCH},
     commitment_config::CommitmentConfig,

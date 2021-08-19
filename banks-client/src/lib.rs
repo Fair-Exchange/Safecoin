@@ -314,7 +314,7 @@ pub async fn start_tcp_client<T: ToSocketAddrs>(addr: T) -> io::Result<BanksClie
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_banks_server::banks_server::start_local_server;
+    use safecoin_banks_server::banks_server::start_local_server;
     use solana_runtime::{
         bank::Bank, bank_forks::BankForks, commitment::BlockCommitmentCache,
         genesis_utils::create_genesis_config,

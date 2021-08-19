@@ -164,7 +164,7 @@ while [[ -n $1 ]]; do
   fi
 done
 
-if [[ "$SAFECOIN_GPU_MISSING" -eq 1 ]]; then
+if [[ "$SAFEANA_GPU_MISSING" -eq 1 ]]; then
   echo "Testnet requires GPUs, but none were found!  Aborting..."
   exit 1
 fi
@@ -177,7 +177,7 @@ if [[ -n $REQUIRE_LEDGER_DIR ]]; then
   if [[ -z $ledger_dir ]]; then
     usage "Error: --ledger not specified"
   fi
-  SAFECOIN_CONFIG_DIR="$ledger_dir"
+  SAFEANA_CONFIG_DIR="$ledger_dir"
 fi
 
 if [[ -n $REQUIRE_KEYPAIRS ]]; then
@@ -190,7 +190,7 @@ if [[ -n $REQUIRE_KEYPAIRS ]]; then
 fi
 
 if [[ -z "$ledger_dir" ]]; then
-  ledger_dir="$SAFECOIN_CONFIG_DIR/validator$label"
+  ledger_dir="$SAFEANA_CONFIG_DIR/validator$label"
 fi
 mkdir -p "$ledger_dir"
 
@@ -226,7 +226,7 @@ default_arg --ledger "$ledger_dir"
 default_arg --log -
 default_arg --require-tower
 
-if [[ -n $SAFECOIN_CUDA ]]; then
+if [[ -n $SAFEANA_CUDA ]]; then
   program=$safecoin_validator_cuda
 else
   program=$safecoin_validator
@@ -275,7 +275,7 @@ setup_validator_accounts() {
       (
         set -x
         $solana_cli \
-          --keypair "$SAFECOIN_CONFIG_DIR/faucet.json" --url "$rpc_url" \
+          --keypair "$SAFEANA_CONFIG_DIR/faucet.json" --url "$rpc_url" \
           transfer --allow-unfunded-recipient "$identity" "$node_sol"
       ) || return $?
     fi

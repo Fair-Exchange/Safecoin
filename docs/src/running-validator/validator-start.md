@@ -207,7 +207,7 @@ safecoin config set --keypair ~/validator-keypair.json
 You should see the following output:
 
 ```text
-Config File: /home/solana/.config/solana/cli/config.yml
+Config File: /home/solana/.config/safecoin/cli/config.yml
 RPC URL: http://api.devnet.safecoin.org
 WebSocket URL: ws://api.devnet.safecoin.org/ (computed)
 Keypair Path: /home/solana/validator-keypair.json
@@ -327,7 +327,7 @@ less disk usage may be requested by adding an argument to `--limit-ledger-size`
 if desired. Check `safecoin-validator --help` for the default limit value used by
 `--limit-ledger-size`. More information about
 selecting a custom limit value is [available
-here](https://github.com/solana-labs/solana/blob/583cec922b6107e0f85c7e14cb5e642bc7dfb340/core/src/ledger_cleanup_service.rs#L15-L26).
+here](https://github.com/fair-exchange/safecoin/blob/583cec922b6107e0f85c7e14cb5e642bc7dfb340/core/src/ledger_cleanup_service.rs#L15-L26).
 
 ### Systemd Unit
 
@@ -477,5 +477,5 @@ account indexes that significantly improve RPC performance by indexing accounts
 by the key field. Currently supports the following parameter values:
 
 - `program-id`: each account indexed by its owning program; used by [`getProgramAccounts`](developing/clients/jsonrpc-api.md#getprogramaccounts)
-- `spl-token-mint`: each SPL token account indexed by its token Mint; used by [getTokenAccountsByDelegate](developing/clients/jsonrpc-api.md#gettokenaccountsbydelegate), and [getTokenLargestAccounts](developing/clients/jsonrpc-api.md#gettokenlargestaccounts)
-- `spl-token-owner`: each SPL token account indexed by the token-owner address; used by [getTokenAccountsByOwner](developing/clients/jsonrpc-api.md#gettokenaccountsbyowner), and [`getProgramAccounts`](developing/clients/jsonrpc-api.md#getprogramaccounts) requests that include an spl-token-owner filter.
+- `safe-token-mint`: each SPL token account indexed by its token Mint; used by [getTokenAccountsByDelegate](developing/clients/jsonrpc-api.md#gettokenaccountsbydelegate), and [getTokenLargestAccounts](developing/clients/jsonrpc-api.md#gettokenlargestaccounts)
+- `safe-token-owner`: each SPL token account indexed by the token-owner address; used by [getTokenAccountsByOwner](developing/clients/jsonrpc-api.md#gettokenaccountsbyowner), and [`getProgramAccounts`](developing/clients/jsonrpc-api.md#getprogramaccounts) requests that include an safe-token-owner filter.

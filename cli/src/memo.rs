@@ -1,6 +1,6 @@
 use solana_sdk::instruction::Instruction;
 use solana_sdk::pubkey::Pubkey;
-use spl_memo::id;
+use safe_memo::id;
 
 pub trait WithMemo {
     fn with_memo<T: AsRef<str>>(self, memo: Option<T>) -> Self;

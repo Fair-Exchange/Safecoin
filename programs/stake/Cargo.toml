@@ -1,12 +1,12 @@
 [package]
-name = "solana-stake-program"
-version = "1.6.16"
+name = "safecoin-stake-program"
+version = "1.6.18"
 description = "Safecoin Stake program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-stake-program"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-stake-program"
 edition = "2018"
 
 [dependencies]
@@ -16,16 +16,16 @@ num-derive = "0.3"
 num-traits = "0.2"
 serde = "1.0.122"
 serde_derive = "1.0.103"
-solana-frozen-abi = { path = "../../frozen-abi", version = "=1.6.16" }
-solana-frozen-abi-macro = { path = "../../frozen-abi/macro", version = "=1.6.16" }
-solana-metrics = { path = "../../metrics", version = "=1.6.16" }
-solana-sdk = { path = "../../sdk", version = "=1.6.16" }
-solana-vote-program = { path = "../vote", version = "=1.6.16" }
-solana-config-program = { path = "../config", version = "=1.6.16" }
+safecoin-frozen-abi = { path = "../../frozen-abi", version = ">=1.6.18" }
+safecoin-frozen-abi-macro = { path = "../../frozen-abi/macro", version = ">=1.6.18" }
+safecoin-metrics = { path = "../../metrics", version = ">=1.6.18" }
+safecoin-sdk = { path = "../../sdk", version = ">=1.6.18" }
+safecoin-vote-program = { path = "../vote", version = ">=1.6.18" }
+safecoin-config-program = { path = "../config", version = ">=1.6.18" }
 thiserror = "1.0"
 
 [dev-dependencies]
-solana-logger = { path = "../../logger", version = "=1.6.16" }
+safecoin-logger = { path = "../../logger", version = ">=1.6.18" }
 
 [build-dependencies]
 rustc_version = "0.2"

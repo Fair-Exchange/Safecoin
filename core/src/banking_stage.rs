@@ -11,11 +11,11 @@ use crossbeam_channel::{Receiver as CrossbeamReceiver, RecvTimeoutError};
 use itertools::Itertools;
 use lru::LruCache;
 use retain_mut::RetainMut;
-use solana_ledger::{
+use safecoin_ledger::{
     blockstore::Blockstore, blockstore_processor::TransactionStatusSender,
     entry::hash_transactions, leader_schedule_cache::LeaderScheduleCache,
 };
-use solana_measure::{measure::Measure, thread_mem_usage};
+use safecoin_measure::{measure::Measure, thread_mem_usage};
 use solana_metrics::{inc_new_counter_debug, inc_new_counter_info};
 use solana_perf::{
     cuda_runtime::PinnedVec,
@@ -46,7 +46,7 @@ use solana_sdk::{
     timing::{duration_as_ms, timestamp},
     transaction::{self, Transaction, TransactionError},
 };
-use solana_transaction_status::token_balances::{
+use safecoin_transaction_status::token_balances::{
     collect_token_balances, TransactionTokenBalancesSet,
 };
 use std::{
@@ -661,7 +661,7 @@ impl BankingStage {
         const MIN_THREADS_VOTES: u32 = 1;
         const MIN_THREADS_BANKING: u32 = 1;
         cmp::max(
-            env::var("SAFECOIN_BANKING_THREADS")
+            env::var("SAFEANA_BANKING_THREADS")
                 .map(|x| x.parse().unwrap_or(NUM_THREADS))
                 .unwrap_or(NUM_THREADS),
             MIN_THREADS_VOTES + MIN_THREADS_BANKING,
@@ -985,16 +985,15 @@ impl BankingStage {
     fn transactions_from_packets(
         msgs: &Packets,
         transaction_indexes: &[usize],
-        secp256k1_program_enabled: bool,
+        libsecp256k1_0_5_upgrade_enabled: bool,
     ) -> (Vec<HashedTransaction<'static>>, Vec<usize>) {
         transaction_indexes
             .iter()
             .filter_map(|tx_index| {
                 let p = &msgs.packets[*tx_index];
                 let tx: Transaction = limited_deserialize(&p.data[0..p.meta.size]).ok()?;
-                if secp256k1_program_enabled {
-                    tx.verify_precompiles().ok()?;
-                }
+                tx.verify_precompiles(libsecp256k1_0_5_upgrade_enabled)
+                    .ok()?;
                 let message_bytes = Self::packet_message(p)?;
                 let message_hash = Message::hash_raw_message(message_bytes);
                 Some((
@@ -1058,7 +1057,7 @@ impl BankingStage {
         let (transactions, transaction_to_packet_indexes) = Self::transactions_from_packets(
             msgs,
             &packet_indexes,
-            bank.secp256k1_program_enabled(),
+            bank.libsecp256k1_0_5_upgrade_enabled(),
         );
         packet_conversion_time.stop();
 
@@ -1129,7 +1128,7 @@ impl BankingStage {
         let (transactions, transaction_to_packet_indexes) = Self::transactions_from_packets(
             msgs,
             &transaction_indexes,
-            bank.secp256k1_program_enabled(),
+            bank.libsecp256k1_0_5_upgrade_enabled(),
         );
 
         let tx_count = transaction_to_packet_indexes.len();
@@ -1442,7 +1441,7 @@ mod tests {
     };
     use crossbeam_channel::unbounded;
     use itertools::Itertools;
-    use solana_ledger::{
+    use safecoin_ledger::{
         blockstore::entries_to_test_shreds,
         entry::{next_entry, Entry, EntrySlice},
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
@@ -1457,7 +1456,7 @@ mod tests {
         system_transaction,
         transaction::TransactionError,
     };
-    use solana_transaction_status::TransactionWithStatusMeta;
+    use safecoin_transaction_status::TransactionWithStatusMeta;
     use std::{
         net::SocketAddr,
         path::Path,

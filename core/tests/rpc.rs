@@ -4,8 +4,8 @@ use jsonrpc_core_client::transports::ws;
 use log::*;
 use reqwest::{self, header::CONTENT_TYPE};
 use serde_json::{json, Value};
-use solana_account_decoder::UiAccount;
-use solana_client::{
+use safecoin_account_decoder::UiAccount;
+use safecoin_client::{
     rpc_client::RpcClient,
     rpc_config::{RpcAccountInfoConfig, RpcSignatureSubscribeConfig},
     rpc_response::{Response, RpcSignatureResult, SlotUpdate},
@@ -96,8 +96,8 @@ fn test_rpc_send_tx() {
 
     assert_eq!(confirmed_tx, true);
 
-    use solana_account_decoder::UiAccountEncoding;
-    use solana_client::rpc_config::RpcAccountInfoConfig;
+    use safecoin_account_decoder::UiAccountEncoding;
+    use safecoin_client::rpc_config::RpcAccountInfoConfig;
     let config = RpcAccountInfoConfig {
         encoding: Some(UiAccountEncoding::Base64),
         commitment: None,

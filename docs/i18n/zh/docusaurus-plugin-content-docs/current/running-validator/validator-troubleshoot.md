@@ -13,7 +13,7 @@ Discord 有一个 **\#validator-support** 频道可以用来联系其他测试�
   - [\#tourdesol](https://discord.gg/BdujK2) Tour de SAFE 参与者的讨论和支持频道([Tour de SAFE是什么？](https://solana.com/tds/)).
   - [\#tourdesol-announcements](https://discord.gg/Q5TxEC) Tour de SAFE相关关键信息的唯一真相来源
   - [\#tourdesol-stage0](https://discord.gg/Xf8tES) Tour de SAFE Stage 0内部的事件讨论。 阶段 0 包括了所有干线
-- [核心软件代码库](https://github.com/solana-labs/solana)
+- [核心软件代码库](https://github.com/fair-exchange/safecoin)
 - [Tour de SAFE 文档](https://docs.solana.com/tour-de-sol)
 - [TdS 代码库](https://github.com/solana-labs/tour-de-sol)
 - [TdS 性能指示板](https://metrics.safecoin.org:3000/d/monitor-edge/cluster-telemetry-edge?refresh=1m&from=now-15m&to=now&var-testnet=tds)

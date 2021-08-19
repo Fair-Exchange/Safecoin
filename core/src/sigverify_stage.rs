@@ -7,7 +7,7 @@
 
 use crate::sigverify;
 use crossbeam_channel::{SendError, Sender as CrossbeamSender};
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_metrics::datapoint_debug;
 use solana_perf::packet::Packets;
 use solana_perf::perf_libs;

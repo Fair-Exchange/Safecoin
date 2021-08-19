@@ -1,5 +1,5 @@
 use rand::{thread_rng, Rng};
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use std::{
     convert::TryFrom,
     sync::{

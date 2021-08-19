@@ -2,7 +2,7 @@ use chrono::prelude::*;
 use pickledb::{error::Error, PickleDb, PickleDbDumpPolicy};
 use serde::{Deserialize, Serialize};
 use solana_sdk::{clock::Slot, pubkey::Pubkey, signature::Signature, transaction::Transaction};
-use solana_transaction_status::TransactionStatus;
+use safecoin_transaction_status::TransactionStatus;
 use std::{cmp::Ordering, fs, io, path::Path};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -211,7 +211,7 @@ mod tests {
     use super::*;
     use csv::{ReaderBuilder, Trim};
     use solana_sdk::transaction::TransactionError;
-    use solana_transaction_status::TransactionConfirmationStatus;
+    use safecoin_transaction_status::TransactionConfirmationStatus;
     use tempfile::NamedTempFile;
 
     #[test]

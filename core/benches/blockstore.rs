@@ -1,10 +1,10 @@
 #![allow(clippy::integer_arithmetic)]
 #![feature(test)]
-extern crate solana_ledger;
+extern crate safecoin_ledger;
 extern crate test;
 
 use rand::Rng;
-use solana_ledger::{
+use safecoin_ledger::{
     blockstore::{entries_to_test_shreds, Blockstore},
     entry::{create_ticks, Entry},
     get_tmp_ledger_path,

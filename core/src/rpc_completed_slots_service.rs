@@ -1,6 +1,6 @@
 use crate::rpc_subscriptions::RpcSubscriptions;
-use solana_client::rpc_response::SlotUpdate;
-use solana_ledger::blockstore::CompletedSlotsReceiver;
+use safecoin_client::rpc_response::SlotUpdate;
+use safecoin_ledger::blockstore::CompletedSlotsReceiver;
 use solana_sdk::timing::timestamp;
 use std::{
     sync::Arc,

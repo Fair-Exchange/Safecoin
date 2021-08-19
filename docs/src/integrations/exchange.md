@@ -53,7 +53,7 @@ under 500GB. More or less disk usage may be requested by adding an argument to
 `--limit-ledger-size` if desired. Check `safecoin-validator --help` for the
 default limit value used by `--limit-ledger-size`. More information about
 selecting a custom limit value is [available
-here](https://github.com/solana-labs/solana/blob/583cec922b6107e0f85c7e14cb5e642bc7dfb340/core/src/ledger_cleanup_service.rs#L15-L26).
+here](https://github.com/fair-exchange/safecoin/blob/583cec922b6107e0f85c7e14cb5e642bc7dfb340/core/src/ledger_cleanup_service.rs#L15-L26).
 
 Specifying one or more `--trusted-validator` parameters can protect you from booting from a malicious snapshot. [More on the value of booting with trusted validators](../running-validator/validator-start.md#trusted-validators)
 
@@ -69,7 +69,7 @@ ensure you miss as little data as possible. Running the safecoin software as a
 systemd service is one great option.
 
 For monitoring, we provide
-[`safecoin-watchtower`](https://github.com/solana-labs/solana/blob/master/watchtower/README.md),
+[`safecoin-watchtower`](https://github.com/fair-exchange/safecoin/blob/master/watchtower/README.md),
 which can monitor your validator and detect with the `safecoin-validator` process
 is unhealthy. It can directly be configured to alert you via Slack, Telegram,
 Discord, or Twillio. For details, run `safecoin-watchtower --help`.
@@ -268,8 +268,8 @@ transfer of 218099990000 - 207099990000 = 11000000000 lamports = 11 SAFE
 
 If you need more information about the transaction type or other specifics, you
 can request the block from RPC in binary format, and parse it using either our
-[Rust SDK](https://github.com/solana-labs/solana) or
-[Javascript SDK](https://github.com/solana-labs/solana-web3.js).
+[Rust SDK](https://github.com/fair-exchange/safecoin) or
+[Javascript SDK](https://github.com/fair-exchange/safecoin-web3.js).
 
 ### Address History
 
@@ -391,7 +391,7 @@ by the cluster. If the transaction fails, it will report any transaction errors.
 safecoin transfer <USER_ADDRESS> <AMOUNT> --allow-unfunded-recipient --keypair <KEYPAIR> --url http://localhost:8328
 ```
 
-The [Safecoin Javascript SDK](https://github.com/solana-labs/solana-web3.js)
+The [Safecoin Javascript SDK](https://github.com/fair-exchange/safecoin-web3.js)
 offers a similar approach for the JS ecosystem. Use the `SystemProgram` to build
 a transfer transaction, and submit it using the `sendAndConfirmTransaction`
 method.
@@ -581,31 +581,31 @@ stores metadata describing token features like the supply, number of decimals, a
 various authorities with control over the mint. Each SPL Token account references
 its associated mint and may only interact with SPL Tokens of that type.
 
-### Installing the `spl-token` CLI Tool
+### Installing the `safe-token` CLI Tool
 
-SPL Token accounts are queried and modified using the `spl-token` command line
+SPL Token accounts are queried and modified using the `safe-token` command line
 utility. The examples provided in this section depend upon having it installed
 on the local system.
 
-`spl-token` is distributed from Rust [crates.io](https://crates.io/crates/spl-token)
+`safe-token` is distributed from Rust [crates.io](https://crates.io/crates/safe-token)
 via the Rust `cargo` command line utility. The latest version of `cargo` can be
 installed using a handy one-liner for your platform at [rustup.rs](https://rustup.rs).
-Once `cargo` is installed, `spl-token` can be obtained with the following command:
+Once `cargo` is installed, `safe-token` can be obtained with the following command:
 
 ```
-cargo install spl-token-cli
+cargo install safe-token-cli
 ```
 
 You can then check the installed version to verify
 
 ```
-spl-token --version
+safe-token --version
 ```
 
 Which should result in something like
 
 ```text
-spl-token-cli 2.0.1
+safe-token-cli 2.0.1
 ```
 
 ### Account Creation
@@ -615,8 +615,8 @@ accounts do not:
 
 1. SPL Token accounts must be created before an amount of tokens can be
    deposited. Token accounts can be created explicitly with the
-   `spl-token create-account` command, or implicitly by the
-   `spl-token transfer --fund-recipient ...` command.
+   `safe-token create-account` command, or implicitly by the
+   `safe-token transfer --fund-recipient ...` command.
 1. SPL Token accounts must remain [rent-exempt](developing/programming-model/accounts.md#rent-exemption)
    for the duration of their existence and therefore require a small amount of
    native SAFE tokens be deposited at account creation. For SPL Token v2 accounts,
@@ -630,13 +630,13 @@ To create an SPL Token account with the following properties:
 1. Owned by the funding account's keypair
 
 ```
-spl-token create-account <TOKEN_MINT_ADDRESS>
+safe-token create-account <TOKEN_MINT_ADDRESS>
 ```
 
 #### Example
 
 ```
-$ spl-token create-account AkUFCWTXb3w9nY2n6SFJvBV6VwvFUCe4KBMCcgLsa2ir
+$ safe-token create-account AkUFCWTXb3w9nY2n6SFJvBV6VwvFUCe4KBMCcgLsa2ir
 Creating account 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
 Signature: 4JsqZEPra2eDTHtHpB4FMWSfk3UgcCVmkKkP7zESZeMrKmFFkDkNd91pKP3vPVVZZPiu5XxyJwS73Vi5WsZL88D7
 ```
@@ -645,7 +645,7 @@ Or to create an SPL Token account with a specific keypair:
 
 ```
 $ safecoin-keygen new -o token-account.json
-$ spl-token create-account AkUFCWTXb3w9nY2n6SFJvBV6VwvFUCe4KBMCcgLsa2ir token-account.json
+$ safe-token create-account AkUFCWTXb3w9nY2n6SFJvBV6VwvFUCe4KBMCcgLsa2ir token-account.json
 Creating account 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
 Signature: 4JsqZEPra2eDTHtHpB4FMWSfk3UgcCVmkKkP7zESZeMrKmFFkDkNd91pKP3vPVVZZPiu5XxyJwS73Vi5WsZL88D7
 ```
@@ -655,7 +655,7 @@ Signature: 4JsqZEPra2eDTHtHpB4FMWSfk3UgcCVmkKkP7zESZeMrKmFFkDkNd91pKP3vPVVZZPiu5
 #### Command Line
 
 ```
-spl-token balance <TOKEN_ACCOUNT_ADDRESS>
+safe-token balance <TOKEN_ACCOUNT_ADDRESS>
 ```
 
 #### Example
@@ -678,13 +678,13 @@ provided.
 #### Command Line
 
 ```
-spl-token transfer <SENDER_ACCOUNT_ADDRESS> <AMOUNT> <RECIPIENT_WALLET_ADDRESS> --fund-recipient
+safe-token transfer <SENDER_ACCOUNT_ADDRESS> <AMOUNT> <RECIPIENT_WALLET_ADDRESS> --fund-recipient
 ```
 
 #### Example
 
 ```
-$ spl-token transfer 6B199xxzw3PkAm25hGJpjj3Wj3WNYNHzDAnt1tEqg5BN 1 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
+$ safe-token transfer 6B199xxzw3PkAm25hGJpjj3Wj3WNYNHzDAnt1tEqg5BN 1 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
 Transfer 1 tokens
   Sender: 6B199xxzw3PkAm25hGJpjj3Wj3WNYNHzDAnt1tEqg5BN
   Recipient: 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
@@ -700,13 +700,13 @@ keypairs.
 
 Monitoring for deposit transactions should follow the [block polling](#poll-for-blocks)
 method described above. Each new block should be scanned for successful transactions
-issuing SPL Token [Transfer](https://github.com/solana-labs/solana-program-library/blob/096d3d4da51a8f63db5160b126ebc56b26346fc8/token/program/src/instruction.rs#L92)
-or [Transfer2](https://github.com/solana-labs/solana-program-library/blob/096d3d4da51a8f63db5160b126ebc56b26346fc8/token/program/src/instruction.rs#L252)
+issuing SPL Token [Transfer](https://github.com/fair-exchange/safecoin-program-library/blob/096d3d4da51a8f63db5160b126ebc56b26346fc8/token/program/src/instruction.rs#L92)
+or [Transfer2](https://github.com/fair-exchange/safecoin-program-library/blob/096d3d4da51a8f63db5160b126ebc56b26346fc8/token/program/src/instruction.rs#L252)
 instructions referencing user accounts, then querying the
 [token account balance](developing/clients/jsonrpc-api.md#gettokenaccountbalance)
 updates.
 
-[Considerations](https://github.com/solana-labs/solana/issues/12318) are being
+[Considerations](https://github.com/fair-exchange/safecoin/issues/12318) are being
 made to exend the `preBalance` and `postBalance` transaction status metadata
 fields to include SPL Token balance transfers.
 
@@ -726,10 +726,10 @@ exchange should fund the account on behalf of the user. For SPL Token v2
 accounts, funding the withdrawal account will require 0.00203928 SAFE (2,039,280
 lamports).
 
-Template `spl-token transfer` command for a withdrawal:
+Template `safe-token transfer` command for a withdrawal:
 
 ```
-$ spl-token transfer --fund-recipient <exchange token account> <withdrawal amount> <withdrawal address>
+$ safe-token transfer --fund-recipient <exchange token account> <withdrawal amount> <withdrawal address>
 ```
 
 ### Other Considerations

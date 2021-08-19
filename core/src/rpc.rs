@@ -14,7 +14,7 @@ use bincode::{config::Options, serialize};
 use jsonrpc_core::{types::error, Error, Metadata, Result};
 use jsonrpc_derive::rpc;
 use serde::{Deserialize, Serialize};
-use solana_account_decoder::{
+use safecoin_account_decoder::{
     parse_account_data::AccountAdditionalData,
     parse_token::{
         get_token_account_mint, spl_token_id_v2_0, spl_token_v2_0_native_mint,
@@ -22,7 +22,7 @@ use solana_account_decoder::{
     },
     UiAccount, UiAccountData, UiAccountEncoding, UiDataSliceConfig,
 };
-use solana_client::{
+use safecoin_client::{
     rpc_cache::LargestAccountsCache,
     rpc_config::*,
     rpc_custom_error::RpcCustomError,
@@ -38,7 +38,7 @@ use solana_client::{
     rpc_response::*,
 };
 use safecoin_faucet::faucet::request_airdrop_transaction;
-use solana_ledger::{
+use safecoin_ledger::{
     blockstore::Blockstore, blockstore_db::BlockstoreError, get_tmp_ledger_path,
     leader_schedule_cache::LeaderScheduleCache,
 };
@@ -70,7 +70,7 @@ use solana_sdk::{
     transaction::{self, Transaction, TransactionError},
 };
 use solana_stake_program::stake_state::StakeState;
-use solana_transaction_status::{
+use safecoin_transaction_status::{
     EncodedConfirmedTransaction, Reward, RewardType, TransactionConfirmationStatus,
     TransactionStatus, UiConfirmedBlock, UiTransactionEncoding,
 };
@@ -220,7 +220,7 @@ impl JsonRpcRequestProcessor {
             // BlockCommitmentCache should hold an `Arc<Bank>` everywhere it currently holds
             // a slot.
             //
-            // For more information, see https://github.com/solana-labs/solana/issues/11078
+            // For more information, see https://github.com/fair-exchange/safecoin/issues/11078
             warn!(
                 "Bank with {:?} not found at slot: {:?}",
                 commitment.commitment, slot
@@ -479,6 +479,7 @@ impl JsonRpcRequestProcessor {
                         effective_slot: first_confirmed_block_in_epoch,
                         amount: reward.lamports.abs() as u64,
                         post_balance: reward.post_balance,
+                        commission: reward.commission,
                     });
                 }
                 None
@@ -778,6 +779,9 @@ impl JsonRpcRequestProcessor {
             .epoch_vote_accounts(bank.get_epoch_and_slot_index(bank.slot()).0)
             .ok_or_else(Error::invalid_request)?;
         let default_vote_state = VoteState::default();
+        let delinquent_validator_slot_distance = config
+            .delinquent_slot_distance
+            .unwrap_or(DELINQUENT_VALIDATOR_SLOT_DISTANCE);
         let (current_vote_accounts, delinquent_vote_accounts): (
             Vec<RpcVoteAccountInfo>,
             Vec<RpcVoteAccountInfo>,
@@ -821,22 +825,27 @@ impl JsonRpcRequestProcessor {
                 })
             })
             .partition(|vote_account_info| {
-                if bank.slot() >= DELINQUENT_VALIDATOR_SLOT_DISTANCE as u64 {
+                if bank.slot() >= delinquent_validator_slot_distance as u64 {
                     vote_account_info.last_vote
-                        > bank.slot() - DELINQUENT_VALIDATOR_SLOT_DISTANCE as u64
+                        > bank.slot() - delinquent_validator_slot_distance as u64
                 } else {
                     vote_account_info.last_vote > 0
                 }
             });
 
-            let delinquent_staked_vote_accounts = delinquent_vote_accounts
-            .into_iter()
-            .filter(|vote_account_info| vote_account_info.activated_stake > 0)
-            .collect::<Vec<_>>();
+        let keep_unstaked_delinquents = config.keep_unstaked_delinquents.unwrap_or_default();
+        let delinquent_vote_accounts = if !keep_unstaked_delinquents {
+            delinquent_vote_accounts
+                .into_iter()
+                .filter(|vote_account_info| vote_account_info.activated_stake > 0)
+                .collect::<Vec<_>>()
+        } else {
+            delinquent_vote_accounts
+        };
 
         Ok(RpcVoteAccountStatus {
             current: current_vote_accounts,
-            delinquent: delinquent_staked_vote_accounts,
+            delinquent: delinquent_vote_accounts,
         })
     }
 
@@ -1349,7 +1358,7 @@ impl JsonRpcRequestProcessor {
     ) -> Vec<Signature> {
         if self.config.enable_rpc_transaction_history {
             // TODO: Add bigtable_ledger_storage support as a part of
-            // https://github.com/solana-labs/solana/pull/10928
+            // https://github.com/fair-exchange/safecoin/pull/10928
             let end_slot = min(
                 end_slot,
                 self.block_commitment_cache
@@ -1772,7 +1781,7 @@ impl JsonRpcRequestProcessor {
         }
     }
 
-    /// Get an iterator of spl-token accounts by owner address
+    /// Get an iterator of safe-token accounts by owner address
     fn get_filtered_spl_token_accounts_by_owner(
         &self,
         bank: &Arc<Bank>,
@@ -1798,7 +1807,7 @@ impl JsonRpcRequestProcessor {
         if self
             .config
             .account_indexes
-            .contains(&AccountIndex::SplTokenOwner)
+            .contains(&AccountIndex::SafeTokenOwner)
         {
             if !self.config.account_indexes.include_key(owner_key) {
                 return Err(RpcCustomError::KeyExcludedFromSecondaryIndex {
@@ -1807,7 +1816,7 @@ impl JsonRpcRequestProcessor {
                 .into());
             }
             Ok(bank.get_filtered_indexed_accounts(
-                &IndexKey::SplTokenOwner(*owner_key),
+                &IndexKey::SafeTokenOwner(*owner_key),
                 |account| {
                     account.owner == spl_token_id_v2_0()
                         && filters.iter().all(|filter_type| match filter_type {
@@ -1821,7 +1830,7 @@ impl JsonRpcRequestProcessor {
         }
     }
 
-    /// Get an iterator of spl-token accounts by mint address
+    /// Get an iterator of safe-token accounts by mint address
     fn get_filtered_spl_token_accounts_by_mint(
         &self,
         bank: &Arc<Bank>,
@@ -1846,7 +1855,7 @@ impl JsonRpcRequestProcessor {
         if self
             .config
             .account_indexes
-            .contains(&AccountIndex::SplTokenMint)
+            .contains(&AccountIndex::SafeTokenMint)
         {
             if !self.config.account_indexes.include_key(mint_key) {
                 return Err(RpcCustomError::KeyExcludedFromSecondaryIndex {
@@ -1855,7 +1864,7 @@ impl JsonRpcRequestProcessor {
                 .into());
             }
             Ok(
-                bank.get_filtered_indexed_accounts(&IndexKey::SplTokenMint(*mint_key), |account| {
+                bank.get_filtered_indexed_accounts(&IndexKey::SafeTokenMint(*mint_key), |account| {
                     account.owner == spl_token_id_v2_0()
                         && filters.iter().all(|filter_type| match filter_type {
                             RpcFilterType::DataSize(size) => account.data().len() as u64 == *size,
@@ -1869,12 +1878,15 @@ impl JsonRpcRequestProcessor {
     }
 }
 
-fn verify_transaction(transaction: &Transaction) -> Result<()> {
+fn verify_transaction(
+    transaction: &Transaction,
+    libsecp256k1_0_5_upgrade_enabled: bool,
+) -> Result<()> {
     if transaction.verify().is_err() {
         return Err(RpcCustomError::TransactionSignatureVerificationFailure.into());
     }
 
-    if let Err(e) = transaction.verify_precompiles() {
+    if let Err(e) = transaction.verify_precompiles(libsecp256k1_0_5_upgrade_enabled) {
         return Err(RpcCustomError::TransactionPrecompileVerificationFailure(e).into());
     }
 
@@ -2373,7 +2385,7 @@ pub mod rpc_minimal {
                 .get_epoch_leader_schedule(epoch)
                 .map(|leader_schedule| {
                     let mut schedule_by_identity =
-                        solana_ledger::leader_schedule_utils::leader_schedule_by_identity(
+                        safecoin_ledger::leader_schedule_utils::leader_schedule_by_identity(
                             leader_schedule.get_slot_leaders().iter().enumerate(),
                         );
                     if let Some(identity) = config.identity {
@@ -3137,7 +3149,10 @@ pub mod rpc_full {
             }
 
             if !config.skip_preflight {
-                if let Err(e) = verify_transaction(&transaction) {
+                if let Err(e) = verify_transaction(
+                    &transaction,
+                    preflight_bank.libsecp256k1_0_5_upgrade_enabled(),
+                ) {
                     return Err(e);
                 }
 
@@ -3200,6 +3215,7 @@ pub mod rpc_full {
             let encoding = config.encoding.unwrap_or(UiTransactionEncoding::Base58);
             let (_, mut transaction) = deserialize_transaction(data, encoding)?;
 
+            let bank = &*meta.bank(config.commitment);
             if config.sig_verify {
                 if config.replace_recent_blockhash {
                     return Err(Error::invalid_params(
@@ -3207,11 +3223,12 @@ pub mod rpc_full {
                     ));
                 }
 
-                if let Err(e) = verify_transaction(&transaction) {
+                if let Err(e) =
+                    verify_transaction(&transaction, bank.libsecp256k1_0_5_upgrade_enabled())
+                {
                     return Err(e);
                 }
             }
-            let bank = &*meta.bank(config.commitment);
             if config.replace_recent_blockhash {
                 transaction.message.recent_blockhash = bank.last_blockhash();
             }
@@ -3732,8 +3749,8 @@ pub mod tests {
     use bincode::deserialize;
     use jsonrpc_core::{futures, ErrorCode, MetaIoHandler, Output, Response, Value};
     use jsonrpc_core_client::transports::local;
-    use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes};
-    use solana_ledger::{
+    use safecoin_client::rpc_filter::{Memcmp, MemcmpEncodedBytes};
+    use safecoin_ledger::{
         blockstore_meta::PerfSample,
         blockstore_processor::fill_blockstore_slot_with_ticks,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
@@ -3754,7 +3771,7 @@ pub mod tests {
         timing::slot_duration_from_slots_per_year,
         transaction::{self, TransactionError},
     };
-    use solana_transaction_status::{
+    use safecoin_transaction_status::{
         EncodedConfirmedBlock, EncodedTransaction, EncodedTransactionWithStatusMeta,
         TransactionDetails, UiMessage,
     };
@@ -3763,7 +3780,7 @@ pub mod tests {
         vote_state::{BlockTimestamp, Vote, VoteInit, VoteStateVersions, MAX_LOCKOUT_HISTORY},
     };
     use spl_token_v2_0::{
-        solana_program::{program_option::COption, pubkey::Pubkey as SplTokenPubkey},
+        solana_program::{program_option::COption, pubkey::Pubkey as SafeTokenPubkey},
         state::AccountState as TokenAccountState,
         state::Mint,
     };
@@ -4425,7 +4442,7 @@ pub mod tests {
 
             assert_eq!(
                 bob_schedule.len(),
-                solana_ledger::leader_schedule_utils::leader_schedule(bank.epoch(), &bank)
+                safecoin_ledger::leader_schedule_utils::leader_schedule(bank.epoch(), &bank)
                     .unwrap()
                     .get_slot_leaders()
                     .len()
@@ -5827,7 +5844,7 @@ pub mod tests {
         let expected = json!({
             "jsonrpc": "2.0",
             "result": {
-                "solana-core": version.to_string(),
+                "safecoin-core": version.to_string(),
                 "feature-set": version.feature_set,
             },
             "id": 1
@@ -6563,7 +6580,8 @@ pub mod tests {
                 r#"{{"jsonrpc":"2.0","id":1,"method":"getVoteAccounts","params":{}}}"#,
                 json!([RpcGetVoteAccountsConfig {
                     vote_pubkey: Some(leader_vote_keypair.pubkey().to_string()),
-                    commitment: Some(CommitmentConfig::processed())
+                    commitment: Some(CommitmentConfig::processed()),
+                    ..RpcGetVoteAccountsConfig::default()
                 }])
             );
 
@@ -6694,9 +6712,9 @@ pub mod tests {
             start_rpc_handler_with_tx(&solana_sdk::pubkey::new_rand());
 
         let mut account_data = vec![0; TokenAccount::get_packed_len()];
-        let mint = SplTokenPubkey::new(&[2; 32]);
-        let owner = SplTokenPubkey::new(&[3; 32]);
-        let delegate = SplTokenPubkey::new(&[4; 32]);
+        let mint = SafeTokenPubkey::new(&[2; 32]);
+        let owner = SafeTokenPubkey::new(&[3; 32]);
+        let delegate = SafeTokenPubkey::new(&[4; 32]);
         let token_account = TokenAccount {
             mint,
             owner,
@@ -6792,7 +6810,7 @@ pub mod tests {
 
         // Add another token account with the same owner and delegate but different mint
         let mut account_data = vec![0; TokenAccount::get_packed_len()];
-        let new_mint = SplTokenPubkey::new(&[5; 32]);
+        let new_mint = SafeTokenPubkey::new(&[5; 32]);
         let token_account = TokenAccount {
             mint: new_mint,
             owner,
@@ -7095,9 +7113,9 @@ pub mod tests {
             start_rpc_handler_with_tx(&solana_sdk::pubkey::new_rand());
 
         let mut account_data = vec![0; TokenAccount::get_packed_len()];
-        let mint = SplTokenPubkey::new(&[2; 32]);
-        let owner = SplTokenPubkey::new(&[3; 32]);
-        let delegate = SplTokenPubkey::new(&[4; 32]);
+        let mint = SafeTokenPubkey::new(&[2; 32]);
+        let owner = SafeTokenPubkey::new(&[3; 32]);
+        let delegate = SafeTokenPubkey::new(&[4; 32]);
         let token_account = TokenAccount {
             mint,
             owner,
@@ -7146,7 +7164,7 @@ pub mod tests {
         assert_eq!(
             result["result"]["value"]["data"],
             json!({
-                "program": "spl-token",
+                "program": "safe-token",
                 "space": TokenAccount::get_packed_len(),
                 "parsed": {
                     "type": "account",
@@ -7191,7 +7209,7 @@ pub mod tests {
         assert_eq!(
             result["result"]["value"]["data"],
             json!({
-                "program": "spl-token",
+                "program": "safe-token",
                 "space": Mint::get_packed_len(),
                 "parsed": {
                     "type": "mint",
@@ -7212,7 +7230,7 @@ pub mod tests {
         let owner = Pubkey::new_unique();
         assert_eq!(
             get_spl_token_owner_filter(
-                &Pubkey::from_str("HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1").unwrap(),
+                &Pubkey::from_str("7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD").unwrap(),
                 &[
                     RpcFilterType::Memcmp(Memcmp {
                         offset: 32,
@@ -7228,7 +7246,7 @@ pub mod tests {
 
         // Filtering on mint instead of owner
         assert!(get_spl_token_owner_filter(
-            &Pubkey::from_str("HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1").unwrap(),
+            &Pubkey::from_str("7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD").unwrap(),
             &[
                 RpcFilterType::Memcmp(Memcmp {
                     offset: 0,

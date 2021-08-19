@@ -96,7 +96,7 @@ pub use solana_sdk_macro::program_declare_id as declare_id;
 extern crate serde_derive;
 
 #[macro_use]
-extern crate solana_frozen_abi_macro;
+extern crate safecoin_frozen_abi_macro;
 
 /// Convenience macro for doing integer division where the opersation's safety
 /// can be checked at compile-time

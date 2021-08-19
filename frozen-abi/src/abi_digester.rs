@@ -197,13 +197,13 @@ impl AbiDigester {
 
         let hash = hasher.result();
 
-        if let Ok(dir) = std::env::var("SAFECOIN_ABI_DUMP_DIR") {
+        if let Ok(dir) = std::env::var("SAFEANA_ABI_DUMP_DIR") {
             let thread_name = std::thread::current()
                 .name()
                 .unwrap_or("unknown-test-thread")
                 .replace(':', "_");
             if thread_name == "main" {
-                error!("Bad thread name detected for dumping; Maybe, --test-threads=1? Sorry, SAFECOIN_ABI_DUMP_DIR doesn't work under 1; increase it");
+                error!("Bad thread name detected for dumping; Maybe, --test-threads=1? Sorry, SAFEANA_ABI_DUMP_DIR doesn't work under 1; increase it");
             }
 
             let path = format!("{}/{}_{}", dir, thread_name, hash,);

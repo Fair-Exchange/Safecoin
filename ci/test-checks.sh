@@ -14,7 +14,7 @@ scripts/increment-cargo-version.sh check
 
 # Disallow uncommitted Cargo.lock changes
 (
-  _ scripts/cargo-for-all-lock-files.sh tree
+  _ scripts/cargo-for-all-lock-files.sh tree >/dev/null
   set +e
   if ! _ git diff --exit-code; then
     echo -e "\nError: Uncommitted Cargo.lock changes" 1>&2
@@ -35,8 +35,10 @@ echo --- build environment
   "$cargo" stable clippy --version --verbose
   "$cargo" nightly clippy --version --verbose
 
-  # audit is done only with stable
+  # audit is done only with "$cargo stable"
   "$cargo" stable audit --version
+
+  grcov --version
 )
 
 export RUST_BACKTRACE=1
@@ -65,7 +67,8 @@ _ ci/order-crates-for-publishing.py
 
 # -Z... is needed because of clippy bug: https://github.com/rust-lang/rust-clippy/issues/4612
 # run nightly clippy for `sdk/` as there's a moderate amount of nightly-only code there
-_ "$cargo" nightly clippy -Zunstable-options --workspace --all-targets -- --deny=warnings --deny=clippy::integer_arithmetic
+_ "$cargo" nightly clippy -Zunstable-options --workspace --all-targets -- \
+  --deny=warnings --deny=clippy::integer_arithmetic --allow=clippy::inconsistent_struct_constructor
 
 _ "$cargo" stable fmt --all -- --check
 

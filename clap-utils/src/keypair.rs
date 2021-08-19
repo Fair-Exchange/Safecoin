@@ -7,7 +7,7 @@ use {
     bip39::{Language, Mnemonic, Seed},
     clap::ArgMatches,
     rpassword::prompt_password_stderr,
-    solana_remote_wallet::{
+    safecoin_remote_wallet::{
         locator::{Locator as RemoteWalletLocator, LocatorError as RemoteWalletLocatorError},
         remote_keypair::generate_remote_keypair,
         remote_wallet::{maybe_wallet_manager, RemoteWalletError, RemoteWalletManager},
@@ -645,7 +645,7 @@ fn sanitize_seed_phrase(seed_phrase: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_remote_wallet::locator::Manufacturer;
+    use safecoin_remote_wallet::locator::Manufacturer;
     use solana_sdk::system_instruction;
     use tempfile::NamedTempFile;
 

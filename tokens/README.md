@@ -151,7 +151,7 @@ You can check the status of the recipients before beginning a distribution. You
 must include the SPL Token mint address:
 
 ```bash
-safecoin-tokens spl-token-balances --mint <ADDRESS> --input-csv <RECIPIENTS_CSV>
+safecoin-tokens safe-token-balances --mint <ADDRESS> --input-csv <RECIPIENTS_CSV>
 ```
 
 Example output:
@@ -168,7 +168,7 @@ C56nwrDVFpPrqwGYsTgQxv1ZraTh81H14PV4RHvZe36s                    10.000  Associat
 To run the distribution:
 
 ```bash
-safecoin-tokens distribute-spl-tokens --from <ADDRESS> --owner <KEYPAIR> \
+safecoin-tokens distribute-safe-tokens --from <ADDRESS> --owner <KEYPAIR> \
     --input-csv <RECIPIENTS_CSV> --fee-payer <KEYPAIR>
 ```
 

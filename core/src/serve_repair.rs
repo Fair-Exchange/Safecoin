@@ -9,9 +9,9 @@ use crate::{
 };
 use bincode::serialize;
 use rand::distributions::{Distribution, WeightedIndex};
-use solana_ledger::{blockstore::Blockstore, shred::Nonce};
-use solana_measure::measure::Measure;
-use solana_measure::thread_mem_usage;
+use safecoin_ledger::{blockstore::Blockstore, shred::Nonce};
+use safecoin_measure::measure::Measure;
+use safecoin_measure::thread_mem_usage;
 use solana_metrics::{datapoint_debug, inc_new_counter_debug};
 use solana_perf::packet::{limited_deserialize, Packets, PacketsRecycler};
 use solana_sdk::{
@@ -584,8 +584,8 @@ impl ServeRepair {
 mod tests {
     use super::*;
     use crate::{repair_response, result::Error};
-    use solana_ledger::get_tmp_ledger_path;
-    use solana_ledger::{
+    use safecoin_ledger::get_tmp_ledger_path;
+    use safecoin_ledger::{
         blockstore::make_many_slot_entries,
         blockstore_processor::fill_blockstore_slot_with_ticks,
         shred::{

@@ -1,24 +1,24 @@
 [package]
-name = "solana-streamer"
-version = "1.6.16"
+name = "safecoin-streamer"
+version = "1.6.18"
 description = "Safecoin Streamer"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-streamer"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-streamer"
 edition = "2018"
 
 [dependencies]
 log = "0.4.11"
-solana-metrics = { path = "../metrics", version = "=1.6.16" }
-solana-sdk = { path = "../sdk", version = "=1.6.16" }
+safecoin-metrics = { path = "../metrics", version = ">=1.6.18" }
+safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
 thiserror = "1.0"
-solana-measure = { path = "../measure", version = "=1.6.16" }
-solana-logger = { path = "../logger", version = "=1.6.16" }
+safecoin-measure = { path = "../measure", version = ">=1.6.18" }
+safecoin-logger = { path = "../logger", version = ">=1.6.18" }
 libc = "0.2.81"
 nix = "0.19.0"
-solana-perf = { path = "../perf", version = "=1.6.16" }
+safecoin-perf = { path = "../perf", version = ">=1.6.18" }
 
 [dev-dependencies]
 

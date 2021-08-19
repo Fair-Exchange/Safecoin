@@ -1,19 +1,19 @@
 [package]
-name = "solana-failure-program"
-version = "1.6.16"
+name = "safecoin-failure-program"
+version = "1.6.18"
 description = "Safecoin failure program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-failure-program"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-failure-program"
 edition = "2018"
 
 [dependencies]
-solana-sdk = { path = "../../sdk", version = "=1.6.16" }
+safecoin-sdk = { path = "../../sdk", version = ">=1.6.18" }
 
 [dev-dependencies]
-solana-runtime = { path = "../../runtime", version = "=1.6.16" }
+safecoin-runtime = { path = "../../runtime", version = ">=1.6.18" }
 
 [lib]
 crate-type = ["lib", "cdylib"]

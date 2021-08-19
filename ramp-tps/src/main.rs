@@ -10,7 +10,7 @@ mod voters;
 use clap::{crate_description, crate_name, crate_version, value_t, value_t_or_exit, App, Arg};
 use log::*;
 use results::Results;
-use solana_client::rpc_client::RpcClient;
+use safecoin_client::rpc_client::RpcClient;
 use solana_metrics::datapoint_info;
 use solana_sdk::{genesis_config::GenesisConfig, signature::read_keypair_file};
 use solana_stake_program::config::{id as stake_config_id, Config as StakeConfig};

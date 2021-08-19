@@ -39,7 +39,7 @@ use {
 };
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-use solana_frozen_abi::abi_example::IgnoreAsHelper;
+use safecoin_frozen_abi::abi_example::IgnoreAsHelper;
 
 mod common;
 mod future;

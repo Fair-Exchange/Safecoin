@@ -130,10 +130,10 @@ impl MetricsWriter for InfluxDbMetricsWriter {
 
 impl Default for MetricsAgent {
     fn default() -> Self {
-        let max_points_per_sec = env::var("SAFECOIN_METRICS_MAX_POINTS_PER_SECOND")
+        let max_points_per_sec = env::var("SAFEANA_METRICS_MAX_POINTS_PER_SECOND")
             .map(|x| {
                 x.parse()
-                    .expect("Failed to parse SAFECOIN_METRICS_MAX_POINTS_PER_SECOND")
+                    .expect("Failed to parse SAFEANA_METRICS_MAX_POINTS_PER_SECOND")
             })
             .unwrap_or(4000);
 
@@ -379,13 +379,13 @@ impl MetricsConfig {
 fn get_metrics_config() -> Result<MetricsConfig, String> {
     let mut config = MetricsConfig::default();
 
-    let config_var = env::var("SAFECOIN_METRICS_CONFIG")
-        .map_err(|err| format!("SAFECOIN_METRICS_CONFIG: {}", err))?;
+    let config_var = env::var("SAFEANA_METRICS_CONFIG")
+        .map_err(|err| format!("SAFEANA_METRICS_CONFIG: {}", err))?;
 
     for pair in config_var.split(',') {
         let nv: Vec<_> = pair.split('=').collect();
         if nv.len() != 2 {
-            return Err(format!("SAFECOIN_METRICS_CONFIG is invalid: '{}'", pair));
+            return Err(format!("SAFEANA_METRICS_CONFIG is invalid: '{}'", pair));
         }
         let v = nv[1].to_string();
         match nv[0] {
@@ -393,12 +393,12 @@ fn get_metrics_config() -> Result<MetricsConfig, String> {
             "db" => config.db = v,
             "u" => config.username = v,
             "p" => config.password = v,
-            _ => return Err(format!("SAFECOIN_METRICS_CONFIG is invalid: '{}'", pair)),
+            _ => return Err(format!("SAFEANA_METRICS_CONFIG is invalid: '{}'", pair)),
         }
     }
 
     if !config.complete() {
-        return Err("SAFECOIN_METRICS_CONFIG is incomplete".to_string());
+        return Err("SAFEANA_METRICS_CONFIG is incomplete".to_string());
     }
     Ok(config)
 }

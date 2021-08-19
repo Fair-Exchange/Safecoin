@@ -18,14 +18,14 @@ fi
 if [[ $(uname) != Linux ]]; then
   # Protect against unsupported configurations to prevent non-obvious errors
   # later. Arguably these should be fatal errors but for now prefer tolerance.
-  if [[ -n $SAFECOIN_CUDA ]]; then
+  if [[ -n $SAFEANA_CUDA ]]; then
     echo "Warning: CUDA is not supported on $(uname)"
-    SAFECOIN_CUDA=
+    SAFEANA_CUDA=
   fi
 fi
 
 if [[ -n $USE_INSTALL || ! -f "$SAFECOIN_ROOT"/Cargo.toml ]]; then
-  safecoin_program() {
+  solana_program() {
     declare program="$1"
     if [[ -z $program ]]; then
       printf "safecoin"

@@ -66,4 +66,4 @@ To pass messages between programs, the receiving program must accept the message
 
 ## Future Work
 
-- [Continuations and Signals for long running Transactions](https://github.com/solana-labs/solana/issues/1485)
+- [Continuations and Signals for long running Transactions](https://github.com/fair-exchange/safecoin/issues/1485)

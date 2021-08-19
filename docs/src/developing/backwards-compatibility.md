@@ -72,10 +72,10 @@ Major releases:
 
 ### Rust Crates
 
-- [`solana-sdk`](https://docs.rs/solana-sdk/) - Rust SDK for creating transactions and parsing account state
-- [`solana-program`](https://docs.rs/solana-program/) - Rust SDK for writing programs
-- [`solana-client`](https://docs.rs/solana-client/) - Rust client for connecting to RPC API
-- [`solana-cli-config`](https://docs.rs/solana-cli-config/) - Rust client for managing Safecoin CLI config files
+- [`safecoin-sdk`](https://docs.rs/safecoin-sdk/) - Rust SDK for creating transactions and parsing account state
+- [`safecoin-program`](https://docs.rs/safecoin-program/) - Rust SDK for writing programs
+- [`safecoin-client`](https://docs.rs/safecoin-client/) - Rust client for connecting to RPC API
+- [`safecoin-cli-config`](https://docs.rs/safecoin-cli-config/) - Rust client for managing Safecoin CLI config files
 
 Patch releases:
 

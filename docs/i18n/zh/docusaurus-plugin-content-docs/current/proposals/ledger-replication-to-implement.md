@@ -2,7 +2,7 @@
 title: 账本复制
 ---
 
-注意：此账本复制解决方案已部分实施，但尚未完成。 为了防止未使用代码的安全风险，https://github.com/solana-labs/solana/pull/9992 删除了部分实现。 本设计文档的第一部分反映了账本复制的已实现部分。 [本章节的第二部分](#ledger-replication-not-implemented) 描述了解决方案中尚未实现的部分。
+注意：此账本复制解决方案已部分实施，但尚未完成。 为了防止未使用代码的安全风险，https://github.com/fair-exchange/safecoin/pull/9992 删除了部分实现。 本设计文档的第一部分反映了账本复制的已实现部分。 [本章节的第二部分](#ledger-replication-not-implemented) 描述了解决方案中尚未实现的部分。
 
 ## 复制证明
 

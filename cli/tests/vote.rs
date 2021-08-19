@@ -3,7 +3,7 @@ use solana_cli::{
     spend_utils::SpendAmount,
     test_utils::check_recent_balance,
 };
-use solana_client::{
+use safecoin_client::{
     blockhash_query::{self, BlockhashQuery},
     rpc_client::RpcClient,
 };

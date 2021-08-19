@@ -3,7 +3,7 @@
 use crate::cluster_info::{ClusterInfo, VALIDATOR_PORT_RANGE};
 use crate::contact_info::ContactInfo;
 use rand::{thread_rng, Rng};
-use solana_client::thin_client::{create_client, ThinClient};
+use safecoin_client::thin_client::{create_client, ThinClient};
 use solana_perf::recycler::Recycler;
 use solana_runtime::bank_forks::BankForks;
 use solana_sdk::{

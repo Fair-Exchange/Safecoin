@@ -8,15 +8,15 @@ use crate::{
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use log::*;
-use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
+use safecoin_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
 use solana_bpf_loader_program::{bpf_verifier, BpfError, ThisInstructionMeter};
-use solana_clap_utils::{self, input_parsers::*, input_validators::*, keypair::*};
-use solana_cli_output::{
+use safecoin_clap_utils::{self, input_parsers::*, input_validators::*, keypair::*};
+use safecoin_cli_output::{
     display::new_spinner_progress_bar, CliProgram, CliProgramAccountType, CliProgramAuthority,
     CliProgramBuffer, CliProgramId, CliUpgradeableBuffer, CliUpgradeableBuffers,
     CliUpgradeableProgram,
 };
-use solana_client::{
+use safecoin_client::{
     client_error::ClientErrorKind,
     rpc_client::RpcClient,
     rpc_config::RpcSendTransactionConfig,
@@ -26,7 +26,7 @@ use solana_client::{
     tpu_client::{TpuClient, TpuClientConfig},
 };
 use solana_rbpf::vm::{Config, Executable};
-use solana_remote_wallet::remote_wallet::RemoteWalletManager;
+use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
 use solana_sdk::{
     account::Account,
     account_utils::StateMut,
@@ -47,7 +47,7 @@ use solana_sdk::{
     transaction::Transaction,
     transaction::TransactionError,
 };
-use solana_transaction_status::TransactionConfirmationStatus;
+use safecoin_transaction_status::TransactionConfirmationStatus;
 use std::{
     collections::HashMap,
     error,
@@ -2106,7 +2106,7 @@ mod tests {
     use super::*;
     use crate::cli::{app, parse_command, process_command};
     use serde_json::Value;
-    use solana_cli_output::OutputFormat;
+    use safecoin_cli_output::OutputFormat;
     use solana_sdk::signature::write_keypair_file;
 
     fn make_tmp_path(name: &str) -> String {

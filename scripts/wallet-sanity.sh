@@ -15,7 +15,7 @@ else
   args=("$@")
 fi
 
-args+=(--keypair "$SAFECOIN_CONFIG_DIR"/faucet.json)
+args+=(--keypair "$SAFEANA_CONFIG_DIR"/faucet.json)
 
 node_readiness=false
 timeout=60

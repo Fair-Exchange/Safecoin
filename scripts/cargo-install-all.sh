@@ -99,7 +99,6 @@ else
       safecoin-dos
       safecoin-install-init
       safecoin-stake-accounts
-      safecoin-stake-monitor
       safecoin-stake-o-matic
       safecoin-test-validator
       safecoin-tokens
@@ -108,7 +107,7 @@ else
   fi
 
   #XXX: Ensure `safecoin-genesis` is built LAST!
-  # See https://github.com/solana-labs/solana/issues/5826
+  # See https://github.com/fair-exchange/safecoin/issues/5826
   BINS+=(safecoin-genesis)
 fi
 
@@ -124,10 +123,10 @@ mkdir -p "$installDir/bin"
   # shellcheck disable=SC2086 # Don't want to double quote $rust_version
   "$cargo" $maybeRustVersion build $maybeReleaseFlag "${binArgs[@]}"
 
-  # Exclude `spl-token` binary for net.sh builds
+  # Exclude `safe-token` binary for net.sh builds
   if [[ -z "$validatorOnly" ]]; then
     # shellcheck disable=SC2086 # Don't want to double quote $rust_version
-    "$cargo" $maybeRustVersion install spl-token-cli --root "$installDir"
+    "$cargo" $maybeRustVersion install safe-token-cli --root "$installDir"
   fi
 )
 

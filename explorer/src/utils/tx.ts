@@ -14,10 +14,10 @@ import {
   Transaction,
   PartiallyDecodedInstruction,
   ParsedInstruction,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { Cluster } from "providers/cluster";
 import { SerumMarketRegistry } from "serumMarketRegistry";
-import { TokenInfoMap } from "@solana/spl-token-registry";
+import { TokenInfoMap } from "@solana/safe-token-registry";
 
 export type ProgramName = typeof PROGRAM_NAME_BY_ID[keyof typeof PROGRAM_NAME_BY_ID];
 
@@ -39,7 +39,7 @@ export enum PROGRAM_NAMES {
 
   // other
   BONFIDA_POOL = "Bonfida Pool Program",
-  BREAK_SAFECOIN = "Break Safecoin Program",
+  BREAK_SAFEANA = "Break Safecoin Program",
   RAYDIUM_LIQUIDITY_1 = "Raydium Liquidity Pool Program v1",
   RAYDIUM_LIQUIDITY_2 = "Raydium Liquidity Pool Program v2",
   RAYDIUM_STAKING = "Raydium Staking Program",
@@ -76,7 +76,7 @@ export const PROGRAM_DEPLOYMENTS = {
 
   // other
   [PROGRAM_NAMES.BONFIDA_POOL]: MAINNET_ONLY,
-  [PROGRAM_NAMES.BREAK_SAFECOIN]: LIVE_CLUSTERS,
+  [PROGRAM_NAMES.BREAK_SAFEANA]: LIVE_CLUSTERS,
   [PROGRAM_NAMES.RAYDIUM_LIQUIDITY_1]: MAINNET_ONLY,
   [PROGRAM_NAMES.RAYDIUM_LIQUIDITY_2]: MAINNET_ONLY,
   [PROGRAM_NAMES.RAYDIUM_STAKING]: MAINNET_ONLY,
@@ -92,17 +92,17 @@ export const PROGRAM_NAME_BY_ID = {
   [VOTE_PROGRAM_ID.toBase58()]: PROGRAM_NAMES.VOTE,
 
   // spl
-  PUFQTv9BK3ax6bKPFnyjBTbVa3782mcfvb22TZovvrm: PROGRAM_NAMES.ASSOCIATED_TOKEN,
-  BKCvVdwmY6zQQyWijdMC2vjtYvCq9Q913yvvNLvjVSMv: PROGRAM_NAMES.FEATURE_PROPOSAL,
+  CWyEp7dp1Cv3334j6gCci2UrrjA8Q98bYa7AwGBpZ6iJ: PROGRAM_NAMES.ASSOCIATED_TOKEN,
+  D5WhRrnh8AefVULhudnuLA1LCVzvEgdn49eDWE67wYNn: PROGRAM_NAMES.FEATURE_PROPOSAL,
   4DDUJ1rA8Vd7e6SFWanf4V8JnsfapjCGNutQYw8Vtt45: PROGRAM_NAMES.MEMO,
-  MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr: PROGRAM_NAMES.MEMO_2,
+  9h7wfE8nxQ6YsRedqNHwroEZbA5bMAmNsh8GdxwBTtaV: PROGRAM_NAMES.MEMO_2,
   6RWe1TGwvojnbAynyWrHzm3GgHf7AmX7kLQTJG7vHCfb: PROGRAM_NAMES.SWAP,
-  HMGr16f8Ct1Zeb9TGPypt9rPgzCkmhCQB8Not8vwiPW1: PROGRAM_NAMES.TOKEN,
+  7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD: PROGRAM_NAMES.TOKEN,
   LendZqTs7gn5CTSJU1jWKhKuVpjJGom45nnwPb2AMTi: PROGRAM_NAMES.LENDING,
 
   // other
   WvmTNLpGMVbwJVYztYL4Hnsy82cJhQorxjnnXcRm3b6: PROGRAM_NAMES.BONFIDA_POOL,
-  CtY5L6mdBzRUakZFJ3NXkhy8ufGkDteBJvgawdAVgWVv: PROGRAM_NAMES.BREAK_SAFECOIN,
+  CtY5L6mdBzRUakZFJ3NXkhy8ufGkDteBJvgawdAVgWVv: PROGRAM_NAMES.BREAK_SAFEANA,
   RVKd61ztZW9GUwhRbbLoYVRE5Xf1B2tVscKqwZqXgEr:
     PROGRAM_NAMES.RAYDIUM_LIQUIDITY_1,
   "27haf8L6oxUeXrHrgEgsexjSY5hbVUWEmvv9Nyxg8vQv":

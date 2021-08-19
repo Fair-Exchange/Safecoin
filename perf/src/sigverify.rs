@@ -10,7 +10,7 @@ use crate::perf_libs;
 use crate::recycler::Recycler;
 use rayon::ThreadPool;
 use solana_metrics::inc_new_counter_debug;
-use solana_rayon_threadlimit::get_thread_count;
+use safecoin_rayon_threadlimit::get_thread_count;
 use solana_sdk::message::MESSAGE_HEADER_LENGTH;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::short_vec::decode_shortu16_len;

@@ -3,7 +3,7 @@
 extern crate log;
 use clap::{crate_description, crate_name, value_t, App, Arg};
 use rayon::prelude::*;
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_runtime::{
     accounts::{create_test_accounts, update_accounts_bench, Accounts},
     accounts_index::{AccountSecondaryIndexes, Ancestors},

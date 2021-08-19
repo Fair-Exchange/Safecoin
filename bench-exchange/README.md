@@ -55,7 +55,7 @@ matching orders.  All the transactions can execute concurrently.
   -  An expression of the relative prices of two tokens. Calculated with the Base
      Asset as the numerator and the Quote Asset as the denominator. Ratios are 
      represented as fixed point numbers.  The fixed point scaler is defined in
-     [exchange_state.rs](https://github.com/solana-labs/solana/blob/c2fdd1362a029dcf89c8907c562d2079d977df11/programs/exchange_api/src/exchange_state.rs#L7)
+     [exchange_state.rs](https://github.com/fair-exchange/safecoin/blob/c2fdd1362a029dcf89c8907c562d2079d977df11/programs/exchange_api/src/exchange_state.rs#L7)
 - Order request
   - A Safecoin transaction sent by a trader to the exchange to submit an order. 
     Order requests are made up of the token pair, the order side (bid or ask),

@@ -30,7 +30,7 @@ use crate::{
     weighted_shuffle::weighted_shuffle,
 };
 use rand::{seq::SliceRandom, CryptoRng, Rng};
-use solana_ledger::shred::Shred;
+use safecoin_ledger::shred::Shred;
 use solana_sdk::sanitize::{Sanitize, SanitizeError};
 
 use bincode::{serialize, serialized_size};
@@ -39,8 +39,8 @@ use rand::thread_rng;
 use rayon::prelude::*;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use serde::ser::Serialize;
-use solana_measure::measure::Measure;
-use solana_measure::thread_mem_usage;
+use safecoin_measure::measure::Measure;
+use safecoin_measure::thread_mem_usage;
 use solana_metrics::{inc_new_counter_debug, inc_new_counter_error};
 use solana_net_utils::{
     bind_common, bind_common_in_range, bind_in_range, find_available_port_in_range,
@@ -50,7 +50,7 @@ use solana_perf::packet::{
     limited_deserialize, to_packets_with_destination, Packet, Packets, PacketsRecycler,
     PACKET_DATA_SIZE,
 };
-use solana_rayon_threadlimit::get_thread_count;
+use safecoin_rayon_threadlimit::get_thread_count;
 use solana_runtime::bank_forks::BankForks;
 use solana_sdk::{
     clock::{Slot, DEFAULT_MS_PER_SLOT, DEFAULT_SLOTS_PER_EPOCH},
@@ -61,8 +61,11 @@ use solana_sdk::{
     timing::timestamp,
     transaction::Transaction,
 };
-use solana_streamer::sendmmsg::multicast;
-use solana_streamer::streamer::{PacketReceiver, PacketSender};
+use solana_streamer::{
+    sendmmsg::multicast,
+    socket::is_global,
+    streamer::{PacketReceiver, PacketSender},
+};
 use solana_vote_program::vote_state::MAX_LOCKOUT_HISTORY;
 use std::{
     borrow::Cow,
@@ -1250,7 +1253,7 @@ impl ClusterInfo {
             .filter(|node| {
                 node.id != self_pubkey
                     && node.shred_version == self_shred_version
-                    && ContactInfo::is_valid_address(&node.tvu)
+                    && ContactInfo::is_valid_tvu_address(&node.tvu)
             })
             .cloned()
             .collect()
@@ -1375,38 +1378,44 @@ impl ClusterInfo {
     /// retransmit messages to a list of nodes
     /// # Remarks
     /// We need to avoid having obj locked while doing a io, such as the `send_to`
-    pub fn retransmit_to(
-        peers: &[&ContactInfo],
-        packet: &Packet,
-        s: &UdpSocket,
-        forwarded: bool,
-    ) -> Result<()> {
+    pub fn retransmit_to(peers: &[&ContactInfo], packet: &Packet, s: &UdpSocket, forwarded: bool) {
         trace!("retransmit orders {}", peers.len());
         let dests: Vec<_> = if forwarded {
             peers
                 .iter()
                 .map(|peer| &peer.tvu_forwards)
                 .filter(|addr| ContactInfo::is_valid_address(addr))
+                .filter(|addr| is_global(addr))
                 .collect()
         } else {
-            peers.iter().map(|peer| &peer.tvu).collect()
+            peers
+                .iter()
+                .map(|peer| &peer.tvu)
+                .filter(|addr| is_global(addr))
+                .collect()
         };
-        let mut sent = 0;
-        while sent < dests.len() {
-            match multicast(s, &packet.data[..packet.meta.size], &dests[sent..]) {
-                Ok(n) => sent += n,
-                Err(e) => {
-                    inc_new_counter_error!(
-                        "cluster_info-retransmit-send_to_error",
-                        dests.len() - sent,
-                        1
-                    );
-                    error!("retransmit result {:?}", e);
-                    return Err(Error::Io(e));
+        let mut dests = &dests[..];
+        let data = &packet.data[..packet.meta.size];
+        while !dests.is_empty() {
+            match multicast(s, data, dests) {
+                Ok(n) => dests = &dests[n..],
+                Err(err) => {
+                    inc_new_counter_error!("cluster_info-retransmit-send_to_error", dests.len(), 1);
+                    error!("retransmit multicast: {:?}", err);
+                    break;
                 }
             }
         }
-        Ok(())
+        let mut errs = 0;
+        for dest in dests {
+            if let Err(err) = s.send_to(data, dest) {
+                error!("retransmit send: {}, {:?}", dest, err);
+                errs += 1;
+            }
+        }
+        if errs != 0 {
+            inc_new_counter_error!("cluster_info-retransmit-error", errs, 1);
+        }
     }
 
     fn insert_self(&self) {
@@ -3033,7 +3042,7 @@ mod tests {
     use itertools::izip;
     use rand::{seq::SliceRandom, SeedableRng};
     use rand_chacha::ChaChaRng;
-    use solana_ledger::shred::Shredder;
+    use safecoin_ledger::shred::Shredder;
     use solana_sdk::signature::{Keypair, Signer};
     use solana_vote_program::{vote_instruction, vote_state::Vote};
     use std::iter::repeat_with;

@@ -3,7 +3,7 @@
 
 use crate::packet::{self, send_to, Packets, PacketsRecycler, PACKETS_PER_BATCH};
 use crate::recvmmsg::NUM_RCVMMSGS;
-use solana_measure::thread_mem_usage;
+use safecoin_measure::thread_mem_usage;
 use solana_sdk::timing::{duration_as_ms, timestamp};
 use std::net::UdpSocket;
 use std::sync::atomic::{AtomicBool, Ordering};

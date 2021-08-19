@@ -17,13 +17,13 @@ use crossbeam_channel::{
     Receiver as CrossbeamReceiver, RecvTimeoutError as CrossbeamRecvTimeoutError,
     Sender as CrossbeamSender,
 };
-use solana_ledger::{blockstore::Blockstore, shred::Shred};
-use solana_measure::measure::Measure;
+use safecoin_ledger::{blockstore::Blockstore, shred::Shred};
+use safecoin_measure::measure::Measure;
 use solana_metrics::{inc_new_counter_error, inc_new_counter_info};
 use solana_runtime::bank::Bank;
 use solana_sdk::timing::timestamp;
 use solana_sdk::{clock::Slot, pubkey::Pubkey};
-use solana_streamer::sendmmsg::send_mmsg;
+use solana_streamer::{sendmmsg::send_mmsg, socket::is_global};
 use std::sync::atomic::AtomicU64;
 use std::{
     collections::HashMap,
@@ -387,10 +387,15 @@ pub fn broadcast_shreds(
     let mut shred_select = Measure::start("shred_select");
     let packets: Vec<_> = shreds
         .iter()
-        .map(|shred| {
+        .filter_map(|shred| {
             let broadcast_index = weighted_best(&peers_and_stakes, shred.seed());
+            let node = &peers[broadcast_index];
 
-            (&shred.payload, &peers[broadcast_index].tvu)
+            if is_global(&node.tvu) {
+                Some((&shred.payload, &node.tvu))
+            } else {
+                None
+            }
         })
         .collect();
     shred_select.stop();
@@ -442,7 +447,7 @@ pub mod test {
     use super::*;
     use crate::cluster_info::{ClusterInfo, Node};
     use crossbeam_channel::unbounded;
-    use solana_ledger::{
+    use safecoin_ledger::{
         blockstore::{make_slot_entries, Blockstore},
         entry::create_ticks,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},

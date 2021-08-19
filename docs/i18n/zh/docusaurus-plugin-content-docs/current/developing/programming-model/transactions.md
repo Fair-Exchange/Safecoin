@@ -52,7 +52,7 @@ title: "交易"
 
 每个[instruction](terminology.md#instruction)都指定一个程序，应传递给该程序的交易帐户的子集以及一个传递给该程序的数据字节数组。 该程序解释数据数组并在指令指定的帐户上运行。 该程序可以成功返回，或者带有错误代码。 错误返回会导致整个事务立即失败。
 
-程序通常提供帮助程序功能来构造它们支持的指令。 例如，系统程序提供了以下Rust助手来构建[`SystemInstruction::CreateAccount`](https://github.com/solana-labs/solana/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L63)指令：
+程序通常提供帮助程序功能来构造它们支持的指令。 例如，系统程序提供了以下Rust助手来构建[`SystemInstruction::CreateAccount`](https://github.com/fair-exchange/safecoin/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L63)指令：
 
 ```rust
 pub fn create_account(
@@ -80,7 +80,7 @@ pub fn create_account(
 
 可以在这里找到：
 
-https://github.com/solana-labs/solana/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L220
+https://github.com/fair-exchange/safecoin/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L220
 
 ### 程序ID
 
@@ -101,7 +101,7 @@ https://github.com/solana-labs/solana/blob/6606590b8132e56dab9e60b3f7d20ba7412a7
 
 程序可以自由指定如何将信息编码到指令数据字节数组中。 数据编码方式的选择应考虑到解码的开销，因为该步骤是由链上程序执行的。 据观察，一些常见的编码(例如Rust的bincode) 效率很低。
 
-[Safecoin程序库的代币程序](https://github.com/solana-labs/solana-program-library/tree/master/token)提供了一个示例，说明如何有效地对指令数据进行编码，但是请注意，这种方法仅支持固定大小的类型。 代币利用[Pack](https://github.com/solana-labs/solana/blob/master/sdk/program/src/program_pack.rs)特征来对代币指令和代币的指令数据进行编码/解码帐户状态。
+[Safecoin程序库的代币程序](https://github.com/fair-exchange/safecoin-program-library/tree/master/token)提供了一个示例，说明如何有效地对指令数据进行编码，但是请注意，这种方法仅支持固定大小的类型。 代币利用[Pack](https://github.com/fair-exchange/safecoin/blob/master/sdk/program/src/program_pack.rs)特征来对代币指令和代币的指令数据进行编码/解码帐户状态。
 
 ## 签名
 

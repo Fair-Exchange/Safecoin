@@ -3,8 +3,8 @@ use solana_cli::{
     cli::{process_command, CliCommand, CliConfig},
     program::ProgramCliCommand,
 };
-use solana_cli_output::OutputFormat;
-use solana_client::rpc_client::RpcClient;
+use safecoin_cli_output::OutputFormat;
+use safecoin_client::rpc_client::RpcClient;
 use solana_core::test_validator::TestValidator;
 use safecoin_faucet::faucet::run_local_faucet;
 use solana_sdk::{

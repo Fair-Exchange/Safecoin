@@ -8,7 +8,7 @@ use crate::{
 };
 use inflector::Inflector;
 use serde_json::Value;
-use solana_account_decoder::parse_token::spl_token_id_v2_0;
+use safecoin_account_decoder::parse_token::spl_token_id_v2_0;
 use solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey, system_program};
 use std::{collections::HashMap, str::from_utf8};
 use thiserror::Error;
@@ -17,8 +17,8 @@ lazy_static! {
     static ref ASSOCIATED_TOKEN_PROGRAM_ID: Pubkey = spl_associated_token_id_v1_0();
     static ref BPF_LOADER_PROGRAM_ID: Pubkey = solana_sdk::bpf_loader::id();
     static ref BPF_UPGRADEABLE_LOADER_PROGRAM_ID: Pubkey = solana_sdk::bpf_loader_upgradeable::id();
-    static ref MEMO_V1_PROGRAM_ID: Pubkey = Pubkey::new_from_array(spl_memo::v1::id().to_bytes());
-    static ref MEMO_V3_PROGRAM_ID: Pubkey = Pubkey::new_from_array(spl_memo::id().to_bytes());
+    static ref MEMO_V1_PROGRAM_ID: Pubkey = Pubkey::new_from_array(safe_memo::v1::id().to_bytes());
+    static ref MEMO_V3_PROGRAM_ID: Pubkey = Pubkey::new_from_array(safe_memo::id().to_bytes());
     static ref STAKE_PROGRAM_ID: Pubkey = solana_stake_program::id();
     static ref SYSTEM_PROGRAM_ID: Pubkey = system_program::id();
     static ref TOKEN_PROGRAM_ID: Pubkey = spl_token_id_v2_0();
@@ -27,11 +27,11 @@ lazy_static! {
         let mut m = HashMap::new();
         m.insert(
             *ASSOCIATED_TOKEN_PROGRAM_ID,
-            ParsableProgram::SplAssociatedTokenAccount,
+            ParsableProgram::SafeAssociatedTokenAccount,
         );
-        m.insert(*MEMO_V1_PROGRAM_ID, ParsableProgram::SplMemo);
-        m.insert(*MEMO_V3_PROGRAM_ID, ParsableProgram::SplMemo);
-        m.insert(*TOKEN_PROGRAM_ID, ParsableProgram::SplToken);
+        m.insert(*MEMO_V1_PROGRAM_ID, ParsableProgram::SafeMemo);
+        m.insert(*MEMO_V3_PROGRAM_ID, ParsableProgram::SafeMemo);
+        m.insert(*TOKEN_PROGRAM_ID, ParsableProgram::SafeToken);
         m.insert(*BPF_LOADER_PROGRAM_ID, ParsableProgram::BpfLoader);
         m.insert(
             *BPF_UPGRADEABLE_LOADER_PROGRAM_ID,
@@ -79,9 +79,9 @@ pub struct ParsedInstructionEnum {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ParsableProgram {
-    SplAssociatedTokenAccount,
-    SplMemo,
-    SplToken,
+    SafeAssociatedTokenAccount,
+    SafeMemo,
+    SafeToken,
     BpfLoader,
     BpfUpgradeableLoader,
     Stake,
@@ -98,11 +98,11 @@ pub fn parse(
         .get(program_id)
         .ok_or(ParseInstructionError::ProgramNotParsable)?;
     let parsed_json = match program_name {
-        ParsableProgram::SplAssociatedTokenAccount => {
+        ParsableProgram::SafeAssociatedTokenAccount => {
             serde_json::to_value(parse_associated_token(instruction, account_keys)?)?
         }
-        ParsableProgram::SplMemo => parse_memo(instruction)?,
-        ParsableProgram::SplToken => serde_json::to_value(parse_token(instruction, account_keys)?)?,
+        ParsableProgram::SafeMemo => parse_memo(instruction)?,
+        ParsableProgram::SafeToken => serde_json::to_value(parse_token(instruction, account_keys)?)?,
         ParsableProgram::BpfLoader => {
             serde_json::to_value(parse_bpf_loader(instruction, account_keys)?)?
         }
@@ -123,7 +123,7 @@ pub fn parse(
 fn parse_memo(instruction: &CompiledInstruction) -> Result<Value, ParseInstructionError> {
     from_utf8(&instruction.data)
         .map(|s| Value::String(s.to_string()))
-        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SplMemo))
+        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeMemo))
 }
 
 pub(crate) fn check_num_accounts(
@@ -155,7 +155,7 @@ mod test {
         assert_eq!(
             parse(&MEMO_V1_PROGRAM_ID, &memo_instruction, &[]).unwrap(),
             ParsedInstruction {
-                program: "spl-memo".to_string(),
+                program: "safe-memo".to_string(),
                 program_id: MEMO_V1_PROGRAM_ID.to_string(),
                 parsed: json!("🦖"),
             }
@@ -163,7 +163,7 @@ mod test {
         assert_eq!(
             parse(&MEMO_V3_PROGRAM_ID, &memo_instruction, &[]).unwrap(),
             ParsedInstruction {
-                program: "spl-memo".to_string(),
+                program: "safe-memo".to_string(),
                 program_id: MEMO_V3_PROGRAM_ID.to_string(),
                 parsed: json!("🦖"),
             }

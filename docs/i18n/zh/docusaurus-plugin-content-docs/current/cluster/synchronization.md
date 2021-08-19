@@ -14,7 +14,7 @@ Safecoin 采取了非常独特的做法，称为 _历史证明_ 或 _PoH_。 带
 
 Safecoin 在 2017 年 11 月首次介绍了历史证明技术在区块链中的使用。 次年 6 月， 斯坦福阐述了类似的技术，称为 [verifiable delay function（可验证延迟函数）](https://eprint.iacr.org/2018/601.pdf) 或简称为 _VDF_。
 
-VDF 的一个优势是验证所需时间非常短。 Safecoin 验证其延迟函数的方法它与创建所需的时间成正比。 拆分超过 4000 个核心 GPU，它足以满足 Safecoin 的性能需要，但如果您请教上述论文的作者，他们可能会跟说 Safecoin 的方法在算法上很慢 \([因此](https://github.com/solana-labs/solana/issues/388)\)，不应该叫作 VDF。 我们的观点是 VDF 一词应当指可证明的延迟方程，而不一定要满足某些性能特征。 在这个问题解决之前，Safecoin 很可能会继续在其特定的应用程序 VDF 使用 PoH 一词。
+VDF 的一个优势是验证所需时间非常短。 Safecoin 验证其延迟函数的方法它与创建所需的时间成正比。 拆分超过 4000 个核心 GPU，它足以满足 Safecoin 的性能需要，但如果您请教上述论文的作者，他们可能会跟说 Safecoin 的方法在算法上很慢 \([因此](https://github.com/fair-exchange/safecoin/issues/388)\)，不应该叫作 VDF。 我们的观点是 VDF 一词应当指可证明的延迟方程，而不一定要满足某些性能特征。 在这个问题解决之前，Safecoin 很可能会继续在其特定的应用程序 VDF 使用 PoH 一词。
 
 PoH 与 VDF 之间的另一个区别是，VDF 仅用于跟踪时间。 另一方面，PoH 的哈希区块链包括应用程序观察到的任何数据的哈希部分。 这些数据是一把双刃剑。 一方面，数据提供了“证明历史”――数据在哈希之后肯定是存在的。 另一方面，这意味着当数据被哈希的_时候_，应用程序可以通过更改它来操纵区块链。 因此，PoH 区块链并不是一个很好的随机数来源，但是没有这种数据的 VDF 却非常合适。 例如，Safecoin 的 [领导人轮换算法](synchronization.md#leader-rotation)，只来源于 VDF _高度_ ，而不是该高度的哈希值。
 

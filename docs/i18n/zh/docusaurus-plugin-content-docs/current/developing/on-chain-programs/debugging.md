@@ -32,11 +32,11 @@ RUST_LOG=solana_runtime::system_instruction_processor=trace,solana_runtime::mess
 - BPF加载程序可能无法解析程序，这应该不会发生，因为加载程序已经对程序的帐户数据进行了_最终处理_。
   - `InstructionError::InvalidAccountData`将作为交易错误的一部分返回。
 - BPF加载程序可能无法设置程序的执行环境
-  - `InstructionError::Custom(0x0b9f_0001)`将作为交易错误的一部分返回。  "0x0b9f_0001"是[`VirtualMachineCreationFailed`](https://github.com/solana-labs/solana/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/programs/bpf_loader/src/lib.rs#L44)的十六进制表示形式。
+  - `InstructionError::Custom(0x0b9f_0001)`将作为交易错误的一部分返回。  "0x0b9f_0001"是[`VirtualMachineCreationFailed`](https://github.com/fair-exchange/safecoin/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/programs/bpf_loader/src/lib.rs#L44)的十六进制表示形式。
 - BPF加载程序可能在程序执行过程中检测到致命错误(紧急情况，内存冲突，系统调用错误等)。
-  - `InstructionError::Custom(0x0b9f_0002)`将作为交易错误的一部分返回。  "0x0b9f_0002"是[`VirtualMachineFailedToRunProgram`](https://github.com/solana-labs/solana/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/programs/bpf_loader/src/lib.rs#L46)的十六进制表示。
+  - `InstructionError::Custom(0x0b9f_0002)`将作为交易错误的一部分返回。  "0x0b9f_0002"是[`VirtualMachineFailedToRunProgram`](https://github.com/fair-exchange/safecoin/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/programs/bpf_loader/src/lib.rs#L46)的十六进制表示。
 - 程序本身可能返回错误
-  - `InstructionError::Custom(<user defined value>)`将被返回。  “用户定义的值”不得与任何[内置运行时程序错误](https://github.com/solana-labs/solana/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/program_error.rs#L87)相冲突 。 程序通常使用枚举类型来定义从零开始的错误代码，因此它们不会冲突。
+  - `InstructionError::Custom(<user defined value>)`将被返回。  “用户定义的值”不得与任何[内置运行时程序错误](https://github.com/fair-exchange/safecoin/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/program_error.rs#L87)相冲突 。 程序通常使用枚举类型来定义从零开始的错误代码，因此它们不会冲突。
 
 如果出现`VirtualMachineFailedToRunProgram`错误，则将有关失败原因的详细信息写入[程序的执行日志](debugging.md#logging)。
 

@@ -3,12 +3,12 @@ use clap::{crate_description, crate_name, value_t, values_t_or_exit, App, Arg};
 use log::*;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use solana_account_decoder::parse_token::spl_token_v2_0_pubkey;
-use solana_clap_utils::input_parsers::pubkey_of;
-use solana_client::rpc_client::RpcClient;
+use safecoin_account_decoder::parse_token::spl_token_v2_0_pubkey;
+use safecoin_clap_utils::input_parsers::pubkey_of;
+use safecoin_client::rpc_client::RpcClient;
 use solana_core::gossip_service::discover;
 use safecoin_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT};
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_runtime::inline_spl_token_v2_0;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
@@ -20,7 +20,7 @@ use solana_sdk::{
     timing::timestamp,
     transaction::Transaction,
 };
-use solana_transaction_status::parse_token::spl_token_v2_0_instruction;
+use safecoin_transaction_status::parse_token::spl_token_v2_0_instruction;
 use std::{
     net::SocketAddr,
     process::exit,

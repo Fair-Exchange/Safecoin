@@ -9,12 +9,12 @@ extern crate solana_exchange_program;
 extern crate solana_vest_program;
 
 use clap::{crate_description, crate_name, value_t, value_t_or_exit, App, Arg, ArgMatches};
-use solana_clap_utils::{
+use safecoin_clap_utils::{
     input_parsers::{cluster_type_of, pubkey_of, pubkeys_of, unix_timestamp_from_rfc3339_datetime},
     input_validators::{is_pubkey_or_keypair, is_rfc3339_datetime, is_slot, is_valid_percentage},
 };
 use safecoin_genesis::{genesis_accounts::add_genesis_accounts, Base64Account};
-use solana_ledger::{
+use safecoin_ledger::{
     blockstore::create_new_ledger, blockstore_db::AccessType, poh::compute_hashes_per_tick,
 };
 use solana_runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE;
@@ -103,7 +103,7 @@ pub fn load_genesis_accounts(file: &str, genesis_config: &mut GenesisConfig) -> 
 
 #[allow(clippy::cognitive_complexity)]
 fn main() -> Result<(), Box<dyn error::Error>> {
-    let default_faucet_pubkey = solana_cli_config::Config::default().keypair_path;
+    let default_faucet_pubkey = safecoin_cli_config::Config::default().keypair_path;
     let fee_rate_governor = FeeRateGovernor::default();
     let (
         default_target_lamports_per_signature,

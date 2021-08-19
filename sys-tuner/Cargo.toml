@@ -3,10 +3,10 @@ authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "safecoin-sys-tuner"
 description = "The safecoin cluster system tuner daemon"
-version = "1.6.16"
-repository = "https://github.com/solana-labs/solana"
+version = "1.6.18"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
+homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/safecoin-sys-tuner"
 publish = true
 
@@ -14,9 +14,9 @@ publish = true
 clap = "2.33.1"
 log = "0.4.11"
 libc = "0.2.81"
-solana-clap-utils = { path = "../clap-utils", version = "=1.6.16" }
-solana-logger = { path = "../logger", version = "=1.6.16" }
-solana-version = { path = "../version", version = "=1.6.16" }
+safecoin-clap-utils = { path = "../clap-utils", version = ">=1.6.18" }
+safecoin-logger = { path = "../logger", version = ">=1.6.18" }
+safecoin-version = { path = "../version", version = ">=1.6.18" }
 
 [target."cfg(unix)".dependencies]
 unix_socket2 = "0.5.4"

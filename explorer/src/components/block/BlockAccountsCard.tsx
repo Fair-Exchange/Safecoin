@@ -1,5 +1,5 @@
 import React from "react";
-import { ConfirmedBlock, PublicKey } from "@solana/web3.js";
+import { ConfirmedBlock, PublicKey } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 
 type AccountStats = {

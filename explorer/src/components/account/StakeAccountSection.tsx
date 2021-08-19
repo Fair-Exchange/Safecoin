@@ -10,7 +10,7 @@ import {
   StakeAccountType,
 } from "validators/accounts/stake";
 import BN from "bn.js";
-import { StakeActivationData } from "@solana/web3.js";
+import { StakeActivationData } from "@safecoin/web3.js";
 
 const MAX_EPOCH = new BN(2).pow(new BN(64)).sub(new BN(1));
 

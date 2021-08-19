@@ -1,12 +1,12 @@
 [package]
-name = "solana-exchange-program"
-version = "1.6.16"
+name = "safecoin-exchange-program"
+version = "1.6.18"
 description = "Safecoin Exchange program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-exchange-program"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-exchange-program"
 edition = "2018"
 
 [dependencies]
@@ -16,13 +16,13 @@ num-derive = { version = "0.3" }
 num-traits = { version = "0.2" }
 serde = "1.0.122"
 serde_derive = "1.0.103"
-solana-logger = { path = "../../logger", version = "=1.6.16" }
-solana-metrics = { path = "../../metrics", version = "=1.6.16" }
-solana-sdk = { path = "../../sdk", version = "=1.6.16" }
+safecoin-logger = { path = "../../logger", version = ">=1.6.18" }
+safecoin-metrics = { path = "../../metrics", version = ">=1.6.18" }
+safecoin-sdk = { path = "../../sdk", version = ">=1.6.18" }
 thiserror = "1.0"
 
 [dev-dependencies]
-solana-runtime = { path = "../../runtime", version = "=1.6.16" }
+safecoin-runtime = { path = "../../runtime", version = ">=1.6.18" }
 
 [lib]
 crate-type = ["lib", "cdylib"]

@@ -3,7 +3,7 @@
 # Convenience script to easily deploy a software update to a testnet
 #
 set -e
-SAFECOIN_ROOT="$(cd "$(dirname "$0")"/..; pwd)"
+SAFEANA_ROOT="$(cd "$(dirname "$0")"/..; pwd)"
 
 maybeKeypair=
 while [[ ${1:0:2} = -- ]]; do
@@ -26,7 +26,7 @@ if [[ -z $URL || -z $TAG ]]; then
 fi
 
 if [[ ! -f update_manifest_keypair.json ]]; then
-  "$SAFECOIN_ROOT"/scripts/safecoin-install-update-manifest-keypair.sh "$OS"
+  "$SAFEANA_ROOT"/scripts/safecoin-install-update-manifest-keypair.sh "$OS"
 fi
 
 case "$OS" in
@@ -60,12 +60,12 @@ edge|beta)
   DOWNLOAD_URL=https://release.solana.com/"$TAG"/solana-release-$TARGET.tar.bz2
   ;;
 *)
-  DOWNLOAD_URL=https://github.com/solana-labs/solana/releases/download/"$TAG"/solana-release-$TARGET.tar.bz2
+  DOWNLOAD_URL=https://github.com/fair-exchange/safecoin/releases/download/"$TAG"/solana-release-$TARGET.tar.bz2
   ;;
 esac
 
 # Prefer possible `cargo build` binaries over PATH binaries
-PATH="$SAFECOIN_ROOT"/target/debug:$PATH
+PATH="$SAFEANA_ROOT"/target/debug:$PATH
 
 set -x
 # shellcheck disable=SC2086 # Don't want to double quote $maybeKeypair

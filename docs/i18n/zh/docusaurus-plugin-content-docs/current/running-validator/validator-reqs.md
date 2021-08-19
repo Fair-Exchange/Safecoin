@@ -16,7 +16,7 @@ title: 验证节点要求
   - 虽然纯CPU的节点可能能够跟上初始的空闲网络，但是一旦事务吞吐量增加，就将需要GPU。
   - 什么类型的 GPU ？
     - 我们建议使用Nvidia Turing和volta系列GPU（从1660ti到2080ti系列用户级GPU或Tesla系列服务器GPU）。
-    - 我们目前不支持OpenCL，因此不支持AMD GPU。 我们对移植Safecoin到OpenCL设有一项奖励。 有兴趣？ [请查看我们的GitHub。](https://github.com/solana-labs/solana)
+    - 我们目前不支持OpenCL，因此不支持AMD GPU。 我们对移植Safecoin到OpenCL设有一项奖励。 有兴趣？ [请查看我们的GitHub。](https://github.com/fair-exchange/safecoin)
 - 电源消耗
   - 运行AMD Threadripper 3950x和2x 2080Ti GPU的验证器节点，其功耗大约为800-1000W。
 

@@ -5,7 +5,7 @@ use super::{
     *,
 };
 use crate::broadcast_stage::broadcast_utils::UnfinishedSlotInfo;
-use solana_ledger::{
+use safecoin_ledger::{
     entry::Entry,
     shred::{
         ProcessShredsStats, Shred, Shredder, MAX_DATA_SHREDS_PER_FEC_BLOCK,
@@ -495,8 +495,8 @@ impl BroadcastRun for StandardBroadcastRun {
 mod test {
     use super::*;
     use crate::cluster_info::{ClusterInfo, Node};
-    use solana_ledger::genesis_utils::create_genesis_config;
-    use solana_ledger::{
+    use safecoin_ledger::genesis_utils::create_genesis_config;
+    use safecoin_ledger::{
         blockstore::Blockstore, entry::create_ticks, get_tmp_ledger_path,
         shred::max_ticks_per_n_shreds,
     };

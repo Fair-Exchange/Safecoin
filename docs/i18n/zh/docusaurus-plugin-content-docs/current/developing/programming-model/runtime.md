@@ -42,7 +42,7 @@ title: "运行时（runtime）"
 
 对于跨程序调用，所调用的程序将继承其父级的预算。  如果被调用的程序消耗了预算或超出了限制，则整个调用链和父级都将停止。
 
-可以在Safecoin SDK中找到当前的[计算预算](https://github.com/solana-labs/solana/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/src/process_instruction.rs#L65)。
+可以在Safecoin SDK中找到当前的[计算预算](https://github.com/fair-exchange/safecoin/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/src/process_instruction.rs#L65)。
 
 例如，如果当前预算是：
 
@@ -69,7 +69,7 @@ log_pubkey_units: 100,
 
 在运行时，程序可以记录剩余多少计算预算。  有关更多信息，请参见[debugging](developing/on-chain-programs/debugging.md#monitoring-compute-budget-consumption)。
 
-预算值取决于功能启用，请查看计算预算的[new](https://github.com/solana-labs/solana/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/src/process_instruction.rs#L97)函数列出预算的编制方式。  需要了解[功能](runtime.md#features)的工作方式以及正在使用的群集上启用的功能才能确定当前预算的值。
+预算值取决于功能启用，请查看计算预算的[new](https://github.com/fair-exchange/safecoin/blob/d3a3a7548c857f26ec2cb10e270da72d373020ec/sdk/src/process_instruction.rs#L97)函数列出预算的编制方式。  需要了解[功能](runtime.md#features)的工作方式以及正在使用的群集上启用的功能才能确定当前预算的值。
 
 ## 新的功能
 

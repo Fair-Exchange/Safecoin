@@ -1,6 +1,6 @@
 use crate::poh_recorder::WorkingBankEntry;
 use crate::result::Result;
-use solana_ledger::{entry::Entry, shred::Shred};
+use safecoin_ledger::{entry::Entry, shred::Shred};
 use solana_runtime::bank::Bank;
 use solana_sdk::clock::Slot;
 use std::{
@@ -80,7 +80,7 @@ pub(super) fn recv_slot_entries(receiver: &Receiver<WorkingBankEntry>) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
+    use safecoin_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
     use solana_sdk::genesis_config::GenesisConfig;
     use solana_sdk::pubkey::Pubkey;
     use solana_sdk::system_transaction;

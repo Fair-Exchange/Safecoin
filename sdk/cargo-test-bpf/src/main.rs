@@ -101,7 +101,7 @@ fn test_bpf_package(config: &Config, target_directory: &Path, package: &cargo_me
 
     spawn(&config.cargo_build_bpf, &build_bpf_args);
 
-    // Pass --bpf-out-dir along to the solana-program-test crate
+    // Pass --bpf-out-dir along to the safecoin-program-test crate
     env::set_var("BPF_OUT_DIR", bpf_out_dir);
 
     cargo_args.insert(0, "test");

@@ -165,7 +165,7 @@ safecoin config set --keypair ~/validator-keypair.json
 您应该看到以下输出：
 
 ```text
-Wallet Config Updated: /home/solana/.config/solana/wallet/config.yml
+Wallet Config Updated: /home/solana/.config/safecoin/wallet/config.yml
 * url: http://api.devnet.safecoin.org
 * keypair: /home/solana/validator-keypair.json
 ```
@@ -250,7 +250,7 @@ safecoin-gossip spy --entrypoint devnet.safecoin.org:10015
 ### 限制账本大小以节省磁盘空间
 `--limit-ledger-size` 参数允许您指定磁盘保留多少个账本[碎片](../terminology.md#shred)。 如果您没有配置该参数，验证节点将保留整个账本直到磁盘空间满了为止。
 
-保持账本磁盘使用量的默认值小于 500GB。  如果需要，可以通过添加参数到 `--limit-ledger-size` 来增加或减少磁盘的使用。 查看 `safecoin-validator --help` 来配置 `--limit-ledger-size` 所使用的默认限制值。  关于选择一个普通限制值的更多信息请参看 [这里](https://github.com/solana-labs/solana/blob/583cec922b6107e0f85c7e14cb5e642bc7dfb340/core/src/ledger_cleanup_service.rs#L15-L26)。
+保持账本磁盘使用量的默认值小于 500GB。  如果需要，可以通过添加参数到 `--limit-ledger-size` 来增加或减少磁盘的使用。 查看 `safecoin-validator --help` 来配置 `--limit-ledger-size` 所使用的默认限制值。  关于选择一个普通限制值的更多信息请参看 [这里](https://github.com/fair-exchange/safecoin/blob/583cec922b6107e0f85c7e14cb5e642bc7dfb340/core/src/ledger_cleanup_service.rs#L15-L26)。
 
 ### 系统单位
 将验证程序作为系统单元运行是管理后台运行的一种简单方法。
@@ -349,5 +349,5 @@ systemctl restart logrotate.service
 随着集群中账户数量的增加，该核算群组的核算数量也在增加， 账户数据 RPC请求扫描整个账户集的时候 -- 例如 [`getProgramAccounts`](developing/clients/jsonrpc-api.md#getprogramaccounts) 和 [SPL-token-specific requests](developing/clients/jsonrpc-api.md#gettokenaccountsbydelegate) -- 效果可能比较差。 如果您的验证节点需要支持这些请求中的任何一个，则可以使用`--account-index`参数来激活一个或多个内存帐户索引，该索引通过按关键字段为帐户建立索引来显着提高RPC性能。 当前支持以下参数值：
 
 - `program-id`: 每个帐户都由其拥有的程序索引; 通过 [`getProgramAccounts`](developing/clients/jsonrpc-api.md#getprogramaccounts)执行
-- `spl-token-mint`: 每个SPL 代币帐户由其代币铸造索引; 通过 [getTokenAccountsByDelegate](developing/clients/jsonrpc-api.md#gettokenaccountsbydelegate)和 [getTokenLargestAccounts](developing/clients/jsonrpc-api.md#gettokenlargestaccounts) 来使用
-- `spl-token-owner`: 每一个 SPL token 帐户按 token-owner 地址索引； 由 [getTokenAccountsByOwner](developing/clients/jsonrpc-api.md#gettokenaccountsbyowner)和 [`getProgramAccounts`](developing/clients/jsonrpc-api.md#getprogramaccounts) 请求包含一个spl-token-owners的过滤器。
+- `safe-token-mint`: 每个SPL 代币帐户由其代币铸造索引; 通过 [getTokenAccountsByDelegate](developing/clients/jsonrpc-api.md#gettokenaccountsbydelegate)和 [getTokenLargestAccounts](developing/clients/jsonrpc-api.md#gettokenlargestaccounts) 来使用
+- `safe-token-owner`: 每一个 SPL token 帐户按 token-owner 地址索引； 由 [getTokenAccountsByOwner](developing/clients/jsonrpc-api.md#gettokenaccountsbyowner)和 [`getProgramAccounts`](developing/clients/jsonrpc-api.md#getprogramaccounts) 请求包含一个safe-token-owners的过滤器。

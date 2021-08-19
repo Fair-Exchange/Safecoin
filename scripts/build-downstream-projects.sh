@@ -21,21 +21,21 @@ update_solana_dependencies() {
   declare tomls=()
   while IFS='' read -r line; do tomls+=("$line"); done < <(find "$1" -name Cargo.toml)
 
-  sed -i -e "s#\(solana-program = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
-  sed -i -e "s#\(solana-program-test = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
-  sed -i -e "s#\(solana-sdk = \"\).*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
-  sed -i -e "s#\(solana-sdk = { version = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
-  sed -i -e "s#\(solana-client = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
-  sed -i -e "s#\(solana-client = { version = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
+  sed -i -e "s#\(safecoin-program = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
+  sed -i -e "s#\(safecoin-program-test = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
+  sed -i -e "s#\(safecoin-sdk = \"\).*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
+  sed -i -e "s#\(safecoin-sdk = { version = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
+  sed -i -e "s#\(safecoin-client = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
+  sed -i -e "s#\(safecoin-client = { version = \"\)[^\"]*\(\"\)#\1$solana_ver\2#g" "${tomls[@]}" || return $?
 }
 
 patch_crates_io() {
   cat >> "$1" <<EOF
 [patch.crates-io]
-solana-client = { path = "$solana_dir/client" }
-solana-program = { path = "$solana_dir/sdk/program" }
-solana-program-test = { path = "$solana_dir/program-test" }
-solana-sdk = { path = "$solana_dir/sdk" }
+safecoin-client = { path = "$solana_dir/client" }
+safecoin-program = { path = "$solana_dir/sdk/program" }
+safecoin-program-test = { path = "$solana_dir/program-test" }
+safecoin-sdk = { path = "$solana_dir/sdk" }
 EOF
 }
 
@@ -61,7 +61,7 @@ spl() {
   (
     set -x
     rm -rf spl
-    git clone https://github.com/solana-labs/solana-program-library.git spl
+    git clone https://github.com/fair-exchange/safecoin-program-library.git spl
     cd spl
 
     ./patch.crates-io.sh "$solana_dir"

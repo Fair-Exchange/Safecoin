@@ -1,6 +1,6 @@
 use crate::utils;
 use log::*;
-use solana_client::{client_error::Result as ClientResult, rpc_client::RpcClient};
+use safecoin_client::{client_error::Result as ClientResult, rpc_client::RpcClient};
 use solana_notifier::Notifier;
 use solana_sdk::{
     clock::Slot,

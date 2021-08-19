@@ -76,7 +76,7 @@ BPF 指令集不支持 [签名分配](https://www.kernel.org/doc/html/latest/bpf
 
 ## 加载程序（loader）
 
-程序由运行时加载程序部署并执行，目前有两个受支持的加载程序[BPF加载程序](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader.rs#L17)]和[不建议使用BPF加载程序](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader_deprecated.rs#L14)
+程序由运行时加载程序部署并执行，目前有两个受支持的加载程序[BPF加载程序](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader.rs#L17)]和[不建议使用BPF加载程序](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader_deprecated.rs#L14)
 
 加载程序可能支持不同的应用程序二进制接口，因此开发人员必须为其编写程序并将其部署到同一加载程序中。  如果为一个装载程序编写的程序被部署到另一个装载程序，则由于程序输入参数的反序列化不匹配，结果通常是`AccessViolation`错误。
 
@@ -88,7 +88,7 @@ BPF 指令集不支持 [签名分配](https://www.kernel.org/doc/html/latest/bpf
 
 ### 部署
 
-BPF程序部署是将BPF共享对象上载到程序帐户的数据中并标记该帐户可执行文件的过程。  客户端将BPF共享对象分成较小的部分，并将其作为[`Write`](https://github.com/solana-labs/solana/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/loader_instruction.rs#L13)的指令数据发送向加载程序的指令，加载程序在此将数据写入程序的帐户数据。  一旦收到所有片段，客户端就会向加载程序发送[`Finalize`](https://github.com/solana-labs/solana/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/loader_instruction.rs#L30)指令，然后加载程序将验证BPF数据是否有效，并将程序帐户标记为_executable_。  一旦程序帐户被标记为可执行，随后的交易就可以发出该程序要处理的指令。
+BPF程序部署是将BPF共享对象上载到程序帐户的数据中并标记该帐户可执行文件的过程。  客户端将BPF共享对象分成较小的部分，并将其作为[`Write`](https://github.com/fair-exchange/safecoin/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/loader_instruction.rs#L13)的指令数据发送向加载程序的指令，加载程序在此将数据写入程序的帐户数据。  一旦收到所有片段，客户端就会向加载程序发送[`Finalize`](https://github.com/fair-exchange/safecoin/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/loader_instruction.rs#L30)指令，然后加载程序将验证BPF数据是否有效，并将程序帐户标记为_executable_。  一旦程序帐户被标记为可执行，随后的交易就可以发出该程序要处理的指令。
 
 当指令针对可执行的BPF程序时，加载程序将配置程序的执行环境，序列化程序的输入参数，调用程序的入口点，并报告遇到的任何错误。
 

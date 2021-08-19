@@ -90,4 +90,4 @@ pub extern crate bs58;
 extern crate log as logger;
 
 #[macro_use]
-extern crate solana_frozen_abi_macro;
+extern crate safecoin_frozen_abi_macro;

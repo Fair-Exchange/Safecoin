@@ -95,7 +95,7 @@ entire transaction to fail immediately.
 Programs typically provide helper functions to construct instructions they
 support. For example, the system program provides the following Rust helper to
 construct a
-[`SystemInstruction::CreateAccount`](https://github.com/solana-labs/solana/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L63)
+[`SystemInstruction::CreateAccount`](https://github.com/fair-exchange/safecoin/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L63)
 instruction:
 
 ```rust
@@ -124,7 +124,7 @@ pub fn create_account(
 
 Which can be found here:
 
-https://github.com/solana-labs/solana/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L220
+https://github.com/fair-exchange/safecoin/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L220
 
 ### Program Id
 
@@ -163,10 +163,10 @@ been observed that some common encodings (Rust's bincode for example) are very
 inefficient.
 
 The [Safecoin Program Library's Token
-program](https://github.com/solana-labs/solana-program-library/tree/master/token)
+program](https://github.com/fair-exchange/safecoin-program-library/tree/master/token)
 gives one example of how instruction data can be encoded efficiently, but note
 that this method only supports fixed sized types. Token utilizes the
-[Pack](https://github.com/solana-labs/solana/blob/master/sdk/program/src/program_pack.rs)
+[Pack](https://github.com/fair-exchange/safecoin/blob/master/sdk/program/src/program_pack.rs)
 trait to encode/decode instruction data for both token instructions as well as
 token account states.
 

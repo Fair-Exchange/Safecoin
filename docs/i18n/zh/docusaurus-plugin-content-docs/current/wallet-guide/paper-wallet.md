@@ -46,7 +46,7 @@ safecoin-keygen --version
 safecoin-keygen new --no-outfile
 ```
 
-> 如果 `--no-outfile` 标志显示为 **omitted**，那么默认行为是将密钥写入到 `~/.config/solana/id.json`，最终产生一个 [文件系统钱包](file-system-wallet.md)
+> 如果 `--no-outfile` 标志显示为 **omitted**，那么默认行为是将密钥写入到 `~/.config/safecoin/id.json`，最终产生一个 [文件系统钱包](file-system-wallet.md)
 
 此命令的输出将显示下面的这一行：
 

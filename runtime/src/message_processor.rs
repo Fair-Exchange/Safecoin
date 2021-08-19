@@ -10,7 +10,7 @@ use solana_sdk::{
     bpf_loader_upgradeable::{self, UpgradeableLoaderState},
     feature_set::{
         cpi_share_ro_and_exec_accounts, demote_sysvar_write_locks, instructions_sysvar_enabled,
-        FeatureSet,
+        updated_verify_policy, FeatureSet,
     },
     ic_msg,
     instruction::{CompiledInstruction, Instruction, InstructionError, VoterGroup},
@@ -105,6 +105,7 @@ impl PreAccount {
         rent: &Rent,
         post: &AccountSharedData,
         timings: &mut ExecuteDetailsTimings,
+        updated_verify_policy: bool,
     ) -> Result<(), InstructionError> {
         let pre = self.account.borrow();
 
@@ -173,9 +174,14 @@ impl PreAccount {
             if !rent.is_exempt(post.lamports, post.data().len()) {
                 return Err(InstructionError::ExecutableAccountNotRentExempt);
             }
+            let owner = if updated_verify_policy {
+                post.owner()
+            } else {
+                pre.owner()
+            };
             if !is_writable // line coverage used to get branch coverage
                 || pre.executable
-                || *program_id != pre.owner
+                || program_id != owner
             {
                 return Err(InstructionError::ExecutableModified);
             }
@@ -357,6 +363,7 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
                 caller_write_privileges,
                 &mut self.timings,
                 self.feature_set.is_active(&demote_sysvar_write_locks::id()),
+                self.feature_set.is_active(&updated_verify_policy::id()),
             ),
             None => Err(InstructionError::GenericError), // Should never happen
         }
@@ -538,7 +545,7 @@ impl Clone for MessageProcessor {
 }
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-impl ::solana_frozen_abi::abi_example::AbiExample for MessageProcessor {
+impl ::safecoin_frozen_abi::abi_example::AbiExample for MessageProcessor {
     fn example() -> Self {
         // MessageProcessor's fields are #[serde(skip)]-ed and not Serialize
         // so, just rely on Default anyway.
@@ -970,6 +977,7 @@ impl MessageProcessor {
         rent: &Rent,
         timings: &mut ExecuteDetailsTimings,
         demote_sysvar_write_locks: bool,
+        updated_verify_policy: bool,
     ) -> Result<(), InstructionError> {
         // Verify all executable accounts have zero outstanding refs
         Self::verify_account_references(executable_accounts)?;
@@ -992,6 +1000,7 @@ impl MessageProcessor {
                     rent,
                     &account,
                     timings,
+                    updated_verify_policy,
                 )?;
                 pre_sum += u128::from(pre_accounts[unique_index].lamports());
                 post_sum += u128::from(account.lamports);
@@ -1008,6 +1017,7 @@ impl MessageProcessor {
     }
 
     /// Verify the results of a cross-program instruction
+    #[allow(clippy::too_many_arguments)]
     fn verify_and_update(
         message: &Message,
         instruction: &CompiledInstruction,
@@ -1018,6 +1028,7 @@ impl MessageProcessor {
         caller_write_privileges: Option<&[bool]>,
         timings: &mut ExecuteDetailsTimings,
         demote_sysvar_write_locks: bool,
+        updated_verify_policy: bool,
     ) -> Result<(), InstructionError> {
         // Verify the per-account instruction results
         let (mut pre_sum, mut post_sum) = (0_u128, 0_u128);
@@ -1040,7 +1051,14 @@ impl MessageProcessor {
                                 .map_err(|_| InstructionError::AccountBorrowOutstanding)?;
                         }
                         let account = account.borrow();
-                        pre_account.verify(&program_id, is_writable, &rent, &account, timings)?;
+                        pre_account.verify(
+                            &program_id,
+                            is_writable,
+                            &rent,
+                            &account,
+                            timings,
+                            updated_verify_policy,
+                        )?;
                         pre_sum += u128::from(pre_account.lamports());
                         post_sum += u128::from(account.lamports);
                         if is_writable && !pre_account.executable() {
@@ -1142,6 +1160,7 @@ impl MessageProcessor {
             &rent_collector.rent,
             timings,
             demote_sysvar_write_locks,
+            invoke_context.is_feature_active(&updated_verify_policy::id()),
         )?;
 
         timings.accumulate(&invoke_context.timings);
@@ -1442,6 +1461,7 @@ mod tests {
                 &self.rent,
                 &self.post,
                 &mut ExecuteDetailsTimings::default(),
+                true,
             )
         }
     }
@@ -1761,6 +1781,21 @@ mod tests {
                 .verify(),
             Ok(()),
             "system program should be able to change account data size"
+        );
+    }
+
+    #[test]
+    fn test_verify_account_changes_owner_executable() {
+        let alice_program_id = solana_sdk::pubkey::new_rand();
+        let bob_program_id = solana_sdk::pubkey::new_rand();
+
+        assert_eq!(
+            Change::new(&alice_program_id, &alice_program_id)
+                .owner(&bob_program_id)
+                .executable(false, true)
+                .verify(),
+            Err(InstructionError::ExecutableModified),
+            "Program should not be able to change owner and executable at the same time"
         );
     }
 

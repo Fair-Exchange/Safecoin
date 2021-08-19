@@ -6,7 +6,7 @@ use itertools::izip;
 use log::*;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use solana_client::perf_utils::{sample_txs, SampleStats};
+use safecoin_client::perf_utils::{sample_txs, SampleStats};
 use solana_core::gen_keys::GenKeys;
 use solana_exchange_program::{exchange_instruction, exchange_state::*, id};
 use safecoin_faucet::faucet::request_airdrop_transaction;

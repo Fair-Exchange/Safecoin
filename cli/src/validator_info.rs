@@ -6,18 +6,18 @@ use bincode::deserialize;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use reqwest::blocking::Client;
 use serde_json::{Map, Value};
-use solana_account_decoder::validator_info::{
+use safecoin_account_decoder::validator_info::{
     self, ValidatorInfo, MAX_LONG_FIELD_LENGTH, MAX_SHORT_FIELD_LENGTH,
 };
-use solana_clap_utils::{
+use safecoin_clap_utils::{
     input_parsers::pubkey_of,
     input_validators::{is_pubkey, is_url},
     keypair::DefaultSigner,
 };
-use solana_cli_output::{CliValidatorInfo, CliValidatorInfoVec};
-use solana_client::rpc_client::RpcClient;
+use safecoin_cli_output::{CliValidatorInfo, CliValidatorInfoVec};
+use safecoin_client::rpc_client::RpcClient;
 use solana_config_program::{config_instruction, get_config_data, ConfigKeys, ConfigState};
-use solana_remote_wallet::remote_wallet::RemoteWalletManager;
+use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
 use solana_sdk::{
     account::Account,
     message::Message,

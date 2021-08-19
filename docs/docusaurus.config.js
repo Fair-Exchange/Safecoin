@@ -66,7 +66,7 @@ module.exports = {
           position: "right",
         },
         {
-          href: "https://github.com/solana-labs/solana",
+          href: "https://github.com/fair-exchange/safecoin",
           label: "GitHub",
           position: "right",
         },
@@ -116,7 +116,7 @@ module.exports = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/solana-labs/solana",
+              href: "https://github.com/fair-exchange/safecoin",
             },
           ],
         },

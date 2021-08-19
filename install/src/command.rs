@@ -8,7 +8,7 @@ use {
     console::{style, Emoji},
     indicatif::{ProgressBar, ProgressStyle},
     serde::{Deserialize, Serialize},
-    solana_client::rpc_client::RpcClient,
+    safecoin_client::rpc_client::RpcClient,
     solana_config_program::{config_instruction, get_config_data, ConfigState},
     solana_sdk::{
         hash::{Hash, Hasher},
@@ -561,7 +561,7 @@ pub fn init(
 
 fn github_release_download_url(release_semver: &str) -> String {
     format!(
-        "https://github.com/solana-labs/solana/releases/download/v{}/solana-release-{}.tar.bz2",
+        "https://github.com/fair-exchange/safecoin/releases/download/v{}/solana-release-{}.tar.bz2",
         release_semver,
         crate::build_env::TARGET
     )
@@ -597,7 +597,7 @@ pub fn info(config_file: &str, local_info_only: bool, eval: bool) -> Result<(), 
 
     if eval {
         println!(
-            "SAFECOIN_INSTALL_ACTIVE_RELEASE={}",
+            "SAFEANA_INSTALL_ACTIVE_RELEASE={}",
             &config.active_release_dir().to_str().unwrap_or("")
         );
         config
@@ -607,7 +607,7 @@ pub fn info(config_file: &str, local_info_only: bool, eval: bool) -> Result<(), 
                 ExplicitRelease::Channel(channel) => channel,
             })
             .and_then(|channel| {
-                println!("SAFECOIN_INSTALL_ACTIVE_CHANNEL={}", channel,);
+                println!("SAFEANA_INSTALL_ACTIVE_CHANNEL={}", channel,);
                 Option::<String>::None
             });
         return Ok(());
@@ -860,7 +860,7 @@ fn check_for_newer_github_release(
     prerelease_allowed: bool,
 ) -> reqwest::Result<Option<String>> {
     let url =
-        reqwest::Url::parse("https://api.github.com/repos/solana-labs/solana/releases").unwrap();
+        reqwest::Url::parse("https://api.github.com/repos/fair-exchange/safecoin/releases").unwrap();
     let client = reqwest::blocking::Client::builder()
         .user_agent("safecoin-install")
         .build()?;

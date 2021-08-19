@@ -1,8 +1,8 @@
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender};
-use solana_ledger::blockstore::Blockstore;
+use safecoin_ledger::blockstore::Blockstore;
 use solana_runtime::bank::RewardInfo;
 use solana_sdk::{clock::Slot, pubkey::Pubkey};
-use solana_transaction_status::Reward;
+use safecoin_transaction_status::Reward;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -55,6 +55,7 @@ impl RewardsRecorderService {
                 lamports: reward_info.lamports,
                 post_balance: reward_info.post_balance,
                 reward_type: Some(reward_info.reward_type),
+                commission: reward_info.commission,
             })
             .collect();
 

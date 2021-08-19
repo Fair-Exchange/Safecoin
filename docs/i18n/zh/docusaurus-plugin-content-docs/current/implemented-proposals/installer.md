@@ -13,7 +13,7 @@ title: 集群软件安装和更新
 支持的平台上最简单的安装方法。
 
 ```bash
-$ curl -sSf https://raw.githubusercontent.com/solana-labs/solana/v1.0.0/install/safecoin-install-init.sh | sh
+$ curl -sSf https://raw.githubusercontent.com/fair-exchange/safecoin/v1.0.0/install/safecoin-install-init.sh | sh
 ```
 
 这个脚本将检查github以获取最新的标签版本，并从那里下载并运行`Safecoin-install-init`二进制文件。
@@ -22,7 +22,7 @@ $ curl -sSf https://raw.githubusercontent.com/solana-labs/solana/v1.0.0/install/
 
 ```bash
 $ init_args=.... # arguments for `safecoin-install-init ...`
-$ curl -sSf https://raw.githubusercontent.com/solana-labs/solana/v1.0.0/install/safecoin-install-init.sh | sh -s - ${init_args}
+$ curl -sSf https://raw.githubusercontent.com/fair-exchange/safecoin/v1.0.0/install/safecoin-install-init.sh | sh -s - ${init_args}
 ```
 
 ### 从Github发布的版本中获取并运行一个预构建的安装程序。
@@ -30,7 +30,7 @@ $ curl -sSf https://raw.githubusercontent.com/solana-labs/solana/v1.0.0/install/
 通过知名的发布URL，可以获得支持平台的预构建二进制文件。
 
 ```bash
-$ curl -o safecoin-install-init https://github.com/solana-labs/solana/releases/download/v1.0.0/safecoin-install-init-x86_64-apple-darwin
+$ curl -o safecoin-install-init https://github.com/fair-exchange/safecoin/releases/download/v1.0.0/safecoin-install-init-x86_64-apple-darwin
 $ chmod +x ./safecoin-install-init
 $ ./safecoin-install-init --help
 ```
@@ -40,7 +40,7 @@ $ ./safecoin-install-init --help
 如果预制的二进制文件不能用于特定的平台，那么从源码中构建安装程序始终是一种选择。
 
 ```bash
-$ git clone https://github.com/solana-labs/solana.git
+$ git clone https://github.com/fair-exchange/safecoin.git
 $ cd solana/install
 $ cargo run -- --help
 ```

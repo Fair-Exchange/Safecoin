@@ -2,12 +2,12 @@
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 description = "I will find you and I will stake you"
 edition = "2018"
-homepage = "https://solana.com/"
+homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/"
 license = "Apache-2.0"
 name = "safecoin-stake-o-matic"
 repository = "https://github.com/solana-labs/stake-o-matic"
-version = "1.6.16"
+version = "1.6.18"
 
 [dependencies]
 clap = "2.33.0"
@@ -17,16 +17,16 @@ semver = "0.9.0"
 serde = { version = "1.0.122", features = ["derive"] }
 serde_json = "1.0.62"
 serde_yaml = "0.8.13"
-solana-clap-utils = { path = "../clap-utils", version = "=1.6.16" }
-solana-client = { path = "../client", version = "=1.6.16" }
-solana-cli-config = { path = "../cli-config", version = "=1.6.16" }
-solana-cli-output = { path = "../cli-output", version = "=1.6.16" }
-solana-logger = { path = "../logger", version = "=1.6.16" }
-solana-metrics = { path = "../metrics", version = "=1.6.16" }
-solana-notifier = { path = "../notifier", version = "=1.6.16" }
-solana-sdk = { path = "../sdk", version = "=1.6.16" }
-solana-stake-program = { path = "../programs/stake", version = "=1.6.16" }
-solana-transaction-status = { path = "../transaction-status", version = "=1.6.16" }
+safecoin-clap-utils = { path = "../clap-utils", version = ">=1.6.18" }
+safecoin-client = { path = "../client", version = ">=1.6.18" }
+safecoin-cli-config = { path = "../cli-config", version = ">=1.6.18" }
+safecoin-cli-output = { path = "../cli-output", version = ">=1.6.18" }
+safecoin-logger = { path = "../logger", version = ">=1.6.18" }
+safecoin-metrics = { path = "../metrics", version = ">=1.6.18" }
+safecoin-notifier = { path = "../notifier", version = ">=1.6.18" }
+safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
+safecoin-stake-program = { path = "../programs/stake", version = ">=1.6.18" }
+safecoin-transaction-status = { path = "../transaction-status", version = ">=1.6.21" }
 thiserror = "1.0.21"
 
 [package.metadata.docs.rs]

@@ -37,7 +37,7 @@ safecoin-validator \
 
 `--entrypoint` and `--experted-genesis-hash` 参数都针对您正在加入的集群。 [主网 Beta 的当前参数](../clusters.md#example-safecoin-validator-command-line-2)
 
-`--limit-ledger-size` 参数允许您指定保留节点的多少个账本 [shreds](../terminology.md#shred) 在磁盘上。 如果您没有配置该参数，验证节点将保留整个账本直到磁盘空间满了为止。  保持账本磁盘使用量的默认值小于 500GB。  如果需要，可以通过添加参数到 `--limit-ledger-size` 来增加或减少磁盘的使用。 查看 `safecoin-validator --help` 来配置 `--limit-ledger-size` 所使用的默认限制值。  关于选择一个普通限制值的更多信息请参看 [这里](https://github.com/solana-labs/solana/blob/583cec922b6107e0f85c7e14cb5e642bc7dfb340/core/src/ledger_cleanup_service.rs#L15-L26).
+`--limit-ledger-size` 参数允许您指定保留节点的多少个账本 [shreds](../terminology.md#shred) 在磁盘上。 如果您没有配置该参数，验证节点将保留整个账本直到磁盘空间满了为止。  保持账本磁盘使用量的默认值小于 500GB。  如果需要，可以通过添加参数到 `--limit-ledger-size` 来增加或减少磁盘的使用。 查看 `safecoin-validator --help` 来配置 `--limit-ledger-size` 所使用的默认限制值。  关于选择一个普通限制值的更多信息请参看 [这里](https://github.com/fair-exchange/safecoin/blob/583cec922b6107e0f85c7e14cb5e642bc7dfb340/core/src/ledger_cleanup_service.rs#L15-L26).
 
 指定一个或多个 `--trusted-validator` 参数可以保护您免遭恶意快照的攻击。 [更多关于使用可信验证程序启动的值](../running-validator/validator-start.md#trusted-validators)
 
@@ -50,7 +50,7 @@ safecoin-validator \
 
 我们建议将每个节点配置退出时自动重启，以确保尽可能少地丢失数据。 把 Safecoin 软件运行为一个系统服务是很好的选择。
 
-对于监控，我们提供[`safecoin-watchtower`](https://github.com/solana-labs/solana/blob/master/watchtower/README.md)，它可以监视您的验证节点，并且通过 `safecoin-validator` 检测节点是否不健康。 它可以直接配置 Slack、Telegram 、Discord 或 Twillio 来提醒您。 详情请运行 `safecoin-watchtower --help`。
+对于监控，我们提供[`safecoin-watchtower`](https://github.com/fair-exchange/safecoin/blob/master/watchtower/README.md)，它可以监视您的验证节点，并且通过 `safecoin-validator` 检测节点是否不健康。 它可以直接配置 Slack、Telegram 、Discord 或 Twillio 来提醒您。 详情请运行 `safecoin-watchtower --help`。
 
 ```bash
 safecoin-watchtower --validator-identity <YOUR VALIDATOR IDENTITY>
@@ -189,7 +189,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0","id":1,"m
 
 ` 原先余额 ` 和 ` 交易后余额 ` 字段能让您跟踪余额每个账户中的变动，而无需解析整个交易。 他们将每个账户的最初和交易后余额分别列出在 [ lamports ](../terminology.md#lamport) 中，并索引到 `账户` 列表。 例如，您准备充值的地址是 ` 47Sbuv6jL7CViK9F2NMW51aQGhfdpUu7WNvKyH645Rfi `，它表示一笔 218099990000 - 207099990000 = 11000000000 lamports = 11 SAFE 的交易。
 
-如果需要更多关于交易类型或其他细节的信息，您可以用二进制格式从 RPC 请求区块，然后使用 [Rust SDK](https://github.com/solana-labs/solana) 或 [Javascript SDK](https://github.com/solana-labs/solana-web3.js) 进行解析。
+如果需要更多关于交易类型或其他细节的信息，您可以用二进制格式从 RPC 请求区块，然后使用 [Rust SDK](https://github.com/fair-exchange/safecoin) 或 [Javascript SDK](https://github.com/fair-exchange/safecoin-web3.js) 进行解析。
 
 ### 地址历史
 
@@ -300,7 +300,7 @@ Safecoin的命令行工具提供了一个用于生成、提交和确认转账交
 safecoin transfer <USER_ADDRESS> <AMOUNT> --keypair <KEYPAIR> --url http://localhost:8328
 ```
 
-[Safecoin Javascript SDK](https://github.com/solana-labs/solana-web3.js) 为 JS 生态提供了类似的方法。 使用 `SystemProgram` 创造一笔转账交易，然后使用 `sendAndConfirmTransaction` 方法提交。
+[Safecoin Javascript SDK](https://github.com/fair-exchange/safecoin-web3.js) 为 JS 生态提供了类似的方法。 使用 `SystemProgram` 创造一笔转账交易，然后使用 `sendAndConfirmTransaction` 方法提交。
 
 ### 异步
 
@@ -437,33 +437,33 @@ SPL 代币的工作流程类似于原生 SAFE 代币，但本节将讨论它们�
 
 每种 *类型* 的 SPL 代币都是由一个 *铸造* 账号所产生。  该帐户存储了代币功能的元数据，如供应量、小数点数和对铸造的多种权限。  每个 SPL Token 帐户引用与它铸造相关的字段，并且只能与该种类型的 SPL 代币交互。
 
-### 安装 `spl-token` CLI 工具
+### 安装 `safe-token` CLI 工具
 
-使用 `spl-token` 命令行功能查询和修改 SPL Token 帐户。 本部分提供的示例取决于能否在本地系统安装。
+使用 `safe-token` 命令行功能查询和修改 SPL Token 帐户。 本部分提供的示例取决于能否在本地系统安装。
 
-`spl-token` 从 Rust [crates.io](https://crates.io/crates/spl-token) 中通过 Rust `cargo` 命令行功能衍生出来的。 最新版本的 `cargo` 可以在 [rustuprers](https://rustup.rs)，通过方便的工具安装在您的平台。 一旦 `cargo` 安装完毕， `spl-toke` 可以通过以下命令获得：
+`safe-token` 从 Rust [crates.io](https://crates.io/crates/safe-token) 中通过 Rust `cargo` 命令行功能衍生出来的。 最新版本的 `cargo` 可以在 [rustuprers](https://rustup.rs)，通过方便的工具安装在您的平台。 一旦 `cargo` 安装完毕， `spl-toke` 可以通过以下命令获得：
 
 ```
-cargo install spl-token-cli
+cargo install safe-token-cli
 ```
 
 然后您可以检查已安装的版本进行验证
 
 ```
-spl-token --version
+safe-token --version
 ```
 
 输出结果应该类似于
 
 ```text
-spl-token-cli 2.0.1
+safe-token-cli 2.0.1
 ```
 
 ### 创建帐户
 
 SPL 代币账户包含了本地系统程序账户所不具备的额外要求：
 
-1. 在创建 SPL Token 帐户之前，必须先存入一定数量的代币。   代币帐户可以使用 `spl-token create-account` 命令显式创建， 或者 `spl-token transfer --fund-receiving ...` 命令隐式创建。
+1. 在创建 SPL Token 帐户之前，必须先存入一定数量的代币。   代币帐户可以使用 `safe-token create-account` 命令显式创建， 或者 `safe-token transfer --fund-receiving ...` 命令隐式创建。
 1. 在生效期间，SPL Token 帐户必须保持 [rent-exempt](developing/programming-model/accounts.md#rent-exemption) 状态，因此在创建帐户时需要存入少量的原生 SAFE 代币。 对于 SPL Token v2 账户，该数量为 0.00203928 SAFE(2 039 280 lamports)。
 
 #### 命令行
@@ -472,12 +472,12 @@ SPL 代币账户包含了本地系统程序账户所不具备的额外要求：
 1. 由资产账户的密钥所拥有
 
 ```
-spl-token create-account <TOKEN_MINT_ADDRESS>
+safe-token create-account <TOKEN_MINT_ADDRESS>
 ```
 
 #### 示例：
 ```
-$ spl-token create-account AkUFCWTXb3w9nY2n6SFJvBV6VwvFUCe4KBMCcgLsa2ir
+$ safe-token create-account AkUFCWTXb3w9nY2n6SFJvBV6VwvFUCe4KBMCcgLsa2ir
 Creating account 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
 Signature: 4JsqZEPra2eDTHtHpB4FMWSfk3UgcCVmkKkP7zESZeMrKmFFkDkNd91pKP3vPVVZZPiu5XxyJwS73Vi5WsZL88D7
 ```
@@ -485,7 +485,7 @@ Signature: 4JsqZEPra2eDTHtHpB4FMWSfk3UgcCVmkKkP7zESZeMrKmFFkDkNd91pKP3vPVVZZPiu5
 或者创建指定密钥对的 SPL 代币账户：
 ```
 $ safecoin-keygen new -o token-account.json
-$ spl-token create-account AkUFCWTXb3w9nY2n6SFJvBV6VwvFUCe4KBMCcgLsa2ir token-account.json
+$ safe-token create-account AkUFCWTXb3w9nY2n6SFJvBV6VwvFUCe4KBMCcgLsa2ir token-account.json
 Creating account 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
 Signature: 4JsqZEPra2eDTHtHpB4FMWSfk3UgcCVmkKkP7zESZeMrKmFFkDkNd91pKP3vPVVZZPiu5XxyJwS73Vi5WsZL88D7
 ```
@@ -494,7 +494,7 @@ Signature: 4JsqZEPra2eDTHtHpB4FMWSfk3UgcCVmkKkP7zESZeMrKmFFkDkNd91pKP3vPVVZZPiu5
 
 #### 命令行
 ```
-spl-token balance <TOKEN_ACCOUNT_ADDRESS>
+safe-token balance <TOKEN_ACCOUNT_ADDRESS>
 ```
 
 #### 示例：
@@ -511,12 +511,12 @@ $ safecoin balance 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
 
 #### 命令行
 ```
-spl-token transfer <SENDER_ACCOUNT_ADDRESS> <AMOUNT> <RECIPIENT_WALLET_ADDRESS> --fund-recipient
+safe-token transfer <SENDER_ACCOUNT_ADDRESS> <AMOUNT> <RECIPIENT_WALLET_ADDRESS> --fund-recipient
 ```
 
 #### 示例：
 ```
-$ spl-token transfer 6B199xxzw3PkAm25hGJpjj3Wj3WNYNHzDAnt1tEqg5BN 1 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
+$ safe-token transfer 6B199xxzw3PkAm25hGJpjj3Wj3WNYNHzDAnt1tEqg5BN 1 6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
 发送 1 个代币
   发送方：6B199xxzw3PkAm25hGJpjj3Wj3WNYNHzDAnt1tEqg5BN
   接收方：6VzWGL51jLebvnDifvcuEDec17sK6Wupi4gYhm5RzfkV
@@ -526,9 +526,9 @@ $ spl-token transfer 6B199xxzw3PkAm25hGJpjj3Wj3WNYNHzDAnt1tEqg5BN 1 6VzWGL51jLeb
 ### 充值
 因为每个 `(user, mint)` 对需要在链上有一个单独的帐户，所以建议交易所提前创建批量代币帐户，并分配给各个用户。 这些账户都由交易所账号密钥所拥有。
 
-存款交易的监控应遵循上面描述的 [block polling](#poll-for-blocks) 方法。 每个新区块应该扫描获得铸造 SPL 代币的成功交易 [Transfer](https://github.com/solana-labs/solana-program-library/blob/096d3d4da51a8f63db5160b126ebc56b26346fc8/token/program/src/instruction.rs#L92) 或 [Transfer2](https://github.com/solana-labs/solana-program-library/blob/096d3d4da51a8f63db5160b126ebc56b26346fc8/token/program/src/instruction.rs#L252) 指令来引用用户帐户，然后查询 [代币账户余额](developing/clients/jsonrpc-api.md#gettokenaccountbalance) 更新。
+存款交易的监控应遵循上面描述的 [block polling](#poll-for-blocks) 方法。 每个新区块应该扫描获得铸造 SPL 代币的成功交易 [Transfer](https://github.com/fair-exchange/safecoin-program-library/blob/096d3d4da51a8f63db5160b126ebc56b26346fc8/token/program/src/instruction.rs#L92) 或 [Transfer2](https://github.com/fair-exchange/safecoin-program-library/blob/096d3d4da51a8f63db5160b126ebc56b26346fc8/token/program/src/instruction.rs#L252) 指令来引用用户帐户，然后查询 [代币账户余额](developing/clients/jsonrpc-api.md#gettokenaccountbalance) 更新。
 
-[Considerations](https://github.com/solana-labs/solana/issues/12318) 正在扩展 `preBalance`和`postBalance` 交易状态元数据字段，来把 SPL代币余额转移包括进去。
+[Considerations](https://github.com/fair-exchange/safecoin/issues/12318) 正在扩展 `preBalance`和`postBalance` 交易状态元数据字段，来把 SPL代币余额转移包括进去。
 
 ### 提现
 用户提供的提现地址应该是和普通 SAFE 提款地址相同。
@@ -537,9 +537,9 @@ $ spl-token transfer 6B199xxzw3PkAm25hGJpjj3Wj3WNYNHzDAnt1tEqg5BN 1 6VzWGL51jLeb
 
 从提款地址为正确的铸币确定关联的代币帐户，并将转账发送到该帐户。  请注意关联的代币帐户现在还不存在，因此交易所应该代表用户为该账户提供资金。  对于 SPL Token v2 账户，为提款账户提供的资金额为 0.00203928 SAFE (2,039 280 lamports)。
 
-用来提现的 `spl-token transfer` 命令模板为：
+用来提现的 `safe-token transfer` 命令模板为：
 ```
-$ spl-token transfer --fund-recipient <exchange token account> <withdrawal amount> <withdrawal address>
+$ safe-token transfer --fund-recipient <exchange token account> <withdrawal amount> <withdrawal address>
 ```
 
 ### 其他考虑因素

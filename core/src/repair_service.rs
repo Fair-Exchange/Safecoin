@@ -9,11 +9,11 @@ use crate::{
     serve_repair::{RepairType, ServeRepair, DEFAULT_NONCE},
 };
 use crossbeam_channel::{Receiver as CrossbeamReceiver, Sender as CrossbeamSender};
-use solana_ledger::{
+use safecoin_ledger::{
     blockstore::{Blockstore, SlotMeta},
     shred::Nonce,
 };
-use solana_measure::measure::Measure;
+use safecoin_measure::measure::Measure;
 use solana_runtime::{
     bank::Bank, bank_forks::BankForks, commitment::VOTE_THRESHOLD_SIZE, contains::Contains,
 };
@@ -658,11 +658,11 @@ mod test {
     use super::*;
     use crate::cluster_info::Node;
     use crossbeam_channel::unbounded;
-    use solana_ledger::blockstore::{
+    use safecoin_ledger::blockstore::{
         make_chaining_slot_entries, make_many_slot_entries, make_slot_entries,
     };
-    use solana_ledger::shred::max_ticks_per_n_shreds;
-    use solana_ledger::{blockstore::Blockstore, get_tmp_ledger_path};
+    use safecoin_ledger::shred::max_ticks_per_n_shreds;
+    use safecoin_ledger::{blockstore::Blockstore, get_tmp_ledger_path};
     use solana_runtime::genesis_utils::{self, GenesisConfigInfo, ValidatorVoteKeypairs};
     use solana_sdk::signature::Signer;
     use solana_vote_program::vote_transaction;

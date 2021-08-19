@@ -4,7 +4,7 @@ extern crate lazy_static;
 
 use {
     clap::{crate_description, crate_name, App, AppSettings, Arg, ArgMatches, SubCommand},
-    solana_clap_utils::{
+    safecoin_clap_utils::{
         input_parsers::pubkey_of,
         input_validators::{is_pubkey, is_url},
     },

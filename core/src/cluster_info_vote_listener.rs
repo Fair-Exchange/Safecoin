@@ -17,7 +17,7 @@ use crossbeam_channel::{
 };
 use itertools::izip;
 use log::*;
-use solana_ledger::blockstore::Blockstore;
+use safecoin_ledger::blockstore::Blockstore;
 use solana_metrics::inc_new_counter_debug;
 use solana_perf::packet::{self, Packets};
 use solana_runtime::{

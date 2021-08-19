@@ -6,8 +6,8 @@ use clap::{value_t_or_exit, App, AppSettings, Arg, ArgMatches, SubCommand};
 use log::*;
 use num_traits::FromPrimitive;
 use serde_json::{self, Value};
-use solana_account_decoder::{UiAccount, UiAccountEncoding};
-use solana_clap_utils::{
+use safecoin_account_decoder::{UiAccount, UiAccountEncoding};
+use safecoin_clap_utils::{
     self,
     fee_payer::{fee_payer_arg, FEE_PAYER_ARG},
     input_parsers::*,
@@ -17,15 +17,15 @@ use solana_clap_utils::{
     nonce::*,
     offline::*,
 };
-use solana_cli_output::{
+use safecoin_cli_output::{
     display::{build_balance_message, println_name_value},
     return_signers_with_config, CliAccount, CliSignature, CliSignatureVerificationStatus,
     CliTransaction, CliTransactionConfirmation, CliValidatorsSortOrder, OutputFormat,
     ReturnSignersConfig,
 };
-use solana_client::{
+use safecoin_client::{
     blockhash_query::BlockhashQuery,
-    client_error::{ClientError, ClientErrorKind, Result as ClientResult},
+    client_error::{ClientError, Result as ClientResult},
     nonce_utils,
     rpc_client::RpcClient,
     rpc_config::{
@@ -34,7 +34,7 @@ use solana_client::{
     },
     rpc_response::RpcKeyedAccount,
 };
-use solana_remote_wallet::remote_wallet::RemoteWalletManager;
+use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
 use solana_sdk::{
     clock::{Epoch, Slot},
     commitment_config::CommitmentConfig,
@@ -52,7 +52,7 @@ use solana_stake_program::{
     stake_instruction::LockupArgs,
     stake_state::{Lockup, StakeAuthorize},
 };
-use solana_transaction_status::{EncodedTransaction, UiTransactionEncoding};
+use safecoin_transaction_status::{EncodedTransaction, UiTransactionEncoding};
 use solana_vote_program::vote_state::VoteAuthorize;
 use std::{
     collections::HashMap, error, fmt::Write as FmtWrite, fs::File, io::Write, str::FromStr,
@@ -135,6 +135,8 @@ pub enum CliCommand {
         sort_order: CliValidatorsSortOrder,
         reverse_sort: bool,
         number_validators: bool,
+        keep_unstaked_delinquents: bool,
+        delinquent_slot_distance: Option<Slot>,
     },
     Supply {
         print_accounts: bool,
@@ -457,15 +459,15 @@ pub struct CliConfig<'a> {
 
 impl CliConfig<'_> {
     fn default_keypair_path() -> String {
-        solana_cli_config::Config::default().keypair_path
+        safecoin_cli_config::Config::default().keypair_path
     }
 
     fn default_json_rpc_url() -> String {
-        solana_cli_config::Config::default().json_rpc_url
+        safecoin_cli_config::Config::default().json_rpc_url
     }
 
     fn default_websocket_url() -> String {
-        solana_cli_config::Config::default().websocket_url
+        safecoin_cli_config::Config::default().websocket_url
     }
 
     fn default_commitment() -> CommitmentConfig {
@@ -502,13 +504,13 @@ impl CliConfig<'_> {
             (SettingType::Explicit, websocket_cfg_url.to_string()),
             (
                 SettingType::Computed,
-                solana_cli_config::Config::compute_websocket_url(&normalize_to_url_if_moniker(
+                safecoin_cli_config::Config::compute_websocket_url(&normalize_to_url_if_moniker(
                     json_rpc_cmd_url,
                 )),
             ),
             (
                 SettingType::Computed,
-                solana_cli_config::Config::compute_websocket_url(&normalize_to_url_if_moniker(
+                safecoin_cli_config::Config::compute_websocket_url(&normalize_to_url_if_moniker(
                     json_rpc_cfg_url,
                 )),
             ),
@@ -1394,6 +1396,8 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             sort_order,
             reverse_sort,
             number_validators,
+            keep_unstaked_delinquents,
+            delinquent_slot_distance,
         } => process_show_validators(
             &rpc_client,
             config,
@@ -1401,6 +1405,8 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             *sort_order,
             *reverse_sort,
             *number_validators,
+            *keep_unstaked_delinquents,
+            *delinquent_slot_distance,
         ),
         CliCommand::Supply { print_accounts } => {
             process_supply(&rpc_client, config, *print_accounts)
@@ -1950,6 +1956,17 @@ pub fn request_and_confirm_airdrop(
     Ok(signature)
 }
 
+fn common_error_adapter<E>(ix_error: &InstructionError) -> Option<E>
+where
+    E: 'static + std::error::Error + DecodeError<E> + FromPrimitive,
+{
+    if let InstructionError::Custom(code) = ix_error {
+        E::decode_custom_error_to_enum(*code)
+    } else {
+        None
+    }
+}
+
 pub fn log_instruction_custom_error<E>(
     result: ClientResult<Signature>,
     config: &CliConfig,
@@ -1957,14 +1974,23 @@ pub fn log_instruction_custom_error<E>(
 where
     E: 'static + std::error::Error + DecodeError<E> + FromPrimitive,
 {
+    log_instruction_custom_error_ex::<E, _>(result, config, common_error_adapter)
+}
+
+pub fn log_instruction_custom_error_ex<E, F>(
+    result: ClientResult<Signature>,
+    config: &CliConfig,
+    error_adapter: F,
+) -> ProcessResult
+where
+    E: 'static + std::error::Error + DecodeError<E> + FromPrimitive,
+    F: Fn(&InstructionError) -> Option<E>,
+{
     match result {
         Err(err) => {
-            if let ClientErrorKind::TransactionError(TransactionError::InstructionError(
-                _,
-                InstructionError::Custom(code),
-            )) = err.kind()
-            {
-                if let Some(specific_error) = E::decode_custom_error_to_enum(*code) {
+            let maybe_tx_err = err.get_transaction_error();
+            if let Some(TransactionError::InstructionError(_, ix_error)) = maybe_tx_err {
+                if let Some(specific_error) = error_adapter(&ix_error) {
                     return Err(specific_error.into());
                 }
             }
@@ -2002,22 +2028,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
         .stake_subcommands()
         .subcommand(
             SubCommand::with_name("airdrop")
-                .about("Request lamports")
-                .arg(
-                    Arg::with_name("faucet_host")
-                        .long("faucet-host")
-                        .value_name("URL")
-                        .takes_value(true)
-                        .help("Faucet host to use [default: the --url host]"),
-                )
-                .arg(
-                    Arg::with_name("faucet_port")
-                        .long("faucet-port")
-                        .value_name("PORT_NUMBER")
-                        .takes_value(true)
-                        .default_value(safecoin_faucet::faucet::FAUCET_PORT_STR)
-                        .help("Faucet port to use"),
-                )
+                .about("Request SAFE from a faucet")
                 .arg(
                     Arg::with_name("amount")
                         .index(1)
@@ -2229,7 +2240,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
                 )
                 .offline_args()
                 .nonce_args(false)
-		.arg(memo_arg())
+                .arg(memo_arg())
                 .arg(fee_payer_arg()),
         )
         .subcommand(
@@ -2266,7 +2277,7 @@ pub fn app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, '
 mod tests {
     use super::*;
     use serde_json::{json, Value};
-    use solana_client::{
+    use safecoin_client::{
         blockhash_query,
         mock_sender::SIGNATURE,
         rpc_request::RpcRequest,
@@ -2277,7 +2288,7 @@ mod tests {
         signature::{keypair_from_seed, read_keypair_file, write_keypair_file, Keypair, Presigner},
         transaction::TransactionError,
     };
-    use solana_transaction_status::TransactionConfirmationStatus;
+    use safecoin_transaction_status::TransactionConfirmationStatus;
     use std::path::PathBuf;
 
     fn make_tmp_path(name: &str) -> String {

@@ -1,6 +1,6 @@
 use bzip2::bufread::BzDecoder;
 use log::*;
-use solana_client::rpc_client::RpcClient;
+use safecoin_client::rpc_client::RpcClient;
 use solana_net_utils::parse_host;
 use solana_notifier::Notifier;
 use solana_sdk::{
