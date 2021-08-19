@@ -5149,6 +5149,7 @@ name = "safecoin-vote-program"
 version = "1.6.25"
 dependencies = [
  "bincode",
+ "chrono",
  "log 0.4.14",
  "num-derive",
  "num-traits",
@@ -5635,16 +5636,11 @@ dependencies = [
 name = "solana-local-cluster"
 version = "1.6.25"
 dependencies = [
-<<<<<<< HEAD
  "assert_matches",
  "crossbeam-channel 0.4.4",
  "fs_extra",
  "gag",
  "itertools 0.9.0",
-=======
- "bincode",
- "chrono",
->>>>>>> c08421659... timestamp fixes
  "log 0.4.14",
  "rand 0.7.3",
  "rayon",
@@ -5854,9 +5850,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tar"
-version = "0.4.37"
+version = "0.4.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6f5515d3add52e0bbdcad7b83c388bb36ba7b754dda3b5f5bc2d38640cdba5c"
+checksum = "7d779dc6aeff029314570f666ec83f19df7280bb36ef338442cfa8c604021b80"
 dependencies = [
  "filetime",
  "libc",
