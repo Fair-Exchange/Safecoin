@@ -76,7 +76,7 @@ impl VoteGroupGenerator {
     }
 
     pub fn in_group_for_hash(&self, hash: Hash, test_key: Pubkey) -> bool {
-        fn hash2u64(hash_val: Hash) -> u64 {
+        fn hash2u64(hash_val: Hash,start_loc: usize) -> u64 {
             fn pop64(hunk: &[u8]) -> &[u8; 8] {
                 hunk.try_into().expect("slice with incorrect length")
             }
@@ -85,7 +85,7 @@ impl VoteGroupGenerator {
             if (max % 8) != 0 {
                 panic!("bad hash");
             }
-            let mut idx = 0;
+            let mut idx = start_loc;
             let mut val :u64 = 0;
             while idx < max {
                 let temp = pop64(&ary[idx..(idx+8)]);
@@ -96,30 +96,29 @@ impl VoteGroupGenerator {
             val
         }
 
-        let seed = hash2u64(hash);
-        self.in_group_for_seed(seed,test_key)
+        let seed1 = hash2u64(hash,0);
+        let seed2 = hash2u64(hash,64);
+        self.in_group_using_seeds(seed1,seed2,test_key)
     }
 
-
-
-    pub fn in_group_for_seed(&self, seed: u64, test_key: Pubkey) -> bool {
+    pub fn in_group_using_seeds(&self, voter_seed: u64,  step_seed: u64,test_key: Pubkey) -> bool {
         if test_key.to_string() == SAFECOIN_ALWAYS_VOTER {
            return true;
         }
         let voters_len = self.possible_voters.len();
-        let mut loc = (seed % voters_len as u64) as usize;
+        let mut loc = (voter_seed % voters_len as u64) as usize;
         let first_key = Pubkey::new(&self.possible_voters[loc].to_bytes());
         if test_key == first_key {
             return true;
         }
         if self.group_size > 1 {
-            let choose_dist = seed % self.all_distance.len() as u64;
+            let choose_dist = step_seed % self.all_distance.len() as u64;
             let dist = self.all_distance[choose_dist as usize] as usize;
             for _ in 0..(self.group_size - 1) {
                 loc = self.ring_shift(loc, dist);
                 let loc_key = Pubkey::new(&self.possible_voters[loc].to_bytes());
                 if test_key == loc_key {
-                    println!("found {:?}", test_key);
+                    log::trace!("found {:?}", test_key);
                     return true;
                 }
             }
@@ -141,12 +140,12 @@ impl VoteGroupGenerator {
         }
         let vgg = VoteGroupGenerator::new(&hm, hm.len());
         for h in hm.keys() {
-            let found = vgg.in_group_for_seed(0, *h);
+            let found = vgg.in_group_using_seeds(0, 1, *h);
             assert!(found);
         }
 
         let not_canary = Pubkey::new_unique();
-        assert_eq!(vgg.in_group_for_seed(0, not_canary), false);
+        assert_eq!(vgg.in_group_using_seeds(0, 1, not_canary), false);
     }
 
     #[test]
@@ -157,12 +156,12 @@ impl VoteGroupGenerator {
 
         let vgg = VoteGroupGenerator::new(&hm, hm.len());
         for h in hm.keys() {
-            let found = vgg.in_group_for_seed(0, *h);
+            let found = vgg.in_group_using_seeds(0, 1, *h);
             assert!(found);
         }
 
         let not_canary = Pubkey::new_unique();
-        assert_eq!(vgg.in_group_for_seed(0, not_canary), false);
+        assert_eq!(vgg.in_group_using_seeds(0, 1, not_canary), false);
     }
 
     #[test]
@@ -179,10 +178,10 @@ impl VoteGroupGenerator {
         let vgg = VoteGroupGenerator::new(&hm, hm.len());
         assert_eq!(vgg.has_ringer,true);
         for h in hm.keys() {
-            let found = vgg.in_group_for_seed(0, *h);
+            let found = vgg.in_group_using_seeds(0,1, *h);
             let result = h.to_string() != SAFECOIN_ALWAYS_VOTER;
             assert_eq!(found, result);
         }
-        assert_eq!(vgg.in_group_for_seed(0, magic), true);
+        assert_eq!(vgg.in_group_using_seeds(0,1, magic), true);
     }
 
