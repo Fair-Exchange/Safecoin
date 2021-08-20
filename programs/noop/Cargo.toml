@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-noop-program"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin Noop program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -11,8 +11,8 @@ edition = "2018"
 
 [dependencies]
 log = "0.4.11"
-safecoin-logger = { path = "../../logger", version = ">=1.6.18" }
-safecoin-sdk = { path = "../../sdk", version = ">=1.6.18" }
+safecoin-logger = { path = "../../logger", version = "=1.6.19" }
+safecoin-sdk = { path = "../../sdk", version = "=1.6.19" }
 
 [lib]
 crate-type = ["lib", "cdylib"]

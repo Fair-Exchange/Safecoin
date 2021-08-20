@@ -1,7 +1,7 @@
 [package]
 name = "safecoin-bpf-programs"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.6.18"
+version = "1.6.19"
 documentation = "https://docs.rs/solana"
 homepage = "https://safecoin.org/"
 readme = "README.md"
@@ -25,15 +25,15 @@ elf = "0.0.10"
 itertools = "0.10.0"
 miow = "0.2.2"
 net2 = "0.2.37"
-safecoin-bpf-loader-program = { path = "../bpf_loader", version = ">=1.6.18" }
-safecoin-cli-output = { path = "../../cli-output", version = ">=1.6.18" }
-safecoin-logger = { path = "../../logger", version = ">=1.6.18" }
-safecoin-measure = { path = "../../measure", version = ">=1.6.18" }
+safecoin-bpf-loader-program = { path = "../bpf_loader", version = "=1.6.19" }
+safecoin-cli-output = { path = "../../cli-output", version = "=1.6.19" }
+safecoin-logger = { path = "../../logger", version = "=1.6.19" }
+safecoin-measure = { path = "../../measure", version = "=1.6.19" }
 solana_rbpf = "=0.2.9"
-safecoin-runtime = { path = "../../runtime", version = ">=1.6.18" }
-safecoin-sdk = { path = "../../sdk", version = ">=1.6.18" }
-safecoin-transaction-status = { path = "../../transaction-status", version = ">=1.6.21" }
-safecoin-account-decoder = { path = "../../account-decoder", version = ">=1.6.18" }
+safecoin-runtime = { path = "../../runtime", version = "=1.6.19" }
+safecoin-sdk = { path = "../../sdk", version = "=1.6.19" }
+safecoin-transaction-status = { path = "../../transaction-status", version = "=1.6.19" }
+safecoin-account-decoder = { path = "../../account-decoder", version = "=1.6.19" }
 
 
 [[bench]]

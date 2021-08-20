@@ -1,6 +1,6 @@
 [package]
 name = "solana-bpf-rust-sanity"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin BPF test program written in Rust"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -10,7 +10,7 @@ documentation = "https://docs.rs/solana-bpf-rust-sanity"
 edition = "2018"
 
 [dependencies]
-safecoin-program = { path = "../../../../sdk/program", version = ">=1.6.18" }
+safecoin-program = { path = "../../../../sdk/program", version = "=1.6.19" }
 
 [lib]
 crate-type = ["cdylib"]

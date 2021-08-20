@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-config-program"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin Config program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -16,10 +16,10 @@ log = "0.4.11"
 rand_core = "0.6.2"
 serde = "1.0.122"
 serde_derive = "1.0.103"
-safecoin-sdk = { path = "../../sdk", version = ">=1.6.18" }
+safecoin-sdk = { path = "../../sdk", version = "=1.6.19" }
 
 [dev-dependencies]
-safecoin-logger = { path = "../../logger", version = ">=1.6.18" }
+safecoin-logger = { path = "../../logger", version = "=1.6.19" }
 
 [lib]
 crate-type = ["lib"]

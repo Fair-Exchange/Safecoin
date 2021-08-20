@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-transaction-status"
-version = "1.6.21"
+version = "1.6.19"
 description = "Safecoin transaction status types"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -18,11 +18,11 @@ lazy_static = "1.4.0"
 serde = "1.0.122"
 serde_derive = "1.0.103"
 serde_json = "1.0.56"
-safecoin-account-decoder = { path = "../account-decoder", version = ">=1.6.18" }
-safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
-safecoin-runtime = { path = "../runtime", version = ">=1.6.18" }
-safecoin-stake-program = { path = "../programs/stake", version = ">=1.6.18" }
-safecoin-vote-program = { path = "../programs/vote", version = ">=1.6.18" }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.6.19" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.19" }
+safecoin-runtime = { path = "../runtime", version = "=1.6.19" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.6.19" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.6.19" }
 safe-associated-token-account-v1-0 = { package = "safe-associated-token-account", version = ">=1.0.7", features = ["no-entrypoint"] }
 safe-memo = { version = ">=3.0.4", features = ["no-entrypoint"] }
 spl-token-v2-0 = { package = "safe-token", version = ">=3.1.6", features = ["no-entrypoint"] }

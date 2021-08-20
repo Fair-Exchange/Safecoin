@@ -2,7 +2,7 @@
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "safecoin-poh-bench"
-version = "1.6.18"
+version = "1.6.19"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -13,13 +13,13 @@ clap = "2.33.1"
 log = "0.4.11"
 rand = "0.7.0"
 rayon = "1.5.0"
-safecoin-logger = { path = "../logger", version = ">=1.6.18" }
-safecoin-ledger = { path = "../ledger", version = ">=1.6.18" }
-safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
-safecoin-clap-utils = { path = "../clap-utils", version = ">=1.6.18" }
-safecoin-measure = { path = "../measure", version = ">=1.6.18" }
-safecoin-version = { path = "../version", version = ">=1.6.18" }
-safecoin-perf = { path = "../perf", version = ">=1.6.18" }
+safecoin-logger = { path = "../logger", version = "=1.6.19" }
+safecoin-ledger = { path = "../ledger", version = "=1.6.19" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.19" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.19" }
+safecoin-measure = { path = "../measure", version = "=1.6.19" }
+safecoin-version = { path = "../version", version = "=1.6.19" }
+safecoin-perf = { path = "../perf", version = "=1.6.19" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

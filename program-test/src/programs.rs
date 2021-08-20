@@ -21,11 +21,11 @@ static SPL_PROGRAMS: &[(Pubkey, &[u8])] = &[
     (spl_token::ID, include_bytes!("programs/spl_token-3.1.0.so")),
     (
         safe_memo_1_0::ID,
-        include_bytes!("programs/safe_memo-3.0.3.so"),
+        include_bytes!("programs/safe_memo-1.0.0.so"),
     ),
     (
         safe_memo_3_0::ID,
-        include_bytes!("programs/safe_memo-3.0.3.so"),
+        include_bytes!("programs/safe_memo-3.0.0.so"),
     ),
     (
         safe_associated_token_account::ID,

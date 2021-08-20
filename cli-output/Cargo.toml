@@ -19,13 +19,13 @@ indicatif = "0.15.0"
 serde = "1.0.122"
 serde_derive = "1.0.103"
 serde_json = "1.0.56"
-safecoin-account-decoder = { path = "../account-decoder", version = ">=1.6.18" }
-safecoin-clap-utils = { path = "../clap-utils", version = ">=1.6.18" }
-safecoin-client = { path = "../client", version = ">=1.6.18" }
-safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
-safecoin-stake-program = { path = "../programs/stake", version = ">=1.6.18" }
-safecoin-transaction-status = { path = "../transaction-status", version = ">=1.6.21" }
-safecoin-vote-program = { path = "../programs/vote", version = ">=1.6.18" }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.6.19" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.19" }
+safecoin-client = { path = "../client", version = "=1.6.19" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.19" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.6.19" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.6.19" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.6.19" }
 safe-memo = { version = ">=3.0.4", features = ["no-entrypoint"] }
 
 [package.metadata.docs.rs]

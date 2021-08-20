@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-budget-program"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin Budget program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -17,11 +17,11 @@ num-derive = "0.3"
 num-traits = "0.2"
 serde = "1.0.122"
 serde_derive = "1.0.103"
-safecoin-sdk = { path = "../../sdk", version = ">=1.6.18" }
+safecoin-sdk = { path = "../../sdk", version = "=1.6.19" }
 thiserror = "1.0"
 
 [dev-dependencies]
-safecoin-runtime = { path = "../../runtime", version = ">=1.6.18" }
+safecoin-runtime = { path = "../../runtime", version = "=1.6.19" }
 
 [lib]
 crate-type = ["lib", "cdylib"]

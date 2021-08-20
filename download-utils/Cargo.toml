@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-download-utils"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin Download Utils"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -15,8 +15,8 @@ console = "0.11.3"
 indicatif = "0.15.0"
 log = "0.4.11"
 reqwest = { version = "0.11.2", default-features = false, features = ["blocking", "rustls-tls", "json"] }
-safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
-safecoin-runtime = { path = "../runtime", version = ">=1.6.18" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.19" }
+safecoin-runtime = { path = "../runtime", version = "=1.6.19" }
 tar = "0.4.28"
 
 [lib]

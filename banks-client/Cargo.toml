@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-banks-client"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin banks client"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -15,16 +15,16 @@ borsh = "0.9.0"
 borsh-derive = "0.9.0"
 futures = "0.3"
 mio = "0.7.6"
-safecoin-banks-interface = { path = "../banks-interface", version = ">=1.6.18" }
-safecoin-program = { path = "../sdk/program", version = ">=1.6.18" }
-safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
+safecoin-banks-interface = { path = "../banks-interface", version = "=1.6.19" }
+safecoin-program = { path = "../sdk/program", version = "=1.6.19" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.19" }
 tarpc = { version = "0.24.1", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 tokio-serde = { version = "0.8", features = ["bincode"] }
 
 [dev-dependencies]
-safecoin-runtime = { path = "../runtime", version = ">=1.6.18" }
-safecoin-banks-server = { path = "../banks-server", version = ">=1.6.18" }
+safecoin-runtime = { path = "../runtime", version = "=1.6.19" }
+safecoin-banks-server = { path = "../banks-server", version = "=1.6.19" }
 
 [lib]
 crate-type = ["lib"]
