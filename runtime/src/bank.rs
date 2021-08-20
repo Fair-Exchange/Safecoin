@@ -2703,7 +2703,7 @@ impl Bank {
             ClusterType::Development => false,
             ClusterType::Devnet => false,
             ClusterType::Testnet => false,
-            ClusterType::MainnetBeta => self.epoch == 61,
+            ClusterType::MainnetBeta => false,
         }
     }
 
@@ -4427,6 +4427,7 @@ impl Bank {
     }
 
     pub fn calculate_and_verify_capitalization(&self) -> bool {
+                *self.inflation.write().unwrap() = Inflation::full();
         let calculated = self.calculate_capitalization() - 15;
         let expected = self.capitalization();
         if calculated == expected {
@@ -4885,7 +4886,7 @@ impl Bank {
         let new_feature_activations = self.compute_active_feature_set(!init_finish_or_warp);
 
         if new_feature_activations.contains(&feature_set::pico_inflation::id()) {
-            *self.inflation.write().unwrap() = Inflation::pico();
+            *self.inflation.write().unwrap() = Inflation::full();
             self.fee_rate_governor.burn_percent = 50; // 50% fee burn
             self.rent_collector.rent.burn_percent = 50; // 50% rent burn
         }
@@ -5016,7 +5017,7 @@ impl Bank {
         let reconfigure_token2_native_mint = match self.cluster_type() {
             ClusterType::Development => true,
             ClusterType::Devnet => true,
-            ClusterType::Testnet => self.epoch() == 10,
+            ClusterType::Testnet => self.epoch() == 93,
             ClusterType::MainnetBeta => self.epoch() == 61,
         };
 

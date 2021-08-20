@@ -3034,7 +3034,7 @@ curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
 
 Result:
 ```json
-{"jsonrpc":"2.0","result":{"safecoin-core": "1.6.18"},"id":1}
+{"jsonrpc":"2.0","result":{"safecoin-core": "1.6.19"},"id":1}
 ```
 
 ### getVoteAccounts

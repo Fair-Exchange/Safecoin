@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-perf"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin Performance APIs"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -18,12 +18,12 @@ serde = "1.0.122"
 dlopen_derive = "0.1.4"
 lazy_static = "1.4.0"
 log = "0.4.11"
-safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = ">=1.6.18" }
-safecoin-budget-program = { path = "../programs/budget", version = ">=1.6.18" }
-safecoin-logger = { path = "../logger", version = ">=1.6.18" }
-safecoin-measure = { path = "../measure", version = ">=1.6.18" }
-safecoin-metrics = { path = "../metrics", version = ">=1.6.18" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.19" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.6.19" }
+safecoin-budget-program = { path = "../programs/budget", version = "=1.6.19" }
+safecoin-logger = { path = "../logger", version = "=1.6.19" }
+safecoin-measure = { path = "../measure", version = "=1.6.19" }
+safecoin-metrics = { path = "../metrics", version = "=1.6.19" }
 curve25519-dalek = { version = "2" }
 
 [lib]

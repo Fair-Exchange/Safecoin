@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-notifier"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin Notifier"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"

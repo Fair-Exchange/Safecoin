@@ -24,14 +24,14 @@ semver = "0.11.0"
 serde = "1.0.122"
 serde_derive = "1.0.103"
 serde_json = "1.0.56"
-safecoin-account-decoder = { path = "../account-decoder", version = ">=1.6.18" }
-safecoin-clap-utils = { path = "../clap-utils", version = ">=1.6.18" }
-safecoin-faucet = { path = "../faucet", version = ">=1.6.18" }
-safecoin-net-utils = { path = "../net-utils", version = ">=1.6.18" }
-safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
-safecoin-transaction-status = { path = "../transaction-status", version = ">=1.6.21" }
-safecoin-version = { path = "../version", version = ">=1.6.18" }
-safecoin-vote-program = { path = "../programs/vote", version = ">=1.6.18" }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.6.19" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.19" }
+safecoin-faucet = { path = "../faucet", version = "=1.6.19" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.6.19" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.19" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.6.19" }
+safecoin-version = { path = "../version", version = "=1.6.19" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.6.19" }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
 tungstenite = "0.10.1"
@@ -40,7 +40,7 @@ url = "2.1.1"
 [dev-dependencies]
 assert_matches = "1.3.0"
 jsonrpc-http-server = "17.0.0"
-safecoin-logger = { path = "../logger", version = ">=1.6.18" }
+safecoin-logger = { path = "../logger", version = "=1.6.19" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

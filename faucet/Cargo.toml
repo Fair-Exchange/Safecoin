@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-faucet"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin Faucet"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -16,13 +16,13 @@ clap = "2.33"
 log = "0.4.11"
 serde = "1.0.122"
 serde_derive = "1.0.103"
-safecoin-clap-utils = { path = "../clap-utils", version = ">=1.6.18" }
-safecoin-cli-config = { path = "../cli-config", version = ">=1.6.18" }
-safecoin-logger = { path = "../logger", version = ">=1.6.18" }
-safecoin-metrics = { path = "../metrics", version = ">=1.6.18" }
-safecoin-sdk = { path = "../sdk", version = ">=1.6.18" }
-safecoin-version = { path = "../version", version = ">=1.6.18" }
-safe-memo = { version = "=3.0.4", features = ["no-entrypoint"] }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.19" }
+safecoin-cli-config = { path = "../cli-config", version = "=1.6.19" }
+safecoin-logger = { path = "../logger", version = "=1.6.19" }
+safecoin-metrics = { path = "../metrics", version = "=1.6.19" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.19" }
+safecoin-version = { path = "../version", version = "=1.6.19" }
+safe-memo = { version = ">=3.0.4", features = ["no-entrypoint"] }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
 

@@ -1,6 +1,6 @@
 [package]
 name = "solana-bpf-rust-rand"
-version = "1.6.18"
+version = "1.6.19"
 description = "Safecoin BPF test program written in Rust"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 getrandom = { version = "0.1.14", features = ["dummy"] }
 rand = "0.7"
-safecoin-program = { path = "../../../../sdk/program", version = ">=1.6.18" }
+safecoin-program = { path = "../../../../sdk/program", version = "=1.6.19" }
 
 [lib]
 crate-type = ["cdylib"]
