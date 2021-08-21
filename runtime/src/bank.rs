@@ -27,7 +27,7 @@ use crate::{
     system_instruction_processor::{get_system_account_kind, SystemAccountKind},
     transaction_batch::TransactionBatch,
     vote_account::ArcVoteAccount,
-        commitment::{VOTE_GROUP_COUNT,VOTE_THRESHOLD_SIZE},
+        commitment::{VOTE_GROUP_COUNT,VOTE_THRESHOLD_SIZE,VOTE_THRESHOLD_SIZE_ORIG},
 };
 use byteorder::{ByteOrder, LittleEndian};
 use itertools::Itertools;
@@ -5110,21 +5110,30 @@ pub trait BankVoteThreshold {
 }
 
 impl BankVoteThreshold for Bank {
-
-    /// The stake weight necessary to root a block in a given epoch 
+    /// The stake weight necessary to root a block in a given epoch
     /// and to be pedantic it is defined as:
     /// the average stake for each authorized voter
     /// multiplied by the expected number of voters (a subset of all authorized voters)
     /// multiplied by the majority ratio (aka VOTE_THRESHOLD_SIZE)
+
     fn epoch_vote_threshold(&self) -> Option<f64> {
-        if let Some(epoch_stakes) = self.epoch_stakes(self.epoch()){
-            let avg_stake : f64 = epoch_stakes.total_stake() as f64 / epoch_stakes.epoch_authorized_voters().len() as f64;
-            let res = avg_stake * VOTE_GROUP_COUNT as f64 * VOTE_THRESHOLD_SIZE as f64;
-            return Some(res);
+        if let Some(epoch_stakes) = self.epoch_stakes(self.epoch()) {
+            if self
+                .feature_set
+                .is_active(&feature_set::voter_groups_consensus::id())
+            {
+                let avg_stake: f64 = epoch_stakes.total_stake() as f64
+                    / epoch_stakes.epoch_authorized_voters().len() as f64;
+                let res = avg_stake * VOTE_GROUP_COUNT as f64 * VOTE_THRESHOLD_SIZE as f64;
+                return Some(res);
+            } else {
+                return Some(epoch_stakes.total_stake() as f64 * VOTE_THRESHOLD_SIZE_ORIG);
+            }
         }
         None
     }
 }
+
 impl VoterGroup for Bank {
         
     /// determine if a voter is in the group for a given slot
