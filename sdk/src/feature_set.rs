@@ -166,6 +166,10 @@ pub mod merge_nonce_error_into_system_error {
     solana_sdk::declare_id!("4n5Ko6ax8yLi21CXoBMFbCy52QydH7jpy42W5df7GZqT");
 }
 
+pub mod voter_groups_consensus {
+    solana_sdk::declare_id!("CyQUUV5ymWwFYoafJZ7bvVa73zukmE31LcvKs5pqRtxz");
+}
+
 lazy_static! {
     /// Map of feature identifiers to user-visible description
     pub static ref FEATURE_NAMES: HashMap<Pubkey, &'static str> = [
@@ -206,6 +210,7 @@ lazy_static! {
         (updated_verify_policy::id(), "Update verify policy"),
         (libsecp256k1_0_5_upgrade_enabled::id(), "upgrade libsecp256k1 to v0.5.0"),
         (merge_nonce_error_into_system_error::id(), "merge NonceError into SystemError"),
+        (voter_groups_consensus::id(), "use a random subset of voters for block consensus"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()
