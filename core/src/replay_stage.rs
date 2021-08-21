@@ -44,12 +44,12 @@ use solana_sdk::{
     clock::{Slot, MAX_PROCESSING_AGE, NUM_CONSECUTIVE_LEADER_SLOTS},
     genesis_config::ClusterType,
     hash::Hash,
-    instruction::VoterGroup,
     pubkey::Pubkey,
     signature::Signature,
     signature::{Keypair, Signer},
     timing::timestamp,
-    feature_set::{self,},  transaction::Transaction,
+    transaction::Transaction,
+    instruction::VoterGroup,
 };
 use solana_vote_program::vote_state::Vote;
 use std::{
@@ -1448,48 +1448,6 @@ impl ReplayStage {
         );
     }
 
-	fn in_consensus(
-    	vote: &Vote,
-    	voter_id: &Pubkey,
-        bank: &Bank
-	) -> bool {
-        if bank.feature_set.is_active(&feature_set::voter_groups_consensus::id()) {
-            return bank.in_group(vote.slots[0], vote.hash, *voter_id);
-        }
-        else {
-            // originally we tested for timestamp > 1626222605 - but that is Wed Jul 14 2021 00:30:05 GMT
-            // so skipping that..
-                log::trace!("vote_hash: {}", vote.hash);
-                log::trace!(
-                    "H_vote: {}",
-                    ((vote.hash.to_string().chars().nth(0).unwrap() as usize) % 10)
-                );
-                log::trace!(
-                    "P_vote: {}",
-                    ((((vote.hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
-                        * (voter_id.to_string().chars().last().unwrap() as usize
-                            + vote.hash.to_string().chars().last().unwrap() as usize)
-                        / 10) as usize
-                        + voter_id.to_string().chars().last().unwrap() as usize
-                        + vote.hash.to_string().chars().last().unwrap() as usize)
-                        % 10 as usize
-                );
-                // this should give a 10% chance to vote UNLESS
-                // you are the magic safety validator (who always votes)
-                let dont_vote = (((vote.hash.to_string().chars().nth(0).unwrap() as usize) % 10) as usize
-                    != ((((vote.hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1)
-                        as usize
-                        * (voter_id.to_string().chars().last().unwrap() as usize
-                            + vote.hash.to_string().chars().last().unwrap() as usize)
-                        / 10) as usize
-                        + voter_id.to_string().chars().last().unwrap() as usize
-                        + vote.hash.to_string().chars().last().unwrap() as usize)
-                        % 10 as usize)
-                   && voter_id.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
-                   return dont_vote == false;
-        }
-	}
-
     fn generate_vote_tx(
         node_keypair: &Arc<Keypair>,
         bank: &Bank,
@@ -1504,16 +1462,19 @@ impl ReplayStage {
             return None;
         }
         log::trace!("authorized_voter_pubkey {}", vote_account_pubkey);
-        log::trace!(
-            "authorized_voter_pubkey_string {}",
-            vote_account_pubkey.to_string()
-        );
+        log::trace!("authorized_voter_pubkey_string {}", vote_account_pubkey.to_string());
         log::trace!("vote_hash: {}", vote.hash);
+  
+        let in_group = bank.in_group(vote.slots[0],vote.hash,*vote_account_pubkey);
 
-		if Self::in_consensus(&vote,vote_account_pubkey, bank) {
-            warn!("I ({}) will vote if I can!!!", *vote_account_pubkey);
+        if in_group {
+            warn!(
+                "I ({}) will vote if I can!!!",*vote_account_pubkey
+            );
         } else {
-            warn!("Vote account has no authorized voter for slot.  Unable to vote");
+            warn!(
+                "Vote account has no authorized voter for slot.  Unable to vote"
+            );       
             return None;
         }
 
@@ -1707,7 +1668,9 @@ impl ReplayStage {
         root: Slot,
         lockouts_sender: &Sender<CommitmentAggregationData>,
     ) {
-        if let Err(e) = lockouts_sender.send(CommitmentAggregationData::new(bank, root)) {
+        if let Err(e) =
+            lockouts_sender.send(CommitmentAggregationData::new(bank, root ))
+        {
             trace!("lockouts_sender failed: {:?}", e);
         }
     }
@@ -2626,7 +2589,6 @@ pub(crate) mod tests {
             SIZE_OF_COMMON_SHRED_HEADER, SIZE_OF_DATA_SHRED_HEADER, SIZE_OF_DATA_SHRED_PAYLOAD,
         },
     };
-    use safecoin_transaction_status::TransactionWithStatusMeta;
     use solana_runtime::{
         accounts_background_service::AbsRequestSender,
         commitment::BlockCommitment,
@@ -2643,6 +2605,7 @@ pub(crate) mod tests {
         system_transaction,
         transaction::TransactionError,
     };
+    use safecoin_transaction_status::TransactionWithStatusMeta;
     use solana_vote_program::{
         vote_state::{VoteState, VoteStateVersions},
         vote_transaction,
@@ -3385,7 +3348,11 @@ pub(crate) mod tests {
             bank_forks.write().unwrap().insert(bank);
             let arc_bank = bank_forks.read().unwrap().get(i).unwrap().clone();
             leader_vote(i - 1, &arc_bank, &leader_voting_pubkey);
-            ReplayStage::update_commitment_cache(arc_bank.clone(), 0, &lockouts_sender);
+            ReplayStage::update_commitment_cache(
+                arc_bank.clone(),
+                0,
+                &lockouts_sender,
+            );
             arc_bank.freeze();
         }
 

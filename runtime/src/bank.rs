@@ -11,6 +11,7 @@ use crate::{
     accounts_index::{AccountSecondaryIndexes, Ancestors, IndexKey},
     blockhash_queue::BlockhashQueue,
     builtins::{self, ActivationType},
+    commitment::{VOTE_GROUP_COUNT, VOTE_THRESHOLD_SIZE, VOTE_THRESHOLD_SIZE_ORIG},
     epoch_stakes::{EpochStakes, NodeVoteAccounts},
     hashed_transaction::{HashedTransaction, HashedTransactionSlice},
     inline_spl_token_v2_0,
@@ -27,7 +28,6 @@ use crate::{
     system_instruction_processor::{get_system_account_kind, SystemAccountKind},
     transaction_batch::TransactionBatch,
     vote_account::ArcVoteAccount,
-        commitment::{VOTE_GROUP_COUNT,VOTE_THRESHOLD_SIZE,VOTE_THRESHOLD_SIZE_ORIG},
 };
 use byteorder::{ByteOrder, LittleEndian};
 use itertools::Itertools;
@@ -56,7 +56,7 @@ use solana_sdk::{
     hash::{extend_and_hash, hashv, Hash},
     incinerator,
     inflation::Inflation,
-    instruction::{CompiledInstruction,VoterGroup},
+    instruction::{CompiledInstruction, VoterGroup},
     message::Message,
     native_loader,
     native_token::sol_to_lamports,
@@ -4427,7 +4427,7 @@ impl Bank {
     }
 
     pub fn calculate_and_verify_capitalization(&self) -> bool {
-                *self.inflation.write().unwrap() = Inflation::full();
+        *self.inflation.write().unwrap() = Inflation::full();
         let calculated = self.calculate_capitalization() - 15;
         let expected = self.capitalization();
         if calculated == expected {
@@ -5135,16 +5135,46 @@ impl BankVoteThreshold for Bank {
 }
 
 impl VoterGroup for Bank {
-        
     /// determine if a voter is in the group for a given slot
-    fn in_group(&self, slot : Slot, hash: Hash, voter: Pubkey) -> bool {
-        let epoch = self.epoch_schedule.get_epoch(slot);
-        match self.epoch_stakes.get(&epoch){
-            None => panic!("No epoch"),
-            Some(stakes) =>{
-                let vgr = stakes.get_group_genr();
-                return vgr.in_group_for_hash(hash, voter) 
+    fn in_group(&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
+        if self
+            .feature_set
+            .is_active(&feature_set::voter_groups_consensus::id())
+        {
+            let epoch = self.epoch_schedule.get_epoch(slot);
+            match self.epoch_stakes.get(&epoch) {
+                None => panic!("No epoch"),
+                Some(stakes) => {
+                    let vgr = stakes.get_group_genr();
+                    return vgr.in_group_for_hash(hash, voter);
+                }
             }
+        } else {
+            log::trace!("vote_hash: {}", hash);
+            log::trace!(
+                "H_vote: {}",
+                ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
+            );
+            log::trace!(
+                "P_vote: {}",
+                ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
+                    * (voter.to_string().chars().last().unwrap() as usize
+                        + hash.to_string().chars().last().unwrap() as usize)
+                    / 10) as usize
+                    + voter.to_string().chars().last().unwrap() as usize
+                    + hash.to_string().chars().last().unwrap() as usize)
+                    % 10 as usize
+            );
+            let dont_vote = (((hash.to_string().chars().nth(0).unwrap() as usize) % 10) as usize
+                != ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
+                    * (voter.to_string().chars().last().unwrap() as usize
+                        + hash.to_string().chars().last().unwrap() as usize)
+                    / 10) as usize
+                    + voter.to_string().chars().last().unwrap() as usize
+                    + hash.to_string().chars().last().unwrap() as usize)
+                    % 10 as usize)
+                && voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
+            return dont_vote == false;
         }
     }
 }
