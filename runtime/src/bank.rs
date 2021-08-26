@@ -4423,12 +4423,11 @@ impl Bank {
     }
 
     pub fn calculate_capitalization(&self) -> u64 {
-        self.rc.accounts.calculate_capitalization(&self.ancestors)
-    }
+        self.rc.accounts.calculate_capitalization(&self.ancestors)     }
 
     pub fn calculate_and_verify_capitalization(&self) -> bool {
         *self.inflation.write().unwrap() = Inflation::full();
-        let calculated = self.calculate_capitalization() - 15;
+        let calculated = self.calculate_capitalization() ;
         let expected = self.capitalization();
         if calculated == expected {
             true
@@ -4474,7 +4473,7 @@ impl Bank {
                 &self.ancestors,
                 Some(self.capitalization()),
             );
-        if total_lamports - 15 != self.capitalization() {
+        if total_lamports  != self.capitalization() {
             datapoint_info!(
                 "capitalization_mismatch",
                 ("slot", self.slot(), i64),
@@ -4562,7 +4561,14 @@ impl Bank {
 
     /// Return the total capitalization of the Bank
     pub fn capitalization(&self) -> u64 {
-        self.capitalization.load(Relaxed)
+
+	    let mut correction:u64 = 0;
+        if self.bypass_bad_math() &&
+        	(self.cluster_type == Some(ClusterType::MainnetBeta)){
+            	correction = 15; // 15 f-ing lamports!!!
+        	}
+
+        self.capitalization.load(Relaxed) + correction
     }
 
     /// Return this bank's max_tick_height
@@ -4829,6 +4835,11 @@ impl Bank {
     pub fn no_overflow_rent_distribution_enabled(&self) -> bool {
         self.feature_set
             .is_active(&feature_set::no_overflow_rent_distribution::id())
+    }
+
+    pub fn bypass_bad_math(&self) -> bool {
+        self.feature_set
+            .is_active(&feature_set::lamports_mystery_solved::id()) == false
     }
 
     pub fn stake_program_v2_enabled(&self) -> bool {

@@ -10,6 +10,10 @@ pub mod instructions_sysvar_enabled {
     solana_sdk::declare_id!("7TfFp6Tf2XqXQQfx16qvXbjekXtn68kiQj9pPfXZ5Bua");
 }
 
+pub mod lamports_mystery_solved { // make bighead feel better
+    solana_sdk::declare_id!("2UZU7sLDrA2t8RAjRcxe2mUiCfkh3dBG5chef8QVR8or");
+}
+
 pub mod consistent_recent_blockhashes_sysvar {
     solana_sdk::declare_id!("ApdySrEmykK3PBLExdN2ehGCRPyVT6athFgu4H7H8e9J");
 }
