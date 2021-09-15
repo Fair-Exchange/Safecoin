@@ -3592,7 +3592,7 @@ impl AccountsDb {
         }
 
         scan.stop();
-        let total_lamports = *total_lamports.lock().unwrap() - 15;
+        let total_lamports = *total_lamports.lock().unwrap();
 
         let mut hash_time = Measure::start("hash");
         let (accumulated_hash, hash_total) = AccountsHash::calculate_hash(hashes);
