@@ -4472,7 +4472,7 @@ impl Bank {
                 &self.ancestors,
                 Some(self.capitalization()),
             );
-        if total_lamports  != self.capitalization() {
+        if total_lamports  > self.capitalization() {
             datapoint_info!(
                 "capitalization_mismatch",
                 ("slot", self.slot(), i64),
