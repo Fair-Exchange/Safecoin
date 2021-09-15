@@ -3788,7 +3788,7 @@ impl AccountsDb {
         let (calculated_hash, calculated_lamports) =
             self.calculate_accounts_hash(slot, ancestors, true)?;
 
-        if calculated_lamports != total_lamports {
+        if calculated_lamports < total_lamports {
             warn!(
                 "Mismatched total lamports: {} calculated: {}",
                 total_lamports, calculated_lamports

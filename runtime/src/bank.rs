@@ -4428,7 +4428,7 @@ impl Bank {
                 *self.inflation.write().unwrap() = Inflation::full();
         let calculated = self.calculate_capitalization();
         let expected = self.capitalization();
-        if calculated == expected {
+        if calculated > expected {
             true
         } else {
             warn!(
