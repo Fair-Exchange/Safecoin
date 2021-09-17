@@ -1,7 +1,7 @@
-pub use safecoin_ledger::blockstore_processor::CacheBlockMetaSender;
+pub use solana_ledger::blockstore_processor::CacheBlockMetaSender;
 use {
     crossbeam_channel::{Receiver, RecvTimeoutError},
-    safecoin_ledger::blockstore::Blockstore,
+    solana_ledger::blockstore::Blockstore,
     safecoin_measure::measure::Measure,
     solana_runtime::bank::Bank,
     std::{

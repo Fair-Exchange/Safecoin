@@ -51,24 +51,40 @@ impl GossipService {
             "gossip_receiver",
             1,
         );
-        let (response_sender, response_receiver) = channel();
-        let t_responder = streamer::responder("gossip", gossip_socket, response_receiver);
-        let t_listen = ClusterInfo::listen(
-            cluster_info.clone(),
-            bank_forks.clone(),
+        let (consume_sender, listen_receiver) = channel();
+        // https://github.com/rust-lang/rust/issues/39364#issuecomment-634545136
+        let _consume_sender = consume_sender.clone();
+        let t_socket_consume = cluster_info.clone().start_socket_consume_thread(
             request_receiver,
+            consume_sender,
+            exit.clone(),
+        );
+        let (response_sender, response_receiver) = channel();
+        let t_listen = cluster_info.clone().listen(
+            bank_forks.clone(),
+            listen_receiver,
             response_sender.clone(),
             should_check_duplicate_instance,
-            exit,
+            exit.clone(),
         );
-        let t_gossip = ClusterInfo::gossip(
-            cluster_info.clone(),
+        let t_gossip = cluster_info.clone().gossip(
             bank_forks,
             response_sender,
             gossip_validators,
-            exit,
+            exit.clone(),
         );
-        let thread_hdls = vec![t_receiver, t_responder, t_listen, t_gossip];
+        // To work around:
+        // https://github.com/rust-lang/rust/issues/54267
+        // responder thread should start after response_sender.clone(). see:
+        // https://github.com/rust-lang/rust/issues/39364#issuecomment-381446873
+        let t_responder = streamer::responder("gossip", gossip_socket, response_receiver);
+        let thread_hdls = vec![
+            t_receiver,
+            t_responder,
+            t_socket_consume,
+            t_listen,
+            t_gossip,
+        ];
         Self { thread_hdls }
     }
 
@@ -229,7 +245,7 @@ fn spy(
             .into_iter()
             .map(|x| x.0)
             .collect::<Vec<_>>();
-        tvu_peers = spy_ref.all_tvu_peers().into_iter().collect::<Vec<_>>();
+        tvu_peers = spy_ref.all_tvu_peers();
 
         let found_node_by_pubkey = if let Some(pubkey) = find_node_by_pubkey {
             all_peers.iter().any(|x| x.id == pubkey)

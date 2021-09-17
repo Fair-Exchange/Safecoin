@@ -17,7 +17,7 @@ import {
 } from "@safecoin/web3.js";
 import { Cluster } from "providers/cluster";
 import { SerumMarketRegistry } from "serumMarketRegistry";
-import { TokenInfoMap } from "@solana/safe-token-registry";
+import { TokenInfoMap } from "@safecoin/safe-token-registry";
 
 export type ProgramName = typeof PROGRAM_NAME_BY_ID[keyof typeof PROGRAM_NAME_BY_ID];
 

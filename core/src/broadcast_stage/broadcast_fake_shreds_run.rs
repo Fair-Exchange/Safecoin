@@ -1,6 +1,6 @@
 use super::*;
-use safecoin_ledger::entry::Entry;
-use safecoin_ledger::shred::Shredder;
+use solana_ledger::entry::Entry;
+use solana_ledger::shred::Shredder;
 use solana_sdk::hash::Hash;
 use solana_sdk::signature::Keypair;
 

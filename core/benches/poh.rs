@@ -4,7 +4,7 @@
 extern crate test;
 
 use solana_core::poh_service::DEFAULT_HASHES_PER_BATCH;
-use safecoin_ledger::poh::Poh;
+use solana_ledger::poh::Poh;
 use solana_sdk::hash::Hash;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};

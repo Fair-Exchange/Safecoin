@@ -36,7 +36,7 @@ use {
         },
     },
     solana_download_utils::{download_genesis_if_missing, download_snapshot},
-    safecoin_ledger::blockstore_db::BlockstoreRecoveryMode,
+    solana_ledger::blockstore_db::BlockstoreRecoveryMode,
     solana_perf::recycler::enable_recycler_warming,
     solana_runtime::{
         accounts_index::{
@@ -2481,7 +2481,7 @@ pub fn main() {
         solana_perf::perf_libs::init_cuda();
         enable_recycler_warming();
     }
-    safecoin_ledger::entry::init_poh();
+    solana_ledger::entry::init_poh();
     solana_runtime::snapshot_utils::remove_tmp_snapshot_archives(&snapshot_output_dir);
 
     let should_check_duplicate_instance = !matches.is_present("no_duplicate_instance_check");

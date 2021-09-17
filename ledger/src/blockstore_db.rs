@@ -22,7 +22,7 @@ use solana_sdk::{
 };
 use solana_storage_proto::convert::generated;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     ffi::{CStr, CString},
     fs,
     marker::PhantomData,
@@ -61,6 +61,8 @@ const CODE_SHRED_CF: &str = "code_shred";
 const TRANSACTION_STATUS_CF: &str = "transaction_status";
 /// Column family for Address Signatures
 const ADDRESS_SIGNATURES_CF: &str = "address_signatures";
+/// Column family for TransactionMemos
+const TRANSACTION_MEMOS_CF: &str = "transaction_memos";
 /// Column family for the Transaction Status Index.
 /// This column family is used for tracking the active primary index for columns that for
 /// query performance reasons should not be indexed by Slot.
@@ -162,6 +164,10 @@ pub mod columns {
     #[derive(Debug)]
     /// The address signatures column
     pub struct AddressSignatures;
+
+    #[derive(Debug)]
+    // The transaction memos column
+    pub struct TransactionMemos;
 
     #[derive(Debug)]
     /// The transaction status index column
@@ -332,6 +338,10 @@ impl Rocks {
             AddressSignatures::NAME,
             get_cf_options::<AddressSignatures>(&access_type, &oldest_slot),
         );
+        let transaction_memos_cf_descriptor = ColumnFamilyDescriptor::new(
+            TransactionMemos::NAME,
+            get_cf_options::<TransactionMemos>(&access_type, &oldest_slot),
+        );
         let transaction_status_index_cf_descriptor = ColumnFamilyDescriptor::new(
             TransactionStatusIndex::NAME,
             get_cf_options::<TransactionStatusIndex>(&access_type, &oldest_slot),
@@ -372,6 +382,7 @@ impl Rocks {
             (ShredCode::NAME, shred_code_cf_descriptor),
             (TransactionStatus::NAME, transaction_status_cf_descriptor),
             (AddressSignatures::NAME, address_signatures_cf_descriptor),
+            (TransactionMemos::NAME, transaction_memos_cf_descriptor),
             (
                 TransactionStatusIndex::NAME,
                 transaction_status_index_cf_descriptor,
@@ -421,9 +432,9 @@ impl Rocks {
         // this is only needed for LedgerCleanupService. so guard with PrimaryOnly (i.e. running safecoin-validator)
         if matches!(access_type, AccessType::PrimaryOnly) {
             for cf_name in cf_names {
-                // this special column family must be excluded from LedgerCleanupService's rocksdb
+                // these special column families must be excluded from LedgerCleanupService's rocksdb
                 // compactions
-                if cf_name == TransactionStatusIndex::NAME {
+                if excludes_from_compaction(cf_name) {
                     continue;
                 }
 
@@ -494,6 +505,7 @@ impl Rocks {
             ShredCode::NAME,
             TransactionStatus::NAME,
             AddressSignatures::NAME,
+            TransactionMemos::NAME,
             TransactionStatusIndex::NAME,
             Rewards::NAME,
             Blocktime::NAME,
@@ -587,6 +599,10 @@ pub trait TypedColumn: Column {
 
 impl TypedColumn for columns::AddressSignatures {
     type Type = blockstore_meta::AddressSignatureMeta;
+}
+
+impl TypedColumn for columns::TransactionMemos {
+    type Type = String;
 }
 
 impl TypedColumn for columns::TransactionStatusIndex {
@@ -701,6 +717,37 @@ impl Column for columns::AddressSignatures {
 
 impl ColumnName for columns::AddressSignatures {
     const NAME: &'static str = ADDRESS_SIGNATURES_CF;
+}
+
+impl Column for columns::TransactionMemos {
+    type Index = Signature;
+
+    fn key(signature: Signature) -> Vec<u8> {
+        let mut key = vec![0; 64]; // size_of Signature
+        key[0..64].clone_from_slice(&signature.as_ref()[0..64]);
+        key
+    }
+
+    fn index(key: &[u8]) -> Signature {
+        Signature::new(&key[0..64])
+    }
+
+    fn primary_index(_index: Self::Index) -> u64 {
+        unimplemented!()
+    }
+
+    fn slot(_index: Self::Index) -> Slot {
+        unimplemented!()
+    }
+
+    #[allow(clippy::wrong_self_convention)]
+    fn as_index(_index: u64) -> Self::Index {
+        Signature::default()
+    }
+}
+
+impl ColumnName for columns::TransactionMemos {
+    const NAME: &'static str = TRANSACTION_MEMOS_CF;
 }
 
 impl Column for columns::TransactionStatusIndex {
@@ -1305,7 +1352,7 @@ fn get_cf_options<C: 'static + Column + ColumnName>(
 ) -> Options {
     let mut options = Options::default();
     // 256 * 8 = 2GB. 6 of these columns should take at most 12GB of RAM
-    options.set_max_write_buffer_number(30);
+    options.set_max_write_buffer_number(8);
     options.set_write_buffer_size(MAX_WRITE_BUFFER_SIZE as usize);
     let file_num_compaction_trigger = 4;
     // Recommend that this be around the size of level 0. Level 0 estimated size in stable state is
@@ -1319,9 +1366,7 @@ fn get_cf_options<C: 'static + Column + ColumnName>(
 
     // TransactionStatusIndex must be excluded from LedgerCleanupService's rocksdb
     // compactions....
-    if matches!(access_type, AccessType::PrimaryOnly)
-        && C::NAME != columns::TransactionStatusIndex::NAME
-    {
+    if matches!(access_type, AccessType::PrimaryOnly) && !excludes_from_compaction(C::NAME) {
         options.set_compaction_filter_factory(PurgedSlotFilterFactory::<C> {
             oldest_slot: oldest_slot.clone(),
             name: CString::new(format!("purged_slot_filter_factory({})", C::NAME)).unwrap(),
@@ -1359,6 +1404,19 @@ fn get_db_options(access_type: &AccessType) -> Options {
     }
 
     options
+}
+
+fn excludes_from_compaction(cf_name: &str) -> bool {
+    // list of Column Families must be excluded from compaction:
+    let no_compaction_cfs: HashSet<&'static str> = vec![
+        columns::TransactionStatusIndex::NAME,
+        columns::ProgramCosts::NAME,
+        columns::TransactionMemos::NAME,
+    ]
+    .into_iter()
+    .collect();
+
+    no_compaction_cfs.get(cf_name).is_some()
 }
 
 #[cfg(test)]
@@ -1412,5 +1470,16 @@ pub mod tests {
             compaction_filter.filter(dummy_level, &key, &dummy_value),
             CompactionDecision::Keep
         );
+    }
+
+    #[test]
+    fn test_excludes_from_compaction() {
+        // currently there are two CFs are excluded from compaction:
+        assert!(excludes_from_compaction(
+            columns::TransactionStatusIndex::NAME
+        ));
+        assert!(excludes_from_compaction(columns::ProgramCosts::NAME));
+        assert!(excludes_from_compaction(columns::TransactionMemos::NAME));
+        assert!(!excludes_from_compaction("something else"));
     }
 }

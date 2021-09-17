@@ -113,9 +113,11 @@ pub(crate) struct GossipStats {
     pub(crate) skip_pull_response_shred_version: Counter,
     pub(crate) skip_pull_shred_version: Counter,
     pub(crate) skip_push_message_shred_version: Counter,
+    pub(crate) trim_crds_table: Counter,
     pub(crate) trim_crds_table_failed: Counter,
     pub(crate) trim_crds_table_purged_values_count: Counter,
     pub(crate) tvu_peers: Counter,
+    pub(crate) verify_gossip_packets_time: Counter,
 }
 
 pub(crate) fn submit_gossip_stats(
@@ -167,6 +169,11 @@ pub(crate) fn submit_gossip_stats(
         (
             "process_gossip_packets_time",
             stats.process_gossip_packets_time.clear(),
+            i64
+        ),
+        (
+            "verify_gossip_packets_time",
+            stats.verify_gossip_packets_time.clear(),
             i64
         ),
         (
@@ -390,6 +397,7 @@ pub(crate) fn submit_gossip_stats(
             stats.require_stake_for_gossip_unknown_stakes.clear(),
             i64
         ),
+        ("trim_crds_table", stats.trim_crds_table.clear(), i64),
         (
             "trim_crds_table_failed",
             stats.trim_crds_table_failed.clear(),

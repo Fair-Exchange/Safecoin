@@ -144,7 +144,7 @@ impl ExecuteTimings {
 }
 
 type BankStatusCache = StatusCache<Result<()>>;
-#[frozen_abi(digest = "HhY4tMP5KZU9fw9VLpMMUikfvNVCLksocZBUKjt8ZjYH")]
+#[frozen_abi(digest = "5Br3PNyyX1L7XoS4jYLt5JTeMXowLSsu7v9LhokC8vnq")]
 pub type BankSlotDelta = SlotDelta<Result<()>>;
 type TransactionAccountRefCells = Vec<Rc<RefCell<AccountSharedData>>>;
 type TransactionAccountDepRefCells = Vec<(Pubkey, Rc<RefCell<AccountSharedData>>)>;
@@ -2468,32 +2468,27 @@ impl Bank {
         tick_height % self.ticks_per_slot == 0
     }
 
-    pub fn demote_sysvar_write_locks(&self) -> bool {
-        self.feature_set
-            .is_active(&feature_set::demote_sysvar_write_locks::id())
-    }
-
     pub fn prepare_batch<'a, 'b>(
         &'a self,
         txs: impl Iterator<Item = &'b Transaction>,
     ) -> TransactionBatch<'a, 'b> {
         let hashed_txs: Vec<HashedTransaction> = txs.map(HashedTransaction::from).collect();
-        let lock_results = self.rc.accounts.lock_accounts(
-            hashed_txs.as_transactions_iter(),
-            self.demote_sysvar_write_locks(),
-        );
-        TransactionBatch::new(lock_results, &self, Cow::Owned(hashed_txs))
+        let lock_results = self
+            .rc
+            .accounts
+            .lock_accounts(hashed_txs.as_transactions_iter());
+        TransactionBatch::new(lock_results, self, Cow::Owned(hashed_txs))
     }
 
     pub fn prepare_hashed_batch<'a, 'b>(
         &'a self,
         hashed_txs: &'b [HashedTransaction],
     ) -> TransactionBatch<'a, 'b> {
-        let lock_results = self.rc.accounts.lock_accounts(
-            hashed_txs.as_transactions_iter(),
-            self.demote_sysvar_write_locks(),
-        );
-        TransactionBatch::new(lock_results, &self, Cow::Borrowed(hashed_txs))
+        let lock_results = self
+            .rc
+            .accounts
+            .lock_accounts(hashed_txs.as_transactions_iter());
+        TransactionBatch::new(lock_results, self, Cow::Borrowed(hashed_txs))
     }
 
     pub(crate) fn prepare_simulation_batch<'a, 'b>(
@@ -2560,11 +2555,9 @@ impl Bank {
     pub fn unlock_accounts(&self, batch: &mut TransactionBatch) {
         if batch.needs_unlock {
             batch.needs_unlock = false;
-            self.rc.accounts.unlock_accounts(
-                batch.transactions_iter(),
-                batch.lock_results(),
-                self.demote_sysvar_write_locks(),
-            )
+            self.rc
+                .accounts
+                .unlock_accounts(batch.transactions_iter(), batch.lock_results())
         }
     }
 
@@ -2702,7 +2695,7 @@ impl Bank {
             ClusterType::Development => false,
             ClusterType::Devnet => false,
             ClusterType::Testnet => false,
-            ClusterType::MainnetBeta => false,
+            ClusterType::MainnetBeta => self.epoch == 61,
         }
     }
 
@@ -2816,6 +2809,12 @@ impl Bank {
             inc_new_counter_info!(
                 "bank-process_transactions-error-cluster-maintenance",
                 error_counters.not_allowed_during_cluster_maintenance
+            );
+        }
+        if 0 != error_counters.invalid_writable_account {
+            inc_new_counter_info!(
+                "bank-process_transactions-error-invalid_writable_account",
+                error_counters.invalid_writable_account
             );
         }
     }
@@ -3303,7 +3302,6 @@ impl Bank {
             &self.rent_collector,
             &self.last_blockhash_with_fee_calculator(),
             self.fix_recent_blockhashes_sysvar_delay(),
-            self.demote_sysvar_write_locks(),
             self.merge_nonce_error_into_system_error(),
         );
         let rent_debits = self.collect_rent(executed, loaded_accounts);
@@ -4425,7 +4423,6 @@ impl Bank {
     }
 
     pub fn calculate_and_verify_capitalization(&self) -> bool {
-                *self.inflation.write().unwrap() = Inflation::full();
         let calculated = self.calculate_capitalization();
         let expected = self.capitalization();
         if calculated == expected {
@@ -4472,7 +4469,7 @@ impl Bank {
                 &self.ancestors,
                 Some(self.capitalization()),
             );
-        if total_lamports  != self.capitalization() {
+        if total_lamports != self.capitalization() {
             datapoint_info!(
                 "capitalization_mismatch",
                 ("slot", self.slot(), i64),
@@ -4884,7 +4881,7 @@ impl Bank {
         let new_feature_activations = self.compute_active_feature_set(!init_finish_or_warp);
 
         if new_feature_activations.contains(&feature_set::pico_inflation::id()) {
-            *self.inflation.write().unwrap() = Inflation::full();
+            *self.inflation.write().unwrap() = Inflation::pico();
             self.fee_rate_governor.burn_percent = 50; // 50% fee burn
             self.rent_collector.rent.burn_percent = 50; // 50% rent burn
         }
@@ -4896,8 +4893,8 @@ impl Bank {
             self.rent_collector.rent.burn_percent = 50; // 50% rent burn
         }
 
-        if new_feature_activations.contains(&feature_set::spl_token_v2_self_transfer_fix::id()) {
-            self.apply_spl_token_v2_self_transfer_fix();
+        if new_feature_activations.contains(&feature_set::spl_token_v2_set_authority_fix::id()) {
+            self.apply_spl_token_v2_set_authority_fix();
         }
         // Remove me after a while around v1.6
         if !self.no_stake_rewrite.load(Relaxed)
@@ -4985,13 +4982,13 @@ impl Bank {
         }
     }
 
-    fn apply_spl_token_v2_self_transfer_fix(&mut self) {
+    fn apply_spl_token_v2_set_authority_fix(&mut self) {
         if let Some(old_account) = self.get_account(&inline_spl_token_v2_0::id()) {
             if let Some(new_account) =
                 self.get_account(&inline_spl_token_v2_0::new_token_program::id())
             {
                 datapoint_info!(
-                    "bank-apply_spl_token_v2_self_transfer_fix",
+                    "bank-apply_spl_token_v2_set_authority_fix",
                     ("slot", self.slot, i64),
                 );
 
@@ -5016,7 +5013,7 @@ impl Bank {
             ClusterType::Development => true,
             ClusterType::Devnet => true,
             ClusterType::Testnet => self.epoch() == 93,
-            ClusterType::MainnetBeta => self.epoch() == 61,
+            ClusterType::MainnetBeta => self.epoch() == 99999999,
         };
 
         if reconfigure_token2_native_mint {
@@ -6088,10 +6085,7 @@ pub(crate) mod tests {
 
         assert_eq!(
             bank.process_transaction(&tx),
-            Err(TransactionError::InstructionError(
-                0,
-                InstructionError::ExecutableLamportChange
-            ))
+            Err(TransactionError::InvalidWritableAccount)
         );
         assert_eq!(bank.get_balance(&account_pubkey), account_balance);
     }
@@ -7503,13 +7497,14 @@ pub(crate) mod tests {
         assert_eq!(bank.get_balance(&sysvar_pubkey), 1);
 
         bank.transfer(500, &mint_keypair, &normal_pubkey).unwrap();
-        bank.transfer(500, &mint_keypair, &sysvar_pubkey).unwrap();
+        bank.transfer(500, &mint_keypair, &sysvar_pubkey)
+            .unwrap_err();
         assert_eq!(bank.get_balance(&normal_pubkey), 500);
-        assert_eq!(bank.get_balance(&sysvar_pubkey), 501);
+        assert_eq!(bank.get_balance(&sysvar_pubkey), 1);
 
         let bank = Arc::new(new_from_parent(&bank));
         assert_eq!(bank.get_balance(&normal_pubkey), 500);
-        assert_eq!(bank.get_balance(&sysvar_pubkey), 501);
+        assert_eq!(bank.get_balance(&sysvar_pubkey), 1);
     }
 
     #[test]
@@ -9661,7 +9656,9 @@ pub(crate) mod tests {
         assert_eq!(bank.process_transaction(&durable_tx), Ok(()));
 
         /* Check balances */
-        assert_eq!(bank.get_balance(&custodian_pubkey), 4_640_000);
+        let mut expected_balance =
+            4_650_000 - bank.fee_calculator.calculate_fee(&durable_tx.message);
+        assert_eq!(bank.get_balance(&custodian_pubkey), expected_balance);
         assert_eq!(bank.get_balance(&nonce_pubkey), 250_000);
         assert_eq!(bank.get_balance(&alice_pubkey), 100_000);
 
@@ -9684,7 +9681,7 @@ pub(crate) mod tests {
             Err(TransactionError::BlockhashNotFound)
         );
         /* Check fee not charged and nonce not advanced */
-        assert_eq!(bank.get_balance(&custodian_pubkey), 4_640_000);
+        assert_eq!(bank.get_balance(&custodian_pubkey), expected_balance);
         assert_eq!(new_nonce, get_nonce_account(&bank, &nonce_pubkey).unwrap());
 
         let nonce_hash = new_nonce;
@@ -9712,7 +9709,8 @@ pub(crate) mod tests {
             ))
         );
         /* Check fee charged and nonce has advanced */
-        assert_eq!(bank.get_balance(&custodian_pubkey), 4_630_000);
+        expected_balance -= bank.fee_calculator.calculate_fee(&durable_tx.message);
+        assert_eq!(bank.get_balance(&custodian_pubkey), expected_balance);
         assert_ne!(nonce_hash, get_nonce_account(&bank, &nonce_pubkey).unwrap());
         /* Confirm replaying a TX that failed with InstructionError::* now
          * fails with TransactionError::BlockhashNotFound
@@ -9780,8 +9778,10 @@ pub(crate) mod tests {
     #[test]
     fn test_nonce_payer() {
         solana_logger::setup();
+        let nonce_starting_balance = 250_000;
         let (mut bank, _mint_keypair, custodian_keypair, nonce_keypair) =
-            setup_nonce_with_bank(10_000_000, |_| {}, 5_000_000, 250_000, None).unwrap();
+            setup_nonce_with_bank(10_000_000, |_| {}, 5_000_000, nonce_starting_balance, None)
+                .unwrap();
         let alice_keypair = Keypair::new();
         let alice_pubkey = alice_keypair.pubkey();
         let custodian_pubkey = custodian_keypair.pubkey();
@@ -9817,7 +9817,10 @@ pub(crate) mod tests {
             ))
         );
         /* Check fee charged and nonce has advanced */
-        assert_eq!(bank.get_balance(&nonce_pubkey), 240_000);
+        assert_eq!(
+            bank.get_balance(&nonce_pubkey),
+            nonce_starting_balance - bank.fee_calculator.calculate_fee(&durable_tx.message)
+        );
         assert_ne!(nonce_hash, get_nonce_account(&bank, &nonce_pubkey).unwrap());
     }
 
@@ -11351,7 +11354,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_spl_token_v2_self_transfer_fix() {
+    fn test_spl_token_v2_replacement() {
         let (genesis_config, _mint_keypair) = create_genesis_config(0);
         let mut bank = Bank::new(&genesis_config);
 
@@ -11381,7 +11384,7 @@ pub(crate) mod tests {
 
         let original_capitalization = bank.capitalization();
 
-        bank.apply_spl_token_v2_self_transfer_fix();
+        bank.apply_spl_token_v2_set_authority_fix();
 
         // New token account is now empty
         assert_eq!(
