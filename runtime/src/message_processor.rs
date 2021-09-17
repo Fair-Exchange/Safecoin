@@ -13,7 +13,7 @@ use solana_sdk::{
         updated_verify_policy, FeatureSet,
     },
     ic_msg,
-    instruction::{CompiledInstruction, Instruction, InstructionError, VoterGroup},
+    instruction::{CompiledInstruction, Instruction, InstructionError},
     keyed_account::{create_keyed_readonly_accounts, KeyedAccount},
     message::Message,
     native_loader,
@@ -282,7 +282,6 @@ pub struct ThisInvokeContext<'a> {
     ancestors: &'a Ancestors,
     #[allow(clippy::type_complexity)]
     sysvars: RefCell<Vec<(Pubkey, Option<Rc<Vec<u8>>>)>>,
-    voter_grp : &'a dyn VoterGroup
 }
 impl<'a> ThisInvokeContext<'a> {
     #[allow(clippy::too_many_arguments)]
@@ -300,7 +299,6 @@ impl<'a> ThisInvokeContext<'a> {
         feature_set: Arc<FeatureSet>,
         account_db: Arc<Accounts>,
         ancestors: &'a Ancestors,
-        voter_grp: &'a dyn VoterGroup,
     ) -> Self {
         let mut program_ids = Vec::with_capacity(bpf_compute_budget.max_invoke_depth);
         program_ids.push(*program_id);
@@ -323,7 +321,6 @@ impl<'a> ThisInvokeContext<'a> {
             account_db,
             ancestors,
             sysvars: RefCell::new(vec![]),
-            voter_grp,
         }
     }
 }
@@ -463,10 +460,6 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
         } else {
             None
         }
-    }
-    
-    fn voter_group(&self) -> & dyn VoterGroup {
-        self.voter_grp
     }
 }
 pub struct ThisLogger {
@@ -1103,7 +1096,6 @@ impl MessageProcessor {
         demote_sysvar_write_locks: bool,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
-        voter_grp : &dyn VoterGroup,
     ) -> Result<(), InstructionError> {
         // Fixup the special instructions key if present
         // before the account pre-values are taken care of
@@ -1136,7 +1128,6 @@ impl MessageProcessor {
             feature_set,
             account_db,
             ancestors,
-            voter_grp,
         );
         let keyed_accounts = Self::create_keyed_accounts(
             message,
@@ -1188,7 +1179,6 @@ impl MessageProcessor {
         timings: &mut ExecuteDetailsTimings,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
-        voter_grp: &dyn VoterGroup,
     ) -> Result<(), TransactionError> {
         let demote_sysvar_write_locks = feature_set.is_active(&demote_sysvar_write_locks::id());
         for (instruction_index, instruction) in message.instructions.iter().enumerate() {
@@ -1212,7 +1202,6 @@ impl MessageProcessor {
                 demote_sysvar_write_locks,
                 account_db.clone(),
                 ancestors,
-                voter_grp,
             )
             .map_err(|err| TransactionError::InstructionError(instruction_index as u8, err))?;
         }
@@ -1230,21 +1219,6 @@ mod tests {
         native_loader::create_loadable_account_for_test,
     };
 
-    struct MockVoterGroup {
-        in_group: bool,
-    }
-    impl MockVoterGroup {
-        pub fn new() -> Self {
-            Self {
-                in_group: true,
-            }
-        }
-    }
-    impl VoterGroup for MockVoterGroup {
-        fn in_group(&self, _: solana_sdk::clock::Slot, _: solana_sdk::hash::Hash, _: solana_sdk::pubkey::Pubkey) -> bool {
-            self.in_group
-        }
-    }    
     #[test]
     fn test_invoke_context() {
         const MAX_DEPTH: usize = 10;
@@ -1268,7 +1242,6 @@ mod tests {
         }
 
         let ancestors = Ancestors::default();
-        let mvg = MockVoterGroup::new();
         let mut invoke_context = ThisInvokeContext::new(
             &program_ids[0],
             Rent::default(),
@@ -1283,7 +1256,6 @@ mod tests {
             Arc::new(FeatureSet::all_enabled()),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mvg,
         );
 
         // Check call depth increases and has a limit
@@ -1868,7 +1840,6 @@ mod tests {
             Some(&from_pubkey),
         );
 
-        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -1883,7 +1854,6 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mvg,
         );
         assert_eq!(result, Ok(()));
         assert_eq!(accounts[0].borrow().lamports, 100);
@@ -1898,7 +1868,6 @@ mod tests {
             Some(&from_pubkey),
         );
 
-        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -1913,7 +1882,6 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mvg,
         );
         assert_eq!(
             result,
@@ -1932,7 +1900,6 @@ mod tests {
             Some(&from_pubkey),
         );
 
-        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -1947,7 +1914,6 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mvg,
         );
         assert_eq!(
             result,
@@ -2053,7 +2019,6 @@ mod tests {
             )],
             Some(&from_pubkey),
         );
-        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2068,7 +2033,6 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mvg,
         );
         assert_eq!(
             result,
@@ -2087,7 +2051,6 @@ mod tests {
             )],
             Some(&from_pubkey),
         );
-        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2102,7 +2065,6 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mvg,
         );
         assert_eq!(result, Ok(()));
 
@@ -2119,7 +2081,6 @@ mod tests {
             Some(&from_pubkey),
         );
         let ancestors = Ancestors::default();
-        let mvg = MockVoterGroup::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2134,7 +2095,6 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mvg,
         );
         assert_eq!(result, Ok(()));
         assert_eq!(accounts[0].borrow().lamports, 80);
@@ -2209,7 +2169,6 @@ mod tests {
         let programs: Vec<(_, ProcessInstructionWithContext)> =
             vec![(callee_program_id, mock_process_instruction)];
         let ancestors = Ancestors::default();
-        let mvg = MockVoterGroup::new();
         let mut invoke_context = ThisInvokeContext::new(
             &caller_program_id,
             Rent::default(),
@@ -2228,7 +2187,6 @@ mod tests {
             Arc::new(FeatureSet::all_enabled()),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mvg,
         );
         let metas = vec![
             AccountMeta::new(owned_key, false),
