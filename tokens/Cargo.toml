@@ -30,7 +30,7 @@ safecoin-sdk = { path = "../sdk", version = "=1.6.25" }
 safecoin-stake-program = { path = "../programs/stake", version = "=1.6.25" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.6.25" }
 safecoin-version = { path = "../version", version = "=1.6.25" }
-safe-associated-token-account-v1-0 = { package = "safe-associated-token-account", version = "=1.0.2" }
+safe-associated-token-account-v1-0 = { package = "safe-associated-token-account", version = "=1.0.7" }
 spl-token-v2-0 = { package = "safe-token", version = "=3.1.6", features = ["no-entrypoint"] }
 tempfile = "3.1.0"
 thiserror = "1.0"

@@ -23,7 +23,7 @@ safecoin-sdk = { path = "../sdk", version = "=1.6.25" }
 safecoin-runtime = { path = "../runtime", version = "=1.6.25" }
 safecoin-stake-program = { path = "../programs/stake", version = "=1.6.25" }
 safecoin-vote-program = { path = "../programs/vote", version = "=1.6.25" }
-safe-associated-token-account-v1-0 = { package = "safe-associated-token-account", version = "=1.0.2", features = ["no-entrypoint"] }
+safe-associated-token-account-v1-0 = { package = "safe-associated-token-account", version = "=1.0.7", features = ["no-entrypoint"] }
 safe-memo = { version = "=3.0.4", features = ["no-entrypoint"] }
 spl-token-v2-0 = { package = "safe-token", version = "=3.1.6", features = ["no-entrypoint"] }
 thiserror = "1.0"
