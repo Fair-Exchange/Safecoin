@@ -164,6 +164,7 @@ pub mod merge_nonce_error_into_system_error {
 
 pub mod spl_token_v2_set_authority_fix {
     solana_sdk::declare_id!("Cb3jN13cfCNDV9dp36djNpcZXF7r82UAE4U1tZjXnFx5");
+}
 
 pub mod voter_groups_consensus {
     solana_sdk::declare_id!("5jvJyof7JXy7JEwGag4qdEuCA2DuEhkQSKMaEsELJxQU");
