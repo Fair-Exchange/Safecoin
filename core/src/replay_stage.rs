@@ -56,6 +56,7 @@ use safecoin_sdk::{
     signature::{Keypair, Signer},
     timing::timestamp,
     transaction::Transaction,
+    instruction::VoterGroup,
 };
 use solana_vote_program::vote_state::Vote;
 use std::{
@@ -1401,7 +1402,6 @@ impl ReplayStage {
         Self::update_commitment_cache(
             bank.clone(),
             bank_forks.read().unwrap().root(),
-            progress.get_fork_stats(bank.slot()).unwrap().total_stake,
             lockouts_sender,
         );
         update_commitment_cache_time.stop();
@@ -1434,6 +1434,24 @@ impl ReplayStage {
         if authorized_voter_keypairs.is_empty() {
             return None;
         }
+
+        log::trace!("authorized_voter_pubkey {}", vote_account_pubkey);
+        log::trace!("authorized_voter_pubkey_string {}", vote_account_pubkey.to_string());
+        log::trace!("vote_hash: {}", vote.hash);
+  
+        let in_group = bank.in_group(vote.slots[0],vote.hash,*vote_account_pubkey);
+
+        if in_group {
+            warn!(
+                "I ({}) will vote if I can!!!",*vote_account_pubkey
+            );
+        } else {
+            warn!(
+                "Vote account has no authorized voter for slot.  Unable to vote"
+            );       
+            return None;
+        }
+
         let vote_account = match bank.get_vote_account(vote_account_pubkey) {
             None => {
                 warn!(
@@ -1626,11 +1644,10 @@ impl ReplayStage {
     fn update_commitment_cache(
         bank: Arc<Bank>,
         root: Slot,
-        total_stake: Stake,
         lockouts_sender: &Sender<CommitmentAggregationData>,
     ) {
         if let Err(e) =
-            lockouts_sender.send(CommitmentAggregationData::new(bank, root, total_stake))
+            lockouts_sender.send(CommitmentAggregationData::new(bank, root ))
         {
             trace!("lockouts_sender failed: {:?}", e);
         }
@@ -3286,7 +3303,6 @@ mod tests {
             ReplayStage::update_commitment_cache(
                 arc_bank.clone(),
                 0,
-                leader_lamports,
                 &lockouts_sender,
             );
             arc_bank.freeze();

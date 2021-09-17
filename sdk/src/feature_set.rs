@@ -227,6 +227,14 @@ pub mod remove_native_loader {
     safecoin_sdk::declare_id!("HTTgmruMYRZEntyL3EdCDdnS6e4D5wRq1FA7kQsb66qq");
 }
 
+pub mod spl_token_v2_set_authority_fix {
+    safecoin_sdk::declare_id!("Cb3jN13cfCNDV9dp36djNpcZXF7r82UAE4U1tZjXnFx5");
+}
+
+pub mod voter_groups_consensus {
+    safecoin_sdk::declare_id!("5jvJyof7JXy7JEwGag4qdEuCA2DuEhkQSKMaEsELJxQU");
+}
+
 lazy_static! {
     /// Map of feature identifiers to user-visible description
     pub static ref FEATURE_NAMES: HashMap<Pubkey, &'static str> = [
@@ -284,6 +292,8 @@ lazy_static! {
         (send_to_tpu_vote_port::id(), "Send votes to the tpu vote port"),
         (optimize_epoch_boundary_updates::id(), "Optimize epoch boundary updates"),
         (remove_native_loader::id(), "Remove support for the native loader"),
+        (spl_token_v2_set_authority_fix::id(), "safe-token set_authority fix"),
+        (voter_groups_consensus::id(), "use a random subset of voters for block consensus"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()

@@ -300,7 +300,7 @@ impl JsonRpcRequestProcessor {
             bank_forks,
             block_commitment_cache: Arc::new(RwLock::new(BlockCommitmentCache::new(
                 HashMap::new(),
-                0,
+                0.6,
                 CommitmentSlots::new_from_slot(bank.slot()),
             ))),
             blockstore,
@@ -609,7 +609,7 @@ impl JsonRpcRequestProcessor {
             commitment: r_block_commitment
                 .get_block_commitment(block)
                 .map(|block_commitment| block_commitment.commitment),
-            total_stake: r_block_commitment.total_stake(),
+            threshold: r_block_commitment.threshold(),
         }
     }
 
