@@ -11,6 +11,7 @@ use crate::{
     accounts_index::{AccountSecondaryIndexes, Ancestors, IndexKey},
     blockhash_queue::BlockhashQueue,
     builtins::{self, ActivationType},
+    commitment::{VOTE_GROUP_COUNT, VOTE_THRESHOLD_SIZE},
     epoch_stakes::{EpochStakes, NodeVoteAccounts},
     hashed_transaction::{HashedTransaction, HashedTransactionSlice},
     inline_spl_token_v2_0,
@@ -55,7 +56,7 @@ use solana_sdk::{
     hash::{extend_and_hash, hashv, Hash},
     incinerator,
     inflation::Inflation,
-    instruction::CompiledInstruction,
+    instruction::{CompiledInstruction, VoterGroup},
     message::Message,
     native_loader,
     native_token::sol_to_lamports,
@@ -3084,6 +3085,7 @@ impl Bank {
                         &mut timings.details,
                         self.rc.accounts.clone(),
                         &self.ancestors,
+                        self,
                     );
 
                     if enable_log_recording {
@@ -5119,6 +5121,50 @@ impl Bank {
                 .feature_set
                 .is_active(&feature_set::consistent_recent_blockhashes_sysvar::id()),
         }
+    }
+
+    ///  This simply returns _me_ but in the limited capacity of
+    ///  providing the vote threshold:
+    ///  sort of a hack to get around the fact that the banks are shared
+    ///  with everything and *between threads* but I don't want to test everything.
+    pub fn threshold_delegate(&self) -> &dyn BankVoteThreshold {
+        self
+    }
+}
+
+pub trait BankVoteThreshold {
+    fn epoch_vote_threshold(&self) -> Option<f64>;
+}
+
+impl BankVoteThreshold for Bank {
+    /// The stake weight necessary to root a block in a given epoch
+    /// and to be pedantic it is defined as:
+    /// the average stake for each authorized voter
+    /// multiplied by the expected number of voters (a subset of all authorized voters)
+    /// multiplied by the majority ratio (aka VOTE_THRESHOLD_SIZE)
+
+    fn epoch_vote_threshold(&self) -> Option<f64> {
+        if let Some(epoch_stakes) = self.epoch_stakes(self.epoch()) {
+                let avg_stake: f64 = epoch_stakes.total_stake() as f64
+                    / epoch_stakes.epoch_authorized_voters().len() as f64;
+                let res = avg_stake * VOTE_GROUP_COUNT as f64 * VOTE_THRESHOLD_SIZE as f64;
+                return Some(res);
+        }
+        None
+    }
+}
+
+impl VoterGroup for Bank {
+    /// determine if a voter is in the group for a given slot
+    fn in_group(&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
+            let epoch = self.epoch_schedule.get_epoch(slot);
+            match self.epoch_stakes.get(&epoch) {
+                None => panic!("No epoch"),
+                Some(stakes) => {
+                    let vgr = stakes.get_group_genr();
+                    return vgr.in_group_for_hash(hash, voter);
+                }
+            }
     }
 }
 
