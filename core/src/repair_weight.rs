@@ -2,7 +2,7 @@ use crate::{
     heaviest_subtree_fork_choice::HeaviestSubtreeForkChoice, repair_service::RepairTiming,
     repair_weighted_traversal, serve_repair::RepairType, tree_diff::TreeDiff,
 };
-use safecoin_ledger::{ancestor_iterator::AncestorIterator, blockstore::Blockstore};
+use solana_ledger::{ancestor_iterator::AncestorIterator, blockstore::Blockstore};
 use safecoin_measure::measure::Measure;
 use solana_runtime::{contains::Contains, epoch_stakes::EpochStakes};
 use solana_sdk::{
@@ -532,7 +532,7 @@ impl RepairWeight {
 #[cfg(test)]
 mod test {
     use super::*;
-    use safecoin_ledger::{blockstore::Blockstore, get_tmp_ledger_path};
+    use solana_ledger::{blockstore::Blockstore, get_tmp_ledger_path};
     use solana_runtime::{bank::Bank, bank_utils};
     use solana_sdk::hash::Hash;
     use trees::tr;

@@ -3,7 +3,7 @@ authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "safecoin-validator"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.6.19"
+version = "1.6.25"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -19,30 +19,30 @@ console = "0.11.3"
 core_affinity = "0.5.10"
 fd-lock = "2.0.0"
 indicatif = "0.15.0"
-jsonrpc-core = "17.1.0"
-jsonrpc-core-client = { version = "17.1.0", features = ["ipc", "ws"] }
-jsonrpc-derive = "17.1.0"
-jsonrpc-ipc-server = "17.1.0"
-jsonrpc-server-utils= "17.1.0"
+jsonrpc-core = "18.0.0"
+jsonrpc-core-client = { version = "18.0.0", features = ["ipc", "ws"] }
+jsonrpc-derive = "18.0.0"
+jsonrpc-ipc-server = "18.0.0"
+jsonrpc-server-utils= "18.0.0"
 log = "0.4.11"
 num_cpus = "1.13.0"
 rand = "0.7.0"
 serde = "1.0.112"
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.19" }
-safecoin-cli-config = { path = "../cli-config", version = "=1.6.19" }
-safecoin-client = { path = "../client", version = "=1.6.19" }
-safecoin-core = { path = "../core", version = "=1.6.19" }
-safecoin-download-utils = { path = "../download-utils", version = "=1.6.19" }
-safecoin-faucet = { path = "../faucet", version = "=1.6.19" }
-safecoin-ledger = { path = "../ledger", version = "=1.6.19" }
-safecoin-logger = { path = "../logger", version = "=1.6.19" }
-safecoin-metrics = { path = "../metrics", version = "=1.6.19" }
-safecoin-net-utils = { path = "../net-utils", version = "=1.6.19" }
-safecoin-perf = { path = "../perf", version = "=1.6.19" }
-safecoin-runtime = { path = "../runtime", version = "=1.6.19" }
-safecoin-sdk = { path = "../sdk", version = "=1.6.19" }
-safecoin-version = { path = "../version", version = "=1.6.19" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.6.19" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.25" }
+safecoin-cli-config = { path = "../cli-config", version = "=1.6.25" }
+safecoin-client = { path = "../client", version = "=1.6.25" }
+safecoin-core = { path = "../core", version = "=1.6.25" }
+safecoin-download-utils = { path = "../download-utils", version = "=1.6.25" }
+safecoin-faucet = { path = "../faucet", version = "=1.6.25" }
+safecoin-ledger = { path = "../ledger", version = "=1.6.25" }
+safecoin-logger = { path = "../logger", version = "=1.6.25" }
+safecoin-metrics = { path = "../metrics", version = "=1.6.25" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.6.25" }
+safecoin-perf = { path = "../perf", version = "=1.6.25" }
+safecoin-runtime = { path = "../runtime", version = "=1.6.25" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.25" }
+safecoin-version = { path = "../version", version = "=1.6.25" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.6.25" }
 symlink = "0.1.0"
 
 [target."cfg(unix)".dependencies]

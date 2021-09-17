@@ -3,7 +3,7 @@ use crate::{
     progress_map::{LockoutIntervals, ProgressMap},
 };
 use chrono::prelude::*;
-use safecoin_ledger::{ancestor_iterator::AncestorIterator, blockstore::Blockstore, blockstore_db};
+use solana_ledger::{ancestor_iterator::AncestorIterator, blockstore::Blockstore, blockstore_db};
 use safecoin_measure::measure::Measure;
 use solana_runtime::{
     bank::Bank, bank_forks::BankForks, commitment::VOTE_THRESHOLD_SIZE,
@@ -1318,7 +1318,7 @@ pub mod test {
         replay_stage::{HeaviestForkFailures, ReplayStage},
         unfrozen_gossip_verified_vote_hashes::UnfrozenGossipVerifiedVoteHashes,
     };
-    use safecoin_ledger::{blockstore::make_slot_entries, get_tmp_ledger_path};
+    use solana_ledger::{blockstore::make_slot_entries, get_tmp_ledger_path};
     use solana_runtime::{
         accounts_background_service::AbsRequestSender,
         bank::Bank,

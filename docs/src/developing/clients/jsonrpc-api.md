@@ -3034,7 +3034,7 @@ curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
 
 Result:
 ```json
-{"jsonrpc":"2.0","result":{"safecoin-core": "1.6.19"},"id":1}
+{"jsonrpc":"2.0","result":{"safecoin-core": "1.6.25"},"id":1}
 ```
 
 ### getVoteAccounts
@@ -3241,6 +3241,8 @@ submission.
   - `skipPreflight: <bool>` - if true, skip the preflight transaction checks (default: false)
   - `preflightCommitment: <string>` - (optional) [Commitment](jsonrpc-api.md#configuring-state-commitment) level to use for preflight (default: `"finalized"`).
   - `encoding: <string>` - (optional) Encoding used for the transaction data. Either `"base58"` (*slow*, **DEPRECATED**), or `"base64"`. (default: `"base58"`).
+  - `maxRetries: <usize>` - (optional) Maximum number of times for the RPC node to retry sending the transaction to the leader.
+  If this parameter not provided, the RPC node will retry the transaction until it is finalized or until the blockhash expires.
 
 #### Results:
 

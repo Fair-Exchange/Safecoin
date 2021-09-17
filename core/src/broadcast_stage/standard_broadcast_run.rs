@@ -5,7 +5,7 @@ use super::{
     *,
 };
 use crate::broadcast_stage::broadcast_utils::UnfinishedSlotInfo;
-use safecoin_ledger::{
+use solana_ledger::{
     entry::Entry,
     shred::{
         ProcessShredsStats, Shred, Shredder, MAX_DATA_SHREDS_PER_FEC_BLOCK,
@@ -351,7 +351,7 @@ impl StandardBroadcastRun {
         if now - last > BROADCAST_PEER_UPDATE_INTERVAL_MS
             && self
                 .last_peer_update
-                .compare_and_swap(now, last, Ordering::Relaxed)
+                .compare_and_swap(last, now, Ordering::Relaxed)
                 == last
         {
             let mut w_broadcast_peer_cache = self.broadcast_peer_cache.write().unwrap();
@@ -495,8 +495,8 @@ impl BroadcastRun for StandardBroadcastRun {
 mod test {
     use super::*;
     use crate::cluster_info::{ClusterInfo, Node};
-    use safecoin_ledger::genesis_utils::create_genesis_config;
-    use safecoin_ledger::{
+    use solana_ledger::genesis_utils::create_genesis_config;
+    use solana_ledger::{
         blockstore::Blockstore, entry::create_ticks, get_tmp_ledger_path,
         shred::max_ticks_per_n_shreds,
     };

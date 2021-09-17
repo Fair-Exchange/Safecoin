@@ -19,8 +19,8 @@ use crate::{
 use crossbeam_channel::{Receiver, Sender};
 use lru::LruCache;
 use safecoin_client::rpc_response::SlotUpdate;
-use safecoin_ledger::shred::{get_shred_slot_index_type, ShredFetchStats};
-use safecoin_ledger::{
+use solana_ledger::shred::{get_shred_slot_index_type, ShredFetchStats};
+use solana_ledger::{
     blockstore::{Blockstore, CompletedSlotsReceiver},
     leader_schedule_cache::LeaderScheduleCache,
 };
@@ -691,10 +691,10 @@ impl RetransmitStage {
 mod tests {
     use super::*;
     use crate::contact_info::ContactInfo;
-    use safecoin_ledger::blockstore_processor::{process_blockstore, ProcessOptions};
-    use safecoin_ledger::create_new_tmp_ledger;
-    use safecoin_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
-    use safecoin_ledger::shred::Shred;
+    use solana_ledger::blockstore_processor::{process_blockstore, ProcessOptions};
+    use solana_ledger::create_new_tmp_ledger;
+    use solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
+    use solana_ledger::shred::Shred;
     use solana_net_utils::find_available_port_in_range;
     use solana_perf::packet::{Packet, Packets};
     use std::net::{IpAddr, Ipv4Addr};

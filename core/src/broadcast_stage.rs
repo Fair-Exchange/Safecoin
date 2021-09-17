@@ -17,7 +17,7 @@ use crossbeam_channel::{
     Receiver as CrossbeamReceiver, RecvTimeoutError as CrossbeamRecvTimeoutError,
     Sender as CrossbeamSender,
 };
-use safecoin_ledger::{blockstore::Blockstore, shred::Shred};
+use solana_ledger::{blockstore::Blockstore, shred::Shred};
 use safecoin_measure::measure::Measure;
 use solana_metrics::{inc_new_counter_error, inc_new_counter_info};
 use solana_runtime::bank::Bank;
@@ -447,7 +447,7 @@ pub mod test {
     use super::*;
     use crate::cluster_info::{ClusterInfo, Node};
     use crossbeam_channel::unbounded;
-    use safecoin_ledger::{
+    use solana_ledger::{
         blockstore::{make_slot_entries, Blockstore},
         entry::create_ticks,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},

@@ -14,7 +14,7 @@ use safecoin_clap_utils::{
     input_validators::{is_pubkey_or_keypair, is_rfc3339_datetime, is_slot, is_valid_percentage},
 };
 use safecoin_genesis::{genesis_accounts::add_genesis_accounts, Base64Account};
-use safecoin_ledger::{
+use solana_ledger::{
     blockstore::create_new_ledger, blockstore_db::AccessType, poh::compute_hashes_per_tick,
 };
 use solana_runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE;

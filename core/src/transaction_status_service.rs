@@ -1,13 +1,15 @@
 use crossbeam_channel::{Receiver, RecvTimeoutError};
 use itertools::izip;
-use safecoin_ledger::{
+use solana_ledger::{
     blockstore::Blockstore,
     blockstore_processor::{TransactionStatusBatch, TransactionStatusMessage},
 };
 use solana_runtime::bank::{
     Bank, InnerInstructionsList, NonceRollbackInfo, TransactionLogMessages,
 };
-use safecoin_transaction_status::{InnerInstructions, Reward, TransactionStatusMeta};
+use safecoin_transaction_status::{
+    extract_and_fmt_memos, InnerInstructions, Reward, TransactionStatusMeta,
+};
 use std::{
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
@@ -107,9 +109,8 @@ impl TransactionStatusService {
                             })
                             .expect("FeeCalculator must exist");
                         let fee = fee_calculator.calculate_fee(transaction.message());
-                        let (writable_keys, readonly_keys) = transaction
-                            .message
-                            .get_account_keys_by_lock_type(bank.demote_sysvar_write_locks());
+                        let (writable_keys, readonly_keys) =
+                            transaction.message.get_account_keys_by_lock_type();
 
                         let inner_instructions = inner_instructions.map(|inner_instructions| {
                             inner_instructions
@@ -140,6 +141,12 @@ impl TransactionStatusService {
                                 .collect(),
                         );
 
+                        if let Some(memos) = extract_and_fmt_memos(transaction.message()) {
+                            blockstore
+                                .write_transaction_memos(&transaction.signatures[0], memos)
+                                .expect("Expect database write to succeed: TransactionMemos");
+                        }
+
                         blockstore
                             .write_transaction_status(
                                 slot,
@@ -158,7 +165,7 @@ impl TransactionStatusService {
                                     rewards,
                                 },
                             )
-                            .expect("Expect database write to succeed");
+                            .expect("Expect database write to succeed: TransactionStatus");
                     }
                 }
             }

@@ -107,10 +107,6 @@ pub mod upgradeable_close_instruction {
     solana_sdk::declare_id!("EzdQuAfpfg1pDTLyj52PLMPJDDCo4aqzncsSprFvMvU5");
 }
 
-pub mod demote_sysvar_write_locks {
-    solana_sdk::declare_id!("2BLLVga5LkTyuq79fQqFpnsLHhQyjzvd9MoEBFshF419");
-}
-
 pub mod sysvar_via_syscall {
     solana_sdk::declare_id!("92ep2YChAdo4XiDPmNkRcAfJZuRv46n5ko9z6S512awn");
 }
@@ -166,8 +162,13 @@ pub mod merge_nonce_error_into_system_error {
     solana_sdk::declare_id!("4n5Ko6ax8yLi21CXoBMFbCy52QydH7jpy42W5df7GZqT");
 }
 
+
+pub mod spl_token_v2_set_authority_fix {
+    solana_sdk::declare_id!("Cb3jN13cfCNDV9dp36djNpcZXF7r82UAE4U1tZjXnFx5");
+}
+
 pub mod voter_groups_consensus {
-    solana_sdk::declare_id!("CyQUUV5ymWwFYoafJZ7bvVa73zukmE31LcvKs5pqRtxz");
+    solana_sdk::declare_id!("5jvJyof7JXy7JEwGag4qdEuCA2DuEhkQSKMaEsELJxQU");
 }
 
 lazy_static! {
@@ -195,7 +196,6 @@ lazy_static! {
         (require_stake_for_gossip::id(), "require stakes for propagating crds values through gossip #15561"),
         (cpi_data_cost::id(), "charge the compute budget for data passed via CPI"),
         (upgradeable_close_instruction::id(), "close upgradeable buffer accounts"),
-        (demote_sysvar_write_locks::id(), "demote builtins and sysvar write locks to readonly #15497"),
         (sysvar_via_syscall::id(), "provide sysvars via syscalls"),
         (check_duplicates_by_hash::id(), "use transaction message hash for duplicate check"),
         (enforce_aligned_host_addrs::id(), "enforce aligned host addresses"),
@@ -210,6 +210,7 @@ lazy_static! {
         (updated_verify_policy::id(), "Update verify policy"),
         (libsecp256k1_0_5_upgrade_enabled::id(), "upgrade libsecp256k1 to v0.5.0"),
         (merge_nonce_error_into_system_error::id(), "merge NonceError into SystemError"),
+        (spl_token_v2_set_authority_fix::id(), "safe-token set_authority fix"),
         (voter_groups_consensus::id(), "use a random subset of voters for block consensus"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]

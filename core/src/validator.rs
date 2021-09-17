@@ -1,84 +1,90 @@
 //! The `validator` module hosts all the validator microservices.
 
-use crate::{
-    broadcast_stage::BroadcastStageType,
-    cache_block_meta_service::{CacheBlockMetaSender, CacheBlockMetaService},
-    cluster_info::{
-        ClusterInfo, Node, DEFAULT_CONTACT_DEBUG_INTERVAL_MILLIS,
-        DEFAULT_CONTACT_SAVE_INTERVAL_MILLIS,
+use {
+    crate::{
+        broadcast_stage::BroadcastStageType,
+        cache_block_meta_service::{CacheBlockMetaSender, CacheBlockMetaService},
+        cluster_info::{
+            ClusterInfo, Node, DEFAULT_CONTACT_DEBUG_INTERVAL_MILLIS,
+            DEFAULT_CONTACT_SAVE_INTERVAL_MILLIS,
+        },
+        cluster_info_vote_listener::VoteTracker,
+        completed_data_sets_service::CompletedDataSetsService,
+        consensus::{reconcile_blockstore_roots_with_tower, Tower},
+        contact_info::ContactInfo,
+        crds_gossip_pull::CRDS_GOSSIP_PULL_CRDS_TIMEOUT_MS,
+        gossip_service::GossipService,
+        max_slots::MaxSlots,
+        optimistically_confirmed_bank_tracker::{
+            OptimisticallyConfirmedBank, OptimisticallyConfirmedBankTracker,
+        },
+        poh_recorder::{PohRecorder, GRACE_TICKS_FACTOR, MAX_GRACE_SLOTS},
+        poh_service::{self, PohService},
+        rewards_recorder_service::{RewardsRecorderSender, RewardsRecorderService},
+        rpc::JsonRpcConfig,
+        rpc_pubsub_service::{PubSubConfig, PubSubService},
+        rpc_service::JsonRpcService,
+        rpc_subscriptions::RpcSubscriptions,
+        sample_performance_service::SamplePerformanceService,
+        serve_repair::ServeRepair,
+        serve_repair_service::ServeRepairService,
+        sigverify,
+        snapshot_packager_service::{PendingSnapshotPackage, SnapshotPackagerService},
+        tpu::{Tpu, DEFAULT_TPU_COALESCE_MS},
+        transaction_status_service::TransactionStatusService,
+        tvu::{Sockets, Tvu, TvuConfig},
     },
-    cluster_info_vote_listener::VoteTracker,
-    completed_data_sets_service::CompletedDataSetsService,
-    consensus::{reconcile_blockstore_roots_with_tower, Tower},
-    contact_info::ContactInfo,
-    gossip_service::GossipService,
-    max_slots::MaxSlots,
-    optimistically_confirmed_bank_tracker::{
-        OptimisticallyConfirmedBank, OptimisticallyConfirmedBankTracker,
+    crossbeam_channel::{bounded, unbounded},
+    rand::{thread_rng, Rng},
+    solana_ledger::{
+        bank_forks_utils,
+        blockstore::{Blockstore, BlockstoreSignals, CompletedSlotsReceiver, PurgeType},
+        blockstore_db::BlockstoreRecoveryMode,
+        blockstore_processor::{self, TransactionStatusSender},
+        leader_schedule::FixedSchedule,
+        leader_schedule_cache::LeaderScheduleCache,
+        poh::compute_hash_time_ns,
     },
-    poh_recorder::{PohRecorder, GRACE_TICKS_FACTOR, MAX_GRACE_SLOTS},
-    poh_service::{self, PohService},
-    rewards_recorder_service::{RewardsRecorderSender, RewardsRecorderService},
-    rpc::JsonRpcConfig,
-    rpc_pubsub_service::{PubSubConfig, PubSubService},
-    rpc_service::JsonRpcService,
-    rpc_subscriptions::RpcSubscriptions,
-    sample_performance_service::SamplePerformanceService,
-    serve_repair::ServeRepair,
-    serve_repair_service::ServeRepairService,
-    sigverify,
-    snapshot_packager_service::{PendingSnapshotPackage, SnapshotPackagerService},
-    tpu::{Tpu, DEFAULT_TPU_COALESCE_MS},
-    transaction_status_service::TransactionStatusService,
-    tvu::{Sockets, Tvu, TvuConfig},
-};
-use crossbeam_channel::{bounded, unbounded};
-use rand::{thread_rng, Rng};
-use safecoin_ledger::{
-    bank_forks_utils,
-    blockstore::{Blockstore, BlockstoreSignals, CompletedSlotsReceiver, PurgeType},
-    blockstore_db::BlockstoreRecoveryMode,
-    blockstore_processor::{self, TransactionStatusSender},
-    leader_schedule::FixedSchedule,
-    leader_schedule_cache::LeaderScheduleCache,
-    poh::compute_hash_time_ns,
-};
-use safecoin_measure::measure::Measure;
-use solana_metrics::datapoint_info;
-use solana_runtime::{
-    accounts_index::AccountSecondaryIndexes,
-    bank::Bank,
-    bank_forks::{BankForks, SnapshotConfig},
-    commitment::BlockCommitmentCache,
-    hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE},
-};
-use solana_sdk::{
-    clock::Slot,
-    epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
-    genesis_config::GenesisConfig,
-    hash::Hash,
-    pubkey::Pubkey,
-    shred_version::compute_shred_version,
-    signature::{Keypair, Signer},
-    timing::timestamp,
-};
-use solana_vote_program::vote_state::VoteState;
-use std::time::Instant;
-use std::{
-    collections::HashSet,
-    fmt,
-    net::SocketAddr,
-    ops::Deref,
-    path::{Path, PathBuf},
-    sync::atomic::{AtomicBool, AtomicU64, Ordering},
-    sync::mpsc::Receiver,
-    sync::{Arc, Mutex, RwLock},
-    thread::{sleep, Builder},
-    time::Duration,
+    safecoin_measure::measure::Measure,
+    solana_metrics::datapoint_info,
+    solana_runtime::{
+        accounts_index::AccountSecondaryIndexes,
+        bank::Bank,
+        bank_forks::{BankForks, SnapshotConfig},
+        commitment::BlockCommitmentCache,
+        hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE},
+    },
+    solana_sdk::{
+        clock::Slot,
+        epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
+        genesis_config::GenesisConfig,
+        hash::Hash,
+        pubkey::Pubkey,
+        shred_version::compute_shred_version,
+        signature::{Keypair, Signer},
+        timing::timestamp,
+    },
+    solana_vote_program::vote_state::VoteState,
+    std::time::Instant,
+    std::{
+        collections::{HashMap, HashSet},
+        fmt,
+        net::SocketAddr,
+        ops::Deref,
+        path::{Path, PathBuf},
+        sync::{
+            atomic::{AtomicBool, AtomicU64, Ordering},
+            mpsc::Receiver,
+            Arc, Mutex, RwLock,
+        },
+        thread::{sleep, Builder},
+        time::Duration,
+    },
 };
 
 const MAX_COMPLETED_DATA_SETS_IN_CHANNEL: usize = 100_000;
 const WAIT_FOR_SUPERMAJORITY_THRESHOLD_PERCENT: u64 = 20;
+
 
 #[derive(Debug)]
 pub struct ValidatorConfig {
@@ -1458,7 +1464,20 @@ fn get_stake_percent_in_gossip(bank: &Bank, cluster_info: &ClusterInfo, log: boo
     let mut offline_nodes = vec![];
 
     let mut total_activated_stake = 0;
-    let all_tvu_peers = cluster_info.all_tvu_peers();
+    let now = timestamp();
+    // Nodes contact infos are saved to disk and restored on validator startup.
+    // Staked nodes entries will not expire until an epoch after. So it
+    // is necessary here to filter for recent entries to establish liveness.
+    let peers: HashMap<_, _> = cluster_info
+        .all_tvu_peers()
+        .into_iter()
+        .filter(|node| {
+            let age = now.saturating_sub(node.wallclock);
+            // Contact infos are refreshed twice during this period.
+            age < CRDS_GOSSIP_PULL_CRDS_TIMEOUT_MS
+        })
+        .map(|node| (node.id, node))
+        .collect();
     let my_shred_version = cluster_info.my_shred_version();
     let my_id = cluster_info.id();
 
@@ -1474,10 +1493,7 @@ fn get_stake_percent_in_gossip(bank: &Bank, cluster_info: &ClusterInfo, log: boo
             .map(|vote_state| vote_state.node_pubkey)
             .unwrap_or_default();
 
-        if let Some(peer) = all_tvu_peers
-            .iter()
-            .find(|peer| peer.id == vote_state_node_pubkey)
-        {
+        if let Some(peer) = peers.get(&vote_state_node_pubkey) {
             if peer.shred_version == my_shred_version {
                 trace!(
                     "observed {} in gossip, (activated_stake={})",
@@ -1497,21 +1513,22 @@ fn get_stake_percent_in_gossip(bank: &Bank, cluster_info: &ClusterInfo, log: boo
         }
     }
 
+    let online_stake_percentage = (online_stake as f64 / total_activated_stake as f64) * 100.;
     if log {
         info!(
-            "{}% of active stake visible in gossip",
-            online_stake * 100 / total_activated_stake
+            "{:.3}% of active stake visible in gossip",
+            online_stake_percentage
         );
 
         if !wrong_shred_nodes.is_empty() {
             info!(
-                "{}% of active stake has the wrong shred version in gossip",
-                wrong_shred_stake * 100 / total_activated_stake,
+                "{:.3}% of active stake has the wrong shred version in gossip",
+                (wrong_shred_stake as f64 / total_activated_stake as f64) * 100.,
             );
             for (stake, identity) in wrong_shred_nodes {
                 info!(
-                    "    {}% - {}",
-                    stake * 100 / total_activated_stake,
+                    "    {:.3}% - {}",
+                    (stake as f64 / total_activated_stake as f64) * 100.,
                     identity
                 );
             }
@@ -1519,20 +1536,20 @@ fn get_stake_percent_in_gossip(bank: &Bank, cluster_info: &ClusterInfo, log: boo
 
         if !offline_nodes.is_empty() {
             info!(
-                "{}% of active stake is not visible in gossip",
-                offline_stake * 100 / total_activated_stake
+                "{:.3}% of active stake is not visible in gossip",
+                (offline_stake as f64 / total_activated_stake as f64) * 100.
             );
             for (stake, identity) in offline_nodes {
                 info!(
-                    "    {}% - {}",
-                    stake * 100 / total_activated_stake,
+                    "    {:.3}% - {}",
+                    (stake as f64 / total_activated_stake as f64) * 100.,
                     identity
                 );
             }
         }
     }
 
-    online_stake * 100 / total_activated_stake
+    online_stake_percentage as u64
 }
 
 // Cleanup anything that looks like an accounts append-vec
@@ -1557,7 +1574,7 @@ pub fn is_snapshot_config_invalid(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use safecoin_ledger::{create_new_tmp_ledger, genesis_utils::create_genesis_config_with_leader};
+    use solana_ledger::{create_new_tmp_ledger, genesis_utils::create_genesis_config_with_leader};
     use solana_sdk::genesis_config::create_genesis_config;
     use solana_sdk::poh_config::PohConfig;
     use std::fs::remove_dir_all;
@@ -1604,8 +1621,8 @@ mod tests {
     fn test_backup_and_clear_blockstore() {
         use std::time::Instant;
         solana_logger::setup();
-        use safecoin_ledger::get_tmp_ledger_path;
-        use safecoin_ledger::{blockstore, entry};
+        use solana_ledger::get_tmp_ledger_path;
+        use solana_ledger::{blockstore, entry};
         let blockstore_path = get_tmp_ledger_path!();
         {
             let blockstore = Blockstore::open(&blockstore_path).unwrap();

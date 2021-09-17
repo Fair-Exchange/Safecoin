@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-sdk-macro"
-version = "1.6.19"
+version = "1.6.25"
 description = "Safecoin SDK Macro"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -10,8 +10,8 @@ license = "Apache-2.0"
 edition = "2018"
 
 [lib]
-name = "solana_sdk_macro"
 proc-macro = true
+name = "solana_sdk_macro"
 
 [dependencies]
 bs58 = "0.3.0"
