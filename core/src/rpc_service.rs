@@ -18,7 +18,7 @@ use jsonrpc_http_server::{
 };
 use regex::Regex;
 use safecoin_client::rpc_cache::LargestAccountsCache;
-use safecoin_ledger::{blockstore::Blockstore, leader_schedule_cache::LeaderScheduleCache};
+use solana_ledger::{blockstore::Blockstore, leader_schedule_cache::LeaderScheduleCache};
 use solana_metrics::inc_new_counter_info;
 use solana_runtime::{
     bank_forks::{BankForks, SnapshotConfig},
@@ -473,7 +473,7 @@ mod tests {
         crds_value::{CrdsData, CrdsValue, SnapshotHash},
         rpc::create_validator_exit,
     };
-    use safecoin_ledger::{
+    use solana_ledger::{
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
         get_tmp_ledger_path,
     };

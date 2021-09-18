@@ -14,8 +14,8 @@ use safecoin_clap_utils::{
         is_parsable, is_pubkey, is_pubkey_or_keypair, is_slot, is_valid_percentage,
     },
 };
-use safecoin_ledger::entry::Entry;
-use safecoin_ledger::{
+use solana_ledger::entry::Entry;
+use solana_ledger::{
     ancestor_iterator::AncestorIterator,
     bank_forks_utils,
     blockstore::{create_new_ledger, Blockstore, PurgeType},
@@ -538,7 +538,7 @@ fn graph_forks(bank_forks: &BankForks, include_all_votes: bool) -> String {
 }
 
 fn analyze_column<
-    T: safecoin_ledger::blockstore_db::Column + safecoin_ledger::blockstore_db::ColumnName,
+    T: solana_ledger::blockstore_db::Column + solana_ledger::blockstore_db::ColumnName,
 >(
     db: &Database,
     name: &str,

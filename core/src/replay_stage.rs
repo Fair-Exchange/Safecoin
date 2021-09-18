@@ -1,6 +1,4 @@
 //! The `replay_stage` replays transactions broadcast by the leader.
-use chrono::prelude::*;
-extern crate chrono;
 
 use crate::{
     broadcast_stage::RetransmitSlotsSender,
@@ -26,10 +24,11 @@ use crate::{
     rewards_recorder_service::RewardsRecorderSender,
     rpc_subscriptions::RpcSubscriptions,
     unfrozen_gossip_verified_vote_hashes::UnfrozenGossipVerifiedVoteHashes,
+    voting_service::VoteOp,
     window_service::DuplicateSlotReceiver,
 };
 use safecoin_client::rpc_response::SlotUpdate;
-use safecoin_ledger::{
+use solana_ledger::{
     block_error::BlockError,
     blockstore::Blockstore,
     blockstore_processor::{self, BlockstoreProcessorError, TransactionStatusSender},
@@ -86,8 +85,6 @@ pub(crate) enum HeaviestForkFailures {
 struct Finalizer {
     exit_sender: Arc<AtomicBool>,
 }
-
-
 
 impl Finalizer {
     fn new(exit_sender: Arc<AtomicBool>) -> Self {
@@ -286,13 +283,6 @@ impl ReplayTiming {
     }
 }
 
-
-
-
-
-
-
-
 pub struct ReplayStage {
     t_replay: JoinHandle<Result<()>>,
     commitment_service: AggregateCommitmentService,
@@ -316,6 +306,7 @@ impl ReplayStage {
         replay_vote_sender: ReplayVoteSender,
         gossip_duplicate_confirmed_slots_receiver: GossipDuplicateConfirmedSlotsReceiver,
         gossip_verified_vote_hash_receiver: GossipVerifiedVoteHashReceiver,
+        voting_sender: Sender<VoteOp>,
     ) -> Self {
         let ReplayStageConfig {
             my_pubkey,
@@ -536,7 +527,7 @@ impl ReplayStage {
 
                     if let Some(heaviest_bank_on_same_voted_fork) = heaviest_bank_on_same_voted_fork.as_ref() {
                         if let Some(my_latest_landed_vote) = progress.my_latest_landed_vote(heaviest_bank_on_same_voted_fork.slot()) {
-                            Self::refresh_last_vote(&mut tower, &cluster_info, heaviest_bank_on_same_voted_fork, &poh_recorder, my_latest_landed_vote, &vote_account, &authorized_voter_keypairs.read().unwrap(), &mut voted_signatures, has_new_vote_been_rooted, &mut last_vote_refresh_time);
+                            Self::refresh_last_vote(&mut tower, &cluster_info, heaviest_bank_on_same_voted_fork, my_latest_landed_vote, &vote_account, &authorized_voter_keypairs.read().unwrap(), &mut voted_signatures, has_new_vote_been_rooted, &mut last_vote_refresh_time, &voting_sender);
                         }
                     }
 
@@ -594,7 +585,6 @@ impl ReplayStage {
 
                         Self::handle_votable_bank(
                             &vote_bank,
-                            &poh_recorder,
                             switch_fork_decision,
                             &bank_forks,
                             &mut tower,
@@ -617,6 +607,7 @@ impl ReplayStage {
                             &mut voted_signatures,
                             &mut has_new_vote_been_rooted,
                             &mut replay_timing,
+                            &voting_sender,
                         );
                     };
                     voting_time.stop();
@@ -1348,7 +1339,6 @@ impl ReplayStage {
     #[allow(clippy::too_many_arguments)]
     fn handle_votable_bank(
         bank: &Arc<Bank>,
-        poh_recorder: &Arc<Mutex<PohRecorder>>,
         switch_fork_decision: &SwitchForkDecision,
         bank_forks: &Arc<RwLock<BankForks>>,
         tower: &mut Tower,
@@ -1371,6 +1361,7 @@ impl ReplayStage {
         vote_signatures: &mut Vec<Signature>,
         has_new_vote_been_rooted: &mut bool,
         replay_timing: &mut ReplayTiming,
+        voting_sender: &Sender<VoteOp>,
     ) {
         if bank.is_empty() {
             inc_new_counter_info!("replay_stage-voted_empty_bank", 1);
@@ -1448,7 +1439,6 @@ impl ReplayStage {
         Self::push_vote(
             cluster_info,
             bank,
-            poh_recorder,
             vote_account_pubkey,
             authorized_voter_keypairs,
             tower,
@@ -1456,6 +1446,7 @@ impl ReplayStage {
             vote_signatures,
             *has_new_vote_been_rooted,
             replay_timing,
+            voting_sender,
         );
     }
 
@@ -1472,7 +1463,6 @@ impl ReplayStage {
         if authorized_voter_keypairs.is_empty() {
             return None;
         }
-
         let vote_account = match bank.get_vote_account(vote_account_pubkey) {
             None => {
                 warn!(
@@ -1505,35 +1495,6 @@ impl ReplayStage {
                 );
                 return None;
             };
-
-
-    let dt = Local::now();
-    log::trace!("timestamp_millis: {}", dt.timestamp_millis());
-    if dt.timestamp_millis() > 1626222605000 {
-    log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
-    log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
-    log::trace!("vote_hash: {}", vote.hash);
-    log::trace!("H_vote: {}", ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 10 ));
-    log::trace!("P_vote: {}", ( ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) % 10 as usize );
-
-	if ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize !=  ( ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) % 10 as usize ) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
-   		warn!(
-                   "Vote account {} not selected for slot {}.",
-                    vote_account_pubkey,
-                    bank.slot()
-		);
-                return None;
-		}
-    }else{ 
-	if (vote.hash.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter_pubkey.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu"  {
-   		warn!(
-	           "Vote account {} not selected for slot {}.",
-                    vote_account_pubkey,
-                    bank.slot()
-		);
-                return None;
-		}	    
-	}
 
         let authorized_voter_keypair = match authorized_voter_keypairs
             .iter()
@@ -1579,13 +1540,13 @@ impl ReplayStage {
         tower: &mut Tower,
         cluster_info: &ClusterInfo,
         heaviest_bank_on_same_fork: &Bank,
-        poh_recorder: &Mutex<PohRecorder>,
         my_latest_landed_vote: Slot,
         vote_account_pubkey: &Pubkey,
         authorized_voter_keypairs: &[Arc<Keypair>],
         vote_signatures: &mut Vec<Signature>,
         has_new_vote_been_rooted: bool,
         last_vote_refresh_time: &mut LastVoteRefreshTime,
+        voting_sender: &Sender<VoteOp>,
     ) {
         let last_voted_slot = tower.last_voted_slot();
         if last_voted_slot.is_none() {
@@ -1637,11 +1598,12 @@ impl ReplayStage {
                 ("target_bank_slot", heaviest_bank_on_same_fork.slot(), i64),
                 ("target_bank_hash", hash_string, String),
             );
-            let _ = cluster_info.send_vote(
-                &vote_tx,
-                crate::banking_stage::next_leader_tpu(cluster_info, poh_recorder),
-            );
-            cluster_info.refresh_vote(vote_tx, last_voted_slot);
+            voting_sender
+                .send(VoteOp::RefreshVote {
+                    tx: vote_tx,
+                    last_voted_slot,
+                })
+                .unwrap_or_else(|err| warn!("Error: {:?}", err));
             last_vote_refresh_time.last_refresh_time = Instant::now();
         }
     }
@@ -1650,7 +1612,6 @@ impl ReplayStage {
     fn push_vote(
         cluster_info: &ClusterInfo,
         bank: &Bank,
-        poh_recorder: &Mutex<PohRecorder>,
         vote_account_pubkey: &Pubkey,
         authorized_voter_keypairs: &[Arc<Keypair>],
         tower: &mut Tower,
@@ -1658,6 +1619,7 @@ impl ReplayStage {
         vote_signatures: &mut Vec<Signature>,
         has_new_vote_been_rooted: bool,
         replay_timing: &mut ReplayTiming,
+        voting_sender: &Sender<VoteOp>,
     ) {
         let mut generate_time = Measure::start("generate_vote");
         let vote_tx = Self::generate_vote_tx(
@@ -1674,16 +1636,14 @@ impl ReplayStage {
         replay_timing.generate_vote_us += generate_time.as_us();
         if let Some(vote_tx) = vote_tx {
             tower.refresh_last_vote_tx_blockhash(vote_tx.message.recent_blockhash);
-            let mut send_time = Measure::start("send_vote");
-            let _ = cluster_info.send_vote(
-                &vote_tx,
-                crate::banking_stage::next_leader_tpu(cluster_info, poh_recorder),
-            );
-            send_time.stop();
-            let mut push_time = Measure::start("push_vote");
-            cluster_info.push_vote(&tower.tower_slots(), vote_tx);
-            push_time.stop();
-            replay_timing.vote_push_us += push_time.as_us();
+
+            let tower_slots = tower.tower_slots();
+            voting_sender
+                .send(VoteOp::PushVote {
+                    tx: vote_tx,
+                    tower_slots,
+                })
+                .unwrap_or_else(|err| warn!("Error: {:?}", err));
         }
     }
 
@@ -2578,7 +2538,7 @@ impl ReplayStage {
             // Epoch 63
             ClusterType::Testnet => 21_692_256,
             // 400_000 slots into epoch 61
-            ClusterType::MainnetBeta => 100,
+            ClusterType::MainnetBeta => 26_752_000,
         }
     }
 
@@ -2587,11 +2547,6 @@ impl ReplayStage {
         self.t_replay.join().map(|_| ())
     }
 }
-
-
-
-
-
 
 #[cfg(test)]
 pub(crate) mod tests {
@@ -2607,7 +2562,7 @@ pub(crate) mod tests {
         transaction_status_service::TransactionStatusService,
     };
     use crossbeam_channel::unbounded;
-    use safecoin_ledger::{
+    use solana_ledger::{
         blockstore::make_slot_entries,
         blockstore::{entries_to_test_shreds, BlockstoreError},
         blockstore_processor, create_new_tmp_ledger,
@@ -2640,6 +2595,7 @@ pub(crate) mod tests {
         vote_state::{VoteState, VoteStateVersions},
         vote_transaction,
     };
+    use std::sync::mpsc::channel;
     use std::{
         fs::remove_dir_all,
         iter,
@@ -4891,6 +4847,7 @@ pub(crate) mod tests {
                 }
             }
         }
+        let (voting_sender, voting_receiver) = channel();
 
         // Simulate landing a vote for slot 0 landing in slot 1
         let bank1 = Arc::new(Bank::new_from_parent(&bank0, &Pubkey::default(), 1));
@@ -4899,7 +4856,6 @@ pub(crate) mod tests {
         ReplayStage::push_vote(
             &cluster_info,
             &bank0,
-            &poh_recorder,
             &my_vote_pubkey,
             &my_vote_keypair,
             &mut tower,
@@ -4907,7 +4863,13 @@ pub(crate) mod tests {
             &mut voted_signatures,
             has_new_vote_been_rooted,
             &mut ReplayTiming::default(),
+            &voting_sender,
         );
+        let vote_info = voting_receiver
+            .recv_timeout(Duration::from_secs(1))
+            .unwrap();
+        crate::voting_service::VotingService::handle_vote(&cluster_info, &poh_recorder, vote_info);
+
         let mut cursor = Cursor::default();
         let (_, votes) = cluster_info.get_votes(&mut cursor);
         assert_eq!(votes.len(), 1);
@@ -4928,13 +4890,13 @@ pub(crate) mod tests {
                 &mut tower,
                 &cluster_info,
                 refresh_bank,
-                &poh_recorder,
                 Tower::last_voted_slot_in_bank(&refresh_bank, &my_vote_pubkey).unwrap(),
                 &my_vote_pubkey,
                 &my_vote_keypair,
                 &mut voted_signatures,
                 has_new_vote_been_rooted,
                 &mut last_vote_refresh_time,
+                &voting_sender,
             );
 
             // No new votes have been submitted to gossip
@@ -4951,7 +4913,6 @@ pub(crate) mod tests {
         ReplayStage::push_vote(
             &cluster_info,
             &bank1,
-            &poh_recorder,
             &my_vote_pubkey,
             &my_vote_keypair,
             &mut tower,
@@ -4959,7 +4920,12 @@ pub(crate) mod tests {
             &mut voted_signatures,
             has_new_vote_been_rooted,
             &mut ReplayTiming::default(),
+            &voting_sender,
         );
+        let vote_info = voting_receiver
+            .recv_timeout(Duration::from_secs(1))
+            .unwrap();
+        crate::voting_service::VotingService::handle_vote(&cluster_info, &poh_recorder, vote_info);
         let (_, votes) = cluster_info.get_votes(&mut cursor);
         assert_eq!(votes.len(), 1);
         let vote_tx = &votes[0];
@@ -4973,14 +4939,15 @@ pub(crate) mod tests {
             &mut tower,
             &cluster_info,
             &bank2,
-            &poh_recorder,
             Tower::last_voted_slot_in_bank(&bank2, &my_vote_pubkey).unwrap(),
             &my_vote_pubkey,
             &my_vote_keypair,
             &mut voted_signatures,
             has_new_vote_been_rooted,
             &mut last_vote_refresh_time,
+            &voting_sender,
         );
+
         // No new votes have been submitted to gossip
         let (_, votes) = cluster_info.get_votes(&mut cursor);
         assert!(votes.is_empty());
@@ -5009,14 +4976,19 @@ pub(crate) mod tests {
             &mut tower,
             &cluster_info,
             &expired_bank,
-            &poh_recorder,
             Tower::last_voted_slot_in_bank(&expired_bank, &my_vote_pubkey).unwrap(),
             &my_vote_pubkey,
             &my_vote_keypair,
             &mut voted_signatures,
             has_new_vote_been_rooted,
             &mut last_vote_refresh_time,
+            &voting_sender,
         );
+        let vote_info = voting_receiver
+            .recv_timeout(Duration::from_secs(1))
+            .unwrap();
+        crate::voting_service::VotingService::handle_vote(&cluster_info, &poh_recorder, vote_info);
+
         assert!(last_vote_refresh_time.last_refresh_time > clone_refresh_time);
         let (_, votes) = cluster_info.get_votes(&mut cursor);
         assert_eq!(votes.len(), 1);
@@ -5065,14 +5037,15 @@ pub(crate) mod tests {
             &mut tower,
             &cluster_info,
             &expired_bank_sibling,
-            &poh_recorder,
             Tower::last_voted_slot_in_bank(&expired_bank_sibling, &my_vote_pubkey).unwrap(),
             &my_vote_pubkey,
             &my_vote_keypair,
             &mut voted_signatures,
             has_new_vote_been_rooted,
             &mut last_vote_refresh_time,
+            &voting_sender,
         );
+
         let (_, votes) = cluster_info.get_votes(&mut cursor);
         assert!(votes.is_empty());
         assert_eq!(

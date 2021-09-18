@@ -166,6 +166,10 @@ pub mod merge_nonce_error_into_system_error {
     solana_sdk::declare_id!("4n5Ko6ax8yLi21CXoBMFbCy52QydH7jpy42W5df7GZqT");
 }
 
+pub mod spl_token_v2_set_authority_fix {
+    solana_sdk::declare_id!("Cb3jN13cfCNDV9dp36djNpcZXF7r82UAE4U1tZjXnFx5");
+}
+
 lazy_static! {
     /// Map of feature identifiers to user-visible description
     pub static ref FEATURE_NAMES: HashMap<Pubkey, &'static str> = [
@@ -206,6 +210,7 @@ lazy_static! {
         (updated_verify_policy::id(), "Update verify policy"),
         (libsecp256k1_0_5_upgrade_enabled::id(), "upgrade libsecp256k1 to v0.5.0"),
         (merge_nonce_error_into_system_error::id(), "merge NonceError into SystemError"),
+        (spl_token_v2_set_authority_fix::id(), "safe-token set_authority fix"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()

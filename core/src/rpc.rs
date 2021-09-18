@@ -38,7 +38,7 @@ use safecoin_client::{
     rpc_response::*,
 };
 use safecoin_faucet::faucet::request_airdrop_transaction;
-use safecoin_ledger::{
+use solana_ledger::{
     blockstore::Blockstore, blockstore_db::BlockstoreError, get_tmp_ledger_path,
     leader_schedule_cache::LeaderScheduleCache,
 };
@@ -2385,7 +2385,7 @@ pub mod rpc_minimal {
                 .get_epoch_leader_schedule(epoch)
                 .map(|leader_schedule| {
                     let mut schedule_by_identity =
-                        safecoin_ledger::leader_schedule_utils::leader_schedule_by_identity(
+                        solana_ledger::leader_schedule_utils::leader_schedule_by_identity(
                             leader_schedule.get_slot_leaders().iter().enumerate(),
                         );
                     if let Some(identity) = config.identity {
@@ -3750,7 +3750,7 @@ pub mod tests {
     use jsonrpc_core::{futures, ErrorCode, MetaIoHandler, Output, Response, Value};
     use jsonrpc_core_client::transports::local;
     use safecoin_client::rpc_filter::{Memcmp, MemcmpEncodedBytes};
-    use safecoin_ledger::{
+    use solana_ledger::{
         blockstore_meta::PerfSample,
         blockstore_processor::fill_blockstore_slot_with_ticks,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
@@ -4442,7 +4442,7 @@ pub mod tests {
 
             assert_eq!(
                 bob_schedule.len(),
-                safecoin_ledger::leader_schedule_utils::leader_schedule(bank.epoch(), &bank)
+                solana_ledger::leader_schedule_utils::leader_schedule(bank.epoch(), &bank)
                     .unwrap()
                     .get_slot_leaders()
                     .len()

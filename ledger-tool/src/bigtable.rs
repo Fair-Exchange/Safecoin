@@ -8,7 +8,7 @@ use safecoin_cli_output::{
     display::println_transaction, CliBlock, CliTransaction, CliTransactionConfirmation,
     OutputFormat,
 };
-use safecoin_ledger::{blockstore::Blockstore, blockstore_db::AccessType};
+use solana_ledger::{blockstore::Blockstore, blockstore_db::AccessType};
 use solana_sdk::{clock::Slot, pubkey::Pubkey, signature::Signature};
 use safecoin_transaction_status::{ConfirmedBlock, EncodedTransaction, UiTransactionEncoding};
 use std::{
@@ -29,7 +29,7 @@ async fn upload(
         .await
         .map_err(|err| format!("Failed to connect to storage: {:?}", err))?;
 
-    safecoin_ledger::bigtable_upload::upload_confirmed_blocks(
+    solana_ledger::bigtable_upload::upload_confirmed_blocks(
         Arc::new(blockstore),
         bigtable,
         starting_slot,

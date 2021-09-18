@@ -1,4 +1,4 @@
-use safecoin_ledger::{
+use solana_ledger::{
     blockstore::Blockstore,
     shred::{Nonce, SIZE_OF_NONCE},
 };
@@ -49,7 +49,7 @@ pub fn nonce(buf: &[u8]) -> Option<Nonce> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use safecoin_ledger::{
+    use solana_ledger::{
         shred::{Shred, Shredder},
         sigverify_shreds::verify_shred_cpu,
     };

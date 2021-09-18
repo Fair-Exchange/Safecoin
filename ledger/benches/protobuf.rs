@@ -3,7 +3,7 @@
 extern crate test;
 
 use bincode::{deserialize, serialize};
-use safecoin_ledger::{
+use solana_ledger::{
     blockstore::Blockstore,
     blockstore_db::{columns as cf, LedgerColumn},
     get_tmp_ledger_path,

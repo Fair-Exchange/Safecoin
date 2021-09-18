@@ -30,7 +30,7 @@ use crate::{
     weighted_shuffle::weighted_shuffle,
 };
 use rand::{seq::SliceRandom, CryptoRng, Rng};
-use safecoin_ledger::shred::Shred;
+use solana_ledger::shred::Shred;
 use solana_sdk::sanitize::{Sanitize, SanitizeError};
 
 use bincode::{serialize, serialized_size};
@@ -3042,7 +3042,7 @@ mod tests {
     use itertools::izip;
     use rand::{seq::SliceRandom, SeedableRng};
     use rand_chacha::ChaChaRng;
-    use safecoin_ledger::shred::Shredder;
+    use solana_ledger::shred::Shredder;
     use solana_sdk::signature::{Keypair, Signer};
     use solana_vote_program::{vote_instruction, vote_state::Vote};
     use std::iter::repeat_with;

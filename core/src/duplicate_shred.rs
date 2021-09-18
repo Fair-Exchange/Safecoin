@@ -1,6 +1,6 @@
 use crate::crds_value::sanitize_wallclock;
 use itertools::Itertools;
-use safecoin_ledger::{
+use solana_ledger::{
     blockstore_meta::DuplicateSlotProof,
     shred::{Shred, ShredError, ShredType},
 };
@@ -285,7 +285,7 @@ impl Sanitize for DuplicateShred {
 pub(crate) mod tests {
     use super::*;
     use rand::Rng;
-    use safecoin_ledger::{entry::Entry, shred::Shredder};
+    use solana_ledger::{entry::Entry, shred::Shredder};
     use solana_sdk::{hash, signature::Keypair, signature::Signer, system_transaction};
     use std::sync::Arc;
 

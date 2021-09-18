@@ -1,6 +1,6 @@
 #![allow(clippy::integer_arithmetic)]
 use clap::{crate_description, crate_name, value_t, App, Arg};
-use safecoin_ledger::entry::{self, create_ticks, init_poh, EntrySlice, VerifyRecyclers};
+use solana_ledger::entry::{self, create_ticks, init_poh, EntrySlice, VerifyRecyclers};
 use safecoin_measure::measure::Measure;
 use solana_perf::perf_libs;
 use solana_sdk::hash::hash;

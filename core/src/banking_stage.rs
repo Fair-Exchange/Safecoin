@@ -11,7 +11,7 @@ use crossbeam_channel::{Receiver as CrossbeamReceiver, RecvTimeoutError};
 use itertools::Itertools;
 use lru::LruCache;
 use retain_mut::RetainMut;
-use safecoin_ledger::{
+use solana_ledger::{
     blockstore::Blockstore, blockstore_processor::TransactionStatusSender,
     entry::hash_transactions, leader_schedule_cache::LeaderScheduleCache,
 };
@@ -1441,7 +1441,7 @@ mod tests {
     };
     use crossbeam_channel::unbounded;
     use itertools::Itertools;
-    use safecoin_ledger::{
+    use solana_ledger::{
         blockstore::entries_to_test_shreds,
         entry::{next_entry, Entry, EntrySlice},
         genesis_utils::{create_genesis_config, GenesisConfigInfo},

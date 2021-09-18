@@ -1,7 +1,7 @@
 // @flow
 import bs58 from 'bs58';
 import {Buffer} from 'buffer';
-import {Token, u64} from '@solana/safe-token';
+import {Token, u64} from '@safecoin/safe-token';
 import {expect, use} from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 

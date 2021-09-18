@@ -50,7 +50,7 @@ import { useCluster, Cluster } from "providers/cluster";
 import { Link } from "react-router-dom";
 import { Location } from "history";
 import { useQuery } from "utils/url";
-import { TokenInfoMap } from "@solana/safe-token-registry";
+import { TokenInfoMap } from "@safecoin/safe-token-registry";
 import { useTokenRegistry } from "providers/mints/token-registry";
 
 const TRUNCATE_TOKEN_LENGTH = 10;

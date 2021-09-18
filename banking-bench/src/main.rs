@@ -11,7 +11,7 @@ use solana_core::{
     poh_recorder::PohRecorder,
     poh_recorder::WorkingBankEntry,
 };
-use safecoin_ledger::{
+use solana_ledger::{
     blockstore::Blockstore,
     genesis_utils::{create_genesis_config, GenesisConfigInfo},
     get_tmp_ledger_path,

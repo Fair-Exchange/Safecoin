@@ -20,7 +20,7 @@ use solana_core::{
     validator::ValidatorConfig,
 };
 use solana_download_utils::download_snapshot;
-use safecoin_ledger::{
+use solana_ledger::{
     ancestor_iterator::AncestorIterator,
     blockstore::{Blockstore, PurgeType},
     blockstore_db::AccessType,

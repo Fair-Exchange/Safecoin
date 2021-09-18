@@ -1,5 +1,5 @@
-use safecoin_ledger::entry;
-use safecoin_ledger::{
+use solana_ledger::entry;
+use solana_ledger::{
     blockstore::{self, Blockstore},
     get_tmp_ledger_path,
 };

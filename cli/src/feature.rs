@@ -271,7 +271,7 @@ fn feature_activation_allowed(rpc_client: &RpcClient, quiet: bool) -> Result<boo
 
     let feature_activation_allowed = active_stake_by_feature_set
         .get(&my_feature_set)
-        .map(|percentage| *percentage >= 60.)
+        .map(|percentage| *percentage >= 95.)
         .unwrap_or(false);
 
     if !feature_activation_allowed && !quiet {
