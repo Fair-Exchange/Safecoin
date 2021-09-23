@@ -50,7 +50,6 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     timing::timestamp,
     transaction::Transaction,
-    instruction::VoterGroup,
 };
 use solana_vote_program::vote_state::Vote;
 use std::{
@@ -1228,12 +1227,15 @@ impl ReplayStage {
                 poh_slot, parent_slot, root_slot
             );
 
+            let root_distance = poh_slot - root_slot;
+
             let tpu_bank = Self::new_bank_from_parent_with_notify(
                 &parent,
                 poh_slot,
                 root_slot,
                 my_pubkey,
                 subscriptions,
+                root_distance > 500,
             );
 
             let tpu_bank = bank_forks.write().unwrap().insert(tpu_bank);
@@ -1431,6 +1433,7 @@ impl ReplayStage {
         Self::update_commitment_cache(
             bank.clone(),
             bank_forks.read().unwrap().root(),
+            progress.get_fork_stats(bank.slot()).unwrap().total_stake,
             lockouts_sender,
         );
         update_commitment_cache_time.stop();
@@ -1463,23 +1466,6 @@ impl ReplayStage {
         if authorized_voter_keypairs.is_empty() {
             return None;
         }
-        log::trace!("authorized_voter_pubkey {}", vote_account_pubkey);
-        log::trace!("authorized_voter_pubkey_string {}", vote_account_pubkey.to_string());
-        log::trace!("vote_hash: {}", vote.hash);
-  
-        let in_group = bank.in_group(vote.slots[0],vote.hash,*vote_account_pubkey);
-
-        if in_group {
-            warn!(
-                "I ({}) will vote if I can!!!",*vote_account_pubkey
-            );
-        } else {
-            warn!(
-                "Vote account has no authorized voter for slot.  Unable to vote"
-            );       
-            return None;
-        }
-
         let vote_account = match bank.get_vote_account(vote_account_pubkey) {
             None => {
                 warn!(
@@ -1667,10 +1653,11 @@ impl ReplayStage {
     fn update_commitment_cache(
         bank: Arc<Bank>,
         root: Slot,
+        total_stake: Stake,
         lockouts_sender: &Sender<CommitmentAggregationData>,
     ) {
         if let Err(e) =
-            lockouts_sender.send(CommitmentAggregationData::new(bank, root ))
+            lockouts_sender.send(CommitmentAggregationData::new(bank, root, total_stake))
         {
             trace!("lockouts_sender failed: {:?}", e);
         }
@@ -2505,6 +2492,7 @@ impl ReplayStage {
                     forks.root(),
                     &leader,
                     subscriptions,
+                    false,
                 );
                 let empty: Vec<Pubkey> = vec![];
                 Self::update_fork_propagated_threshold_from_votes(
@@ -2531,9 +2519,10 @@ impl ReplayStage {
         root_slot: u64,
         leader: &Pubkey,
         subscriptions: &Arc<RpcSubscriptions>,
+        vote_only_bank: bool,
     ) -> Bank {
         subscriptions.notify_slot(slot, parent.slot(), root_slot);
-        Bank::new_from_parent(parent, leader, slot)
+        Bank::new_from_parent_with_vote_only(parent, leader, slot, vote_only_bank)
     }
 
     fn record_rewards(bank: &Bank, rewards_recorder_sender: &Option<RewardsRecorderSender>) {
@@ -2554,7 +2543,7 @@ impl ReplayStage {
             // Epoch 63
             ClusterType::Testnet => 21_692_256,
             // 400_000 slots into epoch 61
-            ClusterType::MainnetBeta => 100,
+            ClusterType::MainnetBeta => 26_752_000,
         }
     }
 
@@ -3353,6 +3342,7 @@ pub(crate) mod tests {
             ReplayStage::update_commitment_cache(
                 arc_bank.clone(),
                 0,
+                leader_lamports,
                 &lockouts_sender,
             );
             arc_bank.freeze();

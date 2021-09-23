@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-crate-features"
-version = "1.6.25"
+version = "1.6.26"
 description = "Safecoin Crate Features"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"

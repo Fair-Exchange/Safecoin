@@ -11,7 +11,6 @@ use crate::{
     accounts_index::{AccountSecondaryIndexes, Ancestors, IndexKey},
     blockhash_queue::BlockhashQueue,
     builtins::{self, ActivationType},
-    commitment::{VOTE_GROUP_COUNT, VOTE_THRESHOLD_SIZE, VOTE_THRESHOLD_SIZE_ORIG},
     epoch_stakes::{EpochStakes, NodeVoteAccounts},
     hashed_transaction::{HashedTransaction, HashedTransactionSlice},
     inline_spl_token_v2_0,
@@ -56,7 +55,7 @@ use solana_sdk::{
     hash::{extend_and_hash, hashv, Hash},
     incinerator,
     inflation::Inflation,
-    instruction::{CompiledInstruction, VoterGroup},
+    instruction::CompiledInstruction,
     message::Message,
     native_loader,
     native_token::sol_to_lamports,
@@ -913,6 +912,8 @@ pub struct Bank {
     pub drop_callback: RwLock<OptionalDropCallback>,
 
     pub freeze_started: AtomicBool,
+
+    vote_only_bank: bool,
 }
 
 impl Default for BlockhashQueue {
@@ -1013,7 +1014,22 @@ impl Bank {
 
     /// Create a new bank that points to an immutable checkpoint of another bank.
     pub fn new_from_parent(parent: &Arc<Bank>, collector_id: &Pubkey, slot: Slot) -> Self {
-        Self::_new_from_parent(parent, collector_id, slot, &mut null_tracer())
+        Self::_new_from_parent(parent, collector_id, slot, &mut null_tracer(), false)
+    }
+
+    pub fn new_from_parent_with_vote_only(
+        parent: &Arc<Bank>,
+        collector_id: &Pubkey,
+        slot: Slot,
+        vote_only_bank: bool,
+    ) -> Self {
+        Self::_new_from_parent(
+            parent,
+            collector_id,
+            slot,
+            &mut null_tracer(),
+            vote_only_bank,
+        )
     }
 
     pub fn new_from_parent_with_tracer(
@@ -1022,7 +1038,13 @@ impl Bank {
         slot: Slot,
         reward_calc_tracer: impl FnMut(&RewardCalculationEvent),
     ) -> Self {
-        Self::_new_from_parent(parent, collector_id, slot, &mut Some(reward_calc_tracer))
+        Self::_new_from_parent(
+            parent,
+            collector_id,
+            slot,
+            &mut Some(reward_calc_tracer),
+            false,
+        )
     }
 
     fn _new_from_parent(
@@ -1030,6 +1052,7 @@ impl Bank {
         collector_id: &Pubkey,
         slot: Slot,
         reward_calc_tracer: &mut Option<impl FnMut(&RewardCalculationEvent)>,
+        vote_only_bank: bool,
     ) -> Self {
         parent.freeze();
         assert_ne!(slot, parent.slot());
@@ -1075,6 +1098,7 @@ impl Bank {
             fee_calculator: fee_rate_governor.create_fee_calculator(),
             fee_rate_governor,
             capitalization: AtomicU64::new(parent.capitalization()),
+            vote_only_bank,
             inflation: parent.inflation.clone(),
             transaction_count: AtomicU64::new(parent.transaction_count()),
             transaction_error_count: AtomicU64::new(0),
@@ -1169,6 +1193,10 @@ impl Bank {
 
     pub fn set_callback(&self, callback: Option<Box<dyn DropCallback + Send + Sync>>) {
         *self.drop_callback.write().unwrap() = OptionalDropCallback(callback);
+    }
+
+    pub fn vote_only_bank(&self) -> bool {
+        self.vote_only_bank
     }
 
     /// Like `new_from_parent` but additionally:
@@ -1266,6 +1294,7 @@ impl Bank {
             feature_set: new(),
             drop_callback: RwLock::new(OptionalDropCallback(None)),
             freeze_started: AtomicBool::new(fields.hash != Hash::default()),
+            vote_only_bank: false,
         };
         bank.finish_init(genesis_config, additional_builtins);
 
@@ -3055,7 +3084,6 @@ impl Bank {
                         &mut timings.details,
                         self.rc.accounts.clone(),
                         &self.ancestors,
-                        self,
                     );
 
                     if enable_log_recording {
@@ -4425,7 +4453,6 @@ impl Bank {
     }
 
     pub fn calculate_and_verify_capitalization(&self) -> bool {
-        *self.inflation.write().unwrap() = Inflation::full();
         let calculated = self.calculate_capitalization();
         let expected = self.capitalization();
         if calculated == expected {
@@ -4884,7 +4911,7 @@ impl Bank {
         let new_feature_activations = self.compute_active_feature_set(!init_finish_or_warp);
 
         if new_feature_activations.contains(&feature_set::pico_inflation::id()) {
-            *self.inflation.write().unwrap() = Inflation::full();
+            *self.inflation.write().unwrap() = Inflation::pico();
             self.fee_rate_governor.burn_percent = 50; // 50% fee burn
             self.rent_collector.rent.burn_percent = 50; // 50% rent burn
         }
@@ -5016,7 +5043,7 @@ impl Bank {
             ClusterType::Development => true,
             ClusterType::Devnet => true,
             ClusterType::Testnet => self.epoch() == 93,
-            ClusterType::MainnetBeta => self.epoch() == 99999999,
+            ClusterType::MainnetBeta => self.epoch() == 9999999,
         };
 
         if reconfigure_token2_native_mint {
@@ -5091,88 +5118,6 @@ impl Bank {
             ClusterType::MainnetBeta => self
                 .feature_set
                 .is_active(&feature_set::consistent_recent_blockhashes_sysvar::id()),
-        }
-    }
-
-    ///  This simply returns _me_ but in the limited capacity of
-    ///  providing the vote threshold:
-    ///  sort of a hack to get around the fact that the banks are shared
-    ///  with everything and *between threads* but I don't want to test everything.
-    pub fn threshold_delegate(&self) -> &dyn BankVoteThreshold {
-        self
-    }
-}
-
-pub trait BankVoteThreshold {
-    fn epoch_vote_threshold(&self) -> Option<f64>;
-}
-
-impl BankVoteThreshold for Bank {
-    /// The stake weight necessary to root a block in a given epoch
-    /// and to be pedantic it is defined as:
-    /// the average stake for each authorized voter
-    /// multiplied by the expected number of voters (a subset of all authorized voters)
-    /// multiplied by the majority ratio (aka VOTE_THRESHOLD_SIZE)
-
-    fn epoch_vote_threshold(&self) -> Option<f64> {
-        if let Some(epoch_stakes) = self.epoch_stakes(self.epoch()) {
-            if self
-                .feature_set
-                .is_active(&feature_set::voter_groups_consensus::id())
-            {
-                let avg_stake: f64 = epoch_stakes.total_stake() as f64
-                    / epoch_stakes.epoch_authorized_voters().len() as f64;
-                let res = avg_stake * VOTE_GROUP_COUNT as f64 * VOTE_THRESHOLD_SIZE as f64;
-                return Some(res);
-            } else {
-                return Some(epoch_stakes.total_stake() as f64 * VOTE_THRESHOLD_SIZE_ORIG);
-            }
-        }
-        None
-    }
-}
-
-impl VoterGroup for Bank {
-    /// determine if a voter is in the group for a given slot
-    fn in_group(&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
-        if self
-            .feature_set
-            .is_active(&feature_set::voter_groups_consensus::id())
-        {
-            let epoch = self.epoch_schedule.get_epoch(slot);
-            match self.epoch_stakes.get(&epoch) {
-                None => panic!("No epoch"),
-                Some(stakes) => {
-                    let vgr = stakes.get_group_genr();
-                    return vgr.in_group_for_hash(hash, voter);
-                }
-            }
-        } else {
-            log::trace!("vote_hash: {}", hash);
-            log::trace!(
-                "H_vote: {}",
-                ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
-            );
-            log::trace!(
-                "P_vote: {}",
-                ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
-                    * (voter.to_string().chars().last().unwrap() as usize
-                        + hash.to_string().chars().last().unwrap() as usize)
-                    / 10) as usize
-                    + voter.to_string().chars().last().unwrap() as usize
-                    + hash.to_string().chars().last().unwrap() as usize)
-                    % 10 as usize
-            );
-            let dont_vote = (((hash.to_string().chars().nth(0).unwrap() as usize) % 10) as usize
-                != ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
-                    * (voter.to_string().chars().last().unwrap() as usize
-                        + hash.to_string().chars().last().unwrap() as usize)
-                    / 10) as usize
-                    + voter.to_string().chars().last().unwrap() as usize
-                    + hash.to_string().chars().last().unwrap() as usize)
-                    % 10 as usize)
-                && voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
-            return dont_vote == false;
         }
     }
 }
