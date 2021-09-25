@@ -5135,19 +5135,6 @@ impl BankVoteThreshold for Bank {
 impl VoterGroup for Bank {
     /// determine if a voter is in the group for a given slot
     fn in_group(&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
-        if self
-            .feature_set
-            .is_active(&feature_set::voter_groups_consensus::id())
-        {
-            let epoch = self.epoch_schedule.get_epoch(slot);
-            match self.epoch_stakes.get(&epoch) {
-                None => panic!("No epoch"),
-                Some(stakes) => {
-                    let vgr = stakes.get_group_genr();
-                    return vgr.in_group_for_hash(hash, voter);
-                }
-            }
-        } else {
             log::trace!("vote_hash: {}", hash);
             log::trace!(
                 "H_vote: {}",
@@ -5173,7 +5160,6 @@ impl VoterGroup for Bank {
                     % 10 as usize)
                 && voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
             return dont_vote == false;
-        }
     }
 }
 
