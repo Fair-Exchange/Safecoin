@@ -1463,34 +1463,21 @@ impl ReplayStage {
         if authorized_voter_keypairs.is_empty() {
             return None;
         }
-        log::trace!("authorized_voter_pubkey {}", vote_account_pubkey);
-        log::trace!("authorized_voter_pubkey_string {}", vote_account_pubkey.to_string());
-        log::trace!("vote_hash: {}", vote.hash);
-  
-        let in_group = bank.in_group(vote.slots[0],vote.hash,*vote_account_pubkey);
 
-        if in_group {
-            warn!(
-                "I ({}) will vote if I can!!!",*vote_account_pubkey
-            );
-        } else {
-            warn!(
-                "Vote account has no authorized voter for slot.  Unable to vote"
-            );       
-            return None;
-        }
 
-        let vote_account = match bank.get_vote_account(vote_account_pubkey) {
+
+
+	let vote_account = match bank.get_vote_account(vote_account_pubkey) {
             None => {
                 warn!(
-                    "Vote account {} does not exist.  Unable to vote",
+	            "Vote account {} does not exist.  Unable to vote",
                     vote_account_pubkey,
                 );
                 return None;
             }
             Some((_stake, vote_account)) => vote_account,
         };
-        let vote_state = vote_account.vote_state();
+	let vote_state = vote_account.vote_state();
         let vote_state = match vote_state.as_ref() {
             Err(_) => {
                 warn!(
@@ -1501,6 +1488,10 @@ impl ReplayStage {
             }
             Ok(vote_state) => vote_state,
         };
+
+
+
+
         let authorized_voter_pubkey =
             if let Some(authorized_voter_pubkey) = vote_state.get_authorized_voter(bank.epoch()) {
                 authorized_voter_pubkey
@@ -1512,6 +1503,26 @@ impl ReplayStage {
                 );
                 return None;
             };
+
+
+
+        log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
+        log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
+        log::trace!("vote_hash: {}", vote.hash);
+
+        let in_group = bank.in_group(vote.slots[0],vote.hash,authorized_voter_pubkey);
+
+        if in_group {
+            warn!(
+                "I ({}) will vote if I can!!!",authorized_voter_pubkey
+            );
+        } else {
+            warn!(
+                "Vote account has no authorized voter for slot.  Unable to vote"
+            );
+            return None;
+        }
+
 
         let authorized_voter_keypair = match authorized_voter_keypairs
             .iter()
