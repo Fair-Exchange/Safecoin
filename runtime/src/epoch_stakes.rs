@@ -25,13 +25,22 @@ impl EpochStakes {
     pub fn new(stakes: &Stakes, leader_schedule_epoch: Epoch) -> Self {
         let epoch_vote_accounts = Stakes::vote_accounts(stakes);
         let (total_stake, node_id_to_vote_accounts, epoch_authorized_voters) =
-            Self::parse_epoch_vote_accounts(&epoch_vote_accounts, leader_schedule_epoch);
-        Self {
+            Self::parse_epoch_vote_accounts(&epoch_vote_accounts, leader_schedule_epoch);  
+            Self {
             stakes: Arc::new(stakes.clone()),
             total_stake,
             node_id_to_vote_accounts: Arc::new(node_id_to_vote_accounts),
             epoch_authorized_voters: Arc::new(epoch_authorized_voters),
-	            }
+       }
+    }
+
+    pub fn make_group_generator (&self) -> VoteGroupGenerator {
+        let group_size = 
+        if self.epoch_authorized_voters.len() < VOTE_GROUP_COUNT 
+            { self.epoch_authorized_voters.len()} 
+        else 
+            { VOTE_GROUP_COUNT }; 
+        VoteGroupGenerator::new(&self.epoch_authorized_voters,group_size) 
     }
 
 
