@@ -2,7 +2,7 @@ use solana_sdk::{clock::Slot, commitment_config::CommitmentLevel};
 use solana_vote_program::vote_state::MAX_LOCKOUT_HISTORY;
 use std::collections::HashMap;
 
-pub const VOTE_THRESHOLD_SIZE: f64 = 2f64 / 40f64;    //to be raised on next upgrade
+pub const VOTE_THRESHOLD_SIZE: f64 = 1f64 / 40f64;    //to be raised on next upgrade
 pub const VOTE_THRESHOLD_SIZE_ORIG: f64 = 1f64 / 40f64;
 pub const VOTE_GROUP_COUNT: usize = 1; // the maximum number of voters we need to vote (solana has *everybody* vote) 
 
