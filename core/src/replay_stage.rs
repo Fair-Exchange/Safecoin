@@ -1509,34 +1509,6 @@ impl ReplayStage {
             };
 
 
-    let dt = Local::now();
-    log::trace!("timestamp_millis: {}", dt.timestamp_millis());
-    if dt.timestamp_millis() > 1626222605000 {
-    log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
-    log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
-    log::trace!("vote_hash: {}", vote.hash);
-    log::trace!("H_vote: {}", ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 10 ));
-    log::trace!("P_vote: {}", ( ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) % 10 as usize );
-
-	if ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize !=  ( ( ( (vote.hash.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize * ( authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) / 10 ) as usize + authorized_voter_pubkey.to_string().chars().last().unwrap() as usize + vote.hash.to_string().chars().last().unwrap() as usize ) % 10 as usize ) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {
-   		warn!(
-                   "Vote account {} not selected for slot {}.",
-                    vote_account_pubkey,
-                    bank.slot()
-		);
-                return None;
-		}
-    }else{ 
-	if (vote.hash.to_string().to_lowercase().find("x").unwrap_or(3) % 10 as usize) != (authorized_voter_pubkey.to_string().to_lowercase().find("x").unwrap_or(2) % 10 as usize) && authorized_voter_pubkey.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu"  {
-   		warn!(
-	           "Vote account {} not selected for slot {}.",
-                    vote_account_pubkey,
-                    bank.slot()
-		);
-                return None;
-		}	    
-	}
-
         let authorized_voter_keypair = match authorized_voter_keypairs
             .iter()
             .find(|keypair| keypair.pubkey() == authorized_voter_pubkey)
