@@ -11,7 +11,9 @@ use crate::{
     accounts_index::{AccountSecondaryIndexes, Ancestors, IndexKey},
     blockhash_queue::BlockhashQueue,
     builtins::{self, ActivationType},
+    commitment::{VOTE_GROUP_COUNT, VOTE_THRESHOLD_SIZE, VOTE_THRESHOLD_SIZE_ORIG},
     epoch_stakes::{EpochStakes, NodeVoteAccounts},
+    vote_group_gen::VoteGroupGenerator,
     hashed_transaction::{HashedTransaction, HashedTransactionSlice},
     inline_spl_token_v2_0,
     instruction_recorder::InstructionRecorder,
@@ -55,7 +57,7 @@ use solana_sdk::{
     hash::{extend_and_hash, hashv, Hash},
     incinerator,
     inflation::Inflation,
-    instruction::CompiledInstruction,
+    instruction::{CompiledInstruction, VoterGroup},
     message::Message,
     native_loader,
     native_token::sol_to_lamports,
@@ -619,6 +621,7 @@ pub(crate) struct BankFieldsToDeserialize {
     pub(crate) stakes: Stakes,
     pub(crate) epoch_stakes: HashMap<Epoch, EpochStakes>,
     pub(crate) is_delta: bool,
+    pub(crate) group_generators : HashMap<Epoch, VoteGroupGenerator>,
 }
 
 // Bank's common fields shared by all supported snapshot versions for serialization.
@@ -914,6 +917,9 @@ pub struct Bank {
     pub freeze_started: AtomicBool,
 
     vote_only_bank: bool,
+
+    pub group_generators: HashMap<Epoch, VoteGroupGenerator>,
+
 }
 
 impl Default for BlockhashQueue {
@@ -1000,8 +1006,12 @@ impl Bank {
         {
             let stakes = bank.stakes.read().unwrap();
             for epoch in 0..=bank.get_leader_schedule_epoch(bank.slot) {
+                let stakes = EpochStakes::new(&stakes, epoch);
+                let vgr = stakes.make_group_generator();
                 bank.epoch_stakes
-                    .insert(epoch, EpochStakes::new(&stakes, epoch));
+                    .insert(epoch, stakes);
+                bank.group_generators 
+                    .insert(epoch, vgr); // tied to epoch & stakes
             }
             bank.update_stake_history(None);
         }
@@ -1075,6 +1085,15 @@ impl Bank {
 
         let fee_rate_governor =
             FeeRateGovernor::new_derived(&parent.fee_rate_governor, parent.signature_count());
+        let xlate_map = |map: &HashMap<Epoch,EpochStakes>| -> HashMap<Epoch,VoteGroupGenerator> {
+                let mut ret : HashMap<Epoch, VoteGroupGenerator> = HashMap::new();
+                for (key, es ) in map.iter() {
+                    let vgr: VoteGroupGenerator = es.make_group_generator();
+                    ret.insert(*key, vgr);
+                }
+                ret
+            };
+        let generators = xlate_map(&parent.epoch_stakes);
 
         let mut new = Bank {
             rc,
@@ -1142,6 +1161,7 @@ impl Bank {
                     .map(|drop_callback| drop_callback.clone_box()),
             )),
             freeze_started: AtomicBool::new(false),
+            group_generators: generators,
         };
 
         datapoint_info!(
@@ -1237,6 +1257,15 @@ impl Bank {
         fn new<T: Default>() -> T {
             T::default()
         }
+        let xlate_map = |map: &HashMap<Epoch,EpochStakes>| -> HashMap<Epoch,VoteGroupGenerator> {
+            let mut ret : HashMap<Epoch, VoteGroupGenerator> = HashMap::new();
+            for (key, es ) in map.iter() {
+                let vgr: VoteGroupGenerator = es.make_group_generator();
+                ret.insert(*key, vgr);
+            }
+            ret
+        };
+        let new_map = xlate_map(&fields.epoch_stakes);
         let mut bank = Self {
             rc: bank_rc,
             src: new(),
@@ -1295,6 +1324,7 @@ impl Bank {
             drop_callback: RwLock::new(OptionalDropCallback(None)),
             freeze_started: AtomicBool::new(fields.hash != Hash::default()),
             vote_only_bank: false,
+            group_generators: new_map,
         };
         bank.finish_init(genesis_config, additional_builtins);
 
@@ -1584,8 +1614,11 @@ impl Bank {
                     new_epoch_stakes.total_stake(),
                 );
             }
+            let vgr : VoteGroupGenerator = new_epoch_stakes.make_group_generator();
             self.epoch_stakes
                 .insert(leader_schedule_epoch, new_epoch_stakes);
+            self.group_generators
+                .insert(leader_schedule_epoch, vgr);
         }
     }
 
@@ -3086,6 +3119,7 @@ impl Bank {
                         &mut timings.details,
                         self.rc.accounts.clone(),
                         &self.ancestors,
+                        self,
                     );
 
                     if enable_log_recording {
@@ -4701,8 +4735,16 @@ impl Bank {
         self.epoch_stakes.get(&epoch)
     }
 
+    pub fn vote_group_generator(&self, epoch: Epoch) -> Option<&VoteGroupGenerator> {
+        self.group_generators.get(&epoch)
+    }
+
     pub fn epoch_stakes_map(&self) -> &HashMap<Epoch, EpochStakes> {
         &self.epoch_stakes
+    }
+
+    pub fn group_generators_map(&self) -> &HashMap<Epoch, VoteGroupGenerator> {
+        &self.group_generators
     }
 
     pub fn epoch_staked_nodes(&self, epoch: Epoch) -> Option<HashMap<Pubkey, u64>> {
@@ -5134,6 +5176,49 @@ impl Bank {
                 .feature_set
                 .is_active(&feature_set::consistent_recent_blockhashes_sysvar::id()),
         }
+    }
+
+    ///  This simply returns _me_ but in the limited capacity of
+    ///  providing the vote threshold:
+    ///  sort of a hack to get around the fact that the banks are shared
+    ///  with everything and *between threads* but I don't want to test everything.
+    pub fn threshold_delegate(&self) -> &dyn BankVoteThreshold {
+        self
+    }
+}
+
+pub trait BankVoteThreshold {
+    fn epoch_vote_threshold(&self) -> Option<f64>;
+}
+
+impl BankVoteThreshold for Bank {
+    /// The stake weight necessary to root a block in a given epoch
+    /// and to be pedantic it is defined as:
+    /// the average stake for each authorized voter
+    /// multiplied by the expected number of voters (a subset of all authorized voters)
+    /// multiplied by the majority ratio (aka VOTE_THRESHOLD_SIZE)
+
+    fn epoch_vote_threshold(&self) -> Option<f64> {
+        if let Some(epoch_stakes) = self.epoch_stakes(self.epoch()) {
+                let avg_stake: f64 = epoch_stakes.total_stake() as f64
+                    / epoch_stakes.epoch_authorized_voters().len() as f64;
+                let res = avg_stake * VOTE_GROUP_COUNT as f64 * VOTE_THRESHOLD_SIZE as f64;
+                return Some(res);
+        }
+        None
+    }
+}
+
+impl VoterGroup for Bank {
+    /// determine if a voter is in the group for a given slot
+    fn in_group(&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
+            let epoch = self.epoch_schedule.get_epoch(slot);
+            match self.group_generators.get(&epoch) {
+                None => panic!("No epoch"),
+                Some(vgr) => {
+                    return vgr.in_group_for_hash(hash, voter);
+                }
+            }
     }
 }
 
@@ -10068,7 +10153,6 @@ pub(crate) mod tests {
             keyed_accounts[1].try_account_ref_mut()?.lamports += lamports;
             Ok(())
         }
-
         let mock_program_id = Pubkey::new(&[2u8; 32]);
         bank.add_builtin("mock_program", mock_program_id, mock_process_instruction);
 
