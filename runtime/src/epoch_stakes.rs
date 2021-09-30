@@ -19,7 +19,6 @@ pub struct EpochStakes {
     total_stake: u64,
     node_id_to_vote_accounts: Arc<NodeIdToVoteAccounts>,
     epoch_authorized_voters: Arc<EpochAuthorizedVoters>,
-    vote_group_gen: VoteGroupGenerator,
 }
 
 impl EpochStakes {

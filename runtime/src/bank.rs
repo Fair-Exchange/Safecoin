@@ -5156,17 +5156,10 @@ impl BankVoteThreshold for Bank {
 
     fn epoch_vote_threshold(&self) -> Option<f64> {
         if let Some(epoch_stakes) = self.epoch_stakes(self.epoch()) {
-            if self
-                .feature_set
-                .is_active(&feature_set::voter_groups_consensus::id())
-            {
                 let avg_stake: f64 = epoch_stakes.total_stake() as f64
                     / epoch_stakes.epoch_authorized_voters().len() as f64;
                 let res = avg_stake * VOTE_GROUP_COUNT as f64 * VOTE_THRESHOLD_SIZE as f64;
                 return Some(res);
-            } else {
-                return Some(epoch_stakes.total_stake() as f64 * VOTE_THRESHOLD_SIZE_ORIG);
-            }
         }
         None
     }
@@ -5175,10 +5168,6 @@ impl BankVoteThreshold for Bank {
 impl VoterGroup for Bank {
     /// determine if a voter is in the group for a given slot
     fn in_group(&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
-        if self
-            .feature_set
-            .is_active(&feature_set::voter_groups_consensus::id())
-        {
             let epoch = self.epoch_schedule.get_epoch(slot);
             match self.group_generators.get(&epoch) {
                 None => panic!("No epoch"),
@@ -5186,33 +5175,6 @@ impl VoterGroup for Bank {
                     return vgr.in_group_for_hash(hash, voter);
                 }
             }
-        } else {
-            log::trace!("vote_hash: {}", hash);
-            log::trace!(
-                "H_vote: {}",
-                ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
-            );
-            log::trace!(
-                "P_vote: {}",
-                ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
-                    * (voter.to_string().chars().last().unwrap() as usize
-                        + hash.to_string().chars().last().unwrap() as usize)
-                    / 10) as usize
-                    + voter.to_string().chars().last().unwrap() as usize
-                    + hash.to_string().chars().last().unwrap() as usize)
-                    % 10 as usize
-            );
-            let dont_vote = (((hash.to_string().chars().nth(0).unwrap() as usize) % 10) as usize
-                != ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
-                    * (voter.to_string().chars().last().unwrap() as usize
-                        + hash.to_string().chars().last().unwrap() as usize)
-                    / 10) as usize
-                    + voter.to_string().chars().last().unwrap() as usize
-                    + hash.to_string().chars().last().unwrap() as usize)
-                    % 10 as usize)
-                && voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
-            return dont_vote == false;
-        }
     }
 }
 
