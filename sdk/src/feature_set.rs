@@ -163,7 +163,10 @@ pub mod merge_nonce_error_into_system_error {
 }
 
 pub mod spl_token_v2_set_authority_fix {
-    solana_sdk::declare_id!("FToKNBYyiF4ky9s8WsmLBXHCht17Ek7RXaLZGHzzQhJ1");
+    solana_sdk::declare_id!("Cb3jN13cfCNDV9dp36djNpcZXF7r82UAE4U1tZjXnFx5");
+
+pub mod voter_groups_consensus {
+    solana_sdk::declare_id!("5jvJyof7JXy7JEwGag4qdEuCA2DuEhkQSKMaEsELJxQU");
 }
 
 lazy_static! {
@@ -206,6 +209,7 @@ lazy_static! {
         (libsecp256k1_0_5_upgrade_enabled::id(), "upgrade libsecp256k1 to v0.5.0"),
         (merge_nonce_error_into_system_error::id(), "merge NonceError into SystemError"),
         (spl_token_v2_set_authority_fix::id(), "safe-token set_authority fix"),
+        (voter_groups_consensus::id(), "use a random subset of voters for block consensus"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()
