@@ -736,6 +736,10 @@ pub fn process_vote<S: std::hash::BuildHasher>(
 
     let mut vote_state = versioned.convert_to_current();
     let authorized_voter = vote_state.get_and_update_authorized_voter(clock.epoch)?;
+
+
+
+log::info!("authorized_voter: {}", &authorized_voter);
     verify_authorized_signer(&authorized_voter, signers)?;
     log::trace!("slot: {}", clock.slot);
     log::trace!("last_hashy: {}", slot_hashes[0].1);

@@ -1505,7 +1505,6 @@ impl ReplayStage {
             };
 
 
-
         log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
         log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
         log::trace!("vote_hash: {}", vote.hash);
@@ -1522,7 +1521,6 @@ impl ReplayStage {
             );
             return None;
         }
-
 
         let authorized_voter_keypair = match authorized_voter_keypairs
             .iter()
