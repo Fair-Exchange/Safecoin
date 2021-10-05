@@ -2,7 +2,7 @@
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "safecoin-banking-bench"
-version = "1.6.25"
+version = "1.6.27"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -14,16 +14,16 @@ crossbeam-channel = "0.4"
 log = "0.4.11"
 rand = "0.7.0"
 rayon = "1.5.0"
-safecoin-core = { path = "../core", version = "=1.6.25" }
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.25" }
-safecoin-streamer = { path = "../streamer", version = "=1.6.25" }
-safecoin-perf = { path = "../perf", version = "=1.6.25" }
-safecoin-ledger = { path = "../ledger", version = "=1.6.25" }
-safecoin-logger = { path = "../logger", version = "=1.6.25" }
-safecoin-runtime = { path = "../runtime", version = "=1.6.25" }
-safecoin-measure = { path = "../measure", version = "=1.6.25" }
-safecoin-sdk = { path = "../sdk", version = "=1.6.25" }
-safecoin-version = { path = "../version", version = "=1.6.25" }
+safecoin-core = { path = "../core", version = "=1.6.27" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.27" }
+safecoin-streamer = { path = "../streamer", version = "=1.6.27" }
+safecoin-perf = { path = "../perf", version = "=1.6.27" }
+safecoin-ledger = { path = "../ledger", version = "=1.6.27" }
+safecoin-logger = { path = "../logger", version = "=1.6.27" }
+safecoin-runtime = { path = "../runtime", version = "=1.6.27" }
+safecoin-measure = { path = "../measure", version = "=1.6.27" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.27" }
+safecoin-version = { path = "../version", version = "=1.6.27" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

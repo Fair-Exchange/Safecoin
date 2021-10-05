@@ -3,7 +3,7 @@ authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "safecoin-cli-output"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.6.25"
+version = "1.6.27"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -19,13 +19,13 @@ indicatif = "0.15.0"
 serde = "1.0.122"
 serde_derive = "1.0.103"
 serde_json = "1.0.56"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.6.25" }
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.25" }
-safecoin-client = { path = "../client", version = "=1.6.25" }
-safecoin-sdk = { path = "../sdk", version = "=1.6.25" }
-safecoin-stake-program = { path = "../programs/stake", version = "=1.6.25" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.6.25" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.6.25" }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.6.27" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.27" }
+safecoin-client = { path = "../client", version = "=1.6.27" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.27" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.6.27" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.6.27" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.6.27" }
 safe-memo = { version = "=3.0.4", features = ["no-entrypoint"] }
 
 [package.metadata.docs.rs]

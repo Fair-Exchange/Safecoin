@@ -11,7 +11,7 @@ use solana_bpf_loader_program::{
     create_vm,
     serialization::{deserialize_parameters, serialize_parameters},
     syscalls::register_syscalls,
-    ThisInstructionMeter,
+    BpfError, ThisInstructionMeter,
 };
 use safecoin_cli_output::display::println_transaction;
 use solana_rbpf::vm::{Config, Executable, Tracer};
@@ -213,7 +213,8 @@ fn run_program(
         enable_instruction_meter: true,
         enable_instruction_tracing: true,
     };
-    let mut executable = Executable::from_elf(&data, None, config).unwrap();
+    let mut executable =
+        <dyn Executable<BpfError, ThisInstructionMeter>>::from_elf(&data, None, config).unwrap();
     executable.set_syscall_registry(register_syscalls(&mut invoke_context).unwrap());
     executable.jit_compile().unwrap();
 
@@ -417,6 +418,7 @@ fn test_program_bpf_sanity() {
         programs.extend_from_slice(&[
             ("alloc", true),
             ("bpf_to_bpf", true),
+            ("float", true),
             ("multiple_static", true),
             ("noop", true),
             ("noop++", true),
@@ -1281,10 +1283,10 @@ fn assert_instruction_count() {
         programs.extend_from_slice(&[
             ("bpf_to_bpf", 13),
             ("multiple_static", 8),
-            ("noop", 45),
+            ("noop", 5),
             ("relative_call", 10),
-            ("sanity", 175),
-            ("sanity++", 177),
+            ("sanity", 169),
+            ("sanity++", 168),
             ("sha", 694),
             ("struct_pass", 8),
             ("struct_ret", 22),
@@ -1293,23 +1295,23 @@ fn assert_instruction_count() {
     #[cfg(feature = "bpf_rust")]
     {
         programs.extend_from_slice(&[
-            ("solana_bpf_rust_128bit", 572),
-            ("solana_bpf_rust_alloc", 8906),
+            ("solana_bpf_rust_128bit", 584),
+            ("solana_bpf_rust_alloc", 7082),
             ("solana_bpf_rust_dep_crate", 2),
-            ("solana_bpf_rust_external_spend", 521),
+            ("solana_bpf_rust_external_spend", 504),
             ("solana_bpf_rust_iter", 724),
-            ("solana_bpf_rust_many_args", 237),
-            ("solana_bpf_rust_mem", 3143),
-            ("solana_bpf_rust_membuiltins", 4069),
-            ("solana_bpf_rust_noop", 495),
+            ("solana_bpf_rust_many_args", 233),
+            ("solana_bpf_rust_mem", 3117),
+            ("solana_bpf_rust_membuiltins", 4065),
+            ("solana_bpf_rust_noop", 478),
             ("solana_bpf_rust_param_passing", 46),
-            ("solana_bpf_rust_sanity", 917),
-            ("solana_bpf_rust_sha", 29099),
+            ("solana_bpf_rust_sanity", 907),
+            ("solana_bpf_rust_sha", 28795),
         ]);
     }
 
     let mut passed = true;
-    println!("\n  {:30} expected actual diff", "BPF program");
+    println!("\n  {:30} expected actual  diff", "BPF program");
     for program in programs.iter() {
         let program_id = solana_sdk::pubkey::new_rand();
         let key = solana_sdk::pubkey::new_rand();
@@ -1317,7 +1319,14 @@ fn assert_instruction_count() {
         let parameter_accounts = vec![KeyedAccount::new(&key, false, &mut account)];
         let count = run_program(program.0, &program_id, &parameter_accounts[..], &[]).unwrap();
         let diff: i64 = count as i64 - program.1 as i64;
-        println!("  {:30} {:8} {:6} {:+4}", program.0, program.1, count, diff);
+        println!(
+            "  {:30} {:8} {:6} {:+5} ({:+3.0}%)",
+            program.0,
+            program.1,
+            count,
+            diff,
+            100.0_f64 * count as f64 / program.1 as f64 - 100.0_f64,
+        );
         if count > program.1 {
             passed = false;
         }
@@ -1773,7 +1782,7 @@ fn test_program_bpf_upgrade_and_invoke_in_same_tx() {
         "solana_bpf_rust_panic",
     );
 
-    // Attempt to invoke, then upgrade the program in same tx
+    // Invoke, then upgrade the program, and then invoke again in same tx
     let message = Message::new(
         &[
             invoke_instruction.clone(),
@@ -1792,12 +1801,10 @@ fn test_program_bpf_upgrade_and_invoke_in_same_tx() {
         message.clone(),
         bank.last_blockhash(),
     );
-    // program_id is automatically demoted to readonly, preventing the upgrade, which requires
-    // writeability
     let (result, _) = process_transaction_and_record_inner(&bank, tx);
     assert_eq!(
         result.unwrap_err(),
-        TransactionError::InstructionError(1, InstructionError::InvalidArgument)
+        TransactionError::InstructionError(2, InstructionError::ProgramFailedToComplete)
     );
 }
 
@@ -2075,6 +2082,97 @@ fn test_program_bpf_upgrade_via_cpi() {
     assert_eq!(
         result.unwrap_err().unwrap(),
         TransactionError::InstructionError(0, InstructionError::Custom(43))
+    );
+}
+
+#[cfg(feature = "bpf_rust")]
+#[test]
+fn test_program_bpf_upgrade_self_via_cpi() {
+    solana_logger::setup();
+
+    let GenesisConfigInfo {
+        genesis_config,
+        mint_keypair,
+        ..
+    } = create_genesis_config(50);
+    let mut bank = Bank::new(&genesis_config);
+    let (name, id, entrypoint) = solana_bpf_loader_program!();
+    bank.add_builtin(&name, id, entrypoint);
+    let (name, id, entrypoint) = solana_bpf_loader_upgradeable_program!();
+    bank.add_builtin(&name, id, entrypoint);
+    let bank = Arc::new(bank);
+    let bank_client = BankClient::new_shared(&bank);
+    let noop_program_id = load_bpf_program(
+        &bank_client,
+        &bpf_loader::id(),
+        &mint_keypair,
+        "solana_bpf_rust_noop",
+    );
+
+    // Deploy upgradeable program
+    let buffer_keypair = Keypair::new();
+    let program_keypair = Keypair::new();
+    let program_id = program_keypair.pubkey();
+    let authority_keypair = Keypair::new();
+    load_upgradeable_bpf_program(
+        &bank_client,
+        &mint_keypair,
+        &buffer_keypair,
+        &program_keypair,
+        &authority_keypair,
+        "solana_bpf_rust_invoke_and_return",
+    );
+
+    let mut invoke_instruction = Instruction::new_with_bytes(
+        program_id,
+        &[0],
+        vec![
+            AccountMeta::new_readonly(noop_program_id, false),
+            AccountMeta::new_readonly(noop_program_id, false),
+            AccountMeta::new_readonly(clock::id(), false),
+            AccountMeta::new_readonly(fees::id(), false),
+        ],
+    );
+
+    // Call the upgraded program
+    invoke_instruction.data[0] += 1;
+    let result =
+        bank_client.send_and_confirm_instruction(&mint_keypair, invoke_instruction.clone());
+    assert!(result.is_ok());
+
+    // Prepare for upgrade
+    let buffer_keypair = Keypair::new();
+    load_upgradeable_buffer(
+        &bank_client,
+        &mint_keypair,
+        &buffer_keypair,
+        &authority_keypair,
+        "solana_bpf_rust_panic",
+    );
+
+    // Invoke, then upgrade the program, and then invoke again in same tx
+    let message = Message::new(
+        &[
+            invoke_instruction.clone(),
+            bpf_loader_upgradeable::upgrade(
+                &program_id,
+                &buffer_keypair.pubkey(),
+                &authority_keypair.pubkey(),
+                &mint_keypair.pubkey(),
+            ),
+            invoke_instruction,
+        ],
+        Some(&mint_keypair.pubkey()),
+    );
+    let tx = Transaction::new(
+        &[&mint_keypair, &authority_keypair],
+        message.clone(),
+        bank.last_blockhash(),
+    );
+    let (result, _) = process_transaction_and_record_inner(&bank, tx);
+    assert_eq!(
+        result.unwrap_err(),
+        TransactionError::InstructionError(2, InstructionError::ProgramFailedToComplete)
     );
 }
 

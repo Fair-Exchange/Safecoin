@@ -166,8 +166,12 @@ pub mod spl_token_v2_set_authority_fix {
     solana_sdk::declare_id!("Cb3jN13cfCNDV9dp36djNpcZXF7r82UAE4U1tZjXnFx5");
 }
 
-pub mod voter_groups_consensus {
-    solana_sdk::declare_id!("5jvJyof7JXy7JEwGag4qdEuCA2DuEhkQSKMaEsELJxQU");
+pub mod demote_program_write_locks {
+    solana_sdk::declare_id!("3E3jV7v9VcdJL8iYZUMax9DiDno8j7EWUVbhm9RtShj2");
+}
+
+pub mod stakes_remove_delegation_if_inactive {
+    solana_sdk::declare_id!("HFpdDDNQjvcXnXKec697HDDsyk6tFoWS2o8fkxuhQZpL");
 }
 
 lazy_static! {
@@ -210,7 +214,8 @@ lazy_static! {
         (libsecp256k1_0_5_upgrade_enabled::id(), "upgrade libsecp256k1 to v0.5.0"),
         (merge_nonce_error_into_system_error::id(), "merge NonceError into SystemError"),
         (spl_token_v2_set_authority_fix::id(), "safe-token set_authority fix"),
-        (voter_groups_consensus::id(), "use a random subset of voters for block consensus"),
+        (demote_program_write_locks::id(), "demote program write locks to readonly, except when upgradeable loader present #19593 #20263"),
+        (stakes_remove_delegation_if_inactive::id(), "remove delegations from stakes cache when inactive"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()

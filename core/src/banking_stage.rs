@@ -91,9 +91,11 @@ pub struct BankingStageStats {
     id: u32,
     process_packets_count: AtomicUsize,
     new_tx_count: AtomicUsize,
-    dropped_batches_count: AtomicUsize,
+    dropped_packet_batches_count: AtomicUsize,
+    dropped_packets_count: AtomicUsize,
     newly_buffered_packets_count: AtomicUsize,
     current_buffered_packets_count: AtomicUsize,
+    current_buffered_packet_batches_count: AtomicUsize,
     rebuffered_packets_count: AtomicUsize,
     consumed_buffered_packets_count: AtomicUsize,
 
@@ -143,13 +145,24 @@ impl BankingStageStats {
                     i64
                 ),
                 (
-                    "dropped_batches_count",
-                    self.dropped_batches_count.swap(0, Ordering::Relaxed) as i64,
+                    "dropped_packet_batches_count",
+                    self.dropped_packet_batches_count.swap(0, Ordering::Relaxed) as i64,
+                    i64
+                ),
+                (
+                    "dropped_packets_count",
+                    self.dropped_packets_count.swap(0, Ordering::Relaxed) as i64,
                     i64
                 ),
                 (
                     "newly_buffered_packets_count",
                     self.newly_buffered_packets_count.swap(0, Ordering::Relaxed) as i64,
+                    i64
+                ),
+                (
+                    "current_buffered_packet_batches_count",
+                    self.current_buffered_packet_batches_count
+                        .swap(0, Ordering::Relaxed) as i64,
                     i64
                 ),
                 (
@@ -161,6 +174,12 @@ impl BankingStageStats {
                 (
                     "rebuffered_packets_count",
                     self.rebuffered_packets_count.swap(0, Ordering::Relaxed) as i64,
+                    i64
+                ),
+                (
+                    "consumed_buffered_packets_count",
+                    self.consumed_buffered_packets_count
+                        .swap(0, Ordering::Relaxed) as i64,
                     i64
                 ),
                 (
@@ -1006,12 +1025,16 @@ impl BankingStage {
         msgs: &Packets,
         transaction_indexes: &[usize],
         libsecp256k1_0_5_upgrade_enabled: bool,
+        votes_only: bool,
     ) -> (Vec<HashedTransaction<'static>>, Vec<usize>) {
         transaction_indexes
             .iter()
             .filter_map(|tx_index| {
                 let p = &msgs.packets[*tx_index];
                 let tx: Transaction = limited_deserialize(&p.data[0..p.meta.size]).ok()?;
+                if votes_only && !solana_runtime::bank::is_simple_vote_transaction(&tx) {
+                    return None;
+                }
                 tx.verify_precompiles(libsecp256k1_0_5_upgrade_enabled)
                     .ok()?;
                 let message_bytes = Self::packet_message(p)?;
@@ -1078,6 +1101,7 @@ impl BankingStage {
             msgs,
             &packet_indexes,
             bank.libsecp256k1_0_5_upgrade_enabled(),
+            bank.vote_only_bank(),
         );
         packet_conversion_time.stop();
 
@@ -1149,6 +1173,7 @@ impl BankingStage {
             msgs,
             &transaction_indexes,
             bank.libsecp256k1_0_5_upgrade_enabled(),
+            bank.vote_only_bank(),
         );
 
         let tx_count = transaction_to_packet_indexes.len();
@@ -1219,7 +1244,8 @@ impl BankingStage {
         let mut new_tx_count = 0;
 
         let mut mms_iter = mms.into_iter();
-        let mut dropped_batches_count = 0;
+        let mut dropped_packets_count = 0;
+        let mut dropped_packet_batches_count = 0;
         let mut newly_buffered_packets_count = 0;
         while let Some(msgs) = mms_iter.next() {
             let packet_indexes = Self::generate_packet_indexes(&msgs.packets);
@@ -1229,7 +1255,8 @@ impl BankingStage {
                     buffered_packets,
                     msgs,
                     packet_indexes,
-                    &mut dropped_batches_count,
+                    &mut dropped_packets_count,
+                    &mut dropped_packet_batches_count,
                     &mut newly_buffered_packets_count,
                     batch_limit,
                     duplicates,
@@ -1258,7 +1285,8 @@ impl BankingStage {
                 buffered_packets,
                 msgs,
                 unprocessed_indexes,
-                &mut dropped_batches_count,
+                &mut dropped_packet_batches_count,
+                &mut dropped_packets_count,
                 &mut newly_buffered_packets_count,
                 batch_limit,
                 duplicates,
@@ -1284,7 +1312,8 @@ impl BankingStage {
                         buffered_packets,
                         msgs,
                         unprocessed_indexes,
-                        &mut dropped_batches_count,
+                        &mut dropped_packet_batches_count,
+                        &mut dropped_packets_count,
                         &mut newly_buffered_packets_count,
                         batch_limit,
                         duplicates,
@@ -1319,14 +1348,18 @@ impl BankingStage {
             .new_tx_count
             .fetch_add(new_tx_count, Ordering::Relaxed);
         banking_stage_stats
-            .dropped_batches_count
-            .fetch_add(dropped_batches_count, Ordering::Relaxed);
+            .dropped_packet_batches_count
+            .fetch_add(dropped_packet_batches_count, Ordering::Relaxed);
         banking_stage_stats
             .newly_buffered_packets_count
             .fetch_add(newly_buffered_packets_count, Ordering::Relaxed);
         banking_stage_stats
-            .current_buffered_packets_count
+            .current_buffered_packet_batches_count
             .swap(buffered_packets.len(), Ordering::Relaxed);
+        banking_stage_stats.current_buffered_packets_count.swap(
+            buffered_packets.iter().map(|packets| packets.1.len()).sum(),
+            Ordering::Relaxed,
+        );
         *recv_start = Instant::now();
         Ok(())
     }
@@ -1335,7 +1368,8 @@ impl BankingStage {
         unprocessed_packets: &mut UnprocessedPackets,
         packets: Packets,
         mut packet_indexes: Vec<usize>,
-        dropped_batches_count: &mut usize,
+        dropped_packet_batches_count: &mut usize,
+        dropped_packets_count: &mut usize,
         newly_buffered_packets_count: &mut usize,
         batch_limit: usize,
         duplicates: &Arc<Mutex<(LruCache<u64, ()>, PacketHasher)>>,
@@ -1362,8 +1396,10 @@ impl BankingStage {
         }
         if Self::packet_has_more_unprocessed_transactions(&packet_indexes) {
             if unprocessed_packets.len() >= batch_limit {
-                *dropped_batches_count += 1;
-                unprocessed_packets.pop_front();
+                *dropped_packet_batches_count += 1;
+                if let Some(dropped_batch) = unprocessed_packets.pop_front() {
+                    *dropped_packets_count += dropped_batch.1.len();
+                }
             }
             *newly_buffered_packets_count += packet_indexes.len();
             unprocessed_packets.push_back((packets, packet_indexes, false));
@@ -2766,23 +2802,22 @@ mod tests {
     #[test]
     fn test_push_unprocessed_batch_limit() {
         solana_logger::setup();
-        // Create `Packets` with 1 unprocessed element
-        let single_element_packets = Packets::new(vec![Packet::default()]);
+        // Create `Packets` with 2 unprocessed elements
+        let new_packets = Packets::new(vec![Packet::default(); 2]);
         let mut unprocessed_packets: UnprocessedPackets =
-            vec![(single_element_packets.clone(), vec![0], false)]
-                .into_iter()
-                .collect();
+            vec![(new_packets, vec![0, 1], false)].into_iter().collect();
         // Set the limit to 2
         let batch_limit = 2;
         // Create some new unprocessed packets
-        let new_packets = single_element_packets;
+        let new_packets = Packets::new(vec![Packet::default()]);
         let packet_indexes = vec![];
 
         let duplicates = Arc::new(Mutex::new((
             LruCache::new(DEFAULT_LRU_SIZE),
             PacketHasher::default(),
         )));
-        let mut dropped_batches_count = 0;
+        let mut dropped_packet_batches_count = 0;
+        let mut dropped_packets_count = 0;
         let mut newly_buffered_packets_count = 0;
         let banking_stage_stats = BankingStageStats::default();
         // Because the set of unprocessed `packet_indexes` is empty, the
@@ -2791,14 +2826,16 @@ mod tests {
             &mut unprocessed_packets,
             new_packets.clone(),
             packet_indexes,
-            &mut dropped_batches_count,
+            &mut dropped_packet_batches_count,
+            &mut dropped_packets_count,
             &mut newly_buffered_packets_count,
             batch_limit,
             &duplicates,
             &banking_stage_stats,
         );
         assert_eq!(unprocessed_packets.len(), 1);
-        assert_eq!(dropped_batches_count, 0);
+        assert_eq!(dropped_packet_batches_count, 0);
+        assert_eq!(dropped_packets_count, 0);
         assert_eq!(newly_buffered_packets_count, 0);
 
         // Because the set of unprocessed `packet_indexes` is non-empty, the
@@ -2808,14 +2845,16 @@ mod tests {
             &mut unprocessed_packets,
             new_packets,
             packet_indexes.clone(),
-            &mut dropped_batches_count,
+            &mut dropped_packet_batches_count,
+            &mut dropped_packets_count,
             &mut newly_buffered_packets_count,
             batch_limit,
             &duplicates,
             &banking_stage_stats,
         );
         assert_eq!(unprocessed_packets.len(), 2);
-        assert_eq!(dropped_batches_count, 0);
+        assert_eq!(dropped_packet_batches_count, 0);
+        assert_eq!(dropped_packets_count, 0);
         assert_eq!(newly_buffered_packets_count, 1);
 
         // Because we've reached the batch limit, old unprocessed packets are
@@ -2830,7 +2869,8 @@ mod tests {
             &mut unprocessed_packets,
             new_packets.clone(),
             packet_indexes.clone(),
-            &mut dropped_batches_count,
+            &mut dropped_packet_batches_count,
+            &mut dropped_packets_count,
             &mut newly_buffered_packets_count,
             batch_limit,
             &duplicates,
@@ -2838,15 +2878,17 @@ mod tests {
         );
         assert_eq!(unprocessed_packets.len(), 2);
         assert_eq!(unprocessed_packets[1].0.packets[0], new_packets.packets[0]);
-        assert_eq!(dropped_batches_count, 1);
+        assert_eq!(dropped_packet_batches_count, 1);
+        assert_eq!(dropped_packets_count, 2);
         assert_eq!(newly_buffered_packets_count, 2);
 
-        // Check duplicates are dropped
+        // Check duplicates are dropped (newly buffered shouldn't change)
         BankingStage::push_unprocessed(
             &mut unprocessed_packets,
             new_packets.clone(),
             packet_indexes,
-            &mut dropped_batches_count,
+            &mut dropped_packet_batches_count,
+            &mut dropped_packets_count,
             &mut newly_buffered_packets_count,
             3,
             &duplicates,
@@ -2854,7 +2896,8 @@ mod tests {
         );
         assert_eq!(unprocessed_packets.len(), 2);
         assert_eq!(unprocessed_packets[1].0.packets[0], new_packets.packets[0]);
-        assert_eq!(dropped_batches_count, 1);
+        assert_eq!(dropped_packet_batches_count, 1);
+        assert_eq!(dropped_packets_count, 2);
         assert_eq!(newly_buffered_packets_count, 2);
     }
 
@@ -2869,5 +2912,38 @@ mod tests {
             BankingStage::packet_message(&packet).unwrap().to_vec(),
             transaction.message_data()
         );
+    }
+
+    #[test]
+    fn test_transactions_from_packets() {
+        use solana_vote_program::vote_state::Vote;
+        solana_logger::setup();
+        let mut vote_packet = Packet::default();
+        let vote_instruction = solana_vote_program::vote_instruction::vote(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            Vote::default(),
+        );
+        let vote_transaction =
+            Transaction::new_with_payer(&[vote_instruction], Some(&Pubkey::new_unique()));
+        Packet::populate_packet(&mut vote_packet, None, &vote_transaction).unwrap();
+        let mut non_vote = Packet::default();
+        let tx = system_transaction::transfer(
+            &Keypair::new(),
+            &Pubkey::new_unique(),
+            2,
+            Hash::default(),
+        );
+        Packet::populate_packet(&mut non_vote, None, &tx).unwrap();
+        let msgs = Packets::new(vec![non_vote, vote_packet]);
+        let packet_indexes = [0, 1];
+        let (transactions, _transaction_to_packet_indexes) =
+            BankingStage::transactions_from_packets(&msgs, &packet_indexes, false, true);
+        assert_eq!(transactions.len(), 1);
+        assert!(!transactions[0].transaction().signatures.is_empty());
+
+        let (transactions, _transaction_to_packet_indexes) =
+            BankingStage::transactions_from_packets(&msgs, &packet_indexes, false, false);
+        assert_eq!(transactions.len(), 2);
     }
 }

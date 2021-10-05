@@ -83,8 +83,7 @@ use {
 };
 
 const MAX_COMPLETED_DATA_SETS_IN_CHANNEL: usize = 100_000;
-const WAIT_FOR_SUPERMAJORITY_THRESHOLD_PERCENT: u64 = 20;
-
+const WAIT_FOR_SUPERMAJORITY_THRESHOLD_PERCENT: u64 = 80;
 
 #[derive(Debug)]
 pub struct ValidatorConfig {
@@ -472,12 +471,12 @@ impl Validator {
         let optimistically_confirmed_bank =
             OptimisticallyConfirmedBank::locked_from_bank_forks_root(&bank_forks);
 
-        let subscriptions = Arc::new(RpcSubscriptions::new_with_vote_subscription(
+        let rpc_subscriptions = Arc::new(RpcSubscriptions::new_with_config(
             &exit,
             bank_forks.clone(),
             block_commitment_cache.clone(),
             optimistically_confirmed_bank.clone(),
-            config.pubsub_config.enable_vote_subscription,
+            &config.pubsub_config,
         ));
 
         let max_slots = Arc::new(MaxSlots::default());
@@ -486,7 +485,7 @@ impl Validator {
         let completed_data_sets_service = CompletedDataSetsService::new(
             completed_data_sets_receiver,
             blockstore.clone(),
-            subscriptions.clone(),
+            rpc_subscriptions.clone(),
             &exit,
             max_slots.clone(),
         );
@@ -564,19 +563,25 @@ impl Validator {
                 if config.rpc_config.minimal_api {
                     None
                 } else {
-                    Some(PubSubService::new(
+                    let (trigger, pubsub_service) = PubSubService::new(
                         config.pubsub_config.clone(),
-                        &subscriptions,
+                        &rpc_subscriptions,
                         rpc_pubsub_addr,
-                        &exit,
-                    ))
+                    );
+                    config
+                        .validator_exit
+                        .write()
+                        .unwrap()
+                        .register_exit(Box::new(move || trigger.cancel()));
+
+                    Some(pubsub_service)
                 },
                 Some(OptimisticallyConfirmedBankTracker::new(
                     bank_notification_receiver,
                     &exit,
                     bank_forks.clone(),
                     optimistically_confirmed_bank,
-                    subscriptions.clone(),
+                    rpc_subscriptions.clone(),
                 )),
                 Some(bank_notification_sender),
             )
@@ -712,7 +717,7 @@ impl Validator {
             },
             blockstore.clone(),
             ledger_signal_receiver,
-            &subscriptions,
+            &rpc_subscriptions,
             &poh_recorder,
             tower,
             &leader_schedule_cache,
@@ -758,7 +763,7 @@ impl Validator {
             node.sockets.tpu,
             node.sockets.tpu_forwards,
             node.sockets.broadcast,
-            &subscriptions,
+            &rpc_subscriptions,
             transaction_status_sender,
             &blockstore,
             &config.broadcast_stage_type,
@@ -1412,6 +1417,10 @@ fn wait_for_supermajority(
         let gossip_stake_percent = get_stake_percent_in_gossip(&bank, &cluster_info, i % 10 == 0);
 
         if gossip_stake_percent >= WAIT_FOR_SUPERMAJORITY_THRESHOLD_PERCENT {
+            info!(
+                "Supermajority reached, {}% active stake detected, starting up now.",
+                gossip_stake_percent,
+            );
             break;
         }
         // The normal RPC health checks don't apply as the node is waiting, so feign health to

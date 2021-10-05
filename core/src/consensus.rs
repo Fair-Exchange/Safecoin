@@ -83,7 +83,7 @@ impl SwitchForkDecision {
 }
 
 pub const VOTE_THRESHOLD_DEPTH: usize = 8;
-pub const SWITCH_FORK_THRESHOLD: f64 = 0.005;
+pub const SWITCH_FORK_THRESHOLD: f64 = 0.38;
 
 pub type Result<T> = std::result::Result<T, TowerError>;
 
@@ -806,14 +806,6 @@ impl Tower {
         voted_stakes: &VotedStakes,
         total_stake: Stake,
     ) -> bool {
-
-        trace!(
-            "check_vote_stake_threshold_init (Slot: {} total_stake: {} threshold_depth {}",
-            slot,
-            total_stake,
-	    self.threshold_depth
-        );
-
         let mut lockouts = self.lockouts.clone();
         lockouts.process_slot_vote_unchecked(slot);
         let vote = lockouts.nth_recent_vote(self.threshold_depth);
@@ -821,8 +813,8 @@ impl Tower {
             if let Some(fork_stake) = voted_stakes.get(&vote.slot) {
                 let lockout = *fork_stake as f64 / total_stake as f64;
                 trace!(
-                    "check_vote_stake_threshold_mid fork_stake slot: {}, vote slot: {}, lockout: {} fork_stake: {} total_stake: {} confirmation_count: {}",
-                    slot, vote.slot, lockout, fork_stake, total_stake, vote.confirmation_count
+                    "fork_stake slot: {}, vote slot: {}, lockout: {} fork_stake: {} total_stake: {}",
+                    slot, vote.slot, lockout, fork_stake, total_stake
                 );
                 if vote.confirmation_count as usize > self.threshold_depth {
                     for old_vote in &self.lockouts.votes {

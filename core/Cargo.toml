@@ -1,7 +1,7 @@
 [package]
 name = "safecoin-core"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.6.25"
+version = "1.6.27"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/safecoin-core"
 readme = "../README.md"
@@ -9,9 +9,6 @@ repository = "https://github.com/fair-exchange/safecoin"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 license = "Apache-2.0"
 edition = "2018"
-
-[lib]
-name = "solana_core"
 
 [badges]
 codecov = { repository = "fair-exchange/safecoin", branch = "master", service = "github" }
@@ -27,6 +24,7 @@ byteorder = "1.3.4"
 chrono = { version = "0.4.11", features = ["serde"] }
 core_affinity = "0.5.10"
 crossbeam-channel = "0.4"
+dashmap = "4.0.2"
 ed25519-dalek = "=1.0.1"
 fs_extra = "1.2.0"
 flate2 = "1.0"
@@ -55,39 +53,43 @@ serde = "1.0.122"
 serde_bytes = "0.11"
 serde_derive = "1.0.103"
 serde_json = "1.0.56"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.6.25" }
-safecoin-banks-server = { path = "../banks-server", version = "=1.6.25" }
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.25" }
-safecoin-client = { path = "../client", version = "=1.6.25" }
-safecoin-faucet = { path = "../faucet", version = "=1.6.25" }
-safecoin-ledger = { path = "../ledger", version = "=1.6.25" }
-safecoin-logger = { path = "../logger", version = "=1.6.25" }
-safecoin-merkle-tree = { path = "../merkle-tree", version = "=1.6.25" }
-safecoin-metrics = { path = "../metrics", version = "=1.6.25" }
-safecoin-measure = { path = "../measure", version = "=1.6.25" }
-safecoin-net-utils = { path = "../net-utils", version = "=1.6.25" }
-safecoin-perf = { path = "../perf", version = "=1.6.25" }
-safecoin-program-test = { path = "../program-test", version = "=1.6.25" }
-safecoin-runtime = { path = "../runtime", version = "=1.6.25" }
-safecoin-sdk = { path = "../sdk", version = "=1.6.25" }
-safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.6.25" }
-safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.6.25" }
-safecoin-stake-program = { path = "../programs/stake", version = "=1.6.25" }
-safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.6.25" }
-safecoin-streamer = { path = "../streamer", version = "=1.6.25" }
-safecoin-sys-tuner = { path = "../sys-tuner", version = "=1.6.25" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.6.25" }
-safecoin-version = { path = "../version", version = "=1.6.25" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.6.25" }
+soketto = "0.6"
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.6.27" }
+safecoin-banks-server = { path = "../banks-server", version = "=1.6.27" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.27" }
+safecoin-client = { path = "../client", version = "=1.6.27" }
+safecoin-faucet = { path = "../faucet", version = "=1.6.27" }
+safecoin-ledger = { path = "../ledger", version = "=1.6.27" }
+safecoin-logger = { path = "../logger", version = "=1.6.27" }
+safecoin-merkle-tree = { path = "../merkle-tree", version = "=1.6.27" }
+safecoin-metrics = { path = "../metrics", version = "=1.6.27" }
+safecoin-measure = { path = "../measure", version = "=1.6.27" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.6.27" }
+safecoin-perf = { path = "../perf", version = "=1.6.27" }
+safecoin-program-test = { path = "../program-test", version = "=1.6.27" }
+safecoin-runtime = { path = "../runtime", version = "=1.6.27" }
+safecoin-sdk = { path = "../sdk", version = "=1.6.27" }
+safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.6.27" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.6.27" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.6.27" }
+safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.6.27" }
+safecoin-streamer = { path = "../streamer", version = "=1.6.27" }
+safecoin-sys-tuner = { path = "../sys-tuner", version = "=1.6.27" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.6.27" }
+safecoin-version = { path = "../version", version = "=1.6.27" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.6.27" }
 spl-token-v2-0 = { package = "safe-token", version = "=3.1.6", features = ["no-entrypoint"] }
 tempfile = "3.1.0"
+stream-cancel = "0.8.1"
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
-tokio-util = { version = "0.6", features = ["codec"] }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.6.25" }
+tokio-util = { version = "0.6", features = ["codec", "compat"] }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.6.27" }
 trees = "0.2.1"
 
 [dev-dependencies]
+jsonrpc-derive = "18.0.0"
+jsonrpc-pubsub = "18.0.0"
 matches = "0.1.6"
 num_cpus = "1.13.0"
 reqwest = { version = "0.11.2", default-features = false, features = ["blocking", "rustls-tls", "json"] }

@@ -373,7 +373,7 @@ impl Message {
         self.program_position(i).is_some()
     }
 
-    pub fn is_writable(&self, i: usize) -> bool {
+    pub fn is_writable(&self, i: usize, demote_program_write_locks: bool) -> bool {
         (i < (self.header.num_required_signatures - self.header.num_readonly_signed_accounts)
             as usize
             || (i >= self.header.num_required_signatures as usize
@@ -383,18 +383,22 @@ impl Message {
                 let key = self.account_keys[i];
                 sysvar::is_sysvar_id(&key) || BUILTIN_PROGRAMS_KEYS.contains(&key)
             }
-            && !self.is_key_called_as_program(i)
+            && (!self.is_key_called_as_program(i)
+                || (demote_program_write_locks && self.is_upgradeable_loader_present()))
     }
 
     pub fn is_signer(&self, i: usize) -> bool {
         i < self.header.num_required_signatures as usize
     }
 
-    pub fn get_account_keys_by_lock_type(&self) -> (Vec<&Pubkey>, Vec<&Pubkey>) {
+    pub fn get_account_keys_by_lock_type(
+        &self,
+        demote_program_write_locks: bool,
+    ) -> (Vec<&Pubkey>, Vec<&Pubkey>) {
         let mut writable_keys = vec![];
         let mut readonly_keys = vec![];
         for (i, key) in self.account_keys.iter().enumerate() {
-            if self.is_writable(i) {
+            if self.is_writable(i, demote_program_write_locks) {
                 writable_keys.push(key);
             } else {
                 readonly_keys.push(key);
@@ -416,7 +420,7 @@ impl Message {
     //   35..67 - program_id
     //   67..69 - data len - u16
     //   69..data_len - data
-    pub fn serialize_instructions(&self) -> Vec<u8> {
+    pub fn serialize_instructions(&self, demote_program_write_locks: bool) -> Vec<u8> {
         // 64 bytes is a reasonable guess, calculating exactly is slower in benchmarks
         let mut data = Vec::with_capacity(self.instructions.len() * (32 * 2));
         append_u16(&mut data, self.instructions.len() as u16);
@@ -431,7 +435,7 @@ impl Message {
             for account_index in &instruction.accounts {
                 let account_index = *account_index as usize;
                 let is_signer = self.is_signer(account_index);
-                let is_writable = self.is_writable(account_index);
+                let is_writable = self.is_writable(account_index, demote_program_write_locks);
                 let mut meta_byte = 0;
                 if is_signer {
                     meta_byte |= 1 << Self::IS_SIGNER_BIT;
@@ -505,6 +509,12 @@ impl Message {
             .len()
             .min(self.header.num_required_signatures as usize);
         self.account_keys[..last_key].iter().collect()
+    }
+
+    pub fn is_upgradeable_loader_present(&self) -> bool {
+        self.account_keys
+            .iter()
+            .any(|&key| key == bpf_loader_upgradeable::id())
     }
 }
 
@@ -870,12 +880,13 @@ mod tests {
             recent_blockhash: Hash::default(),
             instructions: vec![],
         };
-        assert!(message.is_writable(0));
-        assert!(!message.is_writable(1));
-        assert!(!message.is_writable(2));
-        assert!(message.is_writable(3));
-        assert!(message.is_writable(4));
-        assert!(!message.is_writable(5));
+        let demote_program_write_locks = true;
+        assert!(message.is_writable(0, demote_program_write_locks));
+        assert!(!message.is_writable(1, demote_program_write_locks));
+        assert!(!message.is_writable(2, demote_program_write_locks));
+        assert!(message.is_writable(3, demote_program_write_locks));
+        assert!(message.is_writable(4, demote_program_write_locks));
+        assert!(!message.is_writable(5, demote_program_write_locks));
     }
 
     #[test]
@@ -903,7 +914,7 @@ mod tests {
             Some(&id1),
         );
         assert_eq!(
-            message.get_account_keys_by_lock_type(),
+            message.get_account_keys_by_lock_type(/*demote_program_write_locks=*/ true),
             (vec![&id1, &id0], vec![&id3, &id2, &program_id])
         );
     }
@@ -933,7 +944,7 @@ mod tests {
         ];
 
         let message = Message::new(&instructions, Some(&id1));
-        let serialized = message.serialize_instructions();
+        let serialized = message.serialize_instructions(/*demote_program_write_locks=*/ true);
         for (i, instruction) in instructions.iter().enumerate() {
             assert_eq!(
                 Message::deserialize_instruction(i, &serialized).unwrap(),
@@ -954,7 +965,7 @@ mod tests {
         ];
 
         let message = Message::new(&instructions, Some(&id1));
-        let serialized = message.serialize_instructions();
+        let serialized = message.serialize_instructions(/*demote_program_write_locks=*/ true);
         assert_eq!(
             Message::deserialize_instruction(instructions.len(), &serialized).unwrap_err(),
             SanitizeError::IndexOutOfBounds,

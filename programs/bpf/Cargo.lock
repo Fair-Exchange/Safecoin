@@ -1356,6 +1356,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61124eeebbd69b8190558df225adf7e4caafce0d743919e5d6b19652314ec5ec"
 dependencies = [
  "cfg-if 1.0.0",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1817,9 +1820,9 @@ checksum = "9cbca9424c482ee628fa549d9c812e2cd22f1180b9222c9200fdfa6eb31aecb2"
 
 [[package]]
 name = "once_cell"
-version = "1.5.2"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13bd41f508810a131401606d54ac32a467c97172d74ba7662562ebba5ad07fa0"
+checksum = "692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56"
 dependencies = [
  "parking_lot 0.11.1",
 ]
@@ -2678,7 +2681,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-account-decoder"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "Inflector",
  "base64 0.12.3",
@@ -2700,7 +2703,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-banks-client"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "borsh 0.9.0",
@@ -2708,7 +2711,7 @@ dependencies = [
  "futures",
  "mio",
  "safecoin-banks-interface",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
  "safecoin-sdk",
  "tarpc",
  "tokio",
@@ -2717,7 +2720,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-banks-interface"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "mio",
  "serde",
@@ -2727,7 +2730,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-banks-server"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "futures",
@@ -2745,7 +2748,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-bpf-loader-program"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "byteorder 1.3.4",
@@ -2763,7 +2766,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-bpf-programs"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "byteorder 1.3.4",
@@ -2774,7 +2777,7 @@ dependencies = [
  "safecoin-account-decoder",
  "safecoin-bpf-loader-program",
  "safecoin-cli-output",
- "safecoin-logger 1.6.25",
+ "safecoin-logger 1.6.27",
  "safecoin-measure",
  "safecoin-runtime",
  "safecoin-sdk",
@@ -2785,272 +2788,272 @@ dependencies = [
 
 [[package]]
 name = "solana-bpf-rust-128bit"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "solana-bpf-rust-128bit-dep",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-128bit-dep"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-alloc"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-call-depth"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-caller-access"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-custom-heap"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-dep-crate"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "byteorder 1.3.4",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-deprecated-loader"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-dup-accounts"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-error-handling"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "num-derive 0.2.5",
  "num-traits",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
  "thiserror",
 ]
 
 [[package]]
 name = "solana-bpf-rust-external-spend"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-finalize"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-instruction-introspection"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoke"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "solana-bpf-rust-invoked",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoke-and-error"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoke-and-ok"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoke-and-return"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoked"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-iter"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-many-args"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "solana-bpf-rust-many-args-dep",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-many-args-dep"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-mem"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
  "safecoin-program-test",
  "safecoin-sdk",
 ]
 
 [[package]]
 name = "solana-bpf-rust-membuiltins"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "solana-bpf-rust-mem",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-noop"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-panic"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-param-passing"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "solana-bpf-rust-param-passing-dep",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-param-passing-dep"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-rand"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "getrandom 0.1.14",
  "rand 0.7.3",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-ro-modify"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-sanity"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-sha"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-spoof1"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-spoof1-system"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-sysvar"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-upgradeable"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "solana-bpf-rust-upgraded"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.6.27",
 ]
 
 [[package]]
 name = "safecoin-clap-utils"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "chrono",
  "clap",
@@ -3065,7 +3068,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-cli-config"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "dirs-next",
  "lazy_static",
@@ -3077,7 +3080,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-cli-output"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "Inflector",
  "base64 0.13.0",
@@ -3100,7 +3103,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-client"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "base64 0.13.0",
  "bincode",
@@ -3132,7 +3135,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-config-program"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "chrono",
@@ -3145,7 +3148,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-crate-features"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "backtrace",
  "bytes 0.4.12",
@@ -3166,7 +3169,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-faucet"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "byteorder 1.3.4",
@@ -3176,7 +3179,7 @@ dependencies = [
  "serde_derive",
  "safecoin-clap-utils",
  "safecoin-cli-config",
- "safecoin-logger 1.6.25",
+ "safecoin-logger 1.6.27",
  "safecoin-metrics",
  "safecoin-sdk",
  "safecoin-version",
@@ -3187,7 +3190,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-frozen-abi"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bs58",
  "bv",
@@ -3198,8 +3201,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "sha2",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
+ "safecoin-frozen-abi-macro 1.6.27",
+ "safecoin-logger 1.6.27",
  "thiserror",
 ]
 
@@ -3225,7 +3228,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-frozen-abi-macro"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "lazy_static",
  "proc-macro2 1.0.24",
@@ -3248,7 +3251,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-logger"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "env_logger",
  "lazy_static",
@@ -3268,7 +3271,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-measure"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "jemalloc-ctl",
  "jemallocator",
@@ -3279,7 +3282,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-metrics"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "env_logger",
  "gethostname",
@@ -3291,7 +3294,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-net-utils"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "clap",
@@ -3302,7 +3305,7 @@ dependencies = [
  "serde_derive",
  "socket2 0.3.17",
  "safecoin-clap-utils",
- "safecoin-logger 1.6.25",
+ "safecoin-logger 1.6.27",
  "safecoin-version",
  "tokio",
  "url",
@@ -3310,7 +3313,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-program"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "blake3",
@@ -3333,10 +3336,10 @@ dependencies = [
  "serde_derive",
  "sha2",
  "sha3",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
- "safecoin-sdk-macro 1.6.25",
+ "safecoin-frozen-abi 1.6.27",
+ "safecoin-frozen-abi-macro 1.6.27",
+ "safecoin-logger 1.6.27",
+ "safecoin-sdk-macro 1.6.27",
  "thiserror",
 ]
 
@@ -3376,7 +3379,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-program-test"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
@@ -3390,7 +3393,7 @@ dependencies = [
  "safecoin-banks-client",
  "safecoin-banks-server",
  "safecoin-bpf-loader-program",
- "safecoin-logger 1.6.25",
+ "safecoin-logger 1.6.27",
  "safecoin-runtime",
  "safecoin-sdk",
  "safecoin-vote-program",
@@ -3400,7 +3403,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-rayon-threadlimit"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "lazy_static",
  "num_cpus",
@@ -3408,7 +3411,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-remote-wallet"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "base32",
  "console",
@@ -3427,7 +3430,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-runtime"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "arrayref",
  "bincode",
@@ -3457,9 +3460,9 @@ dependencies = [
  "serde",
  "serde_derive",
  "safecoin-config-program",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
+ "safecoin-frozen-abi 1.6.27",
+ "safecoin-frozen-abi-macro 1.6.27",
+ "safecoin-logger 1.6.27",
  "safecoin-measure",
  "safecoin-metrics",
  "safecoin-rayon-threadlimit",
@@ -3476,7 +3479,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-sdk"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "assert_matches",
  "bincode",
@@ -3512,18 +3515,18 @@ dependencies = [
  "sha2",
  "sha3",
  "safecoin-crate-features",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
- "safecoin-program 1.6.25",
- "safecoin-sdk-macro 1.6.25",
+ "safecoin-frozen-abi 1.6.27",
+ "safecoin-frozen-abi-macro 1.6.27",
+ "safecoin-logger 1.6.27",
+ "safecoin-program 1.6.27",
+ "safecoin-sdk-macro 1.6.27",
  "thiserror",
  "uriparse",
 ]
 
 [[package]]
 name = "safecoin-sdk-macro"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bs58",
  "proc-macro2 1.0.24",
@@ -3547,20 +3550,20 @@ dependencies = [
 
 [[package]]
 name = "safecoin-secp256k1-program"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "digest 0.9.0",
  "libsecp256k1",
  "rand 0.7.3",
  "sha3",
- "safecoin-logger 1.6.25",
+ "safecoin-logger 1.6.27",
  "safecoin-sdk",
 ]
 
 [[package]]
 name = "safecoin-stake-program"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "log",
@@ -3570,8 +3573,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "safecoin-config-program",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
+ "safecoin-frozen-abi 1.6.27",
+ "safecoin-frozen-abi-macro 1.6.27",
  "safecoin-metrics",
  "safecoin-sdk",
  "safecoin-vote-program",
@@ -3580,7 +3583,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-transaction-status"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "Inflector",
  "base64 0.12.3",
@@ -3603,21 +3606,21 @@ dependencies = [
 
 [[package]]
 name = "safecoin-version"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "log",
  "rustc_version",
  "serde",
  "serde_derive",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
+ "safecoin-frozen-abi 1.6.27",
+ "safecoin-frozen-abi-macro 1.6.27",
+ "safecoin-logger 1.6.27",
  "safecoin-sdk",
 ]
 
 [[package]]
 name = "safecoin-vote-program"
-version = "1.6.25"
+version = "1.6.27"
 dependencies = [
  "bincode",
  "log",
@@ -3626,9 +3629,9 @@ dependencies = [
  "rustc_version",
  "serde",
  "serde_derive",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
+ "safecoin-frozen-abi 1.6.27",
+ "safecoin-frozen-abi-macro 1.6.27",
+ "safecoin-logger 1.6.27",
  "safecoin-metrics",
  "safecoin-sdk",
  "thiserror",
@@ -3891,13 +3894,14 @@ dependencies = [
 
 [[package]]
 name = "tiny-bip39"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9e44c4759bae7f1032e286a7ef990bd9ed23fe831b7eeba0beb97484c2e59b8"
+checksum = "524daa5624d9d4ffb5a0625971d35205b882111daa6b6338a7a6c578a3c36928"
 dependencies = [
  "anyhow",
  "hmac 0.8.1",
  "once_cell",
+ "parking_lot 0.11.1",
  "pbkdf2 0.4.0",
  "rand 0.7.3",
  "rustc-hash",
@@ -4402,9 +4406,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize_derive"
-version = "1.0.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de251eec69fc7c1bc3923403d18ececb929380e016afe103da75f396704f8ca2"
+checksum = "bdff2024a851a322b08f179173ae2ba620445aef1e838f0c196820eade4ae0c7"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.6",
