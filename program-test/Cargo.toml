@@ -7,6 +7,10 @@ name = "safecoin-program-test"
 repository = "https://github.com/fair-exchange/safecoin"
 version = "1.6.27"
 
+[lib]
+name = "solana_program_test"
+
+
 [dependencies]
 async-trait = "0.1.42"
 base64 = "0.12.3"

@@ -11,6 +11,9 @@ edition = "2018"
 
 [lib]
 proc-macro = true
+name="solana_sdk_macro"
+
+
 
 [dependencies]
 bs58 = "0.3.0"
