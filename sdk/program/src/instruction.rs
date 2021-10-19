@@ -7,27 +7,28 @@ use borsh::BorshSerialize;
 use serde::Serialize;
 use thiserror::Error;
 
-pub trait VoterGroup {
-    fn in_group(&self,slot: Slot,hash : Hash, test_key: Pubkey) -> bool ;
+pub trait VoteModerator {
+    fn vote_allowed(&self,slot: Slot,hash : Hash, test_key: Pubkey) -> bool ;
 }
 #[derive(Debug, Clone)]
-pub struct MockVoterGrp {
+pub struct MockVoteMod {
     pub a : u8,
 }
 
-impl VoterGroup for MockVoterGrp {
-    fn in_group(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
+impl VoteModerator for MockVoteMod {
+    fn vote_allowed(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
         true
     }
+
 }
-impl Default for MockVoterGrp {
+impl Default for MockVoteMod {
     fn default() -> Self {
         Self::new()
     }
 }
-impl MockVoterGrp {
+impl MockVoteMod {
     pub fn new() -> Self {
-        MockVoterGrp {
+        MockVoteMod {
             a: 1,
         }
     }

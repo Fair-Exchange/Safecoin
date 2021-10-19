@@ -50,7 +50,7 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     timing::timestamp,
     transaction::Transaction,
-    instruction::VoterGroup,
+    instruction::VoteModerator,
 };
 use solana_vote_program::vote_state::Vote;
 use std::{
@@ -1466,10 +1466,8 @@ impl ReplayStage {
         log::trace!("authorized_voter_pubkey {}", vote_account_pubkey);
         log::trace!("authorized_voter_pubkey_string {}", vote_account_pubkey.to_string());
         log::trace!("vote_hash: {}", vote.hash);
-  
-        let in_group = bank.in_group(vote.slots[0],vote.hash,*vote_account_pubkey);
-
-        if in_group {
+        let vote_ok = bank.vote_allowed(vote.slots[0],vote.hash,*vote_account_pubkey);
+        if vote_ok  {
             warn!(
                 "I ({}) will vote if I can!!!",*vote_account_pubkey
             );

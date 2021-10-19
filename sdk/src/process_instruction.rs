@@ -5,7 +5,7 @@ use solana_sdk::{
     message::Message,
     pubkey::Pubkey,
     sysvar::Sysvar,
-    instruction::VoterGroup,
+    instruction::VoteModerator,
     hash::Hash,
     clock::Slot,
 };
@@ -75,7 +75,7 @@ pub trait InvokeContext {
     /// Get sysvar data
     fn get_sysvar_data(&self, id: &Pubkey) -> Option<Rc<Vec<u8>>>;
 
-    fn voter_group(&self) -> & dyn VoterGroup;
+    fn voter_group(&self) -> & dyn VoteModerator;
 }
 
 /// Convenience macro to log a message with an `Rc<RefCell<dyn Logger>>`
@@ -404,14 +404,14 @@ impl InvokeContext for MockInvokeContext {
             .find_map(|(key, sysvar)| if id == key { sysvar.clone() } else { None })
     }
 
-    fn voter_group(&self) -> &dyn VoterGroup{
+    fn voter_group(&self) -> &dyn VoteModerator{
         return self;
     }
 }
 
-impl VoterGroup for MockInvokeContext {
+impl VoteModerator for MockInvokeContext {
 
-    fn in_group(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
+    fn vote_allowed(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
         true
     }
 }

@@ -13,7 +13,7 @@ use solana_sdk::{
         FeatureSet,
     },
     ic_msg,
-    instruction::{CompiledInstruction, Instruction, InstructionError, VoterGroup},
+    instruction::{CompiledInstruction, Instruction, InstructionError, VoteModerator},
     keyed_account::{create_keyed_readonly_accounts, KeyedAccount},
     message::Message,
     native_loader,
@@ -282,7 +282,7 @@ pub struct ThisInvokeContext<'a> {
     ancestors: &'a Ancestors,
     #[allow(clippy::type_complexity)]
     sysvars: RefCell<Vec<(Pubkey, Option<Rc<Vec<u8>>>)>>,
-    voter_grp : &'a dyn VoterGroup
+    voter_grp : &'a dyn VoteModerator
 }
 impl<'a> ThisInvokeContext<'a> {
     #[allow(clippy::too_many_arguments)]
@@ -300,7 +300,7 @@ impl<'a> ThisInvokeContext<'a> {
         feature_set: Arc<FeatureSet>,
         account_db: Arc<Accounts>,
         ancestors: &'a Ancestors,
-        voter_grp: &'a dyn VoterGroup,
+        voter_grp: &'a dyn VoteModerator,
     ) -> Self {
         let mut program_ids = Vec::with_capacity(bpf_compute_budget.max_invoke_depth);
         program_ids.push(*program_id);
@@ -464,7 +464,7 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
         }
     }
     
-    fn voter_group(&self) -> & dyn VoterGroup {
+    fn voter_group(&self) -> & dyn VoteModerator {
         self.voter_grp
     }
 }
@@ -1084,7 +1084,7 @@ impl MessageProcessor {
         timings: &mut ExecuteDetailsTimings,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
-        voter_grp : &dyn VoterGroup,
+        voter_grp : &dyn VoteModerator,
     ) -> Result<(), InstructionError> {
         // Fixup the special instructions key if present
         // before the account pre-values are taken care of
@@ -1163,7 +1163,7 @@ impl MessageProcessor {
         timings: &mut ExecuteDetailsTimings,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
-        voter_grp: &dyn VoterGroup,
+        voter_grp: &dyn VoteModerator,
     ) -> Result<(), TransactionError> {
         for (instruction_index, instruction) in message.instructions.iter().enumerate() {
             let instruction_recorder = instruction_recorders
@@ -1203,18 +1203,18 @@ mod tests {
         native_loader::create_loadable_account_for_test,
     };
 
-    struct MockVoterGroup {
+    struct MockVoteMod {
         in_group: bool,
     }
-    impl MockVoterGroup {
+    impl MockVoteMod {
         pub fn new() -> Self {
             Self {
                 in_group: true,
             }
         }
     }
-    impl VoterGroup for MockVoterGroup {
-        fn in_group(&self, _: solana_sdk::clock::Slot, _: solana_sdk::hash::Hash, _: solana_sdk::pubkey::Pubkey) -> bool {
+    impl VoteModerator for MockVoteMod {
+        fn vote_allowed(&self, _: solana_sdk::clock::Slot, _: solana_sdk::hash::Hash, _: solana_sdk::pubkey::Pubkey) -> bool {
             self.in_group
         }
     }    
@@ -1241,7 +1241,7 @@ mod tests {
         }
 
         let ancestors = Ancestors::default();
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let mut invoke_context = ThisInvokeContext::new(
             &program_ids[0],
             Rent::default(),
@@ -1841,7 +1841,7 @@ mod tests {
             Some(&from_pubkey),
         );
 
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -1871,7 +1871,7 @@ mod tests {
             Some(&from_pubkey),
         );
 
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -1905,7 +1905,7 @@ mod tests {
             Some(&from_pubkey),
         );
 
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2026,7 +2026,7 @@ mod tests {
             )],
             Some(&from_pubkey),
         );
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2060,7 +2060,7 @@ mod tests {
             )],
             Some(&from_pubkey),
         );
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2092,7 +2092,7 @@ mod tests {
             Some(&from_pubkey),
         );
         let ancestors = Ancestors::default();
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2184,7 +2184,7 @@ mod tests {
         let feature_set = FeatureSet::all_enabled();
 
         let ancestors = Ancestors::default();
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let mut invoke_context = ThisInvokeContext::new(
             &caller_program_id,
             Rent::default(),

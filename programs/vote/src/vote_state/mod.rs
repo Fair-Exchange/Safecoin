@@ -11,7 +11,7 @@ use solana_sdk::{
     clock::{Epoch, Slot, UnixTimestamp},
     epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
     hash::Hash,
-    instruction::{InstructionError,VoterGroup},
+    instruction::{InstructionError,VoteModerator},
     keyed_account::KeyedAccount,
     pubkey::Pubkey,
     rent::Rent,
@@ -726,7 +726,7 @@ pub fn process_vote<S: std::hash::BuildHasher>(
     clock: &Clock,
     vote: &Vote,
     signers: &HashSet<Pubkey, S>,
-    group: &dyn VoterGroup,
+    group: &dyn VoteModerator,
 ) -> Result<(), InstructionError> {
     let versioned = State::<VoteStateVersions>::state(vote_account)?;
 
@@ -742,7 +742,7 @@ pub fn process_vote<S: std::hash::BuildHasher>(
     log::trace!("last_hashzy: {}", slot_hashes[0].0);
     log::trace!("P: {}", authorized_voter.to_string().to_lowercase().find("x").unwrap_or(2) % 10);
     let hash = slot_hashes[0].1;
-    if !group.in_group(vote.slots[0],hash,authorized_voter) {
+    if !group.vote_allowed(vote.slots[0],hash,authorized_voter) {
         return Err(InstructionError::UninitializedAccount);
     }
     vote_state.process_vote(vote, slot_hashes, clock.epoch)?;
@@ -939,7 +939,7 @@ mod tests {
     ) -> Result<VoteState, InstructionError> {
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         process_vote(
             &keyed_accounts[0],
             slot_hashes,
@@ -1139,18 +1139,18 @@ mod tests {
             .convert_to_current();
         assert_eq!(vote_state.commission, u8::MAX);
     }
-    struct MockVoterGroup {
+    struct MockVoteMod {
         in_group: bool,
     }
-    impl MockVoterGroup {
+    impl MockVoteMod {
         pub fn new() -> Self {
             Self {
                 in_group: true,
             }
         }
     }
-    impl VoterGroup for MockVoterGroup {
-        fn in_group(&self, _: Slot, _: solana_sdk::hash::Hash, _: Pubkey) -> bool {
+    impl VoteModerator for MockVoteMod {
+        fn can_vote(&self, _: Slot, _: solana_sdk::hash::Hash, _: Pubkey) -> bool {
             self.in_group
         }
     }
@@ -1163,7 +1163,7 @@ mod tests {
         // unsigned
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, false, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1181,7 +1181,7 @@ mod tests {
         // signed
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1307,7 +1307,7 @@ mod tests {
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let vote = Vote::new(vec![2], Hash::default());
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1330,7 +1330,7 @@ mod tests {
         ];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let vote = Vote::new(vec![2], Hash::default());
-        let mvg = MockVoterGroup::new();
+        let mvg = MockVoteMod::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
