@@ -26,10 +26,10 @@ export function TokenLendingDetailsCard({
   try {
     title = parseTokenLendingInstructionTitle(ix);
   } catch (error) {
-    reportError(error, {
-      url: url,
-      signature: signature,
-    });
+//    reportError(error, {
+//      url: url,
+//      signature: signature,
+//    });
   }
 
   return (

@@ -371,7 +371,7 @@ function instructionTypeName(
     const type = create(rawType, TokenInstructionType);
     return IX_TITLES[type];
   } catch (err) {
-    reportError(err, { signature: tx.signature });
+//    reportError(err, { signature: tx.signature });
     return "Unknown";
   }
 }
@@ -483,7 +483,7 @@ const TokenTransactionRow = React.memo(
             try {
               name = parseSerumInstructionTitle(transactionInstruction);
             } catch (error) {
-              reportError(error, { signature: tx.signature });
+//              reportError(error, { signature: tx.signature });
               return undefined;
             }
           } else if (
@@ -493,7 +493,7 @@ const TokenTransactionRow = React.memo(
             try {
               name = parseTokenSwapInstructionTitle(transactionInstruction);
             } catch (error) {
-              reportError(error, { signature: tx.signature });
+//              reportError(error, { signature: tx.signature });
               return undefined;
             }
           } else if (
@@ -503,7 +503,7 @@ const TokenTransactionRow = React.memo(
             try {
               name = parseTokenLendingInstructionTitle(transactionInstruction);
             } catch (error) {
-              reportError(error, { signature: tx.signature });
+//              reportError(error, { signature: tx.signature });
               return undefined;
             }
           } else {

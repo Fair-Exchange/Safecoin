@@ -26,10 +26,10 @@ export function TokenSwapDetailsCard({
   try {
     title = parseTokenSwapInstructionTitle(ix);
   } catch (error) {
-    reportError(error, {
-      url: url,
-      signature: signature,
-    });
+//    reportError(error, {
+//      url: url,
+//      signature: signature,
+//    });
   }
 
   return (

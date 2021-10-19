@@ -40,9 +40,9 @@ export function TokenAccountSection({
       }
     }
   } catch (err) {
-    reportError(err, {
-      address: account.pubkey.toBase58(),
-    });
+//    reportError(err, {
+//      address: account.pubkey.toBase58(),
+//    });
   }
   return <UnknownAccountCard account={account} />;
 }

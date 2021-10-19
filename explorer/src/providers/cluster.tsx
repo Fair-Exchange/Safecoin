@@ -199,7 +199,7 @@ async function updateCluster(
     });
   } catch (error) {
     if (cluster !== Cluster.Custom) {
-      reportError(error, { clusterUrl: clusterUrl(cluster, customUrl) });
+//      reportError(error, { clusterUrl: clusterUrl(cluster, customUrl) });
     }
     dispatch({
       status: ClusterStatus.Failure,

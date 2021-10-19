@@ -40,9 +40,9 @@ export function BpfLoaderDetailsCard(props: DetailsProps) {
         return <UnknownDetailsCard {...props} />;
     }
   } catch (error) {
-    reportError(error, {
-      signature: props.tx.signatures[0],
-    });
+//    reportError(error, {
+//      signature: props.tx.signatures[0],
+//    });
     return <UnknownDetailsCard {...props} />;
   }
 }

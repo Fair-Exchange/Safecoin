@@ -63,7 +63,7 @@ async function fetchDetails(
     fetchStatus = FetchStatus.Fetched;
   } catch (error) {
     if (cluster !== Cluster.Custom) {
-      reportError(error, { url });
+//      reportError(error, { url });
     }
     fetchStatus = FetchStatus.FetchFailed;
   }
@@ -144,7 +144,7 @@ async function fetchRawTransaction(
     });
   } catch (error) {
     if (cluster !== Cluster.Custom) {
-      reportError(error, { url });
+//      reportError(error, { url });
     }
   }
 }

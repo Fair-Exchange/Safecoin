@@ -44,9 +44,9 @@ export function TokenDetailsCard(props: DetailsProps) {
     const created = create(info, IX_STRUCTS[type] as any);
     return <TokenInstruction title={title} info={created} {...props} />;
   } catch (err) {
-    reportError(err, {
-      signature: props.tx.signatures[0],
-    });
+//    reportError(err, {
+//      signature: props.tx.signatures[0],
+//    });
     return <UnknownDetailsCard {...props} />;
   }
 }

@@ -89,7 +89,7 @@ export async function fetchTransactionStatus(
         blockTime = await connection.getBlockTime(value.slot);
       } catch (error) {
         if (cluster === Cluster.MainnetBeta && confirmations === "max") {
-          reportError(error, { slot: `${value.slot}` });
+//          reportError(error, { slot: `${value.slot}` });
         }
       }
       let timestamp: Timestamp = blockTime !== null ? blockTime : "unavailable";
@@ -106,18 +106,18 @@ export async function fetchTransactionStatus(
     fetchStatus = FetchStatus.Fetched;
   } catch (error) {
     if (cluster !== Cluster.Custom) {
-      reportError(error, { url });
+//      reportError(error, { url });
     }
     fetchStatus = FetchStatus.FetchFailed;
   }
 
-  dispatch({
-    type: ActionType.Update,
-    key: signature,
-    status: fetchStatus,
-    data,
-    url,
-  });
+//  dispatch({
+//    type: ActionType.Update,
+//    key: signature,
+//    status: fetchStatus,
+//    data,
+//    url,
+//  });
 }
 
 export function useTransactions() {

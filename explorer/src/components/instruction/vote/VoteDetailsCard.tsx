@@ -48,9 +48,9 @@ export function VoteDetailsCard(props: InstructionDetailsProps) {
         return renderDetails<VoteSwitchInfo>(props, parsed, VoteSwitchInfo);
     }
   } catch (error) {
-    reportError(error, {
-      url,
-    });
+//    reportError(error, {
+//      url,
+//    });
   }
 
   return <UnknownDetailsCard {...props} />;

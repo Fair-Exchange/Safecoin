@@ -6,7 +6,7 @@ import {
   PERF_UPDATE_SEC,
   ClusterStatsStatus,
 } from "providers/stats/solanaClusterStats";
-import classNames from "classnames";
+//import classNames from "classnames";
 import { TableCardBody } from "components/common/TableCardBody";
 import { ChartOptions, ChartTooltipModel } from "chart.js";
 import { PerformanceInfo } from "providers/stats/solanaPerformanceInfo";
@@ -191,9 +191,6 @@ function TpsBarChart({ performanceInfo }: TpsBarChartProps) {
                 <button
                   key={key}
                   onClick={() => setSeries(key)}
-                  className={classNames("btn btn-sm btn-white ml-2", {
-                    active: series === key,
-                  })}
                 >
                   {SERIES_INFO[key].interval}
                 </button>
@@ -203,9 +200,8 @@ function TpsBarChart({ performanceInfo }: TpsBarChartProps) {
 
           <div
             id="perf-history"
-            className="mt-3 d-flex justify-content-end flex-row w-100"
           >
-            <div className="w-100">
+            <div >
               <Bar data={chartData} options={chartOptions} height={80} />
             </div>
           </div>

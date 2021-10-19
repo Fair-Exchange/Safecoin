@@ -112,7 +112,7 @@ async function fetchAccountHistory(
     status = FetchStatus.Fetched;
   } catch (error) {
     if (cluster !== Cluster.Custom) {
-      reportError(error, { url });
+//      reportError(error, { url });
     }
     status = FetchStatus.FetchFailed;
   }

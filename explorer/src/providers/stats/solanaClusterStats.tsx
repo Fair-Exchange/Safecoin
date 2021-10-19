@@ -114,15 +114,15 @@ export function SafecoinClusterStatsProvider({ children }: Props) {
         });
       } catch (error) {
         if (cluster !== Cluster.Custom) {
-          reportError(error, { url });
+//          reportError(error, { url });
         }
         dispatchPerformanceInfo({
           type: PerformanceInfoActionType.SetError,
-          data: error.toString(),
+          data: "",
         });
         dispatchDashboardInfo({
           type: DashboardInfoActionType.SetError,
-          data: error.toString(),
+          data: "",
         });
         setActive(false);
       }
@@ -137,11 +137,11 @@ export function SafecoinClusterStatsProvider({ children }: Props) {
         });
       } catch (error) {
         if (cluster !== Cluster.Custom) {
-          reportError(error, { url });
+//          reportError(error, { url });
         }
         dispatchPerformanceInfo({
           type: PerformanceInfoActionType.SetError,
-          data: error.toString(),
+          data: "",
         });
         setActive(false);
       }
@@ -157,11 +157,11 @@ export function SafecoinClusterStatsProvider({ children }: Props) {
         });
       } catch (error) {
         if (cluster !== Cluster.Custom) {
-          reportError(error, { url });
+//          reportError(error, { url });
         }
         dispatchDashboardInfo({
           type: DashboardInfoActionType.SetError,
-          data: error.toString(),
+          data: "",
         });
         setActive(false);
       }

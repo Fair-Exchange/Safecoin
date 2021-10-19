@@ -236,7 +236,7 @@ async function fetchAccountInfo(
               data = undefined;
           }
         } catch (error) {
-          reportError(error, { url, address: pubkey.toBase58() });
+//          reportError(error, { url, address: pubkey.toBase58() });
         }
       }
 
@@ -251,7 +251,7 @@ async function fetchAccountInfo(
     fetchStatus = FetchStatus.Fetched;
   } catch (error) {
     if (cluster !== Cluster.Custom) {
-      reportError(error, { url });
+//      reportError(error, { url });
     }
     fetchStatus = FetchStatus.FetchFailed;
   }
@@ -300,7 +300,7 @@ export function useMintAccountInfo(
 
       return create(data.parsed.info, MintAccountInfo);
     } catch (err) {
-      reportError(err, { address });
+//      reportError(err, { address });
     }
   }, [address, accountInfo]);
 }
@@ -320,7 +320,7 @@ export function useTokenAccountInfo(
 
     return create(data.parsed.info, TokenAccountInfo);
   } catch (err) {
-    reportError(err, { address });
+//    reportError(err, { address });
   }
 }
 

@@ -89,7 +89,7 @@ async function fetchLargestAccounts(
             }
           } catch (error) {
             if (cluster !== Cluster.Custom) {
-              reportError(error, { url });
+//              reportError(error, { url });
             }
           }
           return account;
@@ -100,7 +100,7 @@ async function fetchLargestAccounts(
     fetchStatus = FetchStatus.Fetched;
   } catch (error) {
     if (cluster !== Cluster.Custom) {
-      reportError(error, { url });
+//      reportError(error, { url });
     }
     fetchStatus = FetchStatus.FetchFailed;
   }
