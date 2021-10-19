@@ -4,7 +4,7 @@ use safecoin_sdk::{
     keyed_account::{create_keyed_accounts_unified, KeyedAccount},
     pubkey::Pubkey,
     sysvar::Sysvar,
-    instruction::VoterGroup,
+    instruction::VoteModerator,
     hash::Hash,
     clock::Slot,
 };
@@ -104,7 +104,7 @@ pub trait InvokeContext {
     /// Get sysvar data
     fn get_sysvar_data(&self, id: &Pubkey) -> Option<Rc<Vec<u8>>>;
 
-    fn voter_group(&self) -> & dyn VoterGroup;
+    fn voter_group(&self) -> & dyn VoteModerator;
 }
 
 /// Convenience macro to log a message with an `Rc<RefCell<dyn Logger>>`
@@ -473,14 +473,15 @@ impl<'a> InvokeContext for MockInvokeContext<'a> {
             .find_map(|(key, sysvar)| if id == key { sysvar.clone() } else { None })
     }
 
-    fn voter_group(&self) -> &dyn VoterGroup{
+    fn voter_group(&self) -> &dyn VoteModerator{
         return self;
     }
 }
 
-impl<'a> VoterGroup for MockInvokeContext<'a> {
 
-    fn in_group(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
+impl<'a> VoteModerator for MockInvokeContext<'a> {
+
+    fn vote_allowed(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
         true
     }
 }
