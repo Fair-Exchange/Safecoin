@@ -32,8 +32,9 @@ use safecoin_sdk::{
     native_loader, nonce,
     nonce::NONCED_TX_MARKER_IX_INDEX,
     pubkey::Pubkey,
-    transaction::Result,
-    transaction::{Transaction, TransactionError},
+    system_program, sysvar,
+    sysvar::instructions::construct_instructions_data,
+    transaction::{Transaction, Result, TransactionError},
 };
 use std::{
     cmp::Reverse,
@@ -183,9 +184,7 @@ impl Accounts {
         message: &Message,
         demote_program_write_locks: bool,
     ) -> AccountSharedData {
-        let mut data = message.serialize_instructions(demote_program_write_locks);
-        // add room for current instruction index.
-        data.resize(data.len() + 2, 0);
+        let data = construct_instructions_data(message, demote_program_write_locks);
         AccountSharedData::from(Account {
             data,
             ..Account::default()
