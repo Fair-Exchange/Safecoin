@@ -43,7 +43,7 @@ function StakingComponent() {
   const { status } = useCluster();
   const supply = useSupply();
   const fetchSupply = useFetchSupply();
-  const coinInfo = useCoinGecko("solana");
+  const coinInfo = useCoinGecko("safe-coin-2");
   const { fetchVoteAccounts, voteAccounts } = useVoteAccounts();
 
   function fetchData() {
