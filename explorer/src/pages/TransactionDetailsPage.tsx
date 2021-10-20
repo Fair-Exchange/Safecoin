@@ -287,7 +287,7 @@ function StatusCard({
 
         {fee && (
           <tr>
-            <td>Fee (SOL)</td>
+            <td>Fee (SAFE)</td>
             <td className="text-lg-right">{lamportsToSolString(fee)}</td>
           </tr>
         )}
@@ -386,8 +386,8 @@ function AccountsCard({
           <thead>
             <tr>
               <th className="text-muted">Address</th>
-              <th className="text-muted">Change (SOL)</th>
-              <th className="text-muted">Post Balance (SOL)</th>
+              <th className="text-muted">Change (SAFE)</th>
+              <th className="text-muted">Post Balance (SAFE)</th>
               <th className="text-muted">Details</th>
             </tr>
           </thead>

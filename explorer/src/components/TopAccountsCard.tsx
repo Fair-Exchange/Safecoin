@@ -101,7 +101,7 @@ export function TopAccountsCard() {
                 <tr>
                   <th className="text-muted">Rank</th>
                   <th className="text-muted">Address</th>
-                  <th className="text-muted text-right">Balance (SOL)</th>
+                  <th className="text-muted text-right">Balance (SAFE)</th>
                   <th className="text-muted text-right">
                     % of {header} Supply
                   </th>
