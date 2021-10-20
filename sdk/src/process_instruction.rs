@@ -1,15 +1,11 @@
 use solana_sdk::{
     account::AccountSharedData,
     instruction::{CompiledInstruction, Instruction, InstructionError},
-    keyed_account::KeyedAccount,
-    message::Message,
+    keyed_account::{create_keyed_accounts_unified, KeyedAccount},
     pubkey::Pubkey,
     sysvar::Sysvar,
-    instruction::VoterGroup,
-    hash::Hash,
-    clock::Slot,
 };
-use std::{cell::RefCell, fmt::Debug, rc::Rc, sync::Arc};
+use std::{cell::RefCell, collections::HashSet, fmt::Debug, rc::Rc, sync::Arc};
 
 /// Prototype of a native loader entry point
 ///
@@ -19,32 +15,62 @@ use std::{cell::RefCell, fmt::Debug, rc::Rc, sync::Arc};
 /// invoke_context: Invocation context
 pub type LoaderEntrypoint = unsafe extern "C" fn(
     program_id: &Pubkey,
-    keyed_accounts: &[KeyedAccount],
     instruction_data: &[u8],
     invoke_context: &dyn InvokeContext,
 ) -> Result<(), InstructionError>;
 
 pub type ProcessInstructionWithContext =
-    fn(&Pubkey, &[KeyedAccount], &[u8], &mut dyn InvokeContext) -> Result<(), InstructionError>;
+    fn(&Pubkey, &[u8], &mut dyn InvokeContext) -> Result<(), InstructionError>;
+
+pub struct InvokeContextStackFrame<'a> {
+    pub key: Pubkey,
+    pub keyed_accounts: Vec<KeyedAccount<'a>>,
+    pub keyed_accounts_range: std::ops::Range<usize>,
+}
+
+impl<'a> InvokeContextStackFrame<'a> {
+    pub fn new(key: Pubkey, keyed_accounts: Vec<KeyedAccount<'a>>) -> Self {
+        let keyed_accounts_range = std::ops::Range {
+            start: 0,
+            end: keyed_accounts.len(),
+        };
+        Self {
+            key,
+            keyed_accounts,
+            keyed_accounts_range,
+        }
+    }
+}
 
 /// Invocation context passed to loaders
 pub trait InvokeContext {
-    /// Push a program ID on to the invocation stack
-    fn push(&mut self, key: &Pubkey) -> Result<(), InstructionError>;
-    /// Pop a program ID off of the invocation stack
+    /// Push a stack frame onto the invocation stack
+    ///
+    /// Used in MessageProcessor::process_cross_program_instruction
+    fn push(
+        &mut self,
+        key: &Pubkey,
+        keyed_accounts: &[(bool, bool, &Pubkey, &RefCell<AccountSharedData>)],
+    ) -> Result<(), InstructionError>;
+    /// Pop a stack frame from the invocation stack
+    ///
+    /// Used in MessageProcessor::process_cross_program_instruction
     fn pop(&mut self);
     /// Current depth of the invocation stake
     fn invoke_depth(&self) -> usize;
     /// Verify and update PreAccount state based on program execution
     fn verify_and_update(
         &mut self,
-        message: &Message,
         instruction: &CompiledInstruction,
-        accounts: &[Rc<RefCell<AccountSharedData>>],
-        caller_pivileges: Option<&[bool]>,
+        accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        write_privileges: &[bool],
     ) -> Result<(), InstructionError>;
     /// Get the program ID of the currently executing program
     fn get_caller(&self) -> Result<&Pubkey, InstructionError>;
+    /// Removes the first keyed account
+    fn remove_first_keyed_account(&mut self) -> Result<(), InstructionError>;
+    /// Get the list of keyed accounts
+    fn get_keyed_accounts(&self) -> Result<&[KeyedAccount], InstructionError>;
     /// Get a list of built-in programs
     fn get_programs(&self) -> &[(Pubkey, ProcessInstructionWithContext)];
     /// Get this invocation's logger
@@ -62,7 +88,7 @@ pub trait InvokeContext {
     fn record_instruction(&self, instruction: &Instruction);
     /// Get the bank's active feature set
     fn is_feature_active(&self, feature_id: &Pubkey) -> bool;
-    /// Get an account from a pre-account
+    /// Get an account by its key
     fn get_account(&self, pubkey: &Pubkey) -> Option<Rc<RefCell<AccountSharedData>>>;
     /// Update timing
     fn update_timing(
@@ -74,8 +100,6 @@ pub trait InvokeContext {
     );
     /// Get sysvar data
     fn get_sysvar_data(&self, id: &Pubkey) -> Option<Rc<Vec<u8>>>;
-
-    fn voter_group(&self) -> & dyn VoterGroup;
 }
 
 /// Convenience macro to log a message with an `Rc<RefCell<dyn Logger>>`
@@ -137,7 +161,7 @@ pub struct BpfComputeBudget {
     /// Number of compute units consumed by an invoke call (not including the cost incurred by
     /// the called program)
     pub invoke_units: u64,
-    /// Maximum cross-program invocation depth allowed including the original caller
+    /// Maximum cross-program invocation depth allowed
     pub max_invoke_depth: usize,
     /// Base number of compute units consumed to call SHA256
     pub sha256_base_cost: u64,
@@ -155,6 +179,10 @@ pub struct BpfComputeBudget {
     pub cpi_bytes_per_unit: u64,
     /// Base number of compute units consumed to get a sysvar
     pub sysvar_base_cost: u64,
+    /// Number of compute units consumed to call secp256k1_recover
+    pub secp256k1_recover_cost: u64,
+    /// Optional program heap region size, if `None` then loader default
+    pub heap_size: Option<usize>,
 }
 impl Default for BpfComputeBudget {
     fn default() -> Self {
@@ -178,6 +206,8 @@ impl BpfComputeBudget {
             max_cpi_instruction_size: 1280, // IPv6 Min MTU size
             cpi_bytes_per_unit: 250,        // ~50MB at 200,000 units
             sysvar_base_cost: 100,
+            secp256k1_recover_cost: 25_000,
+            heap_size: None,
         }
     }
 }
@@ -259,7 +289,6 @@ pub trait Executor: Debug + Send + Sync {
         &self,
         loader_id: &Pubkey,
         program_id: &Pubkey,
-        keyed_accounts: &[KeyedAccount],
         instruction_data: &[u8],
         invoke_context: &mut dyn InvokeContext,
         use_jit: bool,
@@ -297,30 +326,38 @@ impl Logger for MockLogger {
     }
 }
 
-pub struct MockInvokeContext {
-    pub key: Pubkey,
+pub struct MockInvokeContext<'a> {
+    pub invoke_stack: Vec<InvokeContextStackFrame<'a>>,
     pub logger: MockLogger,
     pub bpf_compute_budget: BpfComputeBudget,
     pub compute_meter: MockComputeMeter,
     pub programs: Vec<(Pubkey, ProcessInstructionWithContext)>,
     pub accounts: Vec<(Pubkey, Rc<RefCell<AccountSharedData>>)>,
-    pub invoke_depth: usize,
     pub sysvars: Vec<(Pubkey, Option<Rc<Vec<u8>>>)>,
+    pub disabled_features: HashSet<Pubkey>,
 }
-impl Default for MockInvokeContext {
-    fn default() -> Self {
-        MockInvokeContext {
-            key: Pubkey::default(),
+impl<'a> MockInvokeContext<'a> {
+    pub fn new(keyed_accounts: Vec<KeyedAccount<'a>>) -> Self {
+        let bpf_compute_budget = BpfComputeBudget::default();
+        let mut invoke_context = MockInvokeContext {
+            invoke_stack: Vec::with_capacity(bpf_compute_budget.max_invoke_depth),
             logger: MockLogger::default(),
-            bpf_compute_budget: BpfComputeBudget::default(),
+            bpf_compute_budget,
             compute_meter: MockComputeMeter {
                 remaining: std::i64::MAX as u64,
             },
             programs: vec![],
             accounts: vec![],
-            invoke_depth: 0,
             sysvars: vec![],
-        }
+            disabled_features: HashSet::default(),
+        };
+        invoke_context
+            .invoke_stack
+            .push(InvokeContextStackFrame::new(
+                Pubkey::default(),
+                keyed_accounts,
+            ));
+        invoke_context
     }
 }
 
@@ -339,28 +376,55 @@ pub fn mock_set_sysvar<T: Sysvar>(
     Ok(())
 }
 
-impl InvokeContext for MockInvokeContext {
-    fn push(&mut self, _key: &Pubkey) -> Result<(), InstructionError> {
-        self.invoke_depth = self.invoke_depth.saturating_add(1);
+impl<'a> InvokeContext for MockInvokeContext<'a> {
+    fn push(
+        &mut self,
+        key: &Pubkey,
+        keyed_accounts: &[(bool, bool, &Pubkey, &RefCell<AccountSharedData>)],
+    ) -> Result<(), InstructionError> {
+        fn transmute_lifetime<'a, 'b>(value: Vec<KeyedAccount<'a>>) -> Vec<KeyedAccount<'b>> {
+            unsafe { std::mem::transmute(value) }
+        }
+        self.invoke_stack.push(InvokeContextStackFrame::new(
+            *key,
+            transmute_lifetime(create_keyed_accounts_unified(keyed_accounts)),
+        ));
         Ok(())
     }
     fn pop(&mut self) {
-        self.invoke_depth = self.invoke_depth.saturating_sub(1);
+        self.invoke_stack.pop();
     }
     fn invoke_depth(&self) -> usize {
-        self.invoke_depth
+        self.invoke_stack.len()
     }
     fn verify_and_update(
         &mut self,
-        _message: &Message,
         _instruction: &CompiledInstruction,
-        _accounts: &[Rc<RefCell<AccountSharedData>>],
-        _caller_pivileges: Option<&[bool]>,
+        _accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        _write_pivileges: &[bool],
     ) -> Result<(), InstructionError> {
         Ok(())
     }
     fn get_caller(&self) -> Result<&Pubkey, InstructionError> {
-        Ok(&self.key)
+        self.invoke_stack
+            .last()
+            .map(|frame| &frame.key)
+            .ok_or(InstructionError::CallDepth)
+    }
+    fn remove_first_keyed_account(&mut self) -> Result<(), InstructionError> {
+        let stack_frame = &mut self
+            .invoke_stack
+            .last_mut()
+            .ok_or(InstructionError::CallDepth)?;
+        stack_frame.keyed_accounts_range.start =
+            stack_frame.keyed_accounts_range.start.saturating_add(1);
+        Ok(())
+    }
+    fn get_keyed_accounts(&self) -> Result<&[KeyedAccount], InstructionError> {
+        self.invoke_stack
+            .last()
+            .map(|frame| &frame.keyed_accounts[frame.keyed_accounts_range.clone()])
+            .ok_or(InstructionError::CallDepth)
     }
     fn get_programs(&self) -> &[(Pubkey, ProcessInstructionWithContext)] {
         &self.programs
@@ -379,8 +443,8 @@ impl InvokeContext for MockInvokeContext {
         None
     }
     fn record_instruction(&self, _instruction: &Instruction) {}
-    fn is_feature_active(&self, _feature_id: &Pubkey) -> bool {
-        true
+    fn is_feature_active(&self, feature_id: &Pubkey) -> bool {
+        !self.disabled_features.contains(feature_id)
     }
     fn get_account(&self, pubkey: &Pubkey) -> Option<Rc<RefCell<AccountSharedData>>> {
         for (key, account) in self.accounts.iter() {
@@ -402,16 +466,5 @@ impl InvokeContext for MockInvokeContext {
         self.sysvars
             .iter()
             .find_map(|(key, sysvar)| if id == key { sysvar.clone() } else { None })
-    }
-
-    fn voter_group(&self) -> &dyn VoterGroup{
-        return self;
-    }
-}
-
-impl VoterGroup for MockInvokeContext {
-
-    fn in_group(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
-        true
     }
 }

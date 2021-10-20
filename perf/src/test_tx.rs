@@ -1,10 +1,13 @@
-use solana_sdk::hash::Hash;
-use solana_sdk::instruction::CompiledInstruction;
-use solana_sdk::signature::{Keypair, Signer};
-use solana_sdk::system_instruction::SystemInstruction;
-use solana_sdk::system_program;
-use solana_sdk::system_transaction;
-use solana_sdk::transaction::Transaction;
+use solana_sdk::{
+    hash::Hash,
+    instruction::CompiledInstruction,
+    signature::{Keypair, Signer},
+    stake,
+    system_instruction::SystemInstruction,
+    system_program, system_transaction,
+    transaction::Transaction,
+};
+use solana_vote_program::vote_transaction;
 
 pub fn test_tx() -> Transaction {
     let keypair1 = Keypair::new();
@@ -22,7 +25,7 @@ pub fn test_multisig_tx() -> Transaction {
 
     let transfer_instruction = SystemInstruction::Transfer { lamports };
 
-    let program_ids = vec![system_program::id(), solana_budget_program::id()];
+    let program_ids = vec![system_program::id(), stake::program::id()];
 
     let instructions = vec![CompiledInstruction::new(
         0,
@@ -36,5 +39,18 @@ pub fn test_multisig_tx() -> Transaction {
         blockhash,
         program_ids,
         instructions,
+    )
+}
+
+pub fn vote_tx() -> Transaction {
+    let keypair = Keypair::new();
+    vote_transaction::new_vote_transaction(
+        vec![2],
+        Hash::default(),
+        Hash::default(),
+        &keypair,
+        &keypair,
+        &keypair,
+        None,
     )
 }

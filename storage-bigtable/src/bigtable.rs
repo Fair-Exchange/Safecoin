@@ -6,6 +6,7 @@ use {
         compression::{compress_best, decompress},
         root_ca_certificate,
     },
+    backoff::{future::retry, ExponentialBackoff},
     log::*,
     std::time::{Duration, Instant},
     thiserror::Error,
@@ -45,17 +46,17 @@ pub enum CellData<B, P> {
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("AccessToken error: {0}")]
-    AccessTokenError(String),
+    #[error("AccessToken: {0}")]
+    AccessToken(String),
 
-    #[error("Certificate error: {0}")]
-    CertificateError(String),
+    #[error("Certificate: {0}")]
+    Certificate(String),
 
-    #[error("I/O Error: {0}")]
-    IoError(std::io::Error),
+    #[error("I/O: {0}")]
+    Io(std::io::Error),
 
-    #[error("Transport error: {0}")]
-    TransportError(tonic::transport::Error),
+    #[error("Transport: {0}")]
+    Transport(tonic::transport::Error),
 
     #[error("Invalid URI {0}: {1}")]
     InvalidUri(String, String),
@@ -66,34 +67,37 @@ pub enum Error {
     #[error("Row write failed")]
     RowWriteFailed,
 
+    #[error("Row delete failed")]
+    RowDeleteFailed,
+
     #[error("Object not found: {0}")]
     ObjectNotFound(String),
 
     #[error("Object is corrupt: {0}")]
     ObjectCorrupt(String),
 
-    #[error("RPC error: {0}")]
-    RpcError(tonic::Status),
+    #[error("RPC: {0}")]
+    Rpc(tonic::Status),
 
-    #[error("Timeout error")]
-    TimeoutError,
+    #[error("Timeout")]
+    Timeout,
 }
 
 impl std::convert::From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
-        Self::IoError(err)
+        Self::Io(err)
     }
 }
 
 impl std::convert::From<tonic::transport::Error> for Error {
     fn from(err: tonic::transport::Error) -> Self {
-        Self::TransportError(err)
+        Self::Transport(err)
     }
 }
 
 impl std::convert::From<tonic::Status> for Error {
     fn from(err: tonic::Status) -> Self {
-        Self::RpcError(err)
+        Self::Rpc(err)
     }
 }
 
@@ -143,7 +147,7 @@ impl BigTableConnection {
                     Scope::BigTableData
                 })
                 .await
-                .map_err(Error::AccessTokenError)?;
+                .map_err(Error::AccessToken)?;
 
                 let table_prefix = format!(
                     "projects/{}/instances/{}/tables/",
@@ -157,7 +161,7 @@ impl BigTableConnection {
                             .tls_config(
                             ClientTlsConfig::new()
                                 .ca_certificate(
-                                    root_ca_certificate::load().map_err(Error::CertificateError)?,
+                                    root_ca_certificate::load().map_err(Error::Certificate)?,
                                 )
                                 .domain_name("bigtable.googleapis.com"),
                         )?;
@@ -218,10 +222,32 @@ impl BigTableConnection {
     where
         T: serde::ser::Serialize,
     {
-        use backoff::{future::retry, ExponentialBackoff};
         retry(ExponentialBackoff::default(), || async {
             let mut client = self.client();
             Ok(client.put_bincode_cells(table, cells).await?)
+        })
+        .await
+    }
+
+    pub async fn delete_rows_with_retry(&self, table: &str, row_keys: &[RowKey]) -> Result<()> {
+        retry(ExponentialBackoff::default(), || async {
+            let mut client = self.client();
+            Ok(client.delete_rows(table, row_keys).await?)
+        })
+        .await
+    }
+
+    pub async fn get_bincode_cells_with_retry<T>(
+        &self,
+        table: &str,
+        row_keys: &[RowKey],
+    ) -> Result<Vec<(RowKey, Result<T>)>>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        retry(ExponentialBackoff::default(), || async {
+            let mut client = self.client();
+            Ok(client.get_bincode_cells(table, row_keys).await?)
         })
         .await
     }
@@ -234,7 +260,6 @@ impl BigTableConnection {
     where
         T: prost::Message,
     {
-        use backoff::{future::retry, ExponentialBackoff};
         retry(ExponentialBackoff::default(), || async {
             let mut client = self.client();
             Ok(client.put_protobuf_cells(table, cells).await?)
@@ -269,7 +294,7 @@ impl<F: FnMut(Request<()>) -> InterceptedRequestResult> BigTable<F> {
         while let Some(res) = rrr.message().await? {
             if let Some(timeout) = self.timeout {
                 if Instant::now().duration_since(started) > timeout {
-                    return Err(Error::TimeoutError);
+                    return Err(Error::Timeout);
                 }
             }
             for (i, mut chunk) in res.chunks.into_iter().enumerate() {
@@ -444,6 +469,38 @@ impl<F: FnMut(Request<()>) -> InterceptedRequestResult> BigTable<F> {
         self.decode_read_rows_response(response).await
     }
 
+    /// Get latest data from multiple rows of `table`, if those rows exist.
+    pub async fn get_multi_row_data(
+        &mut self,
+        table_name: &str,
+        row_keys: &[RowKey],
+    ) -> Result<Vec<(RowKey, RowData)>> {
+        self.refresh_access_token().await;
+
+        let response = self
+            .client
+            .read_rows(ReadRowsRequest {
+                table_name: format!("{}{}", self.table_prefix, table_name),
+                rows_limit: 0, // return all keys
+                rows: Some(RowSet {
+                    row_keys: row_keys
+                        .iter()
+                        .map(|k| k.as_bytes().to_vec())
+                        .collect::<Vec<_>>(),
+                    row_ranges: vec![],
+                }),
+                filter: Some(RowFilter {
+                    // Only return the latest version of each cell
+                    filter: Some(row_filter::Filter::CellsPerColumnLimitFilter(1)),
+                }),
+                ..ReadRowsRequest::default()
+            })
+            .await?
+            .into_inner();
+
+        self.decode_read_rows_response(response).await
+    }
+
     /// Get latest data from a single row of `table`, if that row exists. Returns an error if that
     /// row does not exist.
     ///
@@ -479,6 +536,47 @@ impl<F: FnMut(Request<()>) -> InterceptedRequestResult> BigTable<F> {
             .next()
             .map(|r| r.1)
             .ok_or(Error::RowNotFound)
+    }
+
+    /// Delete one or more `table` rows
+    async fn delete_rows(&mut self, table_name: &str, row_keys: &[RowKey]) -> Result<()> {
+        self.refresh_access_token().await;
+
+        let mut entries = vec![];
+        for row_key in row_keys {
+            entries.push(mutate_rows_request::Entry {
+                row_key: row_key.as_bytes().to_vec(),
+                mutations: vec![Mutation {
+                    mutation: Some(mutation::Mutation::DeleteFromRow(
+                        mutation::DeleteFromRow {},
+                    )),
+                }],
+            });
+        }
+
+        let mut response = self
+            .client
+            .mutate_rows(MutateRowsRequest {
+                table_name: format!("{}{}", self.table_prefix, table_name),
+                entries,
+                ..MutateRowsRequest::default()
+            })
+            .await?
+            .into_inner();
+
+        while let Some(res) = response.message().await? {
+            for entry in res.entries {
+                if let Some(status) = entry.status {
+                    if status.code != 0 {
+                        eprintln!("delete_rows error {}: {}", status.code, status.message);
+                        warn!("delete_rows error {}: {}", status.code, status.message);
+                        return Err(Error::RowDeleteFailed);
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Store data for one or more `table` rows in the `family_name` Column family
@@ -541,6 +639,28 @@ impl<F: FnMut(Request<()>) -> InterceptedRequestResult> BigTable<F> {
     {
         let row_data = self.get_single_row_data(table, key.clone()).await?;
         deserialize_bincode_cell_data(&row_data, table, key.to_string())
+    }
+
+    pub async fn get_bincode_cells<T>(
+        &mut self,
+        table: &str,
+        keys: &[RowKey],
+    ) -> Result<Vec<(RowKey, Result<T>)>>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        Ok(self
+            .get_multi_row_data(table, keys)
+            .await?
+            .into_iter()
+            .map(|(key, row_data)| {
+                let key_str = key.to_string();
+                (
+                    key,
+                    deserialize_bincode_cell_data(&row_data, table, key_str),
+                )
+            })
+            .collect())
     }
 
     pub async fn get_protobuf_or_bincode_cell<B, P>(
@@ -632,7 +752,7 @@ where
         .ok_or_else(|| Error::ObjectNotFound(format!("{}/{}", table, key)))?
         .1;
 
-    let data = decompress(&value)?;
+    let data = decompress(value)?;
     T::decode(&data[..]).map_err(|err| {
         warn!("Failed to deserialize {}/{}: {}", table, key, err);
         Error::ObjectCorrupt(format!("{}/{}", table, key))
@@ -653,7 +773,7 @@ where
         .ok_or_else(|| Error::ObjectNotFound(format!("{}/{}", table, key)))?
         .1;
 
-    let data = decompress(&value)?;
+    let data = decompress(value)?;
     bincode::deserialize(&data).map_err(|err| {
         warn!("Failed to deserialize {}/{}: {}", table, key, err);
         Error::ObjectCorrupt(format!("{}/{}", table, key))

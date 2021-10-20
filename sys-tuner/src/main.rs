@@ -1,3 +1,4 @@
+#[cfg(not(target_family = "windows"))]
 use clap::{crate_description, crate_name, value_t_or_exit, App, Arg};
 use log::*;
 
@@ -93,7 +94,7 @@ fn tune_kernel_udp_buffers_and_vmmap() {
     sysctl_write("net.core.wmem_default", "134217728");
 
     // increase mmap counts for many append_vecs
-    sysctl_write("vm.max_map_count", "700000");
+    sysctl_write("vm.max_map_count", "1000000");
 }
 
 #[cfg(unix)]

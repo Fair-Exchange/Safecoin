@@ -54,9 +54,9 @@ Post something like the following to #announcements (adjusting the text as appro
 >   --hard-fork SLOT_X                  # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
 >   --no-snapshot-fetch                 # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
 >   --entrypoint entrypoint.testnet.safecoin.org:10015
->   --trusted-validator 5D1fNXzvv5NjV1ysLjirC4WY92RNsVH18vjmcszZd8on
+>   --known-validator 5D1fNXzvv5NjV1ysLjirC4WY92RNsVH18vjmcszZd8on
 >   --expected-genesis-hash 4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY
->   --no-untrusted-rpc
+>   --only-known-rpc
 >   --limit-ledger-size
 >   ...                                # <-- your other --identity/--vote-account/etc arguments
 > ```
@@ -68,9 +68,9 @@ Post something like the following to #announcements (adjusting the text as appro
 >   --wait-for-supermajority SLOT_X     # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
 >   --expected-bank-hash NEW_BANK_HASH  # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
 >   --entrypoint entrypoint.testnet.safecoin.org:10015
->   --trusted-validator 5D1fNXzvv5NjV1ysLjirC4WY92RNsVH18vjmcszZd8on
+>   --known-validator 5D1fNXzvv5NjV1ysLjirC4WY92RNsVH18vjmcszZd8on
 >   --expected-genesis-hash 4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY
->   --no-untrusted-rpc
+>   --only-known-rpc
 >   --limit-ledger-size
 >   ...                                # <-- your other --identity/--vote-account/etc arguments
 > ```
@@ -88,3 +88,28 @@ Post something like the following to #announcements (adjusting the text as appro
 ### Step 7. Wait and listen
 
 Monitor the validators as they restart. Answer questions, help folks,
+
+## Troubleshooting
+
+### 80% of the stake didn't participate in the restart, now what?
+If less than 80% of the stake join the restart after a reasonable amount of
+time, it will be necessary to retry the restart attempt with the stake from the
+non-responsive validators removed.
+
+The community should identify and come to social consensus on the set of
+non-responsive validators. Then all participating validators return to Step 4
+and create a new snapshot with additional `--destake-vote-account <PUBKEY>`
+arguments for each of the non-responsive validator's vote account address
+
+```bash
+$ safecoin-ledger-tool -l ledger create-snapshot SLOT_X ledger --hard-fork SLOT_X \
+    --destake-vote-account <VOTE_ACCOUNT_1> \
+    --destake-vote-account <VOTE_ACCOUNT_2> \
+    .
+    .
+    --destake-vote-account <VOTE_ACCOUNT_N> \
+```
+
+This will cause all stake associated with the non-responsive validators to be
+immediately deactivated. All their stakers will need to re-delegate their stake
+once the cluster restart is successful.

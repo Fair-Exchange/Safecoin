@@ -88,10 +88,6 @@ module.exports = {
               label: "Introduction",
               to: "introduction",
             },
-            {
-              label: "Tour de SAFE",
-              to: "tour-de-sol",
-            },
           ],
         },
         {

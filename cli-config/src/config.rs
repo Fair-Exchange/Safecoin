@@ -107,24 +107,24 @@ mod test {
     #[test]
     fn compute_websocket_url() {
         assert_eq!(
-            Config::compute_websocket_url(&"http://api.devnet.safecoin.org"),
+            Config::compute_websocket_url("http://api.devnet.safecoin.org"),
             "ws://api.devnet.safecoin.org/".to_string()
         );
 
         assert_eq!(
-            Config::compute_websocket_url(&"https://api.devnet.safecoin.org"),
+            Config::compute_websocket_url("https://api.devnet.safecoin.org"),
             "wss://api.devnet.safecoin.org/".to_string()
         );
 
         assert_eq!(
-            Config::compute_websocket_url(&"http://example.com:8328"),
+            Config::compute_websocket_url("http://example.com:8328"),
             "ws://example.com:8329/".to_string()
         );
         assert_eq!(
-            Config::compute_websocket_url(&"https://example.com:1234"),
+            Config::compute_websocket_url("https://example.com:1234"),
             "wss://example.com:1235/".to_string()
         );
 
-        assert_eq!(Config::compute_websocket_url(&"garbage"), String::new());
+        assert_eq!(Config::compute_websocket_url("garbage"), String::new());
     }
 }

@@ -68,6 +68,7 @@ spl() {
 
     $cargo build
     $cargo test
+    $cargo_build_bpf
     $cargo_test_bpf
   )
 }
@@ -100,5 +101,5 @@ EOF
 
 
 _ example_helloworld
-#_ spl
+_ spl
 _ serum_dex

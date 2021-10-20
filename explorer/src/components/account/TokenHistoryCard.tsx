@@ -4,7 +4,7 @@ import {
   ConfirmedSignatureInfo,
   ParsedInstruction,
   PartiallyDecodedInstruction,
-} from "@safecoin/web3.js";
+} from "@solana/web3.js";
 import { CacheEntry, FetchStatus } from "providers/cache";
 import {
   useAccountHistories,
@@ -25,12 +25,6 @@ import {
   useFetchTransactionDetails,
   useTransactionDetailsCache,
 } from "providers/transactions/details";
-import { create } from "superstruct";
-import { ParsedInfo } from "validators";
-import {
-  TokenInstructionType,
-  IX_TITLES,
-} from "components/instruction/token/types";
 import { reportError } from "utils/sentry";
 import { intoTransactionInstruction, displayAddress } from "utils/tx";
 import {
@@ -45,13 +39,18 @@ import {
   isSerumInstruction,
   parseSerumInstructionTitle,
 } from "components/instruction/serum/types";
+import {
+  isBonfidaBotInstruction,
+  parseBonfidaBotInstructionTitle,
+} from "components/instruction/bonfida-bot/types";
 import { INNER_INSTRUCTIONS_START_SLOT } from "pages/TransactionDetailsPage";
 import { useCluster, Cluster } from "providers/cluster";
 import { Link } from "react-router-dom";
 import { Location } from "history";
 import { useQuery } from "utils/url";
-import { TokenInfoMap } from "@safecoin/safe-token-registry";
+import { TokenInfoMap } from "@solana/spl-token-registry";
 import { useTokenRegistry } from "providers/mints/token-registry";
+import { getTokenProgramInstructionName } from "utils/instruction";
 
 const TRUNCATE_TOKEN_LENGTH = 10;
 const ALL_TOKENS = "";
@@ -317,12 +316,14 @@ const FilterDropdown = ({ filter, toggle, show, tokens }: FilterProps) => {
   };
 
   const filterOptions: string[] = [ALL_TOKENS];
-  const nameLookup: { [mint: string]: string } = {};
+  const nameLookup: Map<string, string> = new Map();
 
   tokens.forEach((token) => {
-    const pubkey = token.info.mint.toBase58();
-    filterOptions.push(pubkey);
-    nameLookup[pubkey] = formatTokenName(pubkey, cluster, tokenRegistry);
+    const address = token.info.mint.toBase58();
+    if (!nameLookup.has(address)) {
+      filterOptions.push(address);
+      nameLookup.set(address, formatTokenName(address, cluster, tokenRegistry));
+    }
   });
 
   return (
@@ -333,7 +334,7 @@ const FilterDropdown = ({ filter, toggle, show, tokens }: FilterProps) => {
         type="button"
         onClick={toggle}
       >
-        {filter === ALL_TOKENS ? "All Tokens" : nameLookup[filter]}
+        {filter === ALL_TOKENS ? "All Tokens" : nameLookup.get(filter)}
       </button>
       <div
         className={`token-filter dropdown-menu-right dropdown-menu${
@@ -360,21 +361,6 @@ const FilterDropdown = ({ filter, toggle, show, tokens }: FilterProps) => {
     </div>
   );
 };
-
-function instructionTypeName(
-  ix: ParsedInstruction,
-  tx: ConfirmedSignatureInfo
-): string {
-  try {
-    const parsed = create(ix.parsed, ParsedInfo);
-    const { type: rawType } = parsed;
-    const type = create(rawType, TokenInstructionType);
-    return IX_TITLES[type];
-  } catch (err) {
-    reportError(err, { signature: tx.signature });
-    return "Unknown";
-  }
-}
 
 const TokenTransactionRow = React.memo(
   ({
@@ -471,8 +457,8 @@ const TokenTransactionRow = React.memo(
           }
 
           if ("parsed" in ix) {
-            if (ix.program === "safe-token") {
-              name = instructionTypeName(ix, tx);
+            if (ix.program === "spl-token") {
+              name = getTokenProgramInstructionName(ix, tx);
             } else {
               return undefined;
             }
@@ -506,6 +492,16 @@ const TokenTransactionRow = React.memo(
               reportError(error, { signature: tx.signature });
               return undefined;
             }
+          } else if (
+            transactionInstruction &&
+            isBonfidaBotInstruction(transactionInstruction)
+          ) {
+            try {
+              name = parseBonfidaBotInstructionTitle(transactionInstruction);
+            } catch (error) {
+              reportError(error, { signature: tx.signature });
+              return undefined;
+            }
           } else {
             if (
               ix.accounts.findIndex((account) =>
@@ -519,8 +515,8 @@ const TokenTransactionRow = React.memo(
           }
 
           return {
-            name: name,
-            innerInstructions: innerInstructions,
+            name,
+            innerInstructions,
           };
         })
         .filter((name) => name !== undefined) as InstructionType[];
@@ -571,8 +567,8 @@ function InstructionDetails({
 
   let instructionTypes = instructionType.innerInstructions
     .map((ix) => {
-      if ("parsed" in ix && ix.program === "safe-token") {
-        return instructionTypeName(ix, tx);
+      if ("parsed" in ix && ix.program === "spl-token") {
+        return getTokenProgramInstructionName(ix, tx);
       }
       return undefined;
     })

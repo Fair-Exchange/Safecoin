@@ -6,6 +6,7 @@ use crate::{
     },
     memo::WithMemo,
     spend_utils::{resolve_spend_tx_and_check_account_balance, SpendAmount},
+    stake::check_current_authority,
 };
 use clap::{value_t_or_exit, App, Arg, ArgMatches, SubCommand};
 use safecoin_clap_utils::{
@@ -56,6 +57,15 @@ impl VoteSubCommands for App<'_, '_> {
                         .help("Keypair of validator that will vote with this account"),
                 )
                 .arg(
+                    pubkey!(Arg::with_name("authorized_withdrawer")
+                        .index(3)
+                        .value_name("WITHDRAWER_PUBKEY")
+                        .takes_value(true)
+                        .required(true)
+                        .long("authorized-withdrawer"),
+                        "Public key of the authorized withdrawer")
+                )
+                .arg(
                     Arg::with_name("commission")
                         .long("commission")
                         .value_name("PERCENTAGE")
@@ -70,10 +80,12 @@ impl VoteSubCommands for App<'_, '_> {
                         "Public key of the authorized voter [default: validator identity pubkey]. "),
                 )
                 .arg(
-                    pubkey!(Arg::with_name("authorized_withdrawer")
-                        .long("authorized-withdrawer")
-                        .value_name("WITHDRAWER_PUBKEY"),
-                        "Public key of the authorized withdrawer [default: validator identity pubkey]. "),
+                    Arg::with_name("allow_unsafe_authorized_withdrawer")
+                        .long("allow-unsafe-authorized-withdrawer")
+                        .takes_value(false)
+                        .help("Allow an authorized withdrawer pubkey to be identical to the validator identity \
+                               account pubkey or vote account pubkey, which is normally an unsafe \
+                               configuration and should be avoided."),
                 )
                 .arg(
                     Arg::with_name("seed")
@@ -135,6 +147,64 @@ impl VoteSubCommands for App<'_, '_> {
                         .value_name("AUTHORIZED_PUBKEY")
                         .required(true),
                         "New authorized withdrawer. "),
+                )
+                .arg(memo_arg())
+        )
+        .subcommand(
+            SubCommand::with_name("vote-authorize-voter-checked")
+                .about("Authorize a new vote signing keypair for the given vote account, \
+                    checking the new authority as a signer")
+                .arg(
+                    pubkey!(Arg::with_name("vote_account_pubkey")
+                        .index(1)
+                        .value_name("VOTE_ACCOUNT_ADDRESS")
+                        .required(true),
+                        "Vote account in which to set the authorized voter. "),
+                )
+                .arg(
+                    Arg::with_name("authorized")
+                        .index(2)
+                        .value_name("AUTHORIZED_KEYPAIR")
+                        .required(true)
+                        .validator(is_valid_signer)
+                        .help("Current authorized vote signer."),
+                )
+                .arg(
+                    Arg::with_name("new_authorized")
+                        .index(3)
+                        .value_name("NEW_AUTHORIZED_KEYPAIR")
+                        .required(true)
+                        .validator(is_valid_signer)
+                        .help("New authorized vote signer."),
+                )
+                .arg(memo_arg())
+        )
+        .subcommand(
+            SubCommand::with_name("vote-authorize-withdrawer-checked")
+                .about("Authorize a new withdraw signing keypair for the given vote account, \
+                    checking the new authority as a signer")
+                .arg(
+                    pubkey!(Arg::with_name("vote_account_pubkey")
+                        .index(1)
+                        .value_name("VOTE_ACCOUNT_ADDRESS")
+                        .required(true),
+                        "Vote account in which to set the authorized withdrawer. "),
+                )
+                .arg(
+                    Arg::with_name("authorized")
+                        .index(2)
+                        .value_name("AUTHORIZED_KEYPAIR")
+                        .required(true)
+                        .validator(is_valid_signer)
+                        .help("Current authorized withdrawer."),
+                )
+                .arg(
+                    Arg::with_name("new_authorized")
+                        .index(3)
+                        .value_name("NEW_AUTHORIZED_KEYPAIR")
+                        .required(true)
+                        .validator(is_valid_signer)
+                        .help("New authorized withdrawer."),
                 )
                 .arg(memo_arg())
         )
@@ -282,8 +352,27 @@ pub fn parse_create_vote_account(
         signer_of(matches, "identity_account", wallet_manager)?;
     let commission = value_t_or_exit!(matches, "commission", u8);
     let authorized_voter = pubkey_of_signer(matches, "authorized_voter", wallet_manager)?;
-    let authorized_withdrawer = pubkey_of_signer(matches, "authorized_withdrawer", wallet_manager)?;
+    let authorized_withdrawer =
+        pubkey_of_signer(matches, "authorized_withdrawer", wallet_manager)?.unwrap();
+    let allow_unsafe = matches.is_present("allow_unsafe_authorized_withdrawer");
     let memo = matches.value_of(MEMO_ARG.name).map(String::from);
+
+    if !allow_unsafe {
+        if authorized_withdrawer == vote_account_pubkey.unwrap() {
+            return Err(CliError::BadParameter(
+                "Authorized withdrawer pubkey is identical to vote \
+                                               account pubkey, an unsafe configuration"
+                    .to_owned(),
+            ));
+        }
+        if authorized_withdrawer == identity_pubkey.unwrap() {
+            return Err(CliError::BadParameter(
+                "Authorized withdrawer pubkey is identical to identity \
+                                               account pubkey, an unsafe configuration"
+                    .to_owned(),
+            ));
+        }
+    }
 
     let payer_provided = None;
     let signer_info = default_signer.generate_unique_signers(
@@ -311,19 +400,25 @@ pub fn parse_vote_authorize(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
     vote_authorize: VoteAuthorize,
+    checked: bool,
 ) -> Result<CliCommandInfo, CliError> {
     let vote_account_pubkey =
         pubkey_of_signer(matches, "vote_account_pubkey", wallet_manager)?.unwrap();
-    let new_authorized_pubkey =
-        pubkey_of_signer(matches, "new_authorized_pubkey", wallet_manager)?.unwrap();
-    let (authorized, _) = signer_of(matches, "authorized", wallet_manager)?;
+    let (authorized, authorized_pubkey) = signer_of(matches, "authorized", wallet_manager)?;
 
     let payer_provided = None;
-    let signer_info = default_signer.generate_unique_signers(
-        vec![payer_provided, authorized],
-        matches,
-        wallet_manager,
-    )?;
+    let mut signers = vec![payer_provided, authorized];
+
+    let new_authorized_pubkey = if checked {
+        let (new_authorized_signer, new_authorized_pubkey) =
+            signer_of(matches, "new_authorized", wallet_manager)?;
+        signers.push(new_authorized_signer);
+        new_authorized_pubkey.unwrap()
+    } else {
+        pubkey_of_signer(matches, "new_authorized_pubkey", wallet_manager)?.unwrap()
+    };
+
+    let signer_info = default_signer.generate_unique_signers(signers, matches, wallet_manager)?;
     let memo = matches.value_of(MEMO_ARG.name).map(String::from);
 
     Ok(CliCommandInfo {
@@ -332,6 +427,12 @@ pub fn parse_vote_authorize(
             new_authorized_pubkey,
             vote_authorize,
             memo,
+            authorized: signer_info.index_of(authorized_pubkey).unwrap(),
+            new_authorized: if checked {
+                signer_info.index_of(Some(new_authorized_pubkey))
+            } else {
+                None
+            },
         },
         signers: signer_info.signers,
     })
@@ -461,14 +562,14 @@ pub fn process_create_vote_account(
     seed: &Option<String>,
     identity_account: SignerIndex,
     authorized_voter: &Option<Pubkey>,
-    authorized_withdrawer: &Option<Pubkey>,
+    authorized_withdrawer: Pubkey,
     commission: u8,
     memo: Option<&String>,
 ) -> ProcessResult {
     let vote_account = config.signers[vote_account];
     let vote_account_pubkey = vote_account.pubkey();
     let vote_account_address = if let Some(seed) = seed {
-        Pubkey::create_with_seed(&vote_account_pubkey, &seed, &solana_vote_program::id())?
+        Pubkey::create_with_seed(&vote_account_pubkey, seed, &solana_vote_program::id())?
     } else {
         vote_account_pubkey
     };
@@ -493,7 +594,7 @@ pub fn process_create_vote_account(
         let vote_init = VoteInit {
             node_pubkey: identity_pubkey,
             authorized_voter: authorized_voter.unwrap_or(identity_pubkey),
-            authorized_withdrawer: authorized_withdrawer.unwrap_or(identity_pubkey),
+            authorized_withdrawer,
             commission,
         };
 
@@ -549,7 +650,7 @@ pub fn process_create_vote_account(
     let mut tx = Transaction::new_unsigned(message);
     tx.try_sign(&config.signers, recent_blockhash)?;
     let result = rpc_client.send_and_confirm_transaction_with_spinner(&tx);
-    log_instruction_custom_error::<SystemError>(result, &config)
+    log_instruction_custom_error::<SystemError>(result, config)
 }
 
 pub fn process_vote_authorize(
@@ -558,28 +659,54 @@ pub fn process_vote_authorize(
     vote_account_pubkey: &Pubkey,
     new_authorized_pubkey: &Pubkey,
     vote_authorize: VoteAuthorize,
+    authorized: SignerIndex,
+    new_authorized: Option<SignerIndex>,
     memo: Option<&String>,
 ) -> ProcessResult {
-    // If the `authorized_account` is also the fee payer, `config.signers` will only have one
-    // keypair in it
-    let authorized = if config.signers.len() == 2 {
-        config.signers[1]
-    } else {
-        config.signers[0]
-    };
+    let authorized = config.signers[authorized];
+    let new_authorized_signer = new_authorized.map(|index| config.signers[index]);
 
     check_unique_pubkeys(
         (&authorized.pubkey(), "authorized_account".to_string()),
         (new_authorized_pubkey, "new_authorized_pubkey".to_string()),
     )?;
+
+    let (_, vote_state) = get_vote_account(rpc_client, vote_account_pubkey, config.commitment)?;
+    match vote_authorize {
+        VoteAuthorize::Voter => {
+            let current_authorized_voter = vote_state
+                .authorized_voters()
+                .last()
+                .ok_or_else(|| {
+                    CliError::RpcRequestError(
+                        "Invalid vote account state; no authorized voters found".to_string(),
+                    )
+                })?
+                .1;
+            check_current_authority(current_authorized_voter, &authorized.pubkey())?
+        }
+        VoteAuthorize::Withdrawer => {
+            check_current_authority(&vote_state.authorized_withdrawer, &authorized.pubkey())?
+        }
+    }
+
     let (recent_blockhash, fee_calculator) = rpc_client.get_recent_blockhash()?;
-    let ixs = vec![vote_instruction::authorize(
-        vote_account_pubkey,   // vote account to update
-        &authorized.pubkey(),  // current authorized
-        new_authorized_pubkey, // new vote signer/withdrawer
-        vote_authorize,        // vote or withdraw
-    )]
-    .with_memo(memo);
+    let vote_ix = if new_authorized_signer.is_some() {
+        vote_instruction::authorize_checked(
+            vote_account_pubkey,   // vote account to update
+            &authorized.pubkey(),  // current authorized
+            new_authorized_pubkey, // new vote signer/withdrawer
+            vote_authorize,        // vote or withdraw
+        )
+    } else {
+        vote_instruction::authorize(
+            vote_account_pubkey,   // vote account to update
+            &authorized.pubkey(),  // current authorized
+            new_authorized_pubkey, // new vote signer/withdrawer
+            vote_authorize,        // vote or withdraw
+        )
+    };
+    let ixs = vec![vote_ix].with_memo(memo);
 
     let message = Message::new(&ixs, Some(&config.signers[0].pubkey()));
     let mut tx = Transaction::new_unsigned(message);
@@ -592,7 +719,7 @@ pub fn process_vote_authorize(
         config.commitment,
     )?;
     let result = rpc_client.send_and_confirm_transaction_with_spinner(&tx);
-    log_instruction_custom_error::<VoteError>(result, &config)
+    log_instruction_custom_error::<VoteError>(result, config)
 }
 
 pub fn process_vote_update_validator(
@@ -629,7 +756,7 @@ pub fn process_vote_update_validator(
         config.commitment,
     )?;
     let result = rpc_client.send_and_confirm_transaction_with_spinner(&tx);
-    log_instruction_custom_error::<VoteError>(result, &config)
+    log_instruction_custom_error::<VoteError>(result, config)
 }
 
 pub fn process_vote_update_commission(
@@ -660,7 +787,7 @@ pub fn process_vote_update_commission(
         config.commitment,
     )?;
     let result = rpc_client.send_and_confirm_transaction_with_spinner(&tx);
-    log_instruction_custom_error::<VoteError>(result, &config)
+    log_instruction_custom_error::<VoteError>(result, config)
 }
 
 fn get_vote_account(
@@ -763,7 +890,7 @@ pub fn process_withdraw_from_vote_account(
     let (recent_blockhash, fee_calculator) = rpc_client.get_recent_blockhash()?;
     let withdraw_authority = config.signers[withdraw_authority];
 
-    let current_balance = rpc_client.get_balance(&vote_account_pubkey)?;
+    let current_balance = rpc_client.get_balance(vote_account_pubkey)?;
     let minimum_balance = rpc_client.get_minimum_balance_for_rent_exemption(VoteState::size_of())?;
 
     let lamports = match withdraw_amount {
@@ -798,13 +925,13 @@ pub fn process_withdraw_from_vote_account(
         config.commitment,
     )?;
     let result = rpc_client.send_and_confirm_transaction_with_spinner(&transaction);
-    log_instruction_custom_error::<VoteError>(result, &config)
+    log_instruction_custom_error::<VoteError>(result, config)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::{app, parse_command};
+    use crate::{clap_app::get_clap_app, cli::parse_command};
     use solana_sdk::signature::{read_keypair_file, write_keypair, Keypair, Signer};
     use tempfile::NamedTempFile;
 
@@ -815,7 +942,7 @@ mod tests {
 
     #[test]
     fn test_parse_command() {
-        let test_commands = app("test", "desc", "version");
+        let test_commands = get_clap_app("test", "desc", "version");
         let keypair = Keypair::new();
         let pubkey = keypair.pubkey();
         let pubkey_string = pubkey.to_string();
@@ -843,6 +970,8 @@ mod tests {
                     new_authorized_pubkey: pubkey2,
                     vote_authorize: VoteAuthorize::Voter,
                     memo: None,
+                    authorized: 0,
+                    new_authorized: None,
                 },
                 signers: vec![read_keypair_file(&default_keypair_file).unwrap().into()],
             }
@@ -867,6 +996,8 @@ mod tests {
                     new_authorized_pubkey: pubkey2,
                     vote_authorize: VoteAuthorize::Voter,
                     memo: None,
+                    authorized: 1,
+                    new_authorized: None,
                 },
                 signers: vec![
                     read_keypair_file(&default_keypair_file).unwrap().into(),
@@ -875,18 +1006,84 @@ mod tests {
             }
         );
 
+        let (voter_keypair_file, mut tmp_file) = make_tmp_file();
+        let voter_keypair = Keypair::new();
+        write_keypair(&voter_keypair, tmp_file.as_file_mut()).unwrap();
+
+        let test_authorize_voter = test_commands.clone().get_matches_from(vec![
+            "test",
+            "vote-authorize-voter-checked",
+            &pubkey_string,
+            &default_keypair_file,
+            &voter_keypair_file,
+        ]);
+        assert_eq!(
+            parse_command(&test_authorize_voter, &default_signer, &mut None).unwrap(),
+            CliCommandInfo {
+                command: CliCommand::VoteAuthorize {
+                    vote_account_pubkey: pubkey,
+                    new_authorized_pubkey: voter_keypair.pubkey(),
+                    vote_authorize: VoteAuthorize::Voter,
+                    memo: None,
+                    authorized: 0,
+                    new_authorized: Some(1),
+                },
+                signers: vec![
+                    read_keypair_file(&default_keypair_file).unwrap().into(),
+                    read_keypair_file(&voter_keypair_file).unwrap().into()
+                ],
+            }
+        );
+
+        let test_authorize_voter = test_commands.clone().get_matches_from(vec![
+            "test",
+            "vote-authorize-voter-checked",
+            &pubkey_string,
+            &authorized_keypair_file,
+            &voter_keypair_file,
+        ]);
+        assert_eq!(
+            parse_command(&test_authorize_voter, &default_signer, &mut None).unwrap(),
+            CliCommandInfo {
+                command: CliCommand::VoteAuthorize {
+                    vote_account_pubkey: pubkey,
+                    new_authorized_pubkey: voter_keypair.pubkey(),
+                    vote_authorize: VoteAuthorize::Voter,
+                    memo: None,
+                    authorized: 1,
+                    new_authorized: Some(2),
+                },
+                signers: vec![
+                    read_keypair_file(&default_keypair_file).unwrap().into(),
+                    read_keypair_file(&authorized_keypair_file).unwrap().into(),
+                    read_keypair_file(&voter_keypair_file).unwrap().into(),
+                ],
+            }
+        );
+
+        let test_authorize_voter = test_commands.clone().get_matches_from(vec![
+            "test",
+            "vote-authorize-voter-checked",
+            &pubkey_string,
+            &authorized_keypair_file,
+            &pubkey2_string,
+        ]);
+        assert!(parse_command(&test_authorize_voter, &default_signer, &mut None).is_err());
+
         let (keypair_file, mut tmp_file) = make_tmp_file();
         let keypair = Keypair::new();
         write_keypair(&keypair, tmp_file.as_file_mut()).unwrap();
         // Test CreateVoteAccount SubCommand
         let (identity_keypair_file, mut tmp_file) = make_tmp_file();
         let identity_keypair = Keypair::new();
+        let authorized_withdrawer = Keypair::new().pubkey();
         write_keypair(&identity_keypair, tmp_file.as_file_mut()).unwrap();
         let test_create_vote_account = test_commands.clone().get_matches_from(vec![
             "test",
             "create-vote-account",
             &keypair_file,
             &identity_keypair_file,
+            &authorized_withdrawer.to_string(),
             "--commission",
             "10",
         ]);
@@ -898,7 +1095,7 @@ mod tests {
                     seed: None,
                     identity_account: 2,
                     authorized_voter: None,
-                    authorized_withdrawer: None,
+                    authorized_withdrawer,
                     commission: 10,
                     memo: None,
                 },
@@ -919,6 +1116,7 @@ mod tests {
             "create-vote-account",
             &keypair_file,
             &identity_keypair_file,
+            &authorized_withdrawer.to_string(),
         ]);
         assert_eq!(
             parse_command(&test_create_vote_account2, &default_signer, &mut None).unwrap(),
@@ -928,7 +1126,7 @@ mod tests {
                     seed: None,
                     identity_account: 2,
                     authorized_voter: None,
-                    authorized_withdrawer: None,
+                    authorized_withdrawer,
                     commission: 100,
                     memo: None,
                 },
@@ -951,6 +1149,7 @@ mod tests {
             "create-vote-account",
             &keypair_file,
             &identity_keypair_file,
+            &authorized_withdrawer.to_string(),
             "--authorized-voter",
             &authed.to_string(),
         ]);
@@ -962,7 +1161,7 @@ mod tests {
                     seed: None,
                     identity_account: 2,
                     authorized_voter: Some(authed),
-                    authorized_withdrawer: None,
+                    authorized_withdrawer,
                     commission: 100,
                     memo: None,
                 },
@@ -977,14 +1176,14 @@ mod tests {
         let (keypair_file, mut tmp_file) = make_tmp_file();
         let keypair = Keypair::new();
         write_keypair(&keypair, tmp_file.as_file_mut()).unwrap();
-        // test init with an authed withdrawer
+        // succeed even though withdrawer unsafe (because forcefully allowed)
         let test_create_vote_account4 = test_commands.clone().get_matches_from(vec![
             "test",
             "create-vote-account",
             &keypair_file,
             &identity_keypair_file,
-            "--authorized-withdrawer",
-            &authed.to_string(),
+            &identity_keypair_file,
+            "--allow-unsafe-authorized-withdrawer",
         ]);
         assert_eq!(
             parse_command(&test_create_vote_account4, &default_signer, &mut None).unwrap(),
@@ -994,7 +1193,7 @@ mod tests {
                     seed: None,
                     identity_account: 2,
                     authorized_voter: None,
-                    authorized_withdrawer: Some(authed),
+                    authorized_withdrawer: identity_keypair.pubkey(),
                     commission: 100,
                     memo: None,
                 },

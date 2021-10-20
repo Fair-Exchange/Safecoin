@@ -126,9 +126,12 @@ impl From<SanitizeError> for TransactionError {
 #[frozen_abi(digest = "2Kr1C1pRytLsmUbg8p2nLoZyrjrEQCriAYLTCYvwj1Fo")]
 #[derive(Debug, PartialEq, Default, Eq, Clone, Serialize, Deserialize, AbiExample)]
 pub struct Transaction {
-    /// A set of digital signatures of `account_keys`, `program_ids`, `recent_blockhash`, and `instructions`, signed by the first
-    /// signatures.len() keys of account_keys
-    /// NOTE: Serialization-related changes must be paired with the direct read at sigverify.
+    /// A set of digital signatures of a serialized [`Message`], signed by the
+    /// first `signatures.len()` keys of [`account_keys`].
+    ///
+    /// [`account_keys`]: Message::account_keys
+    ///
+    // NOTE: Serialization-related changes must be paired with the direct read at sigverify.
     #[serde(with = "short_vec")]
     pub signatures: Vec<Signature>,
 
@@ -375,6 +378,11 @@ impl Transaction {
         }
     }
 
+    /// Verify the length of signatures matches the value in the message header
+    pub fn verify_signatures_len(&self) -> bool {
+        self.signatures.len() == self.message.header.num_required_signatures as usize
+    }
+
     /// Verify the transaction and hash its message
     pub fn verify_and_hash_message(&self) -> Result<Hash> {
         let message_bytes = self.message_data();
@@ -477,7 +485,7 @@ pub fn uses_durable_nonce(tx: &Transaction) -> Option<&CompiledInstruction> {
         .filter(|maybe_ix| {
             let prog_id_idx = maybe_ix.program_id_index as usize;
             match message.account_keys.get(prog_id_idx) {
-                Some(program_id) => system_program::check_id(&program_id),
+                Some(program_id) => system_program::check_id(program_id),
                 _ => false,
             }
         } && matches!(limited_deserialize(&maybe_ix.data), Ok(SystemInstruction::AdvanceNonceAccount))
@@ -986,7 +994,7 @@ mod tests {
         let (_, nonce_pubkey, tx) = nonced_transfer_tx();
         let nonce_ix = uses_durable_nonce(&tx).unwrap();
         assert_eq!(
-            get_nonce_pubkey_from_instruction(&nonce_ix, &tx),
+            get_nonce_pubkey_from_instruction(nonce_ix, &tx),
             Some(&nonce_pubkey),
         );
     }

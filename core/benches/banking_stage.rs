@@ -7,16 +7,16 @@ use crossbeam_channel::unbounded;
 use log::*;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use solana_core::banking_stage::{create_test_recorder, BankingStage, BankingStageStats};
-use solana_core::cluster_info::ClusterInfo;
-use solana_core::cluster_info::Node;
-use solana_core::poh_recorder::WorkingBankEntry;
+use solana_core::banking_stage::{BankingStage, BankingStageStats};
+use safecoin_gossip::cluster_info::ClusterInfo;
+use safecoin_gossip::cluster_info::Node;
 use solana_ledger::blockstore_processor::process_entries;
 use solana_ledger::entry::{next_hash, Entry};
 use solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
 use solana_ledger::{blockstore::Blockstore, get_tmp_ledger_path};
 use solana_perf::packet::to_packets_chunked;
 use solana_perf::test_tx::test_tx;
+use solana_poh::poh_recorder::{create_test_recorder, WorkingBankEntry};
 use solana_runtime::bank::Bank;
 use solana_sdk::genesis_config::GenesisConfig;
 use solana_sdk::hash::Hash;
@@ -29,6 +29,7 @@ use solana_sdk::system_instruction;
 use solana_sdk::system_transaction;
 use solana_sdk::timing::{duration_as_us, timestamp};
 use solana_sdk::transaction::Transaction;
+use solana_streamer::socket::SocketAddrSpace;
 use std::collections::VecDeque;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::Receiver;
@@ -107,7 +108,7 @@ fn make_accounts_txs(txes: usize, mint_keypair: &Keypair, hash: Hash) -> Vec<Tra
         .into_par_iter()
         .map(|_| {
             let mut new = dummy.clone();
-            let sig: Vec<u8> = (0..64).map(|_| thread_rng().gen()).collect();
+            let sig: Vec<_> = (0..64).map(|_| thread_rng().gen::<u8>()).collect();
             new.message.account_keys[0] = pubkey::new_rand();
             new.message.account_keys[1] = pubkey::new_rand();
             new.signatures = vec![Signature::new(&sig[0..64])];
@@ -157,6 +158,7 @@ fn bench_banking(bencher: &mut Bencher, tx_type: TransactionType) {
     genesis_config.ticks_per_slot = 10_000;
 
     let (verified_sender, verified_receiver) = unbounded();
+    let (tpu_vote_sender, tpu_vote_receiver) = unbounded();
     let (vote_sender, vote_receiver) = unbounded();
     let mut bank = Bank::new(&genesis_config);
     // Allow arbitrary transaction processing time for the purposes of this bench
@@ -183,7 +185,7 @@ fn bench_banking(bencher: &mut Bencher, tx_type: TransactionType) {
     });
     //sanity check, make sure all the transactions can execute sequentially
     transactions.iter().for_each(|tx| {
-        let res = bank.process_transaction(&tx);
+        let res = bank.process_transaction(tx);
         assert!(res.is_ok(), "sanity test transactions");
     });
     bank.clear_signatures();
@@ -201,13 +203,18 @@ fn bench_banking(bencher: &mut Bencher, tx_type: TransactionType) {
         );
         let (exit, poh_recorder, poh_service, signal_receiver) =
             create_test_recorder(&bank, &blockstore, None);
-        let cluster_info = ClusterInfo::new_with_invalid_keypair(Node::new_localhost().info);
+        let cluster_info = ClusterInfo::new(
+            Node::new_localhost().info,
+            Arc::new(Keypair::new()),
+            SocketAddrSpace::Unspecified,
+        );
         let cluster_info = Arc::new(cluster_info);
         let (s, _r) = unbounded();
         let _banking_stage = BankingStage::new(
             &cluster_info,
             &poh_recorder,
             verified_receiver,
+            tpu_vote_receiver,
             vote_receiver,
             None,
             s,
@@ -254,6 +261,7 @@ fn bench_banking(bencher: &mut Bencher, tx_type: TransactionType) {
             start += chunk_len;
             start %= verified.len();
         });
+        drop(tpu_vote_sender);
         drop(vote_sender);
         exit.store(true, Ordering::Relaxed);
         poh_service.join().unwrap();

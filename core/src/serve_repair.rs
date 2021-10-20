@@ -1,11 +1,9 @@
 use crate::{
-    cluster_info::{ClusterInfo, ClusterInfoError},
     cluster_slots::ClusterSlots,
-    contact_info::ContactInfo,
     repair_response,
-    repair_service::RepairStats,
+    repair_service::{OutstandingRepairs, RepairStats},
+    request_response::RequestResponse,
     result::{Error, Result},
-    weighted_shuffle::weighted_best,
 };
 use bincode::serialize;
 use lru::LruCache;
@@ -13,10 +11,17 @@ use rand::{
     distributions::{Distribution, WeightedError, WeightedIndex},
     Rng,
 };
-use solana_ledger::{blockstore::Blockstore, shred::Nonce};
+use safecoin_gossip::{
+    cluster_info::{ClusterInfo, ClusterInfoError},
+    contact_info::ContactInfo,
+    weighted_shuffle::weighted_best,
+};
+use solana_ledger::{
+    blockstore::Blockstore,
+    shred::{Nonce, Shred},
+};
 use safecoin_measure::measure::Measure;
-use safecoin_measure::thread_mem_usage;
-use solana_metrics::{datapoint_debug, inc_new_counter_debug};
+use solana_metrics::inc_new_counter_debug;
 use solana_perf::packet::{limited_deserialize, Packets, PacketsRecycler};
 use solana_sdk::{
     clock::Slot,
@@ -36,8 +41,6 @@ use std::{
 
 /// the number of slots to respond with when responding to `Orphan` requests
 pub const MAX_ORPHAN_REPAIR_RESPONSES: usize = 10;
-pub const DEFAULT_NONCE: u32 = 42;
-
 // Number of slots to cache their respective repair peers and sampling weights.
 pub(crate) const REPAIR_PEERS_CACHE_CAPACITY: usize = 128;
 // Limit cache entries ttl in order to avoid re-using outdated data.
@@ -56,6 +59,28 @@ impl RepairType {
             RepairType::Orphan(slot) => *slot,
             RepairType::HighestShred(slot, _) => *slot,
             RepairType::Shred(slot, _) => *slot,
+        }
+    }
+}
+
+impl RequestResponse for RepairType {
+    type Response = Shred;
+    fn num_expected_responses(&self) -> u32 {
+        match self {
+            RepairType::Orphan(_) => (MAX_ORPHAN_REPAIR_RESPONSES + 1) as u32, // run_orphan uses <= MAX_ORPHAN_REPAIR_RESPONSES
+            RepairType::HighestShred(_, _) => 1,
+            RepairType::Shred(_, _) => 1,
+        }
+    }
+    fn verify_response(&self, response_shred: &Shred) -> bool {
+        match self {
+            RepairType::Orphan(slot) => response_shred.slot() <= *slot,
+            RepairType::HighestShred(slot, index) => {
+                response_shred.slot() as u64 == *slot && response_shred.index() as u64 >= *index
+            }
+            RepairType::Shred(slot, index) => {
+                response_shred.slot() as u64 == *slot && response_shred.index() as u64 == *index
+            }
         }
     }
 }
@@ -124,13 +149,6 @@ impl RepairPeers {
 }
 
 impl ServeRepair {
-    /// Without a valid keypair gossip will not function. Only useful for tests.
-    pub fn new_with_invalid_keypair(contact_info: ContactInfo) -> Self {
-        Self::new(Arc::new(ClusterInfo::new_with_invalid_keypair(
-            contact_info,
-        )))
-    }
-
     pub fn new(cluster_info: Arc<ClusterInfo>) -> Self {
         let (keypair, my_info) = { (cluster_info.keypair.clone(), cluster_info.my_contact_info()) };
         Self {
@@ -185,7 +203,7 @@ impl ServeRepair {
                         Self::run_window_request(
                             recycler,
                             from,
-                            &from_addr,
+                            from_addr,
                             blockstore,
                             &me.read().unwrap().my_info,
                             *slot,
@@ -200,7 +218,7 @@ impl ServeRepair {
                     (
                         Self::run_highest_window_request(
                             recycler,
-                            &from_addr,
+                            from_addr,
                             blockstore,
                             *slot,
                             *highest_index,
@@ -214,7 +232,7 @@ impl ServeRepair {
                     (
                         Self::run_orphan(
                             recycler,
-                            &from_addr,
+                            from_addr,
                             blockstore,
                             *slot,
                             MAX_ORPHAN_REPAIR_RESPONSES,
@@ -270,7 +288,7 @@ impl ServeRepair {
 
         let mut time = Measure::start("repair::handle_packets");
         for reqs in reqs_v {
-            Self::handle_packets(obj, &recycler, blockstore, reqs, response_sender, stats);
+            Self::handle_packets(obj, recycler, blockstore, reqs, response_sender, stats);
         }
         time.stop();
         if total_packets >= *max_packets {
@@ -319,7 +337,7 @@ impl ServeRepair {
         exit: &Arc<AtomicBool>,
     ) -> JoinHandle<()> {
         let exit = exit.clone();
-        let recycler = PacketsRecycler::new_without_limit("serve-repair-recycler-shrink-stats");
+        let recycler = PacketsRecycler::default();
         Builder::new()
             .name("solana-repair-listen".to_string())
             .spawn(move || {
@@ -337,7 +355,7 @@ impl ServeRepair {
                         &mut max_packets,
                     );
                     match result {
-                        Err(Error::RecvTimeoutError(_)) | Ok(_) => {}
+                        Err(Error::RecvTimeout(_)) | Ok(_) => {}
                         Err(err) => info!("repair listener error: {:?}", err),
                     };
                     if exit.load(Ordering::Relaxed) {
@@ -347,7 +365,6 @@ impl ServeRepair {
                         Self::report_reset_stats(&me, &mut stats);
                         last_print = Instant::now();
                     }
-                    thread_mem_usage::datapoint("solana-repair-listen");
                 }
             })
             .unwrap()
@@ -362,9 +379,7 @@ impl ServeRepair {
         stats: &mut ServeRepairStats,
     ) {
         // iter over the packets
-        let allocated = thread_mem_usage::Allocatedp::default();
         packets.packets.iter().for_each(|packet| {
-            let start = allocated.get();
             let from_addr = packet.meta.addr();
             limited_deserialize(&packet.data[..packet.meta.size])
                 .into_iter()
@@ -376,10 +391,6 @@ impl ServeRepair {
                         let _ignore_disconnect = response_sender.send(rsp);
                     }
                 });
-            datapoint_debug!(
-                "solana-serve-repair-memory",
-                ("serve_repair", (allocated.get() - start) as i64, i64),
-            );
         });
     }
 
@@ -424,6 +435,7 @@ impl ServeRepair {
         peers_cache: &mut LruCache<Slot, RepairPeers>,
         repair_stats: &mut RepairStats,
         repair_validators: &Option<HashSet<Pubkey>>,
+        outstanding_requests: &mut OutstandingRepairs,
     ) -> Result<(SocketAddr, Vec<u8>)> {
         // find a peer that appears to be accepting replication and has the desired slot, as indicated
         // by a valid tvu port location
@@ -440,7 +452,9 @@ impl ServeRepair {
             }
         };
         let (peer, addr) = repair_peers.sample(&mut rand::thread_rng());
-        let out = self.map_repair_request(&repair_request, &peer, repair_stats, DEFAULT_NONCE)?;
+        let nonce =
+            outstanding_requests.add_request(repair_request, solana_sdk::timing::timestamp());
+        let out = self.map_repair_request(&repair_request, &peer, repair_stats, nonce)?;
         Ok((addr, out))
     }
 
@@ -529,7 +543,11 @@ impl ServeRepair {
 
             if let Some(packet) = packet {
                 inc_new_counter_debug!("serve_repair-window-request-ledger", 1);
-                return Some(Packets::new_with_recycler_data(recycler, vec![packet])).unwrap();
+                return Some(Packets::new_unpinned_with_recycler_data(
+                    recycler,
+                    "run_window_request",
+                    vec![packet],
+                ));
             }
         }
 
@@ -565,7 +583,11 @@ impl ServeRepair {
                 from_addr,
                 nonce,
             )?;
-            return Packets::new_with_recycler_data(recycler, vec![packet]);
+            return Some(Packets::new_unpinned_with_recycler_data(
+                recycler,
+                "run_highest_window_request",
+                vec![packet],
+            ));
         }
         None
     }
@@ -578,7 +600,7 @@ impl ServeRepair {
         max_responses: usize,
         nonce: Nonce,
     ) -> Option<Packets> {
-        let mut res = Packets::new_with_recycler(recycler.clone(), 64).unwrap();
+        let mut res = Packets::new_unpinned_with_recycler(recycler.clone(), 64, "run_orphan");
         if let Some(blockstore) = blockstore {
             // Try to find the next "n" parent slots of the input slot
             while let Ok(Some(meta)) = blockstore.meta(slot) {
@@ -615,15 +637,16 @@ impl ServeRepair {
 mod tests {
     use super::*;
     use crate::{repair_response, result::Error};
+    use safecoin_gossip::{socketaddr, socketaddr_any};
     use solana_ledger::get_tmp_ledger_path;
     use solana_ledger::{
         blockstore::make_many_slot_entries,
         blockstore_processor::fill_blockstore_slot_with_ticks,
-        shred::{
-            max_ticks_per_n_shreds, CodingShredHeader, DataShredHeader, Shred, ShredCommonHeader,
-        },
+        shred::{max_ticks_per_n_shreds, Shred},
     };
-    use solana_sdk::{hash::Hash, pubkey::Pubkey, timing::timestamp};
+    use solana_perf::packet::Packet;
+    use solana_sdk::{hash::Hash, pubkey::Pubkey, signature::Keypair, timing::timestamp};
+    use solana_streamer::socket::SocketAddrSpace;
 
     #[test]
     fn test_run_highest_window_request() {
@@ -632,7 +655,7 @@ mod tests {
 
     /// test run_window_request responds with the right shred, and do not overrun
     fn run_highest_window_request(slot: Slot, num_slots: u64, nonce: Nonce) {
-        let recycler = PacketsRecycler::new_without_limit("");
+        let recycler = PacketsRecycler::default();
         solana_logger::setup();
         let ledger_path = get_tmp_ledger_path!();
         {
@@ -665,6 +688,8 @@ mod tests {
                 nonce,
             )
             .expect("packets");
+            let request = RepairType::HighestShred(slot, index);
+            verify_responses(&request, rv.packets.iter());
 
             let rv: Vec<Shred> = rv
                 .packets
@@ -700,7 +725,7 @@ mod tests {
 
     /// test window requests respond with the right shred, and do not overrun
     fn run_window_request(slot: Slot, nonce: Nonce) {
-        let recycler = PacketsRecycler::new_without_limit("");
+        let recycler = PacketsRecycler::default();
         solana_logger::setup();
         let ledger_path = get_tmp_ledger_path!();
         {
@@ -713,7 +738,7 @@ mod tests {
                 repair: socketaddr!("127.0.0.1:1237"),
                 tpu: socketaddr!("127.0.0.1:1238"),
                 tpu_forwards: socketaddr!("127.0.0.1:1239"),
-                unused: socketaddr!("127.0.0.1:1240"),
+                tpu_vote: socketaddr!("127.0.0.1:1240"),
                 rpc: socketaddr!("127.0.0.1:1241"),
                 rpc_pubsub: socketaddr!("127.0.0.1:1242"),
                 serve_repair: socketaddr!("127.0.0.1:1243"),
@@ -731,23 +756,10 @@ mod tests {
                 nonce,
             );
             assert!(rv.is_none());
-            let common_header = ShredCommonHeader {
-                slot,
-                index: 1,
-                ..ShredCommonHeader::default()
-            };
-            let data_header = DataShredHeader {
-                parent_offset: 1,
-                ..DataShredHeader::default()
-            };
-            let shred_info = Shred::new_empty_from_header(
-                common_header,
-                data_header,
-                CodingShredHeader::default(),
-            );
+            let shred = Shred::new_from_data(slot, 1, 1, None, false, false, 0, 2, 0);
 
             blockstore
-                .insert_shreds(vec![shred_info], None, false)
+                .insert_shreds(vec![shred], None, false)
                 .expect("Expect successful ledger write");
 
             let index = 1;
@@ -762,6 +774,8 @@ mod tests {
                 nonce,
             )
             .expect("packets");
+            let request = RepairType::Shred(slot, index);
+            verify_responses(&request, rv.packets.iter());
             let rv: Vec<Shred> = rv
                 .packets
                 .into_iter()
@@ -777,20 +791,30 @@ mod tests {
         Blockstore::destroy(&ledger_path).expect("Expected successful database destruction");
     }
 
+    fn new_test_cluster_info(contact_info: ContactInfo) -> ClusterInfo {
+        ClusterInfo::new(
+            contact_info,
+            Arc::new(Keypair::new()),
+            SocketAddrSpace::Unspecified,
+        )
+    }
+
     #[test]
     fn window_index_request() {
         let cluster_slots = ClusterSlots::default();
         let me = ContactInfo::new_localhost(&solana_sdk::pubkey::new_rand(), timestamp());
-        let cluster_info = Arc::new(ClusterInfo::new_with_invalid_keypair(me));
+        let cluster_info = Arc::new(new_test_cluster_info(me));
         let serve_repair = ServeRepair::new(cluster_info.clone());
+        let mut outstanding_requests = OutstandingRepairs::default();
         let rv = serve_repair.repair_request(
             &cluster_slots,
             RepairType::Shred(0, 0),
             &mut LruCache::new(100),
             &mut RepairStats::default(),
             &None,
+            &mut outstanding_requests,
         );
-        assert_matches!(rv, Err(Error::ClusterInfoError(ClusterInfoError::NoPeers)));
+        assert_matches!(rv, Err(Error::ClusterInfo(ClusterInfoError::NoPeers)));
 
         let serve_repair_addr = socketaddr!([127, 0, 0, 1], 1243);
         let nxt = ContactInfo {
@@ -801,7 +825,7 @@ mod tests {
             repair: socketaddr!([127, 0, 0, 1], 1237),
             tpu: socketaddr!([127, 0, 0, 1], 1238),
             tpu_forwards: socketaddr!([127, 0, 0, 1], 1239),
-            unused: socketaddr!([127, 0, 0, 1], 1240),
+            tpu_vote: socketaddr!([127, 0, 0, 1], 1240),
             rpc: socketaddr!([127, 0, 0, 1], 1241),
             rpc_pubsub: socketaddr!([127, 0, 0, 1], 1242),
             serve_repair: serve_repair_addr,
@@ -816,6 +840,7 @@ mod tests {
                 &mut LruCache::new(100),
                 &mut RepairStats::default(),
                 &None,
+                &mut outstanding_requests,
             )
             .unwrap();
         assert_eq!(nxt.serve_repair, serve_repair_addr);
@@ -830,7 +855,7 @@ mod tests {
             repair: socketaddr!([127, 0, 0, 1], 1237),
             tpu: socketaddr!([127, 0, 0, 1], 1238),
             tpu_forwards: socketaddr!([127, 0, 0, 1], 1239),
-            unused: socketaddr!([127, 0, 0, 1], 1240),
+            tpu_vote: socketaddr!([127, 0, 0, 1], 1240),
             rpc: socketaddr!([127, 0, 0, 1], 1241),
             rpc_pubsub: socketaddr!([127, 0, 0, 1], 1242),
             serve_repair: serve_repair_addr2,
@@ -849,6 +874,7 @@ mod tests {
                     &mut LruCache::new(100),
                     &mut RepairStats::default(),
                     &None,
+                    &mut outstanding_requests,
                 )
                 .unwrap();
             if rv.0 == serve_repair_addr {
@@ -868,7 +894,7 @@ mod tests {
 
     fn run_orphan(slot: Slot, num_slots: u64, nonce: Nonce) {
         solana_logger::setup();
-        let recycler = PacketsRecycler::new_without_limit("");
+        let recycler = PacketsRecycler::default();
         let ledger_path = get_tmp_ledger_path!();
         {
             let blockstore = Arc::new(Blockstore::open(&ledger_path).unwrap());
@@ -917,6 +943,9 @@ mod tests {
             .collect();
 
             // Verify responses
+            let request = RepairType::Orphan(slot);
+            verify_responses(&request, rv.iter());
+
             let expected: Vec<_> = (slot..slot + num_slots)
                 .rev()
                 .filter_map(|slot| {
@@ -939,7 +968,7 @@ mod tests {
     #[test]
     fn run_orphan_corrupted_shred_size() {
         solana_logger::setup();
-        let recycler = PacketsRecycler::new_without_limit("");
+        let recycler = PacketsRecycler::default();
         let ledger_path = get_tmp_ledger_path!();
         {
             let blockstore = Arc::new(Blockstore::open(&ledger_path).unwrap());
@@ -950,6 +979,7 @@ mod tests {
             assert_eq!(shreds[0].slot(), 1);
             assert_eq!(shreds[0].index(), 0);
             shreds[0].payload.push(10);
+            shreds[0].data_header.size = shreds[0].payload.len() as u16;
             blockstore
                 .insert_shreds(shreds, None, false)
                 .expect("Expect successful ledger write");
@@ -1000,7 +1030,7 @@ mod tests {
     fn test_repair_with_repair_validators() {
         let cluster_slots = ClusterSlots::default();
         let me = ContactInfo::new_localhost(&solana_sdk::pubkey::new_rand(), timestamp());
-        let cluster_info = Arc::new(ClusterInfo::new_with_invalid_keypair(me.clone()));
+        let cluster_info = Arc::new(new_test_cluster_info(me.clone()));
 
         // Insert two peers on the network
         let contact_info2 =
@@ -1025,6 +1055,7 @@ mod tests {
                     &mut LruCache::new(100),
                     &mut RepairStats::default(),
                     &trusted_validators,
+                    &mut OutstandingRepairs::default(),
                 )
                 .is_err());
         }
@@ -1041,6 +1072,7 @@ mod tests {
                 &mut LruCache::new(100),
                 &mut RepairStats::default(),
                 &trusted_validators,
+                &mut OutstandingRepairs::default(),
             )
             .is_ok());
 
@@ -1061,7 +1093,68 @@ mod tests {
                 &mut LruCache::new(100),
                 &mut RepairStats::default(),
                 &None,
+                &mut OutstandingRepairs::default(),
             )
             .is_ok());
+    }
+
+    #[test]
+    fn test_verify_response() {
+        let repair = RepairType::Orphan(9);
+        // Ensure new options are addded to this test
+        match repair {
+            RepairType::Orphan(_) => (),
+            RepairType::HighestShred(_, _) => (),
+            RepairType::Shred(_, _) => (),
+        };
+
+        let slot = 9;
+        let index = 5;
+
+        // Orphan
+        let mut shred = Shred::new_empty_data_shred();
+        shred.set_slot(slot);
+        let request = RepairType::Orphan(slot);
+        assert!(request.verify_response(&shred));
+        shred.set_slot(slot - 1);
+        assert!(request.verify_response(&shred));
+        shred.set_slot(slot + 1);
+        assert!(!request.verify_response(&shred));
+
+        // HighestShred
+        shred = Shred::new_empty_data_shred();
+        shred.set_slot(slot);
+        shred.set_index(index);
+        let request = RepairType::HighestShred(slot, index as u64);
+        assert!(request.verify_response(&shred));
+        shred.set_index(index + 1);
+        assert!(request.verify_response(&shred));
+        shred.set_index(index - 1);
+        assert!(!request.verify_response(&shred));
+        shred.set_slot(slot - 1);
+        shred.set_index(index);
+        assert!(!request.verify_response(&shred));
+        shred.set_slot(slot + 1);
+        assert!(!request.verify_response(&shred));
+
+        // Shred
+        shred = Shred::new_empty_data_shred();
+        shred.set_slot(slot);
+        shred.set_index(index);
+        let request = RepairType::Shred(slot, index as u64);
+        assert!(request.verify_response(&shred));
+        shred.set_index(index + 1);
+        assert!(!request.verify_response(&shred));
+        shred.set_slot(slot + 1);
+        shred.set_index(index);
+        assert!(!request.verify_response(&shred));
+    }
+
+    fn verify_responses<'a>(request: &RepairType, packets: impl Iterator<Item = &'a Packet>) {
+        for packet in packets {
+            let shred_payload = packet.data.to_vec();
+            let shred = Shred::new_from_serialized_shred(shred_payload).unwrap();
+            request.verify_response(&shred);
+        }
     }
 }

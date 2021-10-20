@@ -3,7 +3,7 @@ authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "solana-cli"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.6.25"
+version = "1.7.15"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -16,7 +16,7 @@ chrono = { version = "0.4.11", features = ["serde"] }
 clap = "2.33.1"
 criterion-stats = "0.3.0"
 ctrlc = { version = "3.1.5", features = ["termination"] }
-console = "0.11.3"
+console = "0.14.1"
 const_format = "0.2.14"
 dirs-next = "2.0.0"
 log = "0.4.11"
@@ -29,30 +29,30 @@ reqwest = { version = "0.11.2", default-features = false, features = ["blocking"
 serde = "1.0.122"
 serde_derive = "1.0.103"
 serde_json = "1.0.56"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.6.25" }
-safecoin-bpf-loader-program = { path = "../programs/bpf_loader", version = "=1.6.25" }
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.25" }
-safecoin-cli-config = { path = "../cli-config", version = "=1.6.25" }
-safecoin-cli-output = { path = "../cli-output", version = "=1.6.25" }
-safecoin-client = { path = "../client", version = "=1.6.25" }
-safecoin-config-program = { path = "../programs/config", version = "=1.6.25" }
-safecoin-faucet = { path = "../faucet", version = "=1.6.25" }
-safecoin-logger = { path = "../logger", version = "=1.6.25" }
-safecoin-net-utils = { path = "../net-utils", version = "=1.6.25" }
-solana_rbpf = "=0.2.9"
-safecoin-remote-wallet = { path = "../remote-wallet", version = "=1.6.25" }
-safecoin-sdk = { path = "../sdk", version = "=1.6.25" }
-safecoin-stake-program = { path = "../programs/stake", version = "=1.6.25" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.6.25" }
-safecoin-version = { path = "../version", version = "=1.6.25" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.6.25" }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.7.15" }
+safecoin-bpf-loader-program = { path = "../programs/bpf_loader", version = "=1.7.15" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.7.15" }
+safecoin-cli-config = { path = "../cli-config", version = "=1.7.15" }
+safecoin-cli-output = { path = "../cli-output", version = "=1.7.15" }
+safecoin-client = { path = "../client", version = "=1.7.15" }
+safecoin-config-program = { path = "../programs/config", version = "=1.7.15" }
+safecoin-faucet = { path = "../faucet", version = "=1.7.15" }
+safecoin-logger = { path = "../logger", version = "=1.7.15" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.7.15" }
+solana_rbpf = "=0.2.11"
+safecoin-remote-wallet = { path = "../remote-wallet", version = "=1.7.15" }
+safecoin-sdk = { path = "../sdk", version = "=1.7.15" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.7.15" }
+safecoin-version = { path = "../version", version = "=1.7.15" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.7.15" }
 safe-memo = { version = "=3.0.4", features = ["no-entrypoint"] }
 thiserror = "1.0.21"
-tiny-bip39 = "0.7.0"
+tiny-bip39 = "0.8.1"
 url = "2.1.1"
 
 [dev-dependencies]
-safecoin-core = { path = "../core", version = "=1.6.25" }
+safecoin-core = { path = "../core", version = "=1.7.15" }
+safecoin-streamer = { path = "../streamer", version = "=1.7.15" }
 tempfile = "3.1.0"
 
 [[bin]]

@@ -6,7 +6,9 @@ use rayon::prelude::*;
 use safecoin_measure::measure::Measure;
 use solana_runtime::{
     accounts::{create_test_accounts, update_accounts_bench, Accounts},
-    accounts_index::{AccountSecondaryIndexes, Ancestors},
+    accounts_db::AccountShrinkThreshold,
+    accounts_index::AccountSecondaryIndexes,
+    ancestors::Ancestors,
 };
 use solana_sdk::{genesis_config::ClusterType, pubkey::Pubkey};
 use std::{env, fs, path::PathBuf};
@@ -63,6 +65,7 @@ fn main() {
         &ClusterType::Testnet,
         AccountSecondaryIndexes::default(),
         false,
+        AccountShrinkThreshold::default(),
     );
     println!("Creating {} accounts", num_accounts);
     let mut create_time = Measure::start("create accounts");
@@ -87,17 +90,19 @@ fn main() {
         num_slots,
         create_time
     );
-    let mut ancestors: Ancestors = vec![(0, 0)].into_iter().collect();
+    let mut ancestors = Vec::with_capacity(num_slots);
+    ancestors.push(0);
     for i in 1..num_slots {
-        ancestors.insert(i as u64, i - 1);
+        ancestors.push(i as u64);
         accounts.add_root(i as u64);
     }
+    let ancestors = Ancestors::from(ancestors);
     let mut elapsed = vec![0; iterations];
     let mut elapsed_store = vec![0; iterations];
     for x in 0..iterations {
         if clean {
             let mut time = Measure::start("clean");
-            accounts.accounts_db.clean_accounts(None);
+            accounts.accounts_db.clean_accounts(None, false);
             time.stop();
             println!("{}", time);
             for slot in 0..num_slots {
@@ -115,6 +120,8 @@ fn main() {
                 false,
                 solana_sdk::clock::Slot::default(),
                 &ancestors,
+                None,
+                false,
                 None,
             );
             time_store.stop();

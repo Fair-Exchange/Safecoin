@@ -1,24 +1,30 @@
 //! The `repair_service` module implements the tools necessary to generate a thread which
 //! regularly finds missing shreds in the ledger and sends repair requests for those shreds
 use crate::{
-    cluster_info::ClusterInfo,
     cluster_info_vote_listener::VerifiedVoteReceiver,
     cluster_slots::ClusterSlots,
+    outstanding_requests::OutstandingRequests,
     repair_weight::RepairWeight,
+    replay_stage::DUPLICATE_THRESHOLD,
     result::Result,
-    serve_repair::{RepairType, ServeRepair, DEFAULT_NONCE, REPAIR_PEERS_CACHE_CAPACITY},
+    serve_repair::{RepairType, ServeRepair, REPAIR_PEERS_CACHE_CAPACITY},
 };
 use crossbeam_channel::{Receiver as CrossbeamReceiver, Sender as CrossbeamSender};
 use lru::LruCache;
+use safecoin_gossip::cluster_info::ClusterInfo;
 use solana_ledger::{
     blockstore::{Blockstore, SlotMeta},
     shred::Nonce,
 };
 use safecoin_measure::measure::Measure;
-use solana_runtime::{
-    bank::Bank, bank_forks::BankForks, commitment::VOTE_THRESHOLD_SIZE, contains::Contains,
+use solana_runtime::{bank::Bank, bank_forks::BankForks, contains::Contains};
+use solana_sdk::{
+    clock::{BankId, Slot},
+    epoch_schedule::EpochSchedule,
+    pubkey::Pubkey,
+    timing::timestamp,
 };
-use solana_sdk::{clock::Slot, epoch_schedule::EpochSchedule, pubkey::Pubkey, timing::timestamp};
+use solana_streamer::sendmmsg::{batch_send, SendPktsError};
 use std::{
     collections::{HashMap, HashSet},
     iter::Iterator,
@@ -33,6 +39,10 @@ use std::{
 
 pub type DuplicateSlotsResetSender = CrossbeamSender<Slot>;
 pub type DuplicateSlotsResetReceiver = CrossbeamReceiver<Slot>;
+pub type ConfirmedSlotsSender = CrossbeamSender<Vec<Slot>>;
+pub type ConfirmedSlotsReceiver = CrossbeamReceiver<Vec<Slot>>;
+
+pub type OutstandingRepairs = OutstandingRequests<RepairType>;
 
 #[derive(Default, Debug)]
 pub struct SlotRepairs {
@@ -83,6 +93,8 @@ pub struct RepairTiming {
     pub get_best_orphans_elapsed: u64,
     pub get_best_shreds_elapsed: u64,
     pub send_repairs_elapsed: u64,
+    pub build_repairs_batch_elapsed: u64,
+    pub batch_send_repairs_elapsed: u64,
 }
 
 impl RepairTiming {
@@ -91,12 +103,15 @@ impl RepairTiming {
         set_root_elapsed: u64,
         get_votes_elapsed: u64,
         add_votes_elapsed: u64,
-        send_repairs_elapsed: u64,
+        build_repairs_batch_elapsed: u64,
+        batch_send_repairs_elapsed: u64,
     ) {
         self.set_root_elapsed += set_root_elapsed;
         self.get_votes_elapsed += get_votes_elapsed;
         self.add_votes_elapsed += add_votes_elapsed;
-        self.send_repairs_elapsed += send_repairs_elapsed;
+        self.build_repairs_batch_elapsed += build_repairs_batch_elapsed;
+        self.batch_send_repairs_elapsed += batch_send_repairs_elapsed;
+        self.send_repairs_elapsed += build_repairs_batch_elapsed + batch_send_repairs_elapsed;
     }
 }
 
@@ -146,6 +161,7 @@ impl RepairService {
         repair_info: RepairInfo,
         cluster_slots: Arc<ClusterSlots>,
         verified_vote_receiver: VerifiedVoteReceiver,
+        outstanding_requests: Arc<RwLock<OutstandingRepairs>>,
     ) -> Self {
         let t_repair = Builder::new()
             .name("solana-repair-service".to_string())
@@ -158,6 +174,7 @@ impl RepairService {
                     repair_info,
                     &cluster_slots,
                     verified_vote_receiver,
+                    &outstanding_requests,
                 )
             })
             .unwrap();
@@ -173,6 +190,7 @@ impl RepairService {
         repair_info: RepairInfo,
         cluster_slots: &ClusterSlots,
         verified_vote_receiver: VerifiedVoteReceiver,
+        outstanding_requests: &RwLock<OutstandingRepairs>,
     ) {
         let mut repair_weight = RepairWeight::new(repair_info.bank_forks.read().unwrap().root());
         let serve_repair = ServeRepair::new(cluster_info.clone());
@@ -192,6 +210,7 @@ impl RepairService {
             let mut set_root_elapsed;
             let mut get_votes_elapsed;
             let mut add_votes_elapsed;
+
             let repairs = {
                 let root_bank = repair_info.bank_forks.read().unwrap().root_bank().clone();
                 let new_root = root_bank.slot();
@@ -218,7 +237,7 @@ impl RepairService {
 
                 add_votes_elapsed = Measure::start("add_votes");
                 repair_weight.add_votes(
-                    &blockstore,
+                    blockstore,
                     slot_to_vote_pubkeys.into_iter(),
                     root_bank.epoch_stakes_map(),
                     root_bank.epoch_schedule(),
@@ -261,27 +280,50 @@ impl RepairService {
                 )
             };
 
-            let mut send_repairs_elapsed = Measure::start("send_repairs_elapsed");
-            repairs.into_iter().for_each(|repair_request| {
-                if let Ok((to, req)) = serve_repair.repair_request(
-                    &cluster_slots,
-                    repair_request,
-                    &mut peers_cache,
-                    &mut repair_stats,
-                    &repair_info.repair_validators,
-                ) {
-                    repair_socket.send_to(&req, to).unwrap_or_else(|e| {
-                        info!("{} repair req send_to({}) error {:?}", id, to, e);
-                        0
-                    });
+            let mut build_repairs_batch_elapsed = Measure::start("build_repairs_batch_elapsed");
+            let batch: Vec<(Vec<u8>, SocketAddr)> = {
+                let mut outstanding_requests = outstanding_requests.write().unwrap();
+                repairs
+                    .iter()
+                    .filter_map(|repair_request| {
+                        let (to, req) = serve_repair
+                            .repair_request(
+                                cluster_slots,
+                                *repair_request,
+                                &mut peers_cache,
+                                &mut repair_stats,
+                                &repair_info.repair_validators,
+                                &mut outstanding_requests,
+                            )
+                            .ok()?;
+                        Some((req, to))
+                    })
+                    .collect()
+            };
+            build_repairs_batch_elapsed.stop();
+
+            let mut batch_send_repairs_elapsed = Measure::start("batch_send_repairs_elapsed");
+            if !batch.is_empty() {
+                if let Err(SendPktsError::IoError(err, num_failed)) =
+                    batch_send(repair_socket, &batch)
+                {
+                    error!(
+                        "{} batch_send failed to send {}/{} packets first error {:?}",
+                        id,
+                        num_failed,
+                        batch.len(),
+                        err
+                    );
                 }
-            });
-            send_repairs_elapsed.stop();
+            }
+            batch_send_repairs_elapsed.stop();
+
             repair_timing.update(
                 set_root_elapsed.as_us(),
                 get_votes_elapsed.as_us(),
                 add_votes_elapsed.as_us(),
-                send_repairs_elapsed.as_us(),
+                build_repairs_batch_elapsed.as_us(),
+                batch_send_repairs_elapsed.as_us(),
             );
 
             if last_stats.elapsed().as_secs() > 2 {
@@ -335,6 +377,16 @@ impl RepairService {
                     (
                         "send-repairs-elapsed",
                         repair_timing.send_repairs_elapsed,
+                        i64
+                    ),
+                    (
+                        "build-repairs-batch-elapsed",
+                        repair_timing.build_repairs_batch_elapsed,
+                        i64
+                    ),
+                    (
+                        "batch-send-repairs-elapsed",
+                        repair_timing.batch_send_repairs_elapsed,
                         i64
                     ),
                 );
@@ -468,6 +520,7 @@ impl RepairService {
         repair_stats: &mut RepairStats,
         repair_socket: &UdpSocket,
         repair_validators: &Option<HashSet<Pubkey>>,
+        outstanding_requests: &RwLock<OutstandingRepairs>,
     ) {
         duplicate_slot_repair_statuses.retain(|slot, status| {
             Self::update_duplicate_slot_repair_addr(
@@ -478,10 +531,12 @@ impl RepairService {
                 repair_validators,
             );
             if let Some((repair_pubkey, repair_addr)) = status.repair_pubkey_and_addr {
-                let repairs = Self::generate_duplicate_repairs_for_slot(&blockstore, *slot);
+                let repairs = Self::generate_duplicate_repairs_for_slot(blockstore, *slot);
 
                 if let Some(repairs) = repairs {
+                    let mut outstanding_requests = outstanding_requests.write().unwrap();
                     for repair_type in repairs {
+                        let nonce = outstanding_requests.add_request(repair_type, timestamp());
                         if let Err(e) = Self::serialize_and_send_request(
                             &repair_type,
                             repair_socket,
@@ -489,7 +544,7 @@ impl RepairService {
                             &repair_addr,
                             serve_repair,
                             repair_stats,
-                            DEFAULT_NONCE,
+                            nonce,
                         ) {
                             info!(
                                 "repair req send_to {} ({}) error {:?}",
@@ -518,7 +573,7 @@ impl RepairService {
         nonce: Nonce,
     ) -> Result<()> {
         let req =
-            serve_repair.map_repair_request(&repair_type, repair_pubkey, repair_stats, nonce)?;
+            serve_repair.map_repair_request(repair_type, repair_pubkey, repair_stats, nonce)?;
         repair_socket.send_to(&req, to)?;
         Ok(())
     }
@@ -547,7 +602,7 @@ impl RepairService {
 
     #[allow(dead_code)]
     fn process_new_duplicate_slots(
-        new_duplicate_slots: &[Slot],
+        new_duplicate_slots: &[(Slot, BankId)],
         duplicate_slot_repair_statuses: &mut HashMap<Slot, DuplicateSlotRepairStatus>,
         cluster_slots: &ClusterSlots,
         root_bank: &Bank,
@@ -556,16 +611,16 @@ impl RepairService {
         duplicate_slots_reset_sender: &DuplicateSlotsResetSender,
         repair_validators: &Option<HashSet<Pubkey>>,
     ) {
-        for slot in new_duplicate_slots {
+        for (slot, bank_id) in new_duplicate_slots {
             warn!(
-                "Cluster completed slot: {}, dumping our current version and repairing",
+                "Cluster confirmed slot: {}, dumping our current version and repairing",
                 slot
             );
             // Clear the slot signatures from status cache for this slot
             root_bank.clear_slot_signatures(*slot);
 
             // Clear the accounts for this slot
-            root_bank.remove_unrooted_slot(*slot);
+            root_bank.remove_unrooted_slots(&[(*slot, *bank_id)]);
 
             // Clear the slot-related data in blockstore. This will:
             // 1) Clear old shreds allowing new ones to be inserted
@@ -630,7 +685,7 @@ impl RepairService {
                                 })
                                 .sum();
                             if total_completed_slot_stake as f64 / total_stake as f64
-                                > VOTE_THRESHOLD_SIZE
+                                > DUPLICATE_THRESHOLD
                             {
                                 Some(dead_slot)
                             } else {
@@ -657,17 +712,27 @@ impl RepairService {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::cluster_info::Node;
     use crossbeam_channel::unbounded;
+    use safecoin_gossip::{cluster_info::Node, contact_info::ContactInfo};
     use solana_ledger::blockstore::{
         make_chaining_slot_entries, make_many_slot_entries, make_slot_entries,
     };
     use solana_ledger::shred::max_ticks_per_n_shreds;
     use solana_ledger::{blockstore::Blockstore, get_tmp_ledger_path};
     use solana_runtime::genesis_utils::{self, GenesisConfigInfo, ValidatorVoteKeypairs};
+    use solana_sdk::signature::Keypair;
     use solana_sdk::signature::Signer;
+    use solana_streamer::socket::SocketAddrSpace;
     use solana_vote_program::vote_transaction;
     use std::collections::HashSet;
+
+    fn new_test_cluster_info(contact_info: ContactInfo) -> ClusterInfo {
+        ClusterInfo::new(
+            contact_info,
+            Arc::new(Keypair::new()),
+            SocketAddrSpace::Unspecified,
+        )
+    }
 
     #[test]
     pub fn test_repair_orphan() {
@@ -689,7 +754,7 @@ mod test {
                     MAX_ORPHANS,
                     MAX_REPAIR_LENGTH,
                     &HashSet::default(),
-                    None
+                    None,
                 ),
                 vec![RepairType::Orphan(2), RepairType::HighestShred(0, 0)]
             );
@@ -960,7 +1025,8 @@ mod test {
         let blockstore_path = get_tmp_ledger_path!();
         let blockstore = Blockstore::open(&blockstore_path).unwrap();
         let cluster_slots = ClusterSlots::default();
-        let serve_repair = ServeRepair::new_with_invalid_keypair(Node::new_localhost().info);
+        let serve_repair =
+            ServeRepair::new(Arc::new(new_test_cluster_info(Node::new_localhost().info)));
         let mut duplicate_slot_repair_statuses = HashMap::new();
         let dead_slot = 9;
         let receive_socket = &UdpSocket::bind("0.0.0.0:0").unwrap();
@@ -988,6 +1054,7 @@ mod test {
             &mut RepairStats::default(),
             &UdpSocket::bind("0.0.0.0:0").unwrap(),
             &None,
+            &RwLock::new(OutstandingRequests::default()),
         );
         assert!(duplicate_slot_repair_statuses
             .get(&dead_slot)
@@ -1012,6 +1079,7 @@ mod test {
             &mut RepairStats::default(),
             &UdpSocket::bind("0.0.0.0:0").unwrap(),
             &None,
+            &RwLock::new(OutstandingRequests::default()),
         );
         assert_eq!(duplicate_slot_repair_statuses.len(), 1);
         assert!(duplicate_slot_repair_statuses.get(&dead_slot).is_some());
@@ -1029,6 +1097,7 @@ mod test {
             &mut RepairStats::default(),
             &UdpSocket::bind("0.0.0.0:0").unwrap(),
             &None,
+            &RwLock::new(OutstandingRequests::default()),
         );
         assert!(duplicate_slot_repair_statuses.is_empty());
     }
@@ -1039,13 +1108,11 @@ mod test {
             Pubkey::default(),
             UdpSocket::bind("0.0.0.0:0").unwrap().local_addr().unwrap(),
         ));
-        let cluster_info = Arc::new(ClusterInfo::new_with_invalid_keypair(
-            Node::new_localhost().info,
-        ));
+        let cluster_info = Arc::new(new_test_cluster_info(Node::new_localhost().info));
         let serve_repair = ServeRepair::new(cluster_info.clone());
         let valid_repair_peer = Node::new_localhost().info;
 
-        // Signal that this peer has completed the dead slot, and is thus
+        // Signal that this peer has confirmed the dead slot, and is thus
         // a valid target for repair
         let dead_slot = 9;
         let cluster_slots = ClusterSlots::default();
@@ -1101,7 +1168,8 @@ mod test {
         let blockstore_path = get_tmp_ledger_path!();
         let blockstore = Blockstore::open(&blockstore_path).unwrap();
         let cluster_slots = ClusterSlots::default();
-        let serve_repair = ServeRepair::new_with_invalid_keypair(Node::new_localhost().info);
+        let serve_repair =
+            ServeRepair::new(Arc::new(new_test_cluster_info(Node::new_localhost().info)));
         let mut duplicate_slot_repair_statuses = HashMap::new();
         let duplicate_slot = 9;
 
@@ -1124,6 +1192,7 @@ mod test {
         );
         let bank0 = Arc::new(Bank::new(&genesis_config));
         let bank9 = Bank::new_from_parent(&bank0, &Pubkey::default(), duplicate_slot);
+        let duplicate_bank_id = bank9.bank_id();
         let old_balance = bank9.get_balance(&keypairs.node_keypair.pubkey());
         bank9
             .transfer(10_000, &mint_keypair, &keypairs.node_keypair.pubkey())
@@ -1141,7 +1210,7 @@ mod test {
         assert!(bank9.get_signature_status(&vote_tx.signatures[0]).is_some());
 
         RepairService::process_new_duplicate_slots(
-            &[duplicate_slot],
+            &[(duplicate_slot, duplicate_bank_id)],
             &mut duplicate_slot_repair_statuses,
             &cluster_slots,
             &bank9,

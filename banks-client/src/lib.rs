@@ -10,8 +10,14 @@ use futures::{future::join_all, Future, FutureExt};
 pub use solana_banks_interface::{BanksClient as TarpcClient, TransactionStatus};
 use solana_banks_interface::{BanksRequest, BanksResponse};
 use solana_program::{
-    clock::Slot, fee_calculator::FeeCalculator, hash::Hash, program_pack::Pack, pubkey::Pubkey,
-    rent::Rent, sysvar,
+    clock::Clock,
+    clock::Slot,
+    fee_calculator::FeeCalculator,
+    hash::Hash,
+    program_pack::Pack,
+    pubkey::Pubkey,
+    rent::Rent,
+    sysvar::{self, Sysvar},
 };
 use solana_sdk::{
     account::{from_account, Account},
@@ -63,7 +69,7 @@ impl BanksClient {
         &mut self,
         ctx: Context,
         commitment: CommitmentLevel,
-    ) -> impl Future<Output = io::Result<(FeeCalculator, Hash, Slot)>> + '_ {
+    ) -> impl Future<Output = io::Result<(FeeCalculator, Hash, u64)>> + '_ {
         self.inner
             .get_fees_with_commitment_and_context(ctx, commitment)
     }
@@ -83,6 +89,14 @@ impl BanksClient {
         commitment: CommitmentLevel,
     ) -> impl Future<Output = io::Result<Slot>> + '_ {
         self.inner.get_slot_with_context(ctx, commitment)
+    }
+
+    pub fn get_block_height_with_context(
+        &mut self,
+        ctx: Context,
+        commitment: CommitmentLevel,
+    ) -> impl Future<Output = io::Result<Slot>> + '_ {
+        self.inner.get_block_height_with_context(ctx, commitment)
     }
 
     pub fn process_transaction_with_commitment_and_context(
@@ -115,24 +129,39 @@ impl BanksClient {
         self.send_transaction_with_context(context::current(), transaction)
     }
 
+    /// Return the cluster clock
+    pub fn get_clock(&mut self) -> impl Future<Output = io::Result<Clock>> + '_ {
+        self.get_account(sysvar::clock::id()).map(|result| {
+            let clock_sysvar = result?
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Clock sysvar not present"))?;
+            from_account::<Clock, _>(&clock_sysvar).ok_or_else(|| {
+                io::Error::new(io::ErrorKind::Other, "Failed to deserialize Clock sysvar")
+            })
+        })
+    }
+
     /// Return the fee parameters associated with a recent, rooted blockhash. The cluster
     /// will use the transaction's blockhash to look up these same fee parameters and
     /// use them to calculate the transaction fee.
     pub fn get_fees(
         &mut self,
-    ) -> impl Future<Output = io::Result<(FeeCalculator, Hash, Slot)>> + '_ {
+    ) -> impl Future<Output = io::Result<(FeeCalculator, Hash, u64)>> + '_ {
         self.get_fees_with_commitment_and_context(context::current(), CommitmentLevel::default())
+    }
+
+    /// Return the cluster Sysvar
+    pub fn get_sysvar<T: Sysvar>(&mut self) -> impl Future<Output = io::Result<T>> + '_ {
+        self.get_account(T::id()).map(|result| {
+            let sysvar = result?
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Sysvar not present"))?;
+            from_account::<T, _>(&sysvar)
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to deserialize sysvar"))
+        })
     }
 
     /// Return the cluster rent
     pub fn get_rent(&mut self) -> impl Future<Output = io::Result<Rent>> + '_ {
-        self.get_account(sysvar::rent::id()).map(|result| {
-            let rent_sysvar = result?
-                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Rent sysvar not present"))?;
-            from_account::<Rent, _>(&rent_sysvar).ok_or_else(|| {
-                io::Error::new(io::ErrorKind::Other, "Failed to deserialize Rent sysvar")
-            })
-        })
+        self.get_sysvar::<Rent>()
     }
 
     /// Return a recent, rooted blockhash from the server. The cluster will only accept
@@ -192,10 +221,16 @@ impl BanksClient {
         self.process_transactions_with_commitment(transactions, CommitmentLevel::default())
     }
 
-    /// Return the most recent rooted slot height. All transactions at or below this height
-    /// are said to be finalized. The cluster will not fork to a higher slot height.
+    /// Return the most recent rooted slot. All transactions at or below this slot
+    /// are said to be finalized. The cluster will not fork to a higher slot.
     pub fn get_root_slot(&mut self) -> impl Future<Output = io::Result<Slot>> + '_ {
         self.get_slot_with_context(context::current(), CommitmentLevel::default())
+    }
+
+    /// Return the most recent rooted block height. All transactions at or below this height
+    /// are said to be finalized. The cluster will not fork to a higher block height.
+    pub fn get_root_block_height(&mut self) -> impl Future<Output = io::Result<Slot>> + '_ {
+        self.get_block_height_with_context(context::current(), CommitmentLevel::default())
     }
 
     /// Return the account at the given address at the slot corresponding to the given
@@ -377,13 +412,13 @@ mod tests {
 
         let mint_pubkey = &genesis.mint_keypair.pubkey();
         let bob_pubkey = solana_sdk::pubkey::new_rand();
-        let instruction = system_instruction::transfer(&mint_pubkey, &bob_pubkey, 1);
-        let message = Message::new(&[instruction], Some(&mint_pubkey));
+        let instruction = system_instruction::transfer(mint_pubkey, &bob_pubkey, 1);
+        let message = Message::new(&[instruction], Some(mint_pubkey));
 
         Runtime::new()?.block_on(async {
             let client_transport = start_local_server(bank_forks, block_commitment_cache).await;
             let mut banks_client = start_client(client_transport).await?;
-            let (_, recent_blockhash, last_valid_slot) = banks_client.get_fees().await?;
+            let (_, recent_blockhash, last_valid_block_height) = banks_client.get_fees().await?;
             let transaction = Transaction::new(&[&genesis.mint_keypair], message, recent_blockhash);
             let signature = transaction.signatures[0];
             banks_client.send_transaction(transaction).await?;
@@ -391,8 +426,8 @@ mod tests {
             let mut status = banks_client.get_transaction_status(signature).await?;
 
             while status.is_none() {
-                let root_slot = banks_client.get_root_slot().await?;
-                if root_slot > last_valid_slot {
+                let root_block_height = banks_client.get_root_block_height().await?;
+                if root_block_height > last_valid_block_height {
                     break;
                 }
                 sleep(Duration::from_millis(100)).await;

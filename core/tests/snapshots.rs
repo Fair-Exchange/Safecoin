@@ -39,11 +39,8 @@ mod tests {
     use crossbeam_channel::unbounded;
     use fs_extra::dir::CopyOptions;
     use itertools::Itertools;
-    use solana_core::{
-        cluster_info::ClusterInfo,
-        contact_info::ContactInfo,
-        snapshot_packager_service::{PendingSnapshotPackage, SnapshotPackagerService},
-    };
+    use solana_core::snapshot_packager_service::{PendingSnapshotPackage, SnapshotPackagerService};
+    use safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo};
     use solana_runtime::{
         accounts_background_service::{AbsRequestSender, SnapshotRequestHandler},
         accounts_db,
@@ -52,7 +49,7 @@ mod tests {
         bank_forks::{ArchiveFormat, BankForks, SnapshotConfig},
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
         snapshot_utils,
-        snapshot_utils::SnapshotVersion,
+        snapshot_utils::{SnapshotVersion, DEFAULT_MAX_SNAPSHOTS_TO_RETAIN},
         status_cache::MAX_CACHE_ENTRIES,
     };
     use solana_sdk::{
@@ -63,6 +60,7 @@ mod tests {
         signature::{Keypair, Signer},
         system_transaction,
     };
+    use solana_streamer::socket::SocketAddrSpace;
     use std::{
         collections::HashSet,
         fs,
@@ -109,6 +107,8 @@ mod tests {
                 None,
                 AccountSecondaryIndexes::default(),
                 false,
+                accounts_db::AccountShrinkThreshold::default(),
+                false,
             );
             bank0.freeze();
             let mut bank_forks = BankForks::new(bank0);
@@ -120,6 +120,7 @@ mod tests {
                 snapshot_path: PathBuf::from(snapshot_dir.path()),
                 archive_format: ArchiveFormat::TarBzip2,
                 snapshot_version,
+                maximum_snapshots_to_retain: DEFAULT_MAX_SNAPSHOTS_TO_RETAIN,
             };
             bank_forks.set_snapshot_config(Some(snapshot_config.clone()));
             SnapshotTestConfig {
@@ -147,8 +148,9 @@ mod tests {
 
         let old_last_bank = old_bank_forks.get(old_last_slot).unwrap();
 
-        let deserialized_bank = snapshot_utils::bank_from_archive(
-            &account_paths,
+        let check_hash_calculation = false;
+        let (deserialized_bank, _timing) = snapshot_utils::bank_from_archive(
+            account_paths,
             &[],
             &old_bank_forks
                 .snapshot_config
@@ -165,6 +167,10 @@ mod tests {
             None,
             None,
             AccountSecondaryIndexes::default(),
+            false,
+            None,
+            accounts_db::AccountShrinkThreshold::default(),
+            check_hash_calculation,
             false,
         )
         .unwrap();
@@ -212,7 +218,7 @@ mod tests {
         };
         for slot in 0..last_slot {
             let mut bank = Bank::new_from_parent(&bank_forks[slot], &Pubkey::default(), slot + 1);
-            f(&mut bank, &mint_keypair);
+            f(&mut bank, mint_keypair);
             let bank = bank_forks.insert(bank);
             // Set root to make sure we don't end up with too many account storage entries
             // and to allow snapshotting of bank and the purging logic on status_cache to
@@ -221,7 +227,7 @@ mod tests {
                 // set_root should send a snapshot request
                 bank_forks.set_root(bank.slot(), &request_sender, None);
                 bank.update_accounts_hash();
-                snapshot_request_handler.handle_snapshot_requests(false, false, false);
+                snapshot_request_handler.handle_snapshot_requests(false, false, false, 0);
             }
         }
 
@@ -246,9 +252,13 @@ mod tests {
         .unwrap();
         let snapshot_package = snapshot_utils::process_accounts_package_pre(
             snapshot_package,
-            Some(&last_bank.get_thread_pool()),
+            Some(last_bank.get_thread_pool()),
         );
-        snapshot_utils::archive_snapshot_package(&snapshot_package).unwrap();
+        snapshot_utils::archive_snapshot_package(
+            &snapshot_package,
+            DEFAULT_MAX_SNAPSHOTS_TO_RETAIN,
+        )
+        .unwrap();
 
         // Restore bank from snapshot
         let account_paths = &[snapshot_test_config.accounts_dir.path().to_path_buf()];
@@ -269,12 +279,12 @@ mod tests {
             |bank, mint_keypair| {
                 let key1 = Keypair::new().pubkey();
                 let tx =
-                    system_transaction::transfer(&mint_keypair, &key1, 1, bank.last_blockhash());
+                    system_transaction::transfer(mint_keypair, &key1, 1, bank.last_blockhash());
                 assert_eq!(bank.process_transaction(&tx), Ok(()));
 
                 let key2 = Keypair::new().pubkey();
                 let tx =
-                    system_transaction::transfer(&mint_keypair, &key2, 0, bank.last_blockhash());
+                    system_transaction::transfer(mint_keypair, &key2, 0, bank.last_blockhash());
                 assert_eq!(bank.process_transaction(&tx), Ok(()));
 
                 bank.freeze();
@@ -286,7 +296,7 @@ mod tests {
     fn goto_end_of_slot(bank: &mut Bank) {
         let mut tick_hash = bank.last_blockhash();
         loop {
-            tick_hash = hashv(&[&tick_hash.as_ref(), &[42]]);
+            tick_hash = hashv(&[tick_hash.as_ref(), &[42]]);
             bank.register_tick(&tick_hash);
             if tick_hash == bank.last_blockhash() {
                 bank.freeze();
@@ -341,7 +351,7 @@ mod tests {
             );
             let slot = bank.slot();
             let key1 = Keypair::new().pubkey();
-            let tx = system_transaction::transfer(&mint_keypair, &key1, 1, genesis_config.hash());
+            let tx = system_transaction::transfer(mint_keypair, &key1, 1, genesis_config.hash());
             assert_eq!(bank.process_transaction(&tx), Ok(()));
             bank.squash();
             let accounts_hash = bank.update_accounts_hash();
@@ -360,9 +370,9 @@ mod tests {
             snapshot_utils::snapshot_bank(
                 &bank,
                 vec![],
-                &package_sender,
-                &snapshot_path,
-                &snapshot_package_output_path,
+                package_sender,
+                snapshot_path,
+                snapshot_package_output_path,
                 snapshot_config.snapshot_version,
                 &snapshot_config.archive_format,
                 None,
@@ -420,7 +430,7 @@ mod tests {
 
         // Purge all the outdated snapshots, including the ones needed to generate the package
         // currently sitting in the channel
-        snapshot_utils::purge_old_snapshots(&snapshot_path);
+        snapshot_utils::purge_old_snapshots(snapshot_path);
         assert!(snapshot_utils::get_snapshot_paths(&snapshots_dir)
             .into_iter()
             .map(|path| path.slot)
@@ -434,7 +444,11 @@ mod tests {
         // channel hold hard links to these deleted snapshots. We verify this is the case below.
         let exit = Arc::new(AtomicBool::new(false));
 
-        let cluster_info = Arc::new(ClusterInfo::new_with_invalid_keypair(ContactInfo::default()));
+        let cluster_info = Arc::new(ClusterInfo::new(
+            ContactInfo::default(),
+            Arc::new(Keypair::new()),
+            SocketAddrSpace::Unspecified,
+        ));
 
         let pending_snapshot_package = PendingSnapshotPackage::default();
         let snapshot_packager_service = SnapshotPackagerService::new(
@@ -442,6 +456,7 @@ mod tests {
             None,
             &exit,
             &cluster_info,
+            DEFAULT_MAX_SNAPSHOTS_TO_RETAIN,
         );
 
         let thread_pool = accounts_db::make_min_priority_thread_pool();
@@ -566,14 +581,14 @@ mod tests {
                 (MAX_CACHE_ENTRIES * 2 + 1) as u64,
                 |bank, mint_keypair| {
                     let tx = system_transaction::transfer(
-                        &mint_keypair,
+                        mint_keypair,
                         &key1,
                         1,
                         bank.parent().unwrap().last_blockhash(),
                     );
                     assert_eq!(bank.process_transaction(&tx), Ok(()));
                     let tx = system_transaction::transfer(
-                        &mint_keypair,
+                        mint_keypair,
                         &key2,
                         1,
                         bank.parent().unwrap().last_blockhash(),

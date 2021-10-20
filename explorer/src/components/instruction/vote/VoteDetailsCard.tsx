@@ -1,5 +1,5 @@
 import React from "react";
-import { PublicKey } from "@safecoin/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { create, Struct } from "superstruct";
 import { ParsedInfo } from "validators";
 import {
@@ -81,7 +81,7 @@ function renderDetails<T>(
 
       if (value.timestamp) {
         attributes.push(
-          <tr>
+          <tr key="timestamp">
             <td>Timestamp</td>
             <td className="text-lg-right text-monospace">
               {displayTimestamp(value.timestamp * 1000)}

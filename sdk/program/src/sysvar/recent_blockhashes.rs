@@ -1,3 +1,4 @@
+#![allow(clippy::integer_arithmetic)]
 use crate::{
     declare_sysvar_id,
     fee_calculator::FeeCalculator,
@@ -52,6 +53,10 @@ impl<'a> PartialOrd for IterItem<'a> {
     }
 }
 
+/// Contains recent block hashes and fee calculators.
+///
+/// The entries are ordered by descending block height, so the first entry holds
+/// the most recent block hash, and the last entry holds an old block hash.
 #[repr(C)]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RecentBlockhashes(Vec<Entry>);
@@ -132,11 +137,10 @@ pub fn create_test_recent_blockhashes(start: usize) -> RecentBlockhashes {
             )
         })
         .collect();
-    let bhq: Vec<_> = blocks
+    blocks
         .iter()
         .map(|(i, hash, fee_calc)| IterItem(*i, hash, fee_calc))
-        .collect();
-    bhq.into_iter().collect()
+        .collect()
 }
 
 #[cfg(test)]

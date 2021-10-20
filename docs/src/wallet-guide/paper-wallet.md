@@ -9,12 +9,10 @@ tools.
 
 ## Overview
 
-Safecoin provides a key generation tool to derive keys from BIP39 compliant seed
-phrases. Safecoin CLI commands for running a validator and staking tokens all
+Safecoin provides a key generation tool to derive keys from
+[BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)-compliant
+seed phrases. Safecoin CLI commands for running a validator and staking tokens all
 support keypair input via seed phrases.
-
-To learn more about the BIP39 standard, visit the Bitcoin BIPs Github repository
-[here](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki).
 
 ## Paper Wallet Usage
 
@@ -61,7 +59,7 @@ have not made any errors.
 safecoin-keygen new --no-outfile
 ```
 
-> If the `--no-outfile` flag is **omitted**, the default behavior is to write the keypair to `~/.config/safecoin/id.json`, resulting in a [file system wallet](file-system-wallet.md)
+> If the `--no-outfile` flag is **omitted**, the default behavior is to write the keypair to `~/.config/safecoin/id.json`, resulting in a [file system wallet](file-system-wallet.md).
 
 The output of this command will display a line like this:
 
@@ -76,11 +74,12 @@ and "wallet address" are sometimes used interchangably.
 
 > For added security, increase the seed phrase word count using the `--word-count` argument
 
-For full usage details run:
+For full usage details, run:
 
 ```bash
 safecoin-keygen new --help
 ```
+
 
 ### Public Key Derivation
 
@@ -88,7 +87,7 @@ Public keys can be derived from a seed phrase and a passphrase if you choose to
 use one. This is useful for using an offline-generated seed phrase to derive a
 valid public key. The `safecoin-keygen pubkey` command will walk you through how
 to use your seed phrase (and a passphrase if you chose to use one) as a signer
-with the safecoin command-line tools using the `ask` uri scheme.
+with the safecoin command-line tools using the `prompt` URI scheme.
 
 ```bash
 safecoin-keygen pubkey prompt://
@@ -107,14 +106,20 @@ safecoin-keygen pubkey prompt:// --skip-seed-phrase-validation
 ```
 
 After entering your seed phrase with `safecoin-keygen pubkey prompt://` the console
-will display a string of base-58 character. This is the base _wallet address_
+will display a string of base-58 characters. This is the [derived](#hierarchical-derivation) safecoin BIP44 _wallet address_
 associated with your seed phrase.
 
 > Copy the derived address to a USB stick for easy usage on networked computers
 
+If needed, you can access the legacy, raw keypair's pubkey by instead passing the `ASK` keyword:
+
+```bash
+safecoin-keygen pubkey ASK
+```
+
 > A common next step is to [check the balance](#checking-account-balance) of the account associated with a public key
 
-For full usage details run:
+For full usage details, run:
 
 ```bash
 safecoin-keygen pubkey --help
@@ -128,7 +133,7 @@ The solana-cli supports
 hierarchical derivation of private keys from your seed phrase and passphrase by
 adding either the `?key=` query string or the `?full-path=` query string.
 
-By default, `prompt:` will derive solana's base derivation path `m/44'/19165'`. To
+By default, `prompt:` will derive solana's base derivation path `m/44'/501'`. To
 derive a child key, supply the `?key=<ACCOUNT>/<CHANGE>` query string.
 
 ```bash

@@ -11,7 +11,7 @@ use solana_sdk::{
     clock::{Epoch, Slot, UnixTimestamp},
     epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
     hash::Hash,
-    instruction::{InstructionError,VoterGroup},
+    instruction::InstructionError,
     keyed_account::KeyedAccount,
     pubkey::Pubkey,
     rent::Rent,
@@ -84,13 +84,15 @@ impl Lockout {
         (INITIAL_LOCKOUT as u64).pow(self.confirmation_count)
     }
 
-    // The slot height at which this vote expires (cannot vote for any slot
-    // less than this)
-    pub fn expiration_slot(&self) -> Slot {
+    // The last slot at which a vote is still locked out. Validators should not
+    // vote on a slot in another fork which is less than or equal to this slot
+    // to avoid having their stake slashed.
+    pub fn last_locked_out_slot(&self) -> Slot {
         self.slot + self.lockout()
     }
-    pub fn is_expired(&self, slot: Slot) -> bool {
-        self.expiration_slot() < slot
+
+    pub fn is_locked_out_at_slot(&self, slot: Slot) -> bool {
+        self.last_locked_out_slot() >= slot
     }
 }
 
@@ -228,7 +230,7 @@ impl VoteState {
 
     // utility function, used by Stakes, tests
     pub fn from<T: ReadableAccount>(account: &T) -> Option<VoteState> {
-        Self::deserialize(&account.data()).ok()
+        Self::deserialize(account.data()).ok()
     }
 
     // utility function, used by Stakes, tests
@@ -237,7 +239,7 @@ impl VoteState {
     }
 
     pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
-        deserialize::<VoteStateVersions>(&input)
+        deserialize::<VoteStateVersions>(input)
             .map(|versioned| versioned.convert_to_current())
             .map_err(|_| InstructionError::InvalidAccountData)
     }
@@ -352,27 +354,26 @@ impl VoteState {
         if vote.slots.is_empty() {
             return Err(VoteError::EmptySlots);
         }
-
-
-
         self.check_slots_are_valid(vote, slot_hashes)?;
 
-        vote.slots.iter().for_each(|s| self.process_slot(*s, epoch));
+        vote.slots
+            .iter()
+            .for_each(|s| self.process_next_vote_slot(*s, epoch));
         Ok(())
     }
 
-    pub fn process_slot(&mut self, slot: Slot, epoch: Epoch) {
+    pub fn process_next_vote_slot(&mut self, next_vote_slot: Slot, epoch: Epoch) {
         // Ignore votes for slots earlier than we already have votes for
         if self
             .last_voted_slot()
-            .map_or(false, |last_voted_slot| slot <= last_voted_slot)
+            .map_or(false, |last_voted_slot| next_vote_slot <= last_voted_slot)
         {
             return;
         }
 
-        let vote = Lockout::new(slot);
+        let vote = Lockout::new(next_vote_slot);
 
-        self.pop_expired_votes(slot);
+        self.pop_expired_votes(next_vote_slot);
 
         // Once the stack is full, pop the oldest lockout and distribute rewards
         if self.votes.len() == MAX_LOCKOUT_HISTORY {
@@ -543,9 +544,13 @@ impl VoteState {
         Ok(pubkey)
     }
 
-    fn pop_expired_votes(&mut self, slot: Slot) {
-        loop {
-            if self.last_lockout().map_or(false, |v| v.is_expired(slot)) {
+    // Pop all recent votes that are not locked out at the next vote slot.  This
+    // allows validators to switch forks once their votes for another fork have
+    // expired. This also allows validators continue voting on recent blocks in
+    // the same fork without increasing lockouts.
+    fn pop_expired_votes(&mut self, next_vote_slot: Slot) {
+        while let Some(vote) = self.last_lockout() {
+            if !vote.is_locked_out_at_slot(next_vote_slot) {
                 self.votes.pop_back();
             } else {
                 break;
@@ -633,7 +638,7 @@ pub fn update_validator_identity<S: std::hash::BuildHasher>(
     verify_authorized_signer(&vote_state.authorized_withdrawer, signers)?;
 
     // new node must say "yay"
-    verify_authorized_signer(&node_pubkey, signers)?;
+    verify_authorized_signer(node_pubkey, signers)?;
 
     vote_state.node_pubkey = *node_pubkey;
 
@@ -688,8 +693,12 @@ pub fn withdraw<S: std::hash::BuildHasher>(
         }
         _ => (),
     }
-    vote_account.try_account_ref_mut()?.lamports -= lamports;
-    to_account.try_account_ref_mut()?.lamports += lamports;
+    vote_account
+        .try_account_ref_mut()?
+        .checked_sub_lamports(lamports)?;
+    to_account
+        .try_account_ref_mut()?
+        .checked_add_lamports(lamports)?;
     Ok(())
 }
 
@@ -726,7 +735,6 @@ pub fn process_vote<S: std::hash::BuildHasher>(
     clock: &Clock,
     vote: &Vote,
     signers: &HashSet<Pubkey, S>,
-    group: &dyn VoterGroup,
 ) -> Result<(), InstructionError> {
     let versioned = State::<VoteStateVersions>::state(vote_account)?;
 
@@ -737,14 +745,7 @@ pub fn process_vote<S: std::hash::BuildHasher>(
     let mut vote_state = versioned.convert_to_current();
     let authorized_voter = vote_state.get_and_update_authorized_voter(clock.epoch)?;
     verify_authorized_signer(&authorized_voter, signers)?;
-    log::trace!("slot: {}", clock.slot);
-    log::trace!("last_hashy: {}", slot_hashes[0].1);
-    log::trace!("last_hashzy: {}", slot_hashes[0].0);
-    log::trace!("P: {}", authorized_voter.to_string().to_lowercase().find("x").unwrap_or(2) % 10);
-    let hash = slot_hashes[0].1;
-    if !group.in_group(vote.slots[0],hash,authorized_voter) {
-        return Err(InstructionError::UninitializedAccount);
-    }
+
     vote_state.process_vote(vote, slot_hashes, clock.epoch)?;
     if let Some(timestamp) = vote.timestamp {
         vote.slots
@@ -799,7 +800,7 @@ mod tests {
         account::AccountSharedData,
         account_utils::StateMut,
         hash::hash,
-        keyed_account::{get_signers, next_keyed_account},
+        keyed_account::{get_signers, keyed_account_at_index},
     };
     use std::cell::RefCell;
 
@@ -937,9 +938,8 @@ mod tests {
         slot_hashes: &[SlotHash],
         epoch: Epoch,
     ) -> Result<VoteState, InstructionError> {
-        let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, vote_account)];
+        let keyed_accounts = &[KeyedAccount::new(vote_pubkey, true, vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
-        let mvg = MockVoterGroup::new();
         process_vote(
             &keyed_accounts[0],
             slot_hashes,
@@ -949,7 +949,6 @@ mod tests {
             },
             &vote.clone(),
             &signers,
-            &mvg,
         )?;
         StateMut::<VoteStateVersions>::state(&*vote_account.borrow())
             .map(|versioned| versioned.convert_to_current())
@@ -1139,21 +1138,6 @@ mod tests {
             .convert_to_current();
         assert_eq!(vote_state.commission, u8::MAX);
     }
-    struct MockVoterGroup {
-        in_group: bool,
-    }
-    impl MockVoterGroup {
-        pub fn new() -> Self {
-            Self {
-                in_group: true,
-            }
-        }
-    }
-    impl VoterGroup for MockVoterGroup {
-        fn in_group(&self, _: Slot, _: solana_sdk::hash::Hash, _: Pubkey) -> bool {
-            self.in_group
-        }
-    }
 
     #[test]
     fn test_vote_signature() {
@@ -1163,7 +1147,6 @@ mod tests {
         // unsigned
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, false, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
-        let mvg = MockVoterGroup::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1174,14 +1157,12 @@ mod tests {
             },
             &vote,
             &signers,
-            &mvg,
         );
         assert_eq!(res, Err(InstructionError::MissingRequiredSignature));
 
         // signed
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
-        let mvg = MockVoterGroup::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1192,7 +1173,6 @@ mod tests {
             },
             &vote,
             &signers,
-            &mvg,
         );
         assert_eq!(res, Ok(()));
 
@@ -1307,7 +1287,6 @@ mod tests {
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let vote = Vote::new(vec![2], Hash::default());
-        let mvg = MockVoterGroup::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1318,7 +1297,6 @@ mod tests {
             },
             &vote,
             &signers,
-            &mvg,
         );
         assert_eq!(res, Err(InstructionError::MissingRequiredSignature));
 
@@ -1330,7 +1308,6 @@ mod tests {
         ];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let vote = Vote::new(vec![2], Hash::default());
-        let mvg = MockVoterGroup::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1341,7 +1318,6 @@ mod tests {
             },
             &vote,
             &signers,
-            &mvg,
         );
         assert_eq!(res, Ok(()));
     }
@@ -1382,11 +1358,12 @@ mod tests {
         // second vote
         let top_vote = vote_state.votes.front().unwrap().slot;
         vote_state
-            .process_slot_vote_unchecked(vote_state.last_lockout().unwrap().expiration_slot());
+            .process_slot_vote_unchecked(vote_state.last_lockout().unwrap().last_locked_out_slot());
         assert_eq!(Some(top_vote), vote_state.root_slot);
 
         // Expire everything except the first vote
-        vote_state.process_slot_vote_unchecked(vote_state.votes.front().unwrap().expiration_slot());
+        vote_state
+            .process_slot_vote_unchecked(vote_state.votes.front().unwrap().last_locked_out_slot());
         // First vote and new vote are both stored for a total of 2 votes
         assert_eq!(vote_state.votes.len(), 2);
     }
@@ -1710,7 +1687,7 @@ mod tests {
 
         // all good
         let to_account = RefCell::new(AccountSharedData::default());
-        let lamports = vote_account.borrow().lamports;
+        let lamports = vote_account.borrow().lamports();
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let pre_state: VoteStateVersions = vote_account.borrow().state().unwrap();
@@ -1721,14 +1698,14 @@ mod tests {
             &signers,
         );
         assert_eq!(res, Ok(()));
-        assert_eq!(vote_account.borrow().lamports, 0);
-        assert_eq!(to_account.borrow().lamports, lamports);
+        assert_eq!(vote_account.borrow().lamports(), 0);
+        assert_eq!(to_account.borrow().lamports(), lamports);
         let post_state: VoteStateVersions = vote_account.borrow().state().unwrap();
         // State has been deinitialized since balance is zero
         assert!(post_state.is_uninitialized());
 
         // reset balance and restore state, verify that authorized_withdrawer works
-        vote_account.borrow_mut().lamports = lamports;
+        vote_account.borrow_mut().set_lamports(lamports);
         vote_account.borrow_mut().set_state(&pre_state).unwrap();
 
         // authorize authorized_withdrawer
@@ -1751,9 +1728,8 @@ mod tests {
             KeyedAccount::new(&authorized_withdrawer_pubkey, true, &withdrawer_account),
         ];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
-        let keyed_accounts = &mut keyed_accounts.iter();
-        let vote_keyed_account = next_keyed_account(keyed_accounts).unwrap();
-        let withdrawer_keyed_account = next_keyed_account(keyed_accounts).unwrap();
+        let vote_keyed_account = keyed_account_at_index(keyed_accounts, 0).unwrap();
+        let withdrawer_keyed_account = keyed_account_at_index(keyed_accounts, 1).unwrap();
         let res = withdraw(
             vote_keyed_account,
             lamports,
@@ -1761,8 +1737,8 @@ mod tests {
             &signers,
         );
         assert_eq!(res, Ok(()));
-        assert_eq!(vote_account.borrow().lamports, 0);
-        assert_eq!(withdrawer_account.borrow().lamports, lamports);
+        assert_eq!(vote_account.borrow().lamports(), 0);
+        assert_eq!(withdrawer_account.borrow().lamports(), lamports);
         let post_state: VoteStateVersions = vote_account.borrow().state().unwrap();
         // State has been deinitialized since balance is zero
         assert!(post_state.is_uninitialized());

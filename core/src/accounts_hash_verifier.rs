@@ -1,14 +1,12 @@
 // Service to verify accounts hashes with other trusted validator nodes.
 //
 // Each interval, publish the snapshat hash which is the full accounts state
-// hash on gossip. Monitor gossip for messages from validators in the --trusted-validators
+// hash on gossip. Monitor gossip for messages from validators in the `--known-validator`s
 // set and halt the node if a mismatch is detected.
 
-use crate::{
-    cluster_info::{ClusterInfo, MAX_SNAPSHOT_HASHES},
-    snapshot_packager_service::PendingSnapshotPackage,
-};
+use crate::snapshot_packager_service::PendingSnapshotPackage;
 use rayon::ThreadPool;
+use safecoin_gossip::cluster_info::{ClusterInfo, MAX_SNAPSHOT_HASHES};
 use solana_runtime::{
     accounts_db,
     snapshot_package::{AccountsPackage, AccountsPackagePre, AccountsPackageReceiver},
@@ -43,7 +41,7 @@ impl AccountsHashVerifier {
         let exit = exit.clone();
         let cluster_info = cluster_info.clone();
         let t_accounts_hash_verifier = Builder::new()
-            .name("solana-accounts-hash".to_string())
+            .name("solana-hash-accounts".to_string())
             .spawn(move || {
                 let mut hashes = vec![];
                 let mut thread_pool_storage = None;
@@ -150,7 +148,7 @@ impl AccountsHashVerifier {
             for (slot, hash) in hashes.iter() {
                 slot_to_hash.insert(*slot, *hash);
             }
-            if Self::should_halt(&cluster_info, trusted_validators, &mut slot_to_hash) {
+            if Self::should_halt(cluster_info, trusted_validators, &mut slot_to_hash) {
                 exit.store(true, Ordering::Relaxed);
             }
         }
@@ -218,21 +216,29 @@ impl AccountsHashVerifier {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cluster_info::make_accounts_hashes_message;
-    use crate::contact_info::ContactInfo;
+    use safecoin_gossip::{cluster_info::make_accounts_hashes_message, contact_info::ContactInfo};
     use solana_runtime::bank_forks::ArchiveFormat;
     use solana_runtime::snapshot_utils::SnapshotVersion;
     use solana_sdk::{
         hash::hash,
         signature::{Keypair, Signer},
     };
+    use solana_streamer::socket::SocketAddrSpace;
+
+    fn new_test_cluster_info(contact_info: ContactInfo) -> ClusterInfo {
+        ClusterInfo::new(
+            contact_info,
+            Arc::new(Keypair::new()),
+            SocketAddrSpace::Unspecified,
+        )
+    }
 
     #[test]
     fn test_should_halt() {
         let keypair = Keypair::new();
 
         let contact_info = ContactInfo::new_localhost(&keypair.pubkey(), 0);
-        let cluster_info = ClusterInfo::new_with_invalid_keypair(contact_info);
+        let cluster_info = new_test_cluster_info(contact_info);
         let cluster_info = Arc::new(cluster_info);
 
         let mut trusted_validators = HashSet::new();
@@ -268,7 +274,7 @@ mod tests {
         let keypair = Keypair::new();
 
         let contact_info = ContactInfo::new_localhost(&keypair.pubkey(), 0);
-        let cluster_info = ClusterInfo::new_with_invalid_keypair(contact_info);
+        let cluster_info = new_test_cluster_info(contact_info);
         let cluster_info = Arc::new(cluster_info);
 
         let trusted_validators = HashSet::new();

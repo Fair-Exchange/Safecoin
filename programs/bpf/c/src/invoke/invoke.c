@@ -514,24 +514,24 @@ extern uint64_t entrypoint(const uint8_t *input) {
     break;
   }
   case TEST_WRITABLE_DEESCALATION_WRITABLE: {
-  sol_log("Test writable deescalation");
-      uint8_t buffer[10];
-      for (int i = 0; i < 10; i++) {
-        buffer[i] = accounts[INVOKED_ARGUMENT_INDEX].data[i];
-      }
-      SafeAccountMeta arguments[] = {
-          {accounts[INVOKED_ARGUMENT_INDEX].key, false, false}};
-      uint8_t data[] = {WRITE_ACCOUNT, 10};
-      const SafeInstruction instruction = {accounts[INVOKED_PROGRAM_INDEX].key,
-                                          arguments, SAFE_ARRAY_SIZE(arguments),
-                                          data, SAFE_ARRAY_SIZE(data)};
-      sol_invoke(&instruction, accounts, SAFE_ARRAY_SIZE(accounts));
-
-      for (int i = 0; i < 10; i++) {
-        sol_assert(buffer[i] == accounts[INVOKED_ARGUMENT_INDEX].data[i]);
-      }
-      break;
+    sol_log("Test writable deescalation");
+    uint8_t buffer[10];
+    for (int i = 0; i < 10; i++) {
+      buffer[i] = accounts[INVOKED_ARGUMENT_INDEX].data[i];
     }
+    SafeAccountMeta arguments[] = {
+        {accounts[INVOKED_ARGUMENT_INDEX].key, false, false}};
+    uint8_t data[] = {WRITE_ACCOUNT, 10};
+    const SafeInstruction instruction = {accounts[INVOKED_PROGRAM_INDEX].key,
+                                        arguments, SAFE_ARRAY_SIZE(arguments),
+                                        data, SAFE_ARRAY_SIZE(data)};
+    sol_invoke(&instruction, accounts, SAFE_ARRAY_SIZE(accounts));
+
+    for (int i = 0; i < 10; i++) {
+      sol_assert(buffer[i] == accounts[INVOKED_ARGUMENT_INDEX].data[i]);
+    }
+    break;
+  }
   case TEST_NESTED_INVOKE_TOO_DEEP: {
     do_nested_invokes(5, accounts, params.ka_num);
     break;

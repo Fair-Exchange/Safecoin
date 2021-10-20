@@ -10,7 +10,7 @@ use crate::{
 use inflector::Inflector;
 use serde_json::Value;
 use safecoin_account_decoder::parse_token::spl_token_id_v2_0;
-use solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey, system_program};
+use solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey, stake, system_program};
 use std::{
     collections::HashMap,
     str::{from_utf8, Utf8Error},
@@ -23,7 +23,7 @@ lazy_static! {
     static ref BPF_UPGRADEABLE_LOADER_PROGRAM_ID: Pubkey = solana_sdk::bpf_loader_upgradeable::id();
     static ref MEMO_V1_PROGRAM_ID: Pubkey = safe_memo_id_v1();
     static ref MEMO_V3_PROGRAM_ID: Pubkey = safe_memo_id_v3();
-    static ref STAKE_PROGRAM_ID: Pubkey = solana_stake_program::id();
+    static ref STAKE_PROGRAM_ID: Pubkey = stake::program::id();
     static ref SYSTEM_PROGRAM_ID: Pubkey = system_program::id();
     static ref TOKEN_PROGRAM_ID: Pubkey = spl_token_id_v2_0();
     static ref VOTE_PROGRAM_ID: Pubkey = solana_vote_program::id();

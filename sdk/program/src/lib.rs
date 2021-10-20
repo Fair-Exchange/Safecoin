@@ -1,7 +1,6 @@
 #![allow(incomplete_features)]
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(specialization))]
 #![cfg_attr(RUSTC_NEEDS_PROC_MACRO_HYGIENE, feature(proc_macro_hygiene))]
-#![allow(clippy::integer_arithmetic)]
 
 // Allows macro expansion of `use ::solana_program::*` to work within this crate
 extern crate self as solana_program;
@@ -22,6 +21,7 @@ pub mod hash;
 pub mod incinerator;
 pub mod instruction;
 pub mod keccak;
+pub mod lamports;
 pub mod loader_instruction;
 pub mod loader_upgradeable_instruction;
 pub mod log;
@@ -38,13 +38,14 @@ pub mod pubkey;
 pub mod rent;
 pub mod sanitize;
 pub mod secp256k1_program;
+pub mod secp256k1_recover;
 pub mod serialize_utils;
 pub mod short_vec;
 pub mod slot_hashes;
 pub mod slot_history;
+pub mod stake;
 pub mod stake_history;
 pub mod system_instruction;
-
 pub mod system_program;
 pub mod sysvar;
 
@@ -60,15 +61,6 @@ pub mod vote {
     }
 }
 
-pub mod stake {
-    pub mod config {
-        crate::declare_id!("StakeConfig11111111111111111111111111111111");
-    }
-
-    pub mod program {
-        crate::declare_id!("Stake11111111111111111111111111111111111111");
-    }
-}
 /// Convenience macro to declare a static public key and functions to interact with it
 ///
 /// Input: a single literal base58 string representation of a program's id

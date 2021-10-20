@@ -8,7 +8,7 @@ use raptorq::{Decoder, Encoder};
 use solana_ledger::entry::{create_ticks, Entry};
 use solana_ledger::shred::{
     max_entries_per_n_shred, max_ticks_per_n_shreds, ProcessShredsStats, Shred, Shredder,
-    MAX_DATA_SHREDS_PER_FEC_BLOCK, SHRED_PAYLOAD_SIZE, SIZE_OF_DATA_SHRED_IGNORED_TAIL,
+    MAX_DATA_SHREDS_PER_FEC_BLOCK, SHRED_PAYLOAD_SIZE, SIZE_OF_CODING_SHRED_HEADERS,
     SIZE_OF_DATA_SHRED_PAYLOAD,
 };
 use solana_perf::test_tx;
@@ -55,7 +55,7 @@ fn make_shreds(num_shreds: usize) -> Vec<Shred> {
 
 fn make_concatenated_shreds(num_shreds: usize) -> Vec<u8> {
     let data_shreds = make_shreds(num_shreds);
-    let valid_shred_data_len = (SHRED_PAYLOAD_SIZE - SIZE_OF_DATA_SHRED_IGNORED_TAIL) as usize;
+    let valid_shred_data_len = (SHRED_PAYLOAD_SIZE - SIZE_OF_CODING_SHRED_HEADERS) as usize;
     let mut data: Vec<u8> = vec![0; num_shreds * valid_shred_data_len];
     for (i, shred) in (data_shreds[0..num_shreds]).iter().enumerate() {
         data[i * valid_shred_data_len..(i + 1) * valid_shred_data_len]
@@ -163,7 +163,7 @@ fn bench_shredder_decoding(bencher: &mut Bencher) {
 fn bench_shredder_coding_raptorq(bencher: &mut Bencher) {
     let symbol_count = MAX_DATA_SHREDS_PER_FEC_BLOCK;
     let data = make_concatenated_shreds(symbol_count as usize);
-    let valid_shred_data_len = (SHRED_PAYLOAD_SIZE - SIZE_OF_DATA_SHRED_IGNORED_TAIL) as usize;
+    let valid_shred_data_len = (SHRED_PAYLOAD_SIZE - SIZE_OF_CODING_SHRED_HEADERS) as usize;
     bencher.iter(|| {
         let encoder = Encoder::with_defaults(&data, valid_shred_data_len as u16);
         encoder.get_encoded_packets(symbol_count);
@@ -174,7 +174,7 @@ fn bench_shredder_coding_raptorq(bencher: &mut Bencher) {
 fn bench_shredder_decoding_raptorq(bencher: &mut Bencher) {
     let symbol_count = MAX_DATA_SHREDS_PER_FEC_BLOCK;
     let data = make_concatenated_shreds(symbol_count as usize);
-    let valid_shred_data_len = (SHRED_PAYLOAD_SIZE - SIZE_OF_DATA_SHRED_IGNORED_TAIL) as usize;
+    let valid_shred_data_len = (SHRED_PAYLOAD_SIZE - SIZE_OF_CODING_SHRED_HEADERS) as usize;
     let encoder = Encoder::with_defaults(&data, valid_shred_data_len as u16);
     let mut packets = encoder.get_encoded_packets(symbol_count as u32);
     packets.shuffle(&mut rand::thread_rng());

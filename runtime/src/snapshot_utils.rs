@@ -1,26 +1,28 @@
 use {
     crate::{
-        accounts_db::AccountsDb,
+        accounts_db::{AccountShrinkThreshold, AccountsDb},
         accounts_index::AccountSecondaryIndexes,
         bank::{Bank, BankSlotDelta, Builtins},
         bank_forks::ArchiveFormat,
-        hardened_unpack::{unpack_snapshot, UnpackError, UnpackedAppendVecMap},
+        hardened_unpack::{unpack_snapshot, ParallelSelector, UnpackError, UnpackedAppendVecMap},
         serde_snapshot::{
             bank_from_stream, bank_to_stream, SerdeStyle, SnapshotStorage, SnapshotStorages,
         },
         snapshot_package::{
             AccountsPackage, AccountsPackagePre, AccountsPackageSendError, AccountsPackageSender,
         },
+        sorted_storages::SortedStorages,
     },
     bincode::{config::Options, serialize_into},
     bzip2::bufread::BzDecoder,
     flate2::read::GzDecoder,
     log::*,
-    rayon::ThreadPool,
+    rayon::{prelude::*, ThreadPool},
     regex::Regex,
     safecoin_measure::measure::Measure,
     solana_sdk::{clock::Slot, genesis_config::GenesisConfig, hash::Hash, pubkey::Pubkey},
     std::{
+        cmp::max,
         cmp::Ordering,
         collections::HashSet,
         fmt,
@@ -44,6 +46,7 @@ const MAX_SNAPSHOT_DATA_FILE_SIZE: u64 = 32 * 1024 * 1024 * 1024; // 32 GiB
 const VERSION_STRING_V1_2_0: &str = "1.2.0";
 const DEFAULT_SNAPSHOT_VERSION: SnapshotVersion = SnapshotVersion::V1_2_0;
 const TMP_SNAPSHOT_PREFIX: &str = "tmp-snapshot-";
+pub const DEFAULT_MAX_SNAPSHOTS_TO_RETAIN: usize = 2;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum SnapshotVersion {
@@ -190,6 +193,7 @@ pub fn package_snapshot<P: AsRef<Path>, Q: AsRef<Path>>(
         snapshot_package_output_path.as_ref().to_path_buf(),
         bank.capitalization(),
         hash_for_testing,
+        bank.cluster_type(),
     );
 
     Ok(package)
@@ -197,10 +201,10 @@ pub fn package_snapshot<P: AsRef<Path>, Q: AsRef<Path>>(
 
 fn get_archive_ext(archive_format: ArchiveFormat) -> &'static str {
     match archive_format {
-        ArchiveFormat::TarBzip2 => ".tar.bz2",
-        ArchiveFormat::TarGzip => ".tar.gz",
-        ArchiveFormat::TarZstd => ".tar.zst",
-        ArchiveFormat::Tar => ".tar",
+        ArchiveFormat::TarBzip2 => "tar.bz2",
+        ArchiveFormat::TarGzip => "tar.gz",
+        ArchiveFormat::TarZstd => "tar.zst",
+        ArchiveFormat::Tar => "tar",
     }
 }
 
@@ -228,7 +232,10 @@ pub fn remove_tmp_snapshot_archives(snapshot_path: &Path) {
     }
 }
 
-pub fn archive_snapshot_package(snapshot_package: &AccountsPackage) -> Result<()> {
+pub fn archive_snapshot_package(
+    snapshot_package: &AccountsPackage,
+    maximum_snapshots_to_retain: usize,
+) -> Result<()> {
     info!(
         "Generating snapshot archive for slot {}",
         snapshot_package.slot
@@ -308,7 +315,7 @@ pub fn archive_snapshot_package(snapshot_package: &AccountsPackage) -> Result<()
     //
     // system `tar` program is used for -S (sparse file support)
     let archive_path = tar_dir.join(format!(
-        "{}{}{}",
+        "{}{}.{}",
         TMP_SNAPSHOT_PREFIX, snapshot_package.slot, file_ext
     ));
 
@@ -376,7 +383,10 @@ pub fn archive_snapshot_package(snapshot_package: &AccountsPackage) -> Result<()
     fs::rename(&archive_path, &snapshot_package.tar_output_file)
         .map_err(|e| SnapshotError::IoWithSource(e, "archive path rename"))?;
 
-    purge_old_snapshot_archives(snapshot_package.tar_output_file.parent().unwrap());
+    purge_old_snapshot_archives(
+        snapshot_package.tar_output_file.parent().unwrap(),
+        maximum_snapshots_to_retain,
+    );
 
     timer.stop();
     info!(
@@ -597,8 +607,18 @@ pub fn remove_snapshot<P: AsRef<Path>>(slot: Slot, snapshot_path: P) -> Result<(
     Ok(())
 }
 
+#[derive(Debug, Default)]
+pub struct BankFromArchiveTimings {
+    pub rebuild_bank_from_snapshots_us: u64,
+    pub untar_us: u64,
+    pub verify_snapshot_bank_us: u64,
+}
+
+// From testing, 4 seems to be a sweet spot for ranges of 60M-360M accounts and 16-64 cores. This may need to be tuned later.
+pub const PARALLEL_UNTAR_READERS_DEFAULT: usize = 4;
+
 #[allow(clippy::too_many_arguments)]
-pub fn bank_from_archive<P: AsRef<Path>>(
+pub fn bank_from_archive<P: AsRef<Path> + std::marker::Sync>(
     account_paths: &[PathBuf],
     frozen_account_pubkeys: &[Pubkey],
     snapshot_path: &Path,
@@ -609,17 +629,29 @@ pub fn bank_from_archive<P: AsRef<Path>>(
     additional_builtins: Option<&Builtins>,
     account_indexes: AccountSecondaryIndexes,
     accounts_db_caching_enabled: bool,
-) -> Result<Bank> {
+    limit_load_slot_count_from_snapshot: Option<usize>,
+    shrink_ratio: AccountShrinkThreshold,
+    test_hash_calculation: bool,
+    accounts_db_skip_shrink: bool,
+) -> Result<(Bank, BankFromArchiveTimings)> {
     let unpack_dir = tempfile::Builder::new()
         .prefix(TMP_SNAPSHOT_PREFIX)
         .tempdir_in(snapshot_path)?;
 
+    let mut untar = Measure::start("snapshot untar");
+    let divisions = std::cmp::min(
+        PARALLEL_UNTAR_READERS_DEFAULT,
+        std::cmp::max(1, num_cpus::get() / 4),
+    );
     let unpacked_append_vec_map = untar_snapshot_in(
         &snapshot_tar,
-        &unpack_dir.as_ref(),
+        unpack_dir.as_ref(),
         account_paths,
         archive_format,
+        divisions,
     )?;
+    untar.stop();
+    info!("{}", untar);
 
     let mut measure = Measure::start("bank rebuild from snapshot");
     let unpacked_snapshots_dir = unpack_dir.as_ref().join("snapshots");
@@ -639,15 +671,25 @@ pub fn bank_from_archive<P: AsRef<Path>>(
         additional_builtins,
         account_indexes,
         accounts_db_caching_enabled,
+        limit_load_slot_count_from_snapshot,
+        shrink_ratio,
     )?;
+    measure.stop();
 
-    if !bank.verify_snapshot_bank() {
+    let mut verify = Measure::start("verify");
+    if !bank.verify_snapshot_bank(test_hash_calculation, accounts_db_skip_shrink)
+        && limit_load_slot_count_from_snapshot.is_none()
+    {
         panic!("Snapshot bank for slot {} failed to verify", bank.slot());
     }
-    measure.stop();
-    info!("{}", measure);
+    verify.stop();
+    let timings = BankFromArchiveTimings {
+        rebuild_bank_from_snapshots_us: measure.as_us(),
+        untar_us: untar.as_us(),
+        verify_snapshot_bank_us: verify.as_us(),
+    };
 
-    Ok(bank)
+    Ok((bank, timings))
 }
 
 pub fn get_snapshot_archive_path(
@@ -656,7 +698,7 @@ pub fn get_snapshot_archive_path(
     archive_format: ArchiveFormat,
 ) -> PathBuf {
     snapshot_output_dir.join(format!(
-        "snapshot-{}-{}{}",
+        "snapshot-{}-{}.{}",
         snapshot_hash.0,
         snapshot_hash.1,
         get_archive_ext(archive_format),
@@ -673,27 +715,27 @@ fn archive_format_from_str(archive_format: &str) -> Option<ArchiveFormat> {
     }
 }
 
-fn snapshot_hash_of(archive_filename: &str) -> Option<(Slot, Hash, ArchiveFormat)> {
-    let snapshot_filename_regex =
-        Regex::new(r"^snapshot-(\d+)-([[:alnum:]]+)\.(tar|tar\.bz2|tar\.zst|tar\.gz)$").unwrap();
+/// Parse a snapshot archive filename into its Slot, Hash, and Archive Format
+fn parse_snapshot_archive_filename(archive_filename: &str) -> Option<(Slot, Hash, ArchiveFormat)> {
+    let snapshot_archive_filename_regex =
+        Regex::new(r"^snapshot-(\d+)-([[:alnum:]]+)\.(tar|tar\.bz2|tar\.zst|tar\.gz)$");
 
-    if let Some(captures) = snapshot_filename_regex.captures(archive_filename) {
-        let slot_str = captures.get(1).unwrap().as_str();
-        let hash_str = captures.get(2).unwrap().as_str();
-        let ext = captures.get(3).unwrap().as_str();
+    snapshot_archive_filename_regex
+        .ok()?
+        .captures(archive_filename)
+        .and_then(|captures| {
+            let slot = captures.get(1).map(|x| x.as_str().parse::<Slot>())?.ok()?;
+            let hash = captures.get(2).map(|x| x.as_str().parse::<Hash>())?.ok()?;
+            let archive_format = captures
+                .get(3)
+                .map(|x| archive_format_from_str(x.as_str()))??;
 
-        if let (Ok(slot), Ok(hash), Some(archive_format)) = (
-            slot_str.parse::<Slot>(),
-            hash_str.parse::<Hash>(),
-            archive_format_from_str(ext),
-        ) {
-            return Some((slot, hash, archive_format));
-        }
-    }
-    None
+            Some((slot, hash, archive_format))
+        })
 }
 
-pub fn get_snapshot_archives<P: AsRef<Path>>(
+/// Get a list of the snapshot archives in a directory, sorted by Slot in descending order
+fn get_snapshot_archives<P: AsRef<Path>>(
     snapshot_output_dir: P,
 ) -> Vec<(PathBuf, (Slot, Hash, ArchiveFormat))> {
     match fs::read_dir(&snapshot_output_dir) {
@@ -707,9 +749,9 @@ pub fn get_snapshot_archives<P: AsRef<Path>>(
                     if let Ok(entry) = entry {
                         let path = entry.path();
                         if path.is_file() {
-                            if let Some(snapshot_hash) =
-                                snapshot_hash_of(path.file_name().unwrap().to_str().unwrap())
-                            {
+                            if let Some(snapshot_hash) = parse_snapshot_archive_filename(
+                                path.file_name().unwrap().to_str().unwrap(),
+                            ) {
                                 return Some((path, snapshot_hash));
                             }
                         }
@@ -724,6 +766,7 @@ pub fn get_snapshot_archives<P: AsRef<Path>>(
     }
 }
 
+/// Get the snapshot archive with the highest Slot in a directory
 pub fn get_highest_snapshot_archive_path<P: AsRef<Path>>(
     snapshot_output_dir: P,
 ) -> Option<(PathBuf, (Slot, Hash, ArchiveFormat))> {
@@ -731,14 +774,56 @@ pub fn get_highest_snapshot_archive_path<P: AsRef<Path>>(
     archives.into_iter().next()
 }
 
-pub fn purge_old_snapshot_archives<P: AsRef<Path>>(snapshot_output_dir: P) {
+pub fn purge_old_snapshot_archives<P: AsRef<Path>>(
+    snapshot_output_dir: P,
+    maximum_snapshots_to_retain: usize,
+) {
+    info!(
+        "Purging old snapshots in {:?}, retaining {}",
+        snapshot_output_dir.as_ref(),
+        maximum_snapshots_to_retain
+    );
     let mut archives = get_snapshot_archives(snapshot_output_dir);
     // Keep the oldest snapshot so we can always play the ledger from it.
     archives.pop();
-    for old_archive in archives.into_iter().skip(2) {
+    let max_snaps = max(1, maximum_snapshots_to_retain);
+    for old_archive in archives.into_iter().skip(max_snaps) {
         fs::remove_file(old_archive.0)
             .unwrap_or_else(|err| info!("Failed to remove old snapshot: {:}", err));
     }
+}
+
+fn unpack_snapshot_local<T: 'static + Read + std::marker::Send, F: Fn() -> T>(
+    reader: F,
+    ledger_dir: &Path,
+    account_paths: &[PathBuf],
+    parallel_archivers: usize,
+) -> Result<UnpackedAppendVecMap> {
+    assert!(parallel_archivers > 0);
+    let readers = (0..parallel_archivers)
+        .into_iter()
+        .map(|_| reader())
+        .collect::<Vec<_>>();
+
+    // create 'parallel_archivers' # of parallel workers, each responsible for 1/parallel_archivers of all the files to extract.
+    let all_unpacked_append_vec_map = readers
+        .into_par_iter()
+        .enumerate()
+        .map(|(index, reader)| {
+            let parallel_selector = Some(ParallelSelector {
+                index,
+                divisions: parallel_archivers,
+            });
+            let mut archive = Archive::new(reader);
+            unpack_snapshot(&mut archive, ledger_dir, account_paths, parallel_selector)
+        })
+        .collect::<Vec<_>>();
+    let mut unpacked_append_vec_map = UnpackedAppendVecMap::new();
+    for h in all_unpacked_append_vec_map {
+        unpacked_append_vec_map.extend(h?);
+    }
+
+    Ok(unpacked_append_vec_map)
 }
 
 fn untar_snapshot_in<P: AsRef<Path>>(
@@ -746,49 +831,42 @@ fn untar_snapshot_in<P: AsRef<Path>>(
     unpack_dir: &Path,
     account_paths: &[PathBuf],
     archive_format: ArchiveFormat,
+    parallel_divisions: usize,
 ) -> Result<UnpackedAppendVecMap> {
-    let mut measure = Measure::start("snapshot untar");
-    let tar_name = File::open(&snapshot_tar)?;
+    let open_file = || File::open(&snapshot_tar).unwrap();
     let account_paths_map = match archive_format {
-        ArchiveFormat::TarBzip2 => {
-            let tar = BzDecoder::new(BufReader::new(tar_name));
-            let mut archive = Archive::new(tar);
-            unpack_snapshot(&mut archive, unpack_dir, account_paths)?
-        }
-        ArchiveFormat::TarGzip => {
-            let tar = GzDecoder::new(BufReader::new(tar_name));
-            let mut archive = Archive::new(tar);
-            unpack_snapshot(&mut archive, unpack_dir, account_paths)?
-        }
-        ArchiveFormat::TarZstd => {
-            let tar = zstd::stream::read::Decoder::new(BufReader::new(tar_name))?;
-            let mut archive = Archive::new(tar);
-            unpack_snapshot(&mut archive, unpack_dir, account_paths)?
-        }
-        ArchiveFormat::Tar => {
-            let tar = BufReader::new(tar_name);
-            let mut archive = Archive::new(tar);
-            unpack_snapshot(&mut archive, unpack_dir, account_paths)?
-        }
+        ArchiveFormat::TarBzip2 => unpack_snapshot_local(
+            || BzDecoder::new(BufReader::new(open_file())),
+            unpack_dir,
+            account_paths,
+            parallel_divisions,
+        )?,
+        ArchiveFormat::TarGzip => unpack_snapshot_local(
+            || GzDecoder::new(BufReader::new(open_file())),
+            unpack_dir,
+            account_paths,
+            parallel_divisions,
+        )?,
+        ArchiveFormat::TarZstd => unpack_snapshot_local(
+            || zstd::stream::read::Decoder::new(BufReader::new(open_file())).unwrap(),
+            unpack_dir,
+            account_paths,
+            parallel_divisions,
+        )?,
+        ArchiveFormat::Tar => unpack_snapshot_local(
+            || BufReader::new(open_file()),
+            unpack_dir,
+            account_paths,
+            parallel_divisions,
+        )?,
     };
-    measure.stop();
-    info!("{}", measure);
     Ok(account_paths_map)
 }
 
-#[allow(clippy::too_many_arguments)]
-fn rebuild_bank_from_snapshots(
+fn verify_snapshot_version_and_folder(
     snapshot_version: &str,
-    frozen_account_pubkeys: &[Pubkey],
     unpacked_snapshots_dir: &Path,
-    account_paths: &[PathBuf],
-    unpacked_append_vec_map: UnpackedAppendVecMap,
-    genesis_config: &GenesisConfig,
-    debug_keys: Option<Arc<HashSet<Pubkey>>>,
-    additional_builtins: Option<&Builtins>,
-    account_indexes: AccountSecondaryIndexes,
-    accounts_db_caching_enabled: bool,
-) -> Result<Bank> {
+) -> Result<(SnapshotVersion, SlotSnapshotPaths)> {
     info!("snapshot version: {}", snapshot_version);
 
     let snapshot_version_enum =
@@ -805,7 +883,26 @@ fn rebuild_bank_from_snapshots(
     let root_paths = snapshot_paths
         .pop()
         .ok_or_else(|| get_io_error("No snapshots found in snapshots directory"))?;
+    Ok((snapshot_version_enum, root_paths))
+}
 
+#[allow(clippy::too_many_arguments)]
+fn rebuild_bank_from_snapshots(
+    snapshot_version: &str,
+    frozen_account_pubkeys: &[Pubkey],
+    unpacked_snapshots_dir: &Path,
+    account_paths: &[PathBuf],
+    unpacked_append_vec_map: UnpackedAppendVecMap,
+    genesis_config: &GenesisConfig,
+    debug_keys: Option<Arc<HashSet<Pubkey>>>,
+    additional_builtins: Option<&Builtins>,
+    account_indexes: AccountSecondaryIndexes,
+    accounts_db_caching_enabled: bool,
+    limit_load_slot_count_from_snapshot: Option<usize>,
+    shrink_ratio: AccountShrinkThreshold,
+) -> Result<Bank> {
+    let (snapshot_version_enum, root_paths) =
+        verify_snapshot_version_and_folder(snapshot_version, unpacked_snapshots_dir)?;
     info!(
         "Loading bank from {}",
         &root_paths.snapshot_file_path.display()
@@ -823,6 +920,8 @@ fn rebuild_bank_from_snapshots(
                 additional_builtins,
                 account_indexes,
                 accounts_db_caching_enabled,
+                limit_load_slot_count_from_snapshot,
+                shrink_ratio,
             ),
         }?)
     })?;
@@ -874,9 +973,10 @@ pub fn verify_snapshot_archive<P, Q, R>(
     let unpack_dir = temp_dir.path();
     untar_snapshot_in(
         snapshot_archive,
-        &unpack_dir,
+        unpack_dir,
         &[unpack_dir.to_path_buf()],
         archive_format,
+        1,
     )
     .unwrap();
 
@@ -914,7 +1014,7 @@ pub fn snapshot_bank(
 ) -> Result<()> {
     let storages: Vec<_> = root_bank.get_snapshot_storages();
     let mut add_snapshot_time = Measure::start("add-snapshot-ms");
-    add_snapshot(snapshot_path, &root_bank, &storages, snapshot_version)?;
+    add_snapshot(snapshot_path, root_bank, &storages, snapshot_version)?;
     add_snapshot_time.stop();
     inc_new_counter_info!("add-snapshot-ms", add_snapshot_time.as_ms() as usize);
 
@@ -925,7 +1025,7 @@ pub fn snapshot_bank(
         .expect("no snapshots found in config snapshot_path");
 
     let package = package_snapshot(
-        &root_bank,
+        root_bank,
         latest_slot_snapshot_paths,
         snapshot_path,
         status_cache_slot_deltas,
@@ -950,22 +1050,23 @@ pub fn bank_to_snapshot_archive<P: AsRef<Path>, Q: AsRef<Path>>(
     snapshot_package_output_path: Q,
     archive_format: ArchiveFormat,
     thread_pool: Option<&ThreadPool>,
+    maximum_snapshots_to_retain: usize,
 ) -> Result<PathBuf> {
     let snapshot_version = snapshot_version.unwrap_or_default();
 
     assert!(bank.is_complete());
     bank.squash(); // Bank may not be a root
     bank.force_flush_accounts_cache();
-    bank.clean_accounts(true);
+    bank.clean_accounts(true, false);
     bank.update_accounts_hash();
     bank.rehash(); // Bank accounts may have been manually modified by the caller
 
     let temp_dir = tempfile::tempdir_in(snapshot_path)?;
 
     let storages: Vec<_> = bank.get_snapshot_storages();
-    let slot_snapshot_paths = add_snapshot(&temp_dir, &bank, &storages, snapshot_version)?;
+    let slot_snapshot_paths = add_snapshot(&temp_dir, bank, &storages, snapshot_version)?;
     let package = package_snapshot(
-        &bank,
+        bank,
         &slot_snapshot_paths,
         &temp_dir,
         bank.src.slot_deltas(&bank.src.roots()),
@@ -978,7 +1079,7 @@ pub fn bank_to_snapshot_archive<P: AsRef<Path>, Q: AsRef<Path>>(
 
     let package = process_accounts_package_pre(package, thread_pool);
 
-    archive_snapshot_package(&package)?;
+    archive_snapshot_package(&package, maximum_snapshots_to_retain)?;
     Ok(package.tar_output_file)
 }
 
@@ -990,10 +1091,15 @@ pub fn process_accounts_package_pre(
 
     let hash = accounts_package.hash; // temporarily remaining here
     if let Some(expected_hash) = accounts_package.hash_for_testing {
+        let sorted_storages = SortedStorages::new(&accounts_package.storages);
         let (hash, lamports) = AccountsDb::calculate_accounts_hash_without_index(
-            &accounts_package.storages,
+            &sorted_storages,
             thread_pool,
-        );
+            crate::accounts_hash::HashStats::default(),
+            false,
+            None,
+        )
+        .unwrap();
 
         assert_eq!(accounts_package.expected_capitalization, lamports);
 
@@ -1138,26 +1244,107 @@ mod tests {
     }
 
     #[test]
-    fn test_snapshot_hash_of() {
+    fn test_parse_snapshot_archive_filename() {
         assert_eq!(
-            snapshot_hash_of(&format!("snapshot-42-{}.tar.bz2", Hash::default())),
+            parse_snapshot_archive_filename(&format!("snapshot-42-{}.tar.bz2", Hash::default())),
             Some((42, Hash::default(), ArchiveFormat::TarBzip2))
         );
         assert_eq!(
-            snapshot_hash_of(&format!("snapshot-43-{}.tar.zst", Hash::default())),
+            parse_snapshot_archive_filename(&format!("snapshot-43-{}.tar.zst", Hash::default())),
             Some((43, Hash::default(), ArchiveFormat::TarZstd))
         );
         assert_eq!(
-            snapshot_hash_of(&format!("snapshot-42-{}.tar", Hash::default())),
+            parse_snapshot_archive_filename(&format!("snapshot-42-{}.tar", Hash::default())),
             Some((42, Hash::default(), ArchiveFormat::Tar))
         );
-        assert!(snapshot_hash_of(&format!(
-            "{}snapshot-42-{}.tar",
-            TMP_SNAPSHOT_PREFIX,
-            Hash::default()
-        ))
-        .is_none());
 
-        assert!(snapshot_hash_of("invalid").is_none());
+        assert!(parse_snapshot_archive_filename("invalid").is_none());
+        assert!(parse_snapshot_archive_filename("snapshot-bad!slot-bad!hash.bad!ext").is_none());
+
+        assert!(parse_snapshot_archive_filename("snapshot-12345678-bad!hash.bad!ext").is_none());
+        assert!(parse_snapshot_archive_filename("snapshot-12345678-HASH1234.bad!ext").is_none());
+        assert!(parse_snapshot_archive_filename("snapshot-12345678-bad!hash.tar").is_none());
+
+        assert!(parse_snapshot_archive_filename("snapshot-bad!slot-HASH1234.bad!ext").is_none());
+        assert!(parse_snapshot_archive_filename("snapshot-12345678-HASH1234.bad!ext").is_none());
+        assert!(parse_snapshot_archive_filename("snapshot-bad!slot-HASH1234.tar").is_none());
+
+        assert!(parse_snapshot_archive_filename("snapshot-bad!slot-bad!hash.tar").is_none());
+        assert!(parse_snapshot_archive_filename("snapshot-12345678-bad!hash.tar").is_none());
+        assert!(parse_snapshot_archive_filename("snapshot-bad!slot-HASH1234.tar").is_none());
+    }
+
+    #[test]
+    fn test_get_snapshot_archives() {
+        let temp_snapshot_archives_dir = tempfile::TempDir::new().unwrap();
+
+        let min_slot = 123;
+        let max_slot = 456;
+        for slot in min_slot..max_slot {
+            let snapshot_filename = format!("snapshot-{}-{}.tar", slot, Hash::default());
+            let snapshot_filepath = temp_snapshot_archives_dir.path().join(snapshot_filename);
+            File::create(snapshot_filepath).unwrap();
+        }
+
+        // Add in a snapshot with a bad filename and high slot to ensure filename are filtered and
+        // sorted correctly
+        let bad_filename = format!("snapshot-{}-{}.bad!ext", max_slot + 1, Hash::default());
+        let bad_filepath = temp_snapshot_archives_dir.path().join(bad_filename);
+        File::create(bad_filepath).unwrap();
+
+        let results = get_snapshot_archives(temp_snapshot_archives_dir);
+        assert_eq!(results.len(), max_slot - min_slot);
+        assert_eq!(results[0].1 .0 as usize, max_slot - 1);
+    }
+
+    fn common_test_purge_old_snapshot_archives(
+        snapshot_names: &[&String],
+        maximum_snapshots_to_retain: usize,
+        expected_snapshots: &[&String],
+    ) {
+        let temp_snap_dir = tempfile::TempDir::new().unwrap();
+
+        for snap_name in snapshot_names {
+            let snap_path = temp_snap_dir.path().join(&snap_name);
+            let mut _snap_file = File::create(snap_path);
+        }
+        purge_old_snapshot_archives(temp_snap_dir.path(), maximum_snapshots_to_retain);
+
+        let mut retained_snaps = HashSet::new();
+        for entry in fs::read_dir(temp_snap_dir.path()).unwrap() {
+            let entry_path_buf = entry.unwrap().path();
+            let entry_path = entry_path_buf.as_path();
+            let snapshot_name = entry_path
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string();
+            retained_snaps.insert(snapshot_name);
+        }
+
+        for snap_name in expected_snapshots {
+            assert!(retained_snaps.contains(snap_name.as_str()));
+        }
+        assert!(retained_snaps.len() == expected_snapshots.len());
+    }
+
+    #[test]
+    fn test_purge_old_snapshot_archives() {
+        // Create 3 snapshots, retaining 1,
+        // expecting the oldest 1 and the newest 1 are retained
+        let snap1_name = format!("snapshot-1-{}.tar.zst", Hash::default());
+        let snap2_name = format!("snapshot-3-{}.tar.zst", Hash::default());
+        let snap3_name = format!("snapshot-50-{}.tar.zst", Hash::default());
+        let snapshot_names = vec![&snap1_name, &snap2_name, &snap3_name];
+        let expected_snapshots = vec![&snap1_name, &snap3_name];
+        common_test_purge_old_snapshot_archives(&snapshot_names, 1, &expected_snapshots);
+
+        // retaining 0, the expectation is the same as for 1, as at least 1 newest is expected to be retained
+        common_test_purge_old_snapshot_archives(&snapshot_names, 0, &expected_snapshots);
+
+        // retaining 2, all three should be retained
+        let expected_snapshots = vec![&snap1_name, &snap2_name, &snap3_name];
+        common_test_purge_old_snapshot_archives(&snapshot_names, 2, &expected_snapshots);
     }
 }

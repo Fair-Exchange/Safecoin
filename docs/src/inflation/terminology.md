@@ -24,15 +24,15 @@ A deterministic description of token issuance over time. The Solana Foundation i
 
 The inflation rate actually observed on the Safecoin network after accounting for other factors that might decrease the _Total Current Supply_. Note that it is not possible for tokens to be created outside of what is described by the _Inflation Schedule_.
 
-- While the _Inflation Schedule_ determines how the protocol issues SAFE, this neglects the concurrent elimination of tokens in the ecosystem due to various factors. The primary token burning mechanism is the burning of a portion of each transaction fee. While $100\%$ of each transaction fee is currently being destroyed, it is planned on reducing this burn rate to $50\%$ of each transaction fee, with the remaining fee to be retained by the validator that processes the transaction.
+- While the _Inflation Schedule_ determines how the protocol issues SAFE, this neglects the concurrent elimination of tokens in the ecosystem due to various factors. The primary token burning mechanism is the burning of a portion of each transaction fee. $50\%$ of each transaction fee is burned, with the remaining fee retained by the validator that processes the transaction.
 - Additional factors such as loss of private keys and slashing events should also be considered in a holistic analysis of the _Effective Inflation Rate_. For example, it’s estimated that $10-20\%$ of all BTC have been lost and are unrecoverable and that networks may experience similar yearly losses at the rate of $1-2\%$.
 
 ### Staking Yield [%]
 
 The rate of return (aka _interest_) earned on SAFE staked on the network. It is often quoted as an annualized rate (e.g. "the network _staking yield_ is currently $10\%$ per year").
 
-- _Staking yield_ is of great interest to validators and token-holders holders who wish to delegate their tokens to avoid token dilution due to inflation (the extent of which is discussed below).
-- $100\%$ of inflationary issuances are to be distributed to staked token-holders in proportion to their staked SAFE and to validators who charge a commission on the rewards earned by their delegated SAFE..
+- _Staking yield_ is of great interest to validators and token holders who wish to delegate their tokens to avoid token dilution due to inflation (the extent of which is discussed below).
+- $100\%$ of inflationary issuances are to be distributed to staked token-holders in proportion to their staked SAFE and to validators who charge a commission on the rewards earned by their delegated SAFE.
   - There may be future consideration for an additional split of inflation issuance with the introduction of _Archivers_ into the economy. _Archivers_ are network participants who provide a decentralized storage service and should also be incentivized with token distribution from inflation issuances for this service. - Similarly, early designs specified a fixed percentage of inflationary issuance to be delivered to the Foundation treasury for operational expenses and future grants. However, inflation will be launching without any portion allocated to the Foundation.
 - _Staking yield_ can be calculated from the _Inflation Schedule_ along with the fraction of the _Total Current Supply_ that is staked at any given time. The explicit relationship is given by:
 

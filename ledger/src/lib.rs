@@ -1,10 +1,12 @@
-#![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(specialization))]
+#![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(min_specialization))]
 #![allow(clippy::integer_arithmetic)]
 #[macro_use]
 extern crate solana_bpf_loader_program;
 
 pub mod bank_forks_utils;
+pub mod bigtable_delete;
 pub mod bigtable_upload;
+pub mod bigtable_upload_service;
 pub mod block_error;
 #[macro_use]
 pub mod blockstore;

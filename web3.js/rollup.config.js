@@ -1,7 +1,5 @@
 import babel from '@rollup/plugin-babel';
 import commonjs from '@rollup/plugin-commonjs';
-import copy from 'rollup-plugin-copy';
-import flowRemoveTypes from 'flow-remove-types';
 import json from '@rollup/plugin-json';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import nodePolyfills from 'rollup-plugin-node-polyfills';
@@ -9,32 +7,34 @@ import replace from '@rollup/plugin-replace';
 import {terser} from 'rollup-plugin-terser';
 
 const env = process.env.NODE_ENV;
+const extensions = ['.js', '.ts'];
 
 function generateConfig(configType, format) {
   const browser = configType === 'browser';
   const bundle = format === 'iife';
 
   const config = {
-    input: 'src/index.js',
+    input: 'src/index.ts',
     plugins: [
-      flow(),
       commonjs(),
       nodeResolve({
         browser,
-        preferBuiltins: !browser,
         dedupe: ['bn.js', 'buffer'],
+        extensions,
+        preferBuiltins: !browser,
       }),
       babel({
         exclude: '**/node_modules/**',
+        extensions,
         babelHelpers: bundle ? 'bundled' : 'runtime',
         plugins: bundle ? [] : ['@babel/plugin-transform-runtime'],
       }),
       replace({
-        'process.env.NODE_ENV': JSON.stringify(env),
-        'process.env.BROWSER': JSON.stringify(browser),
-      }),
-      copy({
-        targets: [{src: 'module.d.ts', dest: 'lib', rename: 'index.d.ts'}],
+        preventAssignment: true,
+        values: {
+          'process.env.NODE_ENV': JSON.stringify(env),
+          'process.env.BROWSER': JSON.stringify(browser),
+        },
       }),
     ],
     onwarn: function (warning, rollupWarn) {
@@ -46,6 +46,25 @@ function generateConfig(configType, format) {
       moduleSideEffects: false,
     },
   };
+
+  if (configType !== 'browser') {
+    // Prevent dependencies from being bundled
+    config.external = [
+      /@babel\/runtime/,
+      'bn.js',
+      'borsh',
+      'bs58',
+      'buffer-layout',
+      'crypto-hash',
+      'jayson/lib/client/browser',
+      'js-sha3',
+      'node-fetch',
+      'rpc-websockets',
+      'secp256k1',
+      'superstruct',
+      'tweetnacl',
+    ];
+  }
 
   switch (configType) {
     case 'browser':
@@ -63,10 +82,10 @@ function generateConfig(configType, format) {
           config.external = [
             /@babel\/runtime/,
             'bn.js',
-            // Bundled for `Buffer` consistency
-            // 'bs58',
-            // 'buffer',
-            // 'buffer-layout',
+            'borsh',
+            'bs58',
+            'buffer',
+            'buffer-layout',
             'crypto-hash',
             'jayson/lib/client/browser',
             'js-sha3',
@@ -121,22 +140,6 @@ function generateConfig(configType, format) {
           sourcemap: true,
         },
       ];
-
-      // Prevent dependencies from being bundled
-      config.external = [
-        /@babel\/runtime/,
-        'bn.js',
-        'bs58',
-        'buffer-layout',
-        'crypto-hash',
-        'jayson/lib/client/browser',
-        'js-sha3',
-        'node-fetch',
-        'rpc-websockets',
-        'secp256k1',
-        'superstruct',
-        'tweetnacl',
-      ];
       break;
     default:
       throw new Error(`Unknown configType: ${configType}`);
@@ -150,15 +153,3 @@ export default [
   generateConfig('browser', 'esm'),
   generateConfig('browser', 'iife'),
 ];
-
-// Using this instead of rollup-plugin-flow due to
-// https://github.com/leebyron/rollup-plugin-flow/issues/5
-function flow() {
-  return {
-    name: 'flow-remove-types',
-    transform: code => ({
-      code: flowRemoveTypes(code).toString(),
-      map: null,
-    }),
-  };
-}

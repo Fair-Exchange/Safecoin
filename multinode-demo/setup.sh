@@ -21,9 +21,16 @@ if [[ -f $BOOTSTRAP_VALIDATOR_IDENTITY_KEYPAIR ]]; then
 else
   $safecoin_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/identity.json
 fi
-
-$safecoin_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/vote-account.json
-$safecoin_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/stake-account.json
+if [[ -f $BOOTSTRAP_VALIDATOR_STAKE_KEYPAIR ]]; then
+  cp -f "$BOOTSTRAP_VALIDATOR_STAKE_KEYPAIR" "$SAFEANA_CONFIG_DIR"/bootstrap-validator/stake-account.json
+else
+  $safecoin_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/stake-account.json
+fi
+if [[ -f $BOOTSTRAP_VALIDATOR_VOTE_KEYPAIR ]]; then
+  cp -f "$BOOTSTRAP_VALIDATOR_VOTE_KEYPAIR" "$SAFEANA_CONFIG_DIR"/bootstrap-validator/vote-account.json
+else
+  $safecoin_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/vote-account.json
+fi
 
 args=(
   "$@"

@@ -14,12 +14,14 @@ import {
   Transaction,
   PartiallyDecodedInstruction,
   ParsedInstruction,
-} from "@safecoin/web3.js";
+  Secp256k1Program,
+} from "@solana/web3.js";
 import { Cluster } from "providers/cluster";
 import { SerumMarketRegistry } from "serumMarketRegistry";
-import { TokenInfoMap } from "@safecoin/safe-token-registry";
+import { TokenInfoMap } from "@solana/spl-token-registry";
 
-export type ProgramName = typeof PROGRAM_NAME_BY_ID[keyof typeof PROGRAM_NAME_BY_ID];
+export type ProgramName =
+  typeof PROGRAM_NAME_BY_ID[keyof typeof PROGRAM_NAME_BY_ID];
 
 export enum PROGRAM_NAMES {
   // native built-ins
@@ -27,6 +29,7 @@ export enum PROGRAM_NAMES {
   STAKE = "Stake Program",
   SYSTEM = "System Program",
   VOTE = "Vote Program",
+  SECP256K1 = "Secp256k1 Program",
 
   // spl
   ASSOCIATED_TOKEN = "Associated Token Program",
@@ -38,11 +41,13 @@ export enum PROGRAM_NAMES {
   TOKEN = "Token Program",
 
   // other
+  WORMHOLE = "Wormhole",
   BONFIDA_POOL = "Bonfida Pool Program",
-  BREAK_SAFEANA = "Break Safecoin Program",
+  BREAK_SOLANA = "Break Solana Program",
   RAYDIUM_LIQUIDITY_1 = "Raydium Liquidity Pool Program v1",
   RAYDIUM_LIQUIDITY_2 = "Raydium Liquidity Pool Program v2",
   RAYDIUM_STAKING = "Raydium Staking Program",
+  SERUM_1 = "Serum Program v1",
   SERUM_2 = "Serum Program v2",
   SERUM_3 = "Serum Program v3",
 }
@@ -64,6 +69,7 @@ export const PROGRAM_DEPLOYMENTS = {
   [PROGRAM_NAMES.STAKE]: ALL_CLUSTERS,
   [PROGRAM_NAMES.SYSTEM]: ALL_CLUSTERS,
   [PROGRAM_NAMES.VOTE]: ALL_CLUSTERS,
+  [PROGRAM_NAMES.SECP256K1]: ALL_CLUSTERS,
 
   // spl
   [PROGRAM_NAMES.ASSOCIATED_TOKEN]: ALL_CLUSTERS,
@@ -75,11 +81,13 @@ export const PROGRAM_DEPLOYMENTS = {
   [PROGRAM_NAMES.TOKEN]: ALL_CLUSTERS,
 
   // other
+  [PROGRAM_NAMES.WORMHOLE]: MAINNET_ONLY,
   [PROGRAM_NAMES.BONFIDA_POOL]: MAINNET_ONLY,
-  [PROGRAM_NAMES.BREAK_SAFEANA]: LIVE_CLUSTERS,
+  [PROGRAM_NAMES.BREAK_SOLANA]: LIVE_CLUSTERS,
   [PROGRAM_NAMES.RAYDIUM_LIQUIDITY_1]: MAINNET_ONLY,
   [PROGRAM_NAMES.RAYDIUM_LIQUIDITY_2]: MAINNET_ONLY,
   [PROGRAM_NAMES.RAYDIUM_STAKING]: MAINNET_ONLY,
+  [PROGRAM_NAMES.SERUM_1]: MAINNET_ONLY,
   [PROGRAM_NAMES.SERUM_2]: MAINNET_ONLY,
   [PROGRAM_NAMES.SERUM_3]: MAINNET_ONLY,
 } as const;
@@ -90,24 +98,27 @@ export const PROGRAM_NAME_BY_ID = {
   [StakeProgram.programId.toBase58()]: PROGRAM_NAMES.STAKE,
   [SystemProgram.programId.toBase58()]: PROGRAM_NAMES.SYSTEM,
   [VOTE_PROGRAM_ID.toBase58()]: PROGRAM_NAMES.VOTE,
+  [Secp256k1Program.programId.toBase58()]: PROGRAM_NAMES.SECP256K1,
 
   // spl
-  CWyEp7dp1Cv3334j6gCci2UrrjA8Q98bYa7AwGBpZ6iJ: PROGRAM_NAMES.ASSOCIATED_TOKEN,
-  D5WhRrnh8AefVULhudnuLA1LCVzvEgdn49eDWE67wYNn: PROGRAM_NAMES.FEATURE_PROPOSAL,
-  4DDUJ1rA8Vd7e6SFWanf4V8JnsfapjCGNutQYw8Vtt45: PROGRAM_NAMES.MEMO,
-  9h7wfE8nxQ6YsRedqNHwroEZbA5bMAmNsh8GdxwBTtaV: PROGRAM_NAMES.MEMO_2,
-  6RWe1TGwvojnbAynyWrHzm3GgHf7AmX7kLQTJG7vHCfb: PROGRAM_NAMES.SWAP,
-  7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD: PROGRAM_NAMES.TOKEN,
+  ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL: PROGRAM_NAMES.ASSOCIATED_TOKEN,
+  Feat1YXHhH6t1juaWF74WLcfv4XoNocjXA6sPWHNgAse: PROGRAM_NAMES.FEATURE_PROPOSAL,
+  Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo: PROGRAM_NAMES.MEMO,
+  MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr: PROGRAM_NAMES.MEMO_2,
+  SwaPpA9LAaLfeLi3a68M4DjnLqgtticKg6CnyNwgAC8: PROGRAM_NAMES.SWAP,
+  TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA: PROGRAM_NAMES.TOKEN,
   LendZqTs7gn5CTSJU1jWKhKuVpjJGom45nnwPb2AMTi: PROGRAM_NAMES.LENDING,
 
   // other
+  WormT3McKhFJ2RkiGpdw9GKvNCrB2aB54gb2uV9MfQC: PROGRAM_NAMES.WORMHOLE,
   WvmTNLpGMVbwJVYztYL4Hnsy82cJhQorxjnnXcRm3b6: PROGRAM_NAMES.BONFIDA_POOL,
-  CtY5L6mdBzRUakZFJ3NXkhy8ufGkDteBJvgawdAVgWVv: PROGRAM_NAMES.BREAK_SAFEANA,
+  BrEAK7zGZ6dM71zUDACDqJnekihmwF15noTddWTsknjC: PROGRAM_NAMES.BREAK_SOLANA,
   RVKd61ztZW9GUwhRbbLoYVRE5Xf1B2tVscKqwZqXgEr:
     PROGRAM_NAMES.RAYDIUM_LIQUIDITY_1,
   "27haf8L6oxUeXrHrgEgsexjSY5hbVUWEmvv9Nyxg8vQv":
     PROGRAM_NAMES.RAYDIUM_LIQUIDITY_2,
   EhhTKczWMGQt46ynNeRX1WfeagwwJd7ufHvCDjRxjo5Q: PROGRAM_NAMES.RAYDIUM_STAKING,
+  BJ3jrUzddfuSrZHXSCxMUUQsjKEyLmuuyZebkcaFp2fg: PROGRAM_NAMES.SERUM_1,
   EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o: PROGRAM_NAMES.SERUM_2,
   "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin": PROGRAM_NAMES.SERUM_3,
 } as const;
@@ -148,6 +159,19 @@ export function programLabel(
   }
 }
 
+export function tokenLabel(
+  address: string,
+  tokenRegistry?: TokenInfoMap
+): string | undefined {
+  if (!tokenRegistry) return;
+  const tokenInfo = tokenRegistry.get(address);
+  if (!tokenInfo) return;
+  if (tokenInfo.name === tokenInfo.symbol) {
+    return tokenInfo.name;
+  }
+  return `${tokenInfo.symbol} - ${tokenInfo.name}`;
+}
+
 export function addressLabel(
   address: string,
   cluster: Cluster,
@@ -158,7 +182,7 @@ export function addressLabel(
     LOADER_IDS[address] ||
     SYSVAR_IDS[address] ||
     SYSVAR_ID[address] ||
-    tokenRegistry?.get(address)?.name ||
+    tokenLabel(address, tokenRegistry) ||
     SerumMarketRegistry.get(address, cluster)
   );
 }

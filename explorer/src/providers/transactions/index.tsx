@@ -4,7 +4,7 @@ import {
   Connection,
   SignatureResult,
   TransactionConfirmationStatus,
-} from "@safecoin/web3.js";
+} from "@solana/web3.js";
 import { useCluster, Cluster } from "../cluster";
 import { DetailsProvider } from "./details";
 import * as Cache from "providers/cache";
@@ -21,7 +21,7 @@ export interface TransactionStatusInfo {
   result: SignatureResult;
   timestamp: Timestamp;
   confirmations: Confirmations;
-  confirmationStatus: TransactionConfirmationStatus | null;
+  confirmationStatus?: TransactionConfirmationStatus;
 }
 
 export interface TransactionStatus {

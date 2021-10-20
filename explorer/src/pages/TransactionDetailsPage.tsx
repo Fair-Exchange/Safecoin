@@ -11,8 +11,8 @@ import {
   TransactionSignature,
   SystemProgram,
   SystemInstruction,
-} from "@safecoin/web3.js";
-import { lamportsToSafeString } from "utils";
+} from "@solana/web3.js";
+import { lamportsToSolString } from "utils";
 import { ErrorCard } from "components/common/ErrorCard";
 import { LoadingCard } from "components/common/LoadingCard";
 import { TableCardBody } from "components/common/TableCardBody";
@@ -60,9 +60,8 @@ export function TransactionDetailsPage({ signature: raw }: SignatureProps) {
   } catch (err) {}
 
   const status = useTransactionStatus(signature);
-  const [zeroConfirmationRetries, setZeroConfirmationRetries] = React.useState(
-    0
-  );
+  const [zeroConfirmationRetries, setZeroConfirmationRetries] =
+    React.useState(0);
 
   let autoRefresh = AutoRefresh.Inactive;
 
@@ -244,7 +243,7 @@ function StatusCard({
               <InfoTooltip
                 bottom
                 right
-                text="Timestamps are available for confirmed blocks within the past 5 epochs"
+                text="Timestamps are only available for confirmed blocks"
               >
                 Unavailable
               </InfoTooltip>
@@ -288,8 +287,8 @@ function StatusCard({
 
         {fee && (
           <tr>
-            <td>Fee (SAFE)</td>
-            <td className="text-lg-right">{lamportsToSafeString(fee)}</td>
+            <td>Fee (SOL)</td>
+            <td className="text-lg-right">{lamportsToSolString(fee)}</td>
           </tr>
         )}
       </TableCardBody>
@@ -356,9 +355,9 @@ function AccountsCard({
           <Address pubkey={pubkey} link />
         </td>
         <td>
-          <BalanceDelta delta={delta} isSafe />
+          <BalanceDelta delta={delta} isSol />
         </td>
-        <td>{lamportsToSafeString(post)}</td>
+        <td>{lamportsToSolString(post)}</td>
         <td>
           {index === 0 && (
             <span className="badge badge-soft-info mr-1">Fee Payer</span>
@@ -387,8 +386,8 @@ function AccountsCard({
           <thead>
             <tr>
               <th className="text-muted">Address</th>
-              <th className="text-muted">Change (SAFE)</th>
-              <th className="text-muted">Post Balance (SAFE)</th>
+              <th className="text-muted">Change (SOL)</th>
+              <th className="text-muted">Post Balance (SOL)</th>
               <th className="text-muted">Details</th>
             </tr>
           </thead>

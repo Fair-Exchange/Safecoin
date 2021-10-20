@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-keygen"
-version = "1.6.25"
+version = "1.7.15"
 description = "Safecoin key generation utility"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -14,12 +14,12 @@ bs58 = "0.3.1"
 clap = "2.33"
 dirs-next = "2.0.0"
 num_cpus = "1.13.0"
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.6.25" }
-safecoin-cli-config = { path = "../cli-config", version = "=1.6.25" }
-safecoin-remote-wallet = { path = "../remote-wallet", version = "=1.6.25" }
-safecoin-sdk = { path = "../sdk", version = "=1.6.25" }
-safecoin-version = { path = "../version", version = "=1.6.25" }
-tiny-bip39 = "0.7.0"
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.7.15" }
+safecoin-cli-config = { path = "../cli-config", version = "=1.7.15" }
+safecoin-remote-wallet = { path = "../remote-wallet", version = "=1.7.15" }
+safecoin-sdk = { path = "../sdk", version = "=1.7.15" }
+safecoin-version = { path = "../version", version = "=1.7.15" }
+tiny-bip39 = "0.8.1"
 
 [[bin]]
 name = "safecoin-keygen"

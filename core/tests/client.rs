@@ -1,9 +1,9 @@
 use safecoin_client::{pubsub_client::PubsubClient, rpc_client::RpcClient, rpc_response::SlotInfo};
-use solana_core::{
+use solana_core::test_validator::TestValidator;
+use solana_rpc::{
     optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
     rpc_pubsub_service::{PubSubConfig, PubSubService},
     rpc_subscriptions::RpcSubscriptions,
-    test_validator::TestValidator,
 };
 use solana_runtime::{
     bank::Bank,
@@ -18,6 +18,7 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     system_transaction,
 };
+use solana_streamer::socket::SocketAddrSpace;
 use std::{
     net::{IpAddr, SocketAddr},
     sync::{
@@ -34,7 +35,8 @@ fn test_rpc_client() {
     solana_logger::setup();
 
     let alice = Keypair::new();
-    let test_validator = TestValidator::with_no_fees(alice.pubkey(), None);
+    let test_validator =
+        TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
 
     let bob_pubkey = solana_sdk::pubkey::new_rand();
 
@@ -96,14 +98,14 @@ fn test_slot_subscription() {
     let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
     let optimistically_confirmed_bank =
         OptimisticallyConfirmedBank::locked_from_bank_forks_root(&bank_forks);
-    let subscriptions = Arc::new(RpcSubscriptions::new(
+    let subscriptions = Arc::new(RpcSubscriptions::new_for_tests(
         &exit,
         bank_forks,
         Arc::new(RwLock::new(BlockCommitmentCache::default())),
         optimistically_confirmed_bank,
     ));
-    let pubsub_service =
-        PubSubService::new(PubSubConfig::default(), &subscriptions, pubsub_addr, &exit);
+    let (trigger, pubsub_service) =
+        PubSubService::new(PubSubConfig::default(), &subscriptions, pubsub_addr);
     std::thread::sleep(Duration::from_millis(400));
 
     let (mut client, receiver) =
@@ -136,6 +138,7 @@ fn test_slot_subscription() {
     }
 
     exit.store(true, Ordering::Relaxed);
+    trigger.cancel();
     client.shutdown().unwrap();
     pubsub_service.close().unwrap();
 

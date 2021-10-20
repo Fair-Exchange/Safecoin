@@ -36,7 +36,7 @@ impl OptimisticConfirmationVerifier {
             .into_iter()
             .filter(|(optimistic_slot, optimistic_hash)| {
                 (*optimistic_slot == root && *optimistic_hash != root_bank.hash())
-                    || (!root_ancestors.contains_key(&optimistic_slot) &&
+                    || (!root_ancestors.contains_key(optimistic_slot) &&
                     // In this second part of the `and`, we account for the possibility that
                     // there was some other root `rootX` set in BankForks where:
                     //
@@ -316,7 +316,7 @@ mod test {
             assert!(optimistic_confirmation_verifier.unchecked_slots.is_empty());
 
             // If we know set the root in blockstore, should return nothing
-            blockstore.set_roots(&[1, 3]).unwrap();
+            blockstore.set_roots(vec![1, 3].iter()).unwrap();
             optimistic_confirmation_verifier.add_new_optimistic_confirmed_slots(optimistic_slots);
             assert!(optimistic_confirmation_verifier
                 .verify_for_unrooted_optimistic_slots(&bank7, &blockstore)

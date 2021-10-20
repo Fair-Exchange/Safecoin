@@ -1,5 +1,5 @@
 use dashmap::{mapref::entry::Entry::Occupied, DashMap};
-use solana_sdk::pubkey::Pubkey;
+use solana_sdk::{pubkey::Pubkey, timing::AtomicInterval};
 use std::{
     collections::HashSet,
     fmt::Debug,
@@ -26,7 +26,7 @@ pub trait SecondaryIndexEntry: Debug {
 
 #[derive(Debug, Default)]
 pub struct SecondaryIndexStats {
-    last_report: AtomicU64,
+    last_report: AtomicInterval,
     num_inner_keys: AtomicU64,
 }
 
@@ -134,25 +134,15 @@ impl<SecondaryIndexEntryType: SecondaryIndexEntry + Default + Sync + Send>
                 .downgrade()
         });
 
-        let should_insert = !outer_keys.read().unwrap().contains(&key);
+        let should_insert = !outer_keys.read().unwrap().contains(key);
         if should_insert {
             let mut w_outer_keys = outer_keys.write().unwrap();
-            if !w_outer_keys.contains(&key) {
+            if !w_outer_keys.contains(key) {
                 w_outer_keys.push(*key);
             }
         }
 
-        let now = solana_sdk::timing::timestamp();
-        let last = self.stats.last_report.load(Ordering::Relaxed);
-        let should_report = now.saturating_sub(last) > 1000
-            && self.stats.last_report.compare_exchange(
-                last,
-                now,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            ) == Ok(last);
-
-        if should_report {
+        if self.stats.last_report.should_update(1000) {
             datapoint_info!(
                 self.metrics_name,
                 ("num_secondary_keys", self.index.len() as i64, i64),
@@ -175,11 +165,11 @@ impl<SecondaryIndexEntryType: SecondaryIndexEntry + Default + Sync + Send>
         let is_outer_key_empty = {
             let inner_key_map = self
                 .index
-                .get_mut(&outer_key)
+                .get_mut(outer_key)
                 .expect("If we're removing a key, then it must have an entry in the map");
             // If we deleted a pubkey from the reverse_index, then the corresponding entry
             // better exist in this index as well or the two indexes are out of sync!
-            assert!(inner_key_map.value().remove_inner_key(&removed_inner_key));
+            assert!(inner_key_map.value().remove_inner_key(removed_inner_key));
             inner_key_map.is_empty()
         };
 

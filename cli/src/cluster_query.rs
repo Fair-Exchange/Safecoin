@@ -1,7 +1,6 @@
 use crate::{
     cli::{CliCommand, CliCommandInfo, CliConfig, CliError, ProcessResult},
     spend_utils::{resolve_spend_tx_and_check_account_balance, SpendAmount},
-    stake::is_stake_program_v2_enabled,
 };
 use clap::{value_t, value_t_or_exit, App, AppSettings, Arg, ArgMatches, SubCommand};
 use console::{style, Emoji};
@@ -24,9 +23,9 @@ use safecoin_client::{
     pubsub_client::PubsubClient,
     rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient},
     rpc_config::{
-        RpcAccountInfoConfig, RpcConfirmedBlockConfig, RpcConfirmedTransactionConfig,
-        RpcGetVoteAccountsConfig, RpcLargestAccountsConfig, RpcLargestAccountsFilter,
-        RpcProgramAccountsConfig, RpcTransactionLogsConfig, RpcTransactionLogsFilter,
+        RpcAccountInfoConfig, RpcBlockConfig, RpcGetVoteAccountsConfig, RpcLargestAccountsConfig,
+        RpcLargestAccountsFilter, RpcProgramAccountsConfig, RpcTransactionConfig,
+        RpcTransactionLogsConfig, RpcTransactionLogsFilter,
     },
     rpc_filter,
     rpc_request::DELINQUENT_VALIDATOR_SLOT_DISTANCE,
@@ -47,7 +46,9 @@ use solana_sdk::{
     rent::Rent,
     rpc_port::DEFAULT_RPC_PORT_STR,
     signature::Signature,
-    slot_history, system_instruction, system_program,
+    slot_history,
+    stake::{self, state::StakeState},
+    system_instruction, system_program,
     sysvar::{
         self,
         slot_history::SlotHistory,
@@ -56,7 +57,6 @@ use solana_sdk::{
     timing,
     transaction::Transaction,
 };
-use solana_stake_program::stake_state::StakeState;
 use safecoin_transaction_status::UiTransactionEncoding;
 use solana_vote_program::vote_state::VoteState;
 use std::{
@@ -122,7 +122,7 @@ impl ClusterQuerySubCommands for App<'_, '_> {
                         .long("our-localhost")
                         .takes_value(false)
                         .value_name("PORT")
-                        .default_value(&DEFAULT_RPC_PORT_STR)
+                        .default_value(DEFAULT_RPC_PORT_STR)
                         .validator(is_port)
                         .help("Guess Identity pubkey and validator rpc node assuming local (possibly private) validator"),
                 )
@@ -1052,12 +1052,12 @@ pub fn process_get_block(
     };
 
     let encoded_confirmed_block = rpc_client
-        .get_confirmed_block_with_config(
+        .get_block_with_config(
             slot,
-            RpcConfirmedBlockConfig {
+            RpcBlockConfig {
                 encoding: Some(UiTransactionEncoding::Base64),
                 commitment: Some(CommitmentConfig::confirmed()),
-                ..RpcConfirmedBlockConfig::default()
+                ..RpcBlockConfig::default()
             },
         )?
         .into();
@@ -1215,7 +1215,7 @@ pub fn process_show_block_production(
                 start_slot = minimum_ledger_slot;
             }
 
-            let confirmed_blocks = rpc_client.get_confirmed_blocks(start_slot, Some(end_slot))?;
+            let confirmed_blocks = rpc_client.get_blocks(start_slot, Some(end_slot))?;
             (confirmed_blocks, start_slot)
         };
 
@@ -1738,7 +1738,7 @@ pub fn process_show_stakes(
         }
     }
     let all_stake_accounts = rpc_client
-        .get_program_accounts_with_config(&solana_stake_program::id(), program_accounts_config)?;
+        .get_program_accounts_with_config(&stake::program::id(), program_accounts_config)?;
     let stake_history_account = rpc_client.get_account(&stake_history::id())?;
     let clock_account = rpc_client.get_account(&sysvar::clock::id())?;
     let clock: Clock = from_account(&clock_account).ok_or_else(|| {
@@ -1749,8 +1749,6 @@ pub fn process_show_stakes(
     let stake_history = from_account(&stake_history_account).ok_or_else(|| {
         CliError::RpcRequestError("Failed to deserialize stake history".to_string())
     })?;
-    // At v1.6, this check can be removed and simply passed as `true`
-    let stake_program_v2_enabled = is_stake_program_v2_enabled(rpc_client)?;
 
     let mut stake_accounts: Vec<CliKeyedStakeState> = vec![];
     for (stake_pubkey, stake_account) in all_stake_accounts {
@@ -1766,7 +1764,6 @@ pub fn process_show_stakes(
                                 use_lamports_unit,
                                 &stake_history,
                                 &clock,
-                                stake_program_v2_enabled,
                             ),
                         });
                     }
@@ -1785,7 +1782,6 @@ pub fn process_show_stakes(
                                 use_lamports_unit,
                                 &stake_history,
                                 &clock,
-                                stake_program_v2_enabled,
                             ),
                         });
                     }
@@ -1977,7 +1973,7 @@ pub fn process_transaction_history(
     limit: usize,
     show_transactions: bool,
 ) -> ProcessResult {
-    let results = rpc_client.get_confirmed_signatures_for_address2_with_config(
+    let results = rpc_client.get_signatures_for_address_with_config(
         address,
         GetConfirmedSignaturesForAddress2Config {
             before,
@@ -2016,9 +2012,9 @@ pub fn process_transaction_history(
 
         if show_transactions {
             if let Ok(signature) = result.signature.parse::<Signature>() {
-                match rpc_client.get_confirmed_transaction_with_config(
+                match rpc_client.get_transaction_with_config(
                     &signature,
-                    RpcConfirmedTransactionConfig {
+                    RpcTransactionConfig {
                         encoding: Some(UiTransactionEncoding::Base64),
                         commitment: Some(CommitmentConfig::confirmed()),
                     },
@@ -2145,7 +2141,7 @@ pub fn process_calculate_rent(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::{app, parse_command};
+    use crate::{clap_app::get_clap_app, cli::parse_command};
     use solana_sdk::signature::{write_keypair, Keypair};
     use std::str::FromStr;
     use tempfile::NamedTempFile;
@@ -2157,7 +2153,7 @@ mod tests {
 
     #[test]
     fn test_parse_command() {
-        let test_commands = app("test", "desc", "version");
+        let test_commands = get_clap_app("test", "desc", "version");
         let default_keypair = Keypair::new();
         let (default_keypair_file, mut tmp_file) = make_tmp_file();
         write_keypair(&default_keypair, tmp_file.as_file_mut()).unwrap();

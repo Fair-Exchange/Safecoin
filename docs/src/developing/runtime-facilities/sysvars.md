@@ -17,6 +17,12 @@ The first is to query the sysvar at runtime via the sysvar's `get()` function:
 let clock = Clock::get()
 ```
 
+The following sysvars support `get`:
+- Clock
+- EpochSchedule
+- Fees
+- Rent
+
 The second is to pass the sysvar to the program as an account by including its address as one of the accounts in the `Instruction` and then deserializing the data during execution.  Access to sysvars accounts is
 always _readonly_.
 
@@ -91,7 +97,9 @@ other instructions in the same transaction. Read more information on
 ## RecentBlockhashes
 
 The RecentBlockhashes sysvar contains the active recent blockhashes as well as
-their associated fee calculators. It is updated every slot.
+their associated fee calculators. It is updated every slot. Entries are ordered
+by descending block height, so the first entry holds the most recent block hash,
+and the last entry holds an old block hash.
 
 - Address: `SysvarRecentB1ockHashes11111111111111111111`
 - Layout:

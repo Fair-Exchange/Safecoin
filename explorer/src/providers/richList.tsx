@@ -1,6 +1,6 @@
 import React from "react";
 
-import { AccountBalancePair, Connection } from "@safecoin/web3.js";
+import { AccountBalancePair, Connection } from "@solana/web3.js";
 import { useCluster, ClusterStatus, Cluster } from "./cluster";
 import { reportError } from "utils/sentry";
 
@@ -55,7 +55,7 @@ async function fetch(dispatch: Dispatch, cluster: Cluster, url: string) {
   dispatch(Status.Connecting);
 
   try {
-    const connection = new Connection(url, "max");
+    const connection = new Connection(url, "finalized");
 
     const [total, circulating, nonCirculating] = (
       await Promise.all([

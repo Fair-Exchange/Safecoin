@@ -1,6 +1,6 @@
 use {
     crate::{
-        input_parsers::pubkeys_sigs_of,
+        input_parsers::{pubkeys_sigs_of, STDOUT_OUTFILE_TOKEN},
         offline::{SIGNER_ARG, SIGN_ONLY_ARG},
         ArgConstant,
     },
@@ -297,7 +297,7 @@ pub(crate) fn parse_signer_source<S: AsRef<str>>(
                 }
             } else {
                 match source.as_str() {
-                    "-" => Ok(SignerSource::new(SignerSourceKind::Stdin)),
+                    STDOUT_OUTFILE_TOKEN => Ok(SignerSource::new(SignerSourceKind::Stdin)),
                     ASK_KEYWORD => Ok(SignerSource::new_legacy(SignerSourceKind::Prompt)),
                     _ => match Pubkey::from_str(source.as_str()) {
                         Ok(pubkey) => Ok(SignerSource::new(SignerSourceKind::Pubkey(pubkey))),
@@ -506,7 +506,7 @@ pub const SKIP_SEED_PHRASE_VALIDATION_ARG: ArgConstant<'static> = ArgConstant {
 
 /// Prompts user for a passphrase and then asks for confirmirmation to check for mistakes
 pub fn prompt_passphrase(prompt: &str) -> Result<String, Box<dyn error::Error>> {
-    let passphrase = prompt_password_stderr(&prompt)?;
+    let passphrase = prompt_password_stderr(prompt)?;
     if !passphrase.is_empty() {
         let confirmed = rpassword::prompt_password_stderr("Enter same passphrase again: ")?;
         if confirmed != passphrase {
@@ -586,9 +586,9 @@ pub fn keypair_from_seed_phrase(
     let keypair = if skip_validation {
         let passphrase = prompt_passphrase(&passphrase_prompt)?;
         if legacy {
-            keypair_from_seed_phrase_and_passphrase(&seed_phrase, &passphrase)?
+            keypair_from_seed_phrase_and_passphrase(seed_phrase, &passphrase)?
         } else {
-            let seed = generate_seed_from_seed_phrase_and_passphrase(&seed_phrase, &passphrase);
+            let seed = generate_seed_from_seed_phrase_and_passphrase(seed_phrase, &passphrase);
             keypair_from_seed_and_derivation_path(&seed, derivation_path)?
         }
     } else {
@@ -616,7 +616,7 @@ pub fn keypair_from_seed_phrase(
         if legacy {
             keypair_from_seed(seed.as_bytes())?
         } else {
-            keypair_from_seed_and_derivation_path(&seed.as_bytes(), derivation_path)?
+            keypair_from_seed_and_derivation_path(seed.as_bytes(), derivation_path)?
         }
     };
 
@@ -692,7 +692,7 @@ mod tests {
     #[test]
     fn test_parse_signer_source() {
         assert!(matches!(
-            parse_signer_source("-").unwrap(),
+            parse_signer_source(STDOUT_OUTFILE_TOKEN).unwrap(),
             SignerSource {
                 kind: SignerSourceKind::Stdin,
                 derivation_path: None,

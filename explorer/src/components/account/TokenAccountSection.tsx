@@ -10,12 +10,28 @@ import { create } from "superstruct";
 import { TableCardBody } from "components/common/TableCardBody";
 import { Address } from "components/common/Address";
 import { UnknownAccountCard } from "./UnknownAccountCard";
-import { useCluster } from "providers/cluster";
+import { Cluster, useCluster } from "providers/cluster";
 import { normalizeTokenAmount } from "utils";
 import { addressLabel } from "utils/tx";
 import { reportError } from "utils/sentry";
 import { useTokenRegistry } from "providers/mints/token-registry";
 import { BigNumber } from "bignumber.js";
+import { Copyable } from "components/common/Copyable";
+import { CoingeckoStatus, useCoinGecko } from "utils/coingecko";
+import { displayTimestampWithoutDate } from "utils/date";
+
+const getEthAddress = (link?: string) => {
+  let address = "";
+  if (link) {
+    const extractEth = link.match(/0x[a-fA-F0-9]{40,64}/);
+
+    if (extractEth) {
+      address = extractEth[0];
+    }
+  }
+
+  return address;
+};
 
 export function TokenAccountSection({
   account,
@@ -24,6 +40,8 @@ export function TokenAccountSection({
   account: Account;
   tokenAccount: TokenAccount;
 }) {
+  const { cluster } = useCluster();
+
   try {
     switch (tokenAccount.type) {
       case "mint": {
@@ -40,9 +58,11 @@ export function TokenAccountSection({
       }
     }
   } catch (err) {
-    reportError(err, {
-      address: account.pubkey.toBase58(),
-    });
+    if (cluster !== Cluster.Custom) {
+      reportError(err, {
+        address: account.pubkey.toBase58(),
+      });
+    }
   }
   return <UnknownAccountCard account={account} />;
 }
@@ -58,8 +78,22 @@ function MintAccountCard({
   const mintAddress = account.pubkey.toBase58();
   const fetchInfo = useFetchAccountInfo();
   const refresh = () => fetchInfo(account.pubkey);
-
   const tokenInfo = tokenRegistry.get(mintAddress);
+
+  const bridgeContractAddress = getEthAddress(
+    tokenInfo?.extensions?.bridgeContract
+  );
+  const assetContractAddress = getEthAddress(
+    tokenInfo?.extensions?.assetContract
+  );
+
+  const coinInfo = useCoinGecko(tokenInfo?.extensions?.coingeckoId);
+
+  let tokenPriceInfo;
+  if (coinInfo?.status === CoingeckoStatus.Success) {
+    tokenPriceInfo = coinInfo.coinInfo;
+  }
+
   return (
     <div className="card">
       <div className="card-header">
@@ -89,6 +123,17 @@ function MintAccountCard({
             )}
           </td>
         </tr>
+        {tokenPriceInfo?.price && (
+          <tr>
+            <td>Current Price</td>
+            <td className="text-lg-right">
+              $
+              {tokenPriceInfo.price.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              })}
+            </td>
+          </tr>
+        )}
         {tokenInfo?.extensions?.website && (
           <tr>
             <td>Website</td>
@@ -130,7 +175,45 @@ function MintAccountCard({
             <td className="text-lg-right">Uninitialized</td>
           </tr>
         )}
+        {tokenInfo?.extensions?.bridgeContract && bridgeContractAddress && (
+          <tr>
+            <td>Bridge Contract</td>
+            <td className="text-lg-right">
+              <Copyable text={bridgeContractAddress}>
+                <a
+                  href={tokenInfo.extensions.bridgeContract}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {bridgeContractAddress}
+                </a>
+              </Copyable>
+            </td>
+          </tr>
+        )}
+        {tokenInfo?.extensions?.assetContract && assetContractAddress && (
+          <tr>
+            <td>Bridged Asset Contract</td>
+            <td className="text-lg-right">
+              <Copyable text={assetContractAddress}>
+                <a
+                  href={tokenInfo.extensions.bridgeContract}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {assetContractAddress}
+                </a>
+              </Copyable>
+            </td>
+          </tr>
+        )}
       </TableCardBody>
+      {tokenPriceInfo && (
+        <p className="updated-time text-muted mr-4">
+          Price updated at{" "}
+          {displayTimestampWithoutDate(tokenPriceInfo.last_updated.getTime())}
+        </p>
+      )}
     </div>
   );
 }
@@ -149,7 +232,7 @@ function TokenAccountCard({
 
   let unit, balance;
   if (info.isNative) {
-    unit = "SAFE";
+    unit = "SOL";
     balance = (
       <>
         ◎
@@ -215,7 +298,7 @@ function TokenAccountCard({
         )}
         {info.rentExemptReserve && (
           <tr>
-            <td>Rent-exempt reserve (SAFE)</td>
+            <td>Rent-exempt reserve (SOL)</td>
             <td className="text-lg-right">
               <>
                 ◎

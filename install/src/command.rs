@@ -362,7 +362,7 @@ fn get_windows_path_var() -> Result<Option<String>, String> {
                 Ok(Some(s))
             } else {
                 println!("the registry key HKEY_CURRENT_USER\\Environment\\PATH does not contain valid Unicode. Not modifying the PATH variable");
-                return Ok(None);
+                Ok(None)
             }
         }
         Err(ref e) if e.kind() == io::ErrorKind::NotFound => Ok(Some(String::new())),
@@ -391,7 +391,7 @@ fn add_to_path(new_path: &str) -> bool {
     if !old_path.contains(&new_path) {
         let mut new_path = new_path.to_string();
         if !old_path.is_empty() {
-            new_path.push_str(";");
+            new_path.push(';');
             new_path.push_str(&old_path);
         }
 
@@ -416,7 +416,7 @@ fn add_to_path(new_path: &str) -> bool {
             SendMessageTimeoutA(
                 HWND_BROADCAST,
                 WM_SETTINGCHANGE,
-                0 as WPARAM,
+                0_usize,
                 "Environment\0".as_ptr() as LPARAM,
                 SMTO_ABORTIFHUNG,
                 5000,
@@ -436,7 +436,7 @@ fn add_to_path(new_path: &str) -> bool {
 
 #[cfg(unix)]
 fn add_to_path(new_path: &str) -> bool {
-    let shell_export_string = format!(r#"export PATH="{}:$PATH""#, new_path);
+    let shell_export_string = format!("\nexport PATH=\"{}:$PATH\"", new_path);
     let mut modified_rcfiles = false;
 
     // Look for sh, bash, and zsh rc files
@@ -548,7 +548,7 @@ pub fn init(
     init_or_update(config_file, true, false)?;
 
     let path_modified = if !no_modify_path {
-        add_to_path(&config.active_release_bin_dir().to_str().unwrap())
+        add_to_path(config.active_release_bin_dir().to_str().unwrap())
     } else {
         false
     };
@@ -613,10 +613,10 @@ pub fn info(config_file: &str, local_info_only: bool, eval: bool) -> Result<(), 
         return Ok(());
     }
 
-    println_name_value("Configuration:", &config_file);
+    println_name_value("Configuration:", config_file);
     println_name_value(
         "Active release directory:",
-        &config.active_release_dir().to_str().unwrap_or("?"),
+        config.active_release_dir().to_str().unwrap_or("?"),
     );
 
     fn print_release_version(config: &Config) {
@@ -633,14 +633,14 @@ pub fn info(config_file: &str, local_info_only: bool, eval: bool) -> Result<(), 
     if let Some(explicit_release) = &config.explicit_release {
         match explicit_release {
             ExplicitRelease::Semver(release_semver) => {
-                println_name_value(&format!("{}Release version:", BULLET), &release_semver);
+                println_name_value(&format!("{}Release version:", BULLET), release_semver);
                 println_name_value(
                     &format!("{}Release URL:", BULLET),
                     &github_release_download_url(release_semver),
                 );
             }
             ExplicitRelease::Channel(release_channel) => {
-                println_name_value(&format!("{}Release channel:", BULLET), &release_channel);
+                println_name_value(&format!("{}Release channel:", BULLET), release_channel);
                 println_name_value(
                     &format!("{}Release URL:", BULLET),
                     &release_channel_download_url(release_channel),
@@ -659,7 +659,7 @@ pub fn info(config_file: &str, local_info_only: bool, eval: bool) -> Result<(), 
             Some(ref update_manifest) => {
                 println_name_value("Installed version:", "");
                 print_release_version(&config);
-                print_update_manifest(&update_manifest);
+                print_update_manifest(update_manifest);
             }
             None => {
                 println_name_value("Installed version:", "None");

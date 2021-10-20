@@ -15,7 +15,8 @@ OUT_DIR ?= ./out
 OS := $(shell uname)
 
 LLVM_DIR = $(LOCAL_PATH)../dependencies/bpf-tools/llvm
-LLVM_SYSTEM_INC_DIRS := $(LLVM_DIR)/lib/clang/11.0.1/include
+LLVM_SYSTEM_INC_DIRS := $(LLVM_DIR)/lib/clang/12.0.1/include
+COMPILER_RT_DIR = $(LOCAL_PATH)../dependencies/bpf-tools/rust/lib/rustlib/bpfel-unknown-unknown/lib
 
 ifdef LLVM_DIR
 CC := $(LLVM_DIR)/bin/clang
@@ -45,6 +46,7 @@ BPF_C_FLAGS := \
   $(C_FLAGS) \
   -target bpf \
   -fPIC \
+  -march=bpfel+solana
 
 BPF_CXX_FLAGS := \
   $(CXX_FLAGS) \
@@ -54,6 +56,7 @@ BPF_CXX_FLAGS := \
   -fno-exceptions \
   -fno-asynchronous-unwind-tables \
   -fno-unwind-tables \
+  -march=bpfel+solana
 
 BPF_LLD_FLAGS := \
   -z notext \
@@ -165,7 +168,7 @@ define SO_RULE
 $1: $2
 	@echo "[lld] $1 ($2)"
 	$(_@)mkdir -p $(dir $1)
-	$(_@)$(LLD) $(BPF_LLD_FLAGS) -o $1 $2
+	$(_@)$(LLD) $(BPF_LLD_FLAGS) -o $1 $2 $(COMPILER_RT_DIR)/libcompiler_builtins-*.rlib
 ifeq (,$(wildcard $(subst .so,-keypair.json,$1)))
 	$(_@)safecoin-keygen new --no-passphrase --silent -o $(subst .so,-keypair.json,$1)
 endif

@@ -48,7 +48,7 @@ test-stable-bpf)
   "$cargo_build_bpf" --manifest-path sdk/Cargo.toml
 
   # BPF Program unit tests
-  "$cargo" stable test --manifest-path programs/bpf/Cargo.toml
+  "$cargo" test --manifest-path programs/bpf/Cargo.toml
   "$cargo_build_bpf" --manifest-path programs/bpf/Cargo.toml --bpf-sdk sdk/bpf
 
   # BPF program system tests
@@ -75,6 +75,7 @@ test-stable-bpf)
   bpf_dump_archive="bpf-dumps.tar.bz2"
   rm -f "$bpf_dump_archive"
   tar cjvf "$bpf_dump_archive" "${bpf_target_path}"/{deploy/*.txt,bpfel-unknown-unknown/release/*.so}
+  exit 0
   ;;
 test-stable-perf)
   if [[ $(uname) = Linux ]]; then

@@ -1,5 +1,5 @@
 import React from "react";
-import { PublicKey } from "@safecoin/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { LoadingCard } from "components/common/LoadingCard";
 import { ErrorCard } from "components/common/ErrorCard";
 import { Address } from "components/common/Address";
@@ -19,10 +19,10 @@ export function TokenLargestAccountsCard({ pubkey }: { pubkey: PublicKey }) {
   const mintInfo = useMintAccountInfo(mintAddress);
   const largestAccounts = useTokenLargestTokens(mintAddress);
   const fetchLargestAccounts = useFetchTokenLargestAccounts();
-  const refreshLargest = React.useCallback(() => fetchLargestAccounts(pubkey), [
-    pubkey,
-    fetchLargestAccounts,
-  ]);
+  const refreshLargest = React.useCallback(
+    () => fetchLargestAccounts(pubkey),
+    [pubkey, fetchLargestAccounts]
+  );
   const { tokenRegistry } = useTokenRegistry();
   const unit = tokenRegistry.get(mintAddress)?.symbol;
   const unitLabel = unit ? `(${unit})` : "";

@@ -45,12 +45,5 @@ cargo_audit_ignores=(
   # Blocked on jsonrpc removing dependency on unmaintained `websocket`
   # https://github.com/paritytech/jsonrpc/issues/605
   --ignore RUSTSEC-2021-0079
-
-  # tar: Links in archive can create arbitrary directories
-  #
-  # Blocked on `tar` releasing safe upgrade
-  # https://github.com/alexcrichton/tar-rs/issues/238
-  --ignore RUSTSEC-2021-0080
-
 )
 scripts/cargo-for-all-lock-files.sh stable audit "${cargo_audit_ignores[@]}"

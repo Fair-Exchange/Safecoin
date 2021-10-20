@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-perf"
-version = "1.6.25"
+version = "1.7.15"
 description = "Safecoin Performance APIs"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -10,21 +10,20 @@ documentation = "https://docs.rs/safecoin-perf"
 edition = "2018"
 
 [dependencies]
-rand = "0.7.0"
-dlopen = "0.1.8"
 bincode = "1.3.1"
-rayon = "1.5.0"
-serde = "1.0.122"
+curve25519-dalek = { version = "2" }
+dlopen = "0.1.8"
 dlopen_derive = "0.1.4"
 lazy_static = "1.4.0"
 log = "0.4.11"
-safecoin-sdk = { path = "../sdk", version = "=1.6.25" }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.6.25" }
-safecoin-budget-program = { path = "../programs/budget", version = "=1.6.25" }
-safecoin-logger = { path = "../logger", version = "=1.6.25" }
-safecoin-measure = { path = "../measure", version = "=1.6.25" }
-safecoin-metrics = { path = "../metrics", version = "=1.6.25" }
-curve25519-dalek = { version = "2" }
+rand = "0.7.0"
+rayon = "1.5.0"
+serde = "1.0.126"
+safecoin-logger = { path = "../logger", version = "=1.7.15" }
+safecoin-metrics = { path = "../metrics", version = "=1.7.15" }
+safecoin-sdk = { path = "../sdk", version = "=1.7.15" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.7.15" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.7.15" }
 
 [lib]
 name = "solana_perf"

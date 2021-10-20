@@ -4,8 +4,8 @@ import {
   TokenInfoMap,
   TokenInfo,
   TokenListContainer,
-} from "@safecoin/safe-token-registry";
-import { clusterSlug, useCluster } from "providers/cluster";
+} from "@solana/spl-token-registry";
+import { Cluster, clusterSlug, useCluster } from "providers/cluster";
 
 const TokenRegistryContext = React.createContext<TokenInfoMap>(new Map());
 
@@ -19,9 +19,10 @@ export function TokenRegistryProvider({ children }: ProviderProps) {
 
   React.useEffect(() => {
     new TokenListProvider().resolve().then((tokens: TokenListContainer) => {
-      const tokenList = tokens
-        .filterByClusterSlug(clusterSlug(cluster))
-        .getList();
+      const tokenList =
+        cluster === Cluster.Custom
+          ? []
+          : tokens.filterByClusterSlug(clusterSlug(cluster)).getList();
 
       setTokenRegistry(
         tokenList.reduce((map: TokenInfoMap, item: TokenInfo) => {

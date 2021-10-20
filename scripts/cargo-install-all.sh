@@ -3,7 +3,13 @@
 # |cargo install| of the top-level crate will not install binaries for
 # other workspace crates or native program crates.
 here="$(dirname "$0")"
-cargo="$(readlink -f "${here}/../cargo")"
+readlink_cmd="readlink"
+if [[ $OSTYPE == darwin* ]]; then
+  # Mac OS X's version of `readlink` does not support the -f option,
+  # But `greadlink` does, which you can get with `brew install coreutils`
+  readlink_cmd="greadlink"
+fi
+cargo="$("${readlink_cmd}" -f "${here}/../cargo")"
 
 set -e
 
@@ -71,6 +77,7 @@ if [[ $CI_OS_NAME = windows ]]; then
     safecoin-install-init
     safecoin-keygen
     safecoin-stake-accounts
+    safecoin-test-validator
     safecoin-tokens
   )
 else
@@ -99,7 +106,6 @@ else
       safecoin-dos
       safecoin-install-init
       safecoin-stake-accounts
-      safecoin-stake-o-matic
       safecoin-test-validator
       safecoin-tokens
       safecoin-watchtower

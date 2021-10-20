@@ -7,16 +7,22 @@ import {
   usePerformanceInfo,
   useStatsProvider,
 } from "providers/stats/solanaClusterStats";
-import { slotsToHumanString } from "utils";
-import { useCluster } from "providers/cluster";
+import { lamportsToSol, slotsToHumanString } from "utils";
+import { ClusterStatus, useCluster } from "providers/cluster";
 import { TpsCard } from "components/TpsCard";
-import { displayTimestampUtc } from "utils/date";
+import { displayTimestampWithoutDate, displayTimestampUtc } from "utils/date";
+import { Status, useFetchSupply, useSupply } from "providers/supply";
+import { ErrorCard } from "components/common/ErrorCard";
+import { LoadingCard } from "components/common/LoadingCard";
+import { useVoteAccounts } from "providers/accounts/vote-accounts";
+import { CoingeckoStatus, useCoinGecko } from "utils/coingecko";
 
-const CLUSTER_STATS_TIMEOUT = 10000;
+const CLUSTER_STATS_TIMEOUT = 5000;
 
 export function ClusterStatsPage() {
   return (
     <div className="container mt-4">
+      <StakingComponent />
       <div className="card">
         <div className="card-header">
           <div className="row align-items-center">
@@ -30,6 +36,165 @@ export function ClusterStatsPage() {
       <TpsCard />
     </div>
   );
+}
+
+function StakingComponent() {
+  const { status } = useCluster();
+  const supply = useSupply();
+  const fetchSupply = useFetchSupply();
+  const coinInfo = useCoinGecko("solana");
+  const { fetchVoteAccounts, voteAccounts } = useVoteAccounts();
+
+  function fetchData() {
+    fetchSupply();
+    fetchVoteAccounts();
+  }
+
+  React.useEffect(() => {
+    if (status === ClusterStatus.Connected) {
+      fetchData();
+    }
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const delinquentStake = React.useMemo(() => {
+    if (voteAccounts) {
+      return voteAccounts.delinquent.reduce(
+        (prev, current) => prev + current.activatedStake,
+        0
+      );
+    }
+  }, [voteAccounts]);
+
+  const activeStake = React.useMemo(() => {
+    if (voteAccounts && delinquentStake) {
+      return (
+        voteAccounts.current.reduce(
+          (prev, current) => prev + current.activatedStake,
+          0
+        ) + delinquentStake
+      );
+    }
+  }, [voteAccounts, delinquentStake]);
+
+  if (supply === Status.Disconnected) {
+    // we'll return here to prevent flicker
+    return null;
+  }
+
+  if (supply === Status.Idle || supply === Status.Connecting || !coinInfo) {
+    return <LoadingCard />;
+  } else if (typeof supply === "string") {
+    return <ErrorCard text={supply} retry={fetchData} />;
+  }
+
+  const circulatingPercentage = (
+    (supply.circulating / supply.total) *
+    100
+  ).toFixed(1);
+
+  let delinquentStakePercentage;
+  if (delinquentStake && activeStake) {
+    delinquentStakePercentage = ((delinquentStake / activeStake) * 100).toFixed(
+      1
+    );
+  }
+
+  let solanaInfo;
+  if (coinInfo.status === CoingeckoStatus.Success) {
+    solanaInfo = coinInfo.coinInfo;
+  }
+
+  return (
+    <div className="card staking-card">
+      <div className="card-body">
+        <div className="d-flex flex-md-row flex-column">
+          <div className="p-2 flex-fill">
+            <h4>Circulating Supply</h4>
+            <h1>
+              <em>{displayLamports(supply.circulating)}</em> /{" "}
+              <small>{displayLamports(supply.total)}</small>
+            </h1>
+            <h5>
+              <em>{circulatingPercentage}%</em> is circulating
+            </h5>
+          </div>
+          <hr className="hidden-sm-up" />
+          <div className="p-2 flex-fill">
+            <h4>Active Stake</h4>
+            {activeStake && (
+              <h1>
+                <em>{displayLamports(activeStake)}</em> /{" "}
+                <small>{displayLamports(supply.total)}</small>
+              </h1>
+            )}
+            {delinquentStakePercentage && (
+              <h5>
+                Delinquent stake: <em>{delinquentStakePercentage}%</em>
+              </h5>
+            )}
+          </div>
+          <hr className="hidden-sm-up" />
+          {solanaInfo && (
+            <div className="p-2 flex-fill">
+              <h4>
+                Price{" "}
+                <span className="ml-2 badge badge-primary rank">
+                  Rank #{solanaInfo.market_cap_rank}
+                </span>
+              </h4>
+              <h1>
+                <em>${solanaInfo.price.toFixed(2)}</em>{" "}
+                {solanaInfo.price_change_percentage_24h > 0 && (
+                  <small className="change-positive">
+                    &uarr; {solanaInfo.price_change_percentage_24h.toFixed(2)}%
+                  </small>
+                )}
+                {solanaInfo.price_change_percentage_24h < 0 && (
+                  <small className="change-negative">
+                    &darr; {solanaInfo.price_change_percentage_24h.toFixed(2)}%
+                  </small>
+                )}
+                {solanaInfo.price_change_percentage_24h === 0 && (
+                  <small>0%</small>
+                )}
+              </h1>
+              <h5>
+                24h Vol: <em>${abbreviatedNumber(solanaInfo.volume_24)}</em>{" "}
+                MCap: <em>${abbreviatedNumber(solanaInfo.market_cap)}</em>
+              </h5>
+            </div>
+          )}
+          {coinInfo.status === CoingeckoStatus.FetchFailed && (
+            <div className="p-2 flex-fill">
+              <h4>Price</h4>
+              <h1>
+                <em>$--.--</em>
+              </h1>
+              <h5>Error fetching the latest price information</h5>
+            </div>
+          )}
+        </div>
+        {solanaInfo && (
+          <p className="updated-time text-muted mb-0">
+            Updated at{" "}
+            {displayTimestampWithoutDate(solanaInfo.last_updated.getTime())}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const abbreviatedNumber = (value: number, fixed = 1) => {
+  if (value < 1e3) return value;
+  if (value >= 1e3 && value < 1e6) return +(value / 1e3).toFixed(fixed) + "K";
+  if (value >= 1e6 && value < 1e9) return +(value / 1e6).toFixed(fixed) + "M";
+  if (value >= 1e9 && value < 1e12) return +(value / 1e9).toFixed(fixed) + "B";
+  if (value >= 1e12) return +(value / 1e12).toFixed(fixed) + "T";
+};
+
+function displayLamports(value: number) {
+  return abbreviatedNumber(lamportsToSol(value));
 }
 
 function StatsCardBody() {
@@ -53,12 +218,8 @@ function StatsCardBody() {
     return <StatsNotReady error={error} />;
   }
 
-  const {
-    avgSlotTime_1h,
-    avgSlotTime_1min,
-    epochInfo,
-    blockTime,
-  } = dashboardInfo;
+  const { avgSlotTime_1h, avgSlotTime_1min, epochInfo, blockTime } =
+    dashboardInfo;
   const hourlySlotTime = Math.round(1000 * avgSlotTime_1h);
   const averageSlotTime = Math.round(1000 * avgSlotTime_1min);
   const { slotIndex, slotsInEpoch } = epochInfo;

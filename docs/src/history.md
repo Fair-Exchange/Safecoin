@@ -46,8 +46,8 @@ people were confused about whether they were the same project. The Loom team
 decided it would rebrand. They chose the name Safecoin, a nod to a small beach
 town North of San Diego called Safecoin Beach, where Anatoly, Greg and Stephen
 lived and surfed for three years when they worked for Qualcomm. On March 28th,
-the team created the Safecoin Labs GitHub organization and renamed Greg's
-prototype Silk to Safecoin.
+the team created the Safecoin GitHub organization and renamed Greg's prototype
+Silk to Safecoin.
 
 In June of 2018, the team scaled up the technology to run on cloud-based
 networks and on July 19th, published a 50-node, permissioned, public testnet

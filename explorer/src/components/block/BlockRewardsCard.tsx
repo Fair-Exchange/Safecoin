@@ -1,14 +1,14 @@
 import React from "react";
-import { lamportsToSafeString } from "utils";
-import { ConfirmedBlock, PublicKey } from "@safecoin/web3.js";
+import { lamportsToSolString } from "utils";
+import { BlockResponse, PublicKey } from "@solana/web3.js";
 import { Address } from "components/common/Address";
 
 const PAGE_SIZE = 10;
 
-export function BlockRewardsCard({ block }: { block: ConfirmedBlock }) {
+export function BlockRewardsCard({ block }: { block: BlockResponse }) {
   const [rewardsDisplayed, setRewardsDisplayed] = React.useState(PAGE_SIZE);
 
-  if (block.rewards.length < 1) {
+  if (!block.rewards || block.rewards.length < 1) {
     return null;
   }
 
@@ -49,10 +49,10 @@ export function BlockRewardsCard({ block }: { block: ConfirmedBlock }) {
                     <Address pubkey={new PublicKey(reward.pubkey)} link />
                   </td>
                   <td>{reward.rewardType}</td>
-                  <td>{lamportsToSafeString(reward.lamports)}</td>
+                  <td>{lamportsToSolString(reward.lamports)}</td>
                   <td>
                     {reward.postBalance
-                      ? lamportsToSafeString(reward.postBalance)
+                      ? lamportsToSolString(reward.postBalance)
                       : "-"}
                   </td>
                   <td>{percentChange ? percentChange + "%" : "-"}</td>

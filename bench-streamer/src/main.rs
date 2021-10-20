@@ -18,7 +18,7 @@ fn producer(addr: &SocketAddr, exit: Arc<AtomicBool>) -> JoinHandle<()> {
     msgs.packets.resize(10, Packet::default());
     for w in msgs.packets.iter_mut() {
         w.meta.size = PACKET_DATA_SIZE;
-        w.meta.set_addr(&addr);
+        w.meta.set_addr(addr);
     }
     let msgs = Arc::new(msgs);
     spawn(move || loop {
@@ -75,7 +75,7 @@ fn main() -> Result<()> {
 
     let mut read_channels = Vec::new();
     let mut read_threads = Vec::new();
-    let recycler = PacketsRecycler::new_without_limit("bench-streamer-recycler-shrink-stats");
+    let recycler = PacketsRecycler::default();
     for _ in 0..num_sockets {
         let read = solana_net_utils::bind_to(ip_addr, port, false).unwrap();
         read.set_read_timeout(Some(Duration::new(1, 0))).unwrap();
@@ -92,6 +92,7 @@ fn main() -> Result<()> {
             recycler.clone(),
             "bench-streamer-test",
             1,
+            true,
         ));
     }
 

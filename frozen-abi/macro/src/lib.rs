@@ -1,9 +1,5 @@
 extern crate proc_macro;
 
-#[cfg(RUSTC_WITH_SPECIALIZATION)]
-#[macro_use]
-extern crate lazy_static;
-
 // This file littered with these essential cfgs so ensure them.
 #[cfg(not(any(RUSTC_WITH_SPECIALIZATION, RUSTC_WITHOUT_SPECIALIZATION)))]
 compile_error!("rustc_version is missing in build dependency and build.rs is not specified");
@@ -71,37 +67,6 @@ fn filter_allow_attrs(attrs: &mut Vec<Attribute>) {
     });
 }
 
-#[allow(deprecated)]
-#[cfg(RUSTC_WITH_SPECIALIZATION)]
-fn quote_for_specialization_detection() -> TokenStream2 {
-    lazy_static! {
-        static ref SPECIALIZATION_DETECTOR_INJECTED: std::sync::atomic::AtomicBool =
-            std::sync::atomic::AtomicBool::new(false);
-    }
-
-    if !SPECIALIZATION_DETECTOR_INJECTED.compare_and_swap(
-        false,
-        true,
-        std::sync::atomic::Ordering::AcqRel,
-    ) {
-        quote! {
-            mod specialization_detector {
-                trait SpecializedTrait {
-                    fn specialized_fn() {}
-                }
-                impl<T: Sized> SpecializedTrait for T {
-                    default fn specialized_fn() {}
-                }
-                impl<T: Sized + Default> SpecializedTrait for T {
-                    fn specialized_fn() {}
-                }
-            }
-        }
-    } else {
-        quote! {}
-    }
-}
-
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
     let type_name = &input.ident;
@@ -162,10 +127,8 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
     let mut attrs = input.attrs.clone();
     filter_allow_attrs(&mut attrs);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let injection = quote_for_specialization_detection();
 
     let result = quote! {
-        #injection
         #[automatically_derived]
         #( #attrs )*
         impl #impl_generics ::safecoin_frozen_abi::abi_example::AbiExample for #type_name #ty_generics #where_clause {
@@ -216,10 +179,8 @@ fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
     filter_allow_attrs(&mut attrs);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let turbofish = ty_generics.as_turbofish();
-    let injection = quote_for_specialization_detection();
 
     let result = quote! {
-        #injection
         #[automatically_derived]
         #( #attrs )*
         impl #impl_generics ::safecoin_frozen_abi::abi_example::AbiExample for #type_name #ty_generics #where_clause {
@@ -263,7 +224,7 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
         if filter_serde_attrs(&variant.attrs) {
             continue;
         };
-        let sample_variant = quote_sample_variant(&type_name, &ty_generics, &variant);
+        let sample_variant = quote_sample_variant(type_name, &ty_generics, variant);
         variant_count = if let Some(variant_count) = variant_count.checked_add(1) {
             variant_count
         } else {
@@ -358,7 +319,7 @@ fn test_mod_name(type_name: &Ident) -> Ident {
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 fn frozen_abi_type_alias(input: ItemType, expected_digest: &str) -> TokenStream {
     let type_name = &input.ident;
-    let test = quote_for_test(&test_mod_name(type_name), type_name, &expected_digest);
+    let test = quote_for_test(&test_mod_name(type_name), type_name, expected_digest);
     let result = quote! {
         #input
         #test
@@ -369,7 +330,7 @@ fn frozen_abi_type_alias(input: ItemType, expected_digest: &str) -> TokenStream 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 fn frozen_abi_struct_type(input: ItemStruct, expected_digest: &str) -> TokenStream {
     let type_name = &input.ident;
-    let test = quote_for_test(&test_mod_name(type_name), type_name, &expected_digest);
+    let test = quote_for_test(&test_mod_name(type_name), type_name, expected_digest);
     let result = quote! {
         #input
         #test
@@ -426,7 +387,7 @@ fn quote_sample_variant(
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 fn frozen_abi_enum_type(input: ItemEnum, expected_digest: &str) -> TokenStream {
     let type_name = &input.ident;
-    let test = quote_for_test(&test_mod_name(type_name), type_name, &expected_digest);
+    let test = quote_for_test(&test_mod_name(type_name), type_name, expected_digest);
     let result = quote! {
         #input
         #test

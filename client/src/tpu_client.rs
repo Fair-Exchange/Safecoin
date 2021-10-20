@@ -5,7 +5,9 @@ use crate::{
 };
 use bincode::serialize;
 use log::*;
-use solana_sdk::{clock::Slot, pubkey::Pubkey, transaction::Transaction};
+use solana_sdk::{
+    clock::Slot, commitment_config::CommitmentConfig, pubkey::Pubkey, transaction::Transaction,
+};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     net::{SocketAddr, UdpSocket},
@@ -121,7 +123,7 @@ struct LeaderTpuCache {
 impl LeaderTpuCache {
     fn new(rpc_client: &RpcClient, first_slot: Slot) -> Self {
         let leaders = Self::fetch_slot_leaders(rpc_client, first_slot).unwrap_or_default();
-        let leader_tpu_map = Self::fetch_cluster_tpu_sockets(&rpc_client).unwrap_or_default();
+        let leader_tpu_map = Self::fetch_cluster_tpu_sockets(rpc_client).unwrap_or_default();
         Self {
             first_slot,
             leaders,
@@ -242,7 +244,7 @@ struct LeaderTpuService {
 
 impl LeaderTpuService {
     fn new(rpc_client: Arc<RpcClient>, websocket_url: &str, exit: Arc<AtomicBool>) -> Result<Self> {
-        let start_slot = rpc_client.get_max_shred_insert_slot()?;
+        let start_slot = rpc_client.get_slot_with_commitment(CommitmentConfig::processed())?;
 
         let recent_slots = RecentLeaderSlots::new(start_slot);
         let leader_tpu_cache = Arc::new(RwLock::new(LeaderTpuCache::new(&rpc_client, start_slot)));

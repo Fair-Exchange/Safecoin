@@ -4,7 +4,7 @@ import {
   PublicKey,
   TokenAmount,
   TokenBalance,
-} from "@safecoin/web3.js";
+} from "@solana/web3.js";
 import { BigNumber } from "bignumber.js";
 import { Address } from "components/common/Address";
 import { BalanceDelta } from "components/common/BalanceDelta";
@@ -12,7 +12,7 @@ import { SignatureProps } from "pages/TransactionDetailsPage";
 import { useTransactionDetails } from "providers/transactions";
 import { useTokenRegistry } from "providers/mints/token-registry";
 
-type TokenBalanceRow = {
+export type TokenBalanceRow = {
   account: PublicKey;
   mint: string;
   balance: TokenAmount;
@@ -64,7 +64,7 @@ export function TokenBalancesCard({ signature }: SignatureProps) {
           <BalanceDelta delta={delta} />
         </td>
         <td>
-          {balance.uiAmount} {units}
+          {balance.uiAmountString} {units}
         </td>
       </tr>
     );
@@ -92,7 +92,7 @@ export function TokenBalancesCard({ signature }: SignatureProps) {
   );
 }
 
-function generateTokenBalanceRows(
+export function generateTokenBalanceRows(
   preTokenBalances: TokenBalance[],
   postTokenBalances: TokenBalance[],
   accounts: ParsedMessageAccount[]

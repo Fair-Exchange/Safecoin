@@ -1,9 +1,16 @@
 use log::*;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use solana_runtime::{accounts_db::AccountsDb, accounts_index::Ancestors};
+use solana_runtime::{
+    accounts_db::{AccountsDb, LoadHint},
+    ancestors::Ancestors,
+};
 use solana_sdk::genesis_config::ClusterType;
-use solana_sdk::{account::AccountSharedData, clock::Slot, pubkey::Pubkey};
+use solana_sdk::{
+    account::{AccountSharedData, ReadableAccount, WritableAccount},
+    clock::Slot,
+    pubkey::Pubkey,
+};
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -41,18 +48,18 @@ fn test_shrink_and_clean() {
                 ));
             }
 
-            alive_accounts.retain(|(_pubkey, account)| account.lamports >= 1);
+            alive_accounts.retain(|(_pubkey, account)| account.lamports() >= 1);
 
             for (pubkey, account) in alive_accounts.iter_mut() {
-                account.lamports -= 1;
-                accounts.store_uncached(current_slot, &[(&pubkey, &account)]);
+                account.checked_sub_lamports(1).unwrap();
+                accounts.store_uncached(current_slot, &[(pubkey, account)]);
             }
             accounts.add_root(current_slot);
         }
 
         // let's dance.
         for _ in 0..10 {
-            accounts.clean_accounts(None);
+            accounts.clean_accounts(None, false);
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
 
@@ -69,7 +76,7 @@ fn test_bad_bank_hash() {
     let db = AccountsDb::new(Vec::new(), &ClusterType::Development);
 
     let some_slot: Slot = 0;
-    let ancestors: Ancestors = [(some_slot, 0)].iter().copied().collect();
+    let ancestors = Ancestors::from(vec![some_slot]);
 
     let max_accounts = 200;
     let mut accounts_keys: Vec<_> = (0..max_accounts)
@@ -101,7 +108,9 @@ fn test_bad_bank_hash() {
                 existing.insert(idx);
                 break;
             }
-            accounts_keys[idx].1.lamports = thread_rng().gen_range(0, 1000);
+            accounts_keys[idx]
+                .1
+                .set_lamports(thread_rng().gen_range(0, 1000));
         });
 
         let account_refs: Vec<_> = existing
@@ -112,8 +121,9 @@ fn test_bad_bank_hash() {
 
         for (key, account) in &account_refs {
             assert_eq!(
-                db.load_account_hash(&ancestors, &key),
-                AccountsDb::hash_account(some_slot, &account, &key, &ClusterType::Development)
+                db.load_account_hash(&ancestors, key, None, LoadHint::Unspecified)
+                    .unwrap(),
+                AccountsDb::hash_account(some_slot, *account, key)
             );
         }
         existing.clear();

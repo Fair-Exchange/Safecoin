@@ -5,7 +5,7 @@ use {
     indicatif::{ProgressBar, ProgressStyle},
     solana_sdk::{
         clock::UnixTimestamp, hash::Hash, message::Message, native_token::lamports_to_sol,
-        program_utils::limited_deserialize, pubkey::Pubkey, transaction::Transaction,
+        program_utils::limited_deserialize, pubkey::Pubkey, stake, transaction::Transaction,
     },
     safecoin_transaction_status::UiTransactionStatusMeta,
     safe_memo::id as safe_memo_id,
@@ -140,7 +140,7 @@ fn format_account_mode(message: &Message, index: usize) -> String {
         } else {
             "-"
         },
-        if message.is_writable(index) {
+        if message.is_writable(index, /*demote_program_write_locks=*/ true) {
             "w" // comment for consistent rust fmt (no joking; lol)
         } else {
             "-"
@@ -244,10 +244,9 @@ pub fn write_transaction<W: io::Write>(
                 writeln!(w, "{}  {:?}", prefix, vote_instruction)?;
                 raw = false;
             }
-        } else if program_pubkey == solana_stake_program::id() {
-            if let Ok(stake_instruction) = limited_deserialize::<
-                solana_stake_program::stake_instruction::StakeInstruction,
-            >(&instruction.data)
+        } else if program_pubkey == stake::program::id() {
+            if let Ok(stake_instruction) =
+                limited_deserialize::<stake::instruction::StakeInstruction>(&instruction.data)
             {
                 writeln!(w, "{}  {:?}", prefix, stake_instruction)?;
                 raw = false;
