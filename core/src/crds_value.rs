@@ -8,9 +8,9 @@ use crate::{
 use bincode::{serialize, serialized_size};
 use rand::{CryptoRng, Rng};
 use serde::de::{Deserialize, Deserializer};
-use solana_sdk::sanitize::{Sanitize, SanitizeError};
-use solana_sdk::timing::timestamp;
-use solana_sdk::{
+use safecoin_sdk::sanitize::{Sanitize, SanitizeError};
+use safecoin_sdk::timing::timestamp;
+use safecoin_sdk::{
     clock::Slot,
     hash::Hash,
     pubkey::{self, Pubkey},
@@ -190,7 +190,7 @@ impl SnapshotHash {
         let num_hashes = rng.gen_range(0, MAX_SNAPSHOT_HASHES) + 1;
         let hashes = std::iter::repeat_with(|| {
             let slot = 47825632 + rng.gen_range(0, 512);
-            let hash = solana_sdk::hash::new_rand(rng);
+            let hash = safecoin_sdk::hash::new_rand(rng);
             (slot, hash)
         })
         .take(num_hashes)
@@ -690,8 +690,8 @@ mod test {
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use solana_perf::test_tx::test_tx;
-    use solana_sdk::signature::{Keypair, Signer};
-    use solana_sdk::timing::timestamp;
+    use safecoin_sdk::signature::{Keypair, Signer};
+    use safecoin_sdk::timing::timestamp;
     use solana_vote_program::{vote_instruction, vote_state};
     use std::cmp::Ordering;
     use std::iter::repeat_with;
@@ -785,7 +785,7 @@ mod test {
         let mut rng = rand::thread_rng();
         let vote = vote_state::Vote::new(
             vec![1, 3, 7], // slots
-            solana_sdk::hash::new_rand(&mut rng),
+            safecoin_sdk::hash::new_rand(&mut rng),
         );
         let ix = vote_instruction::vote(
             &Pubkey::new_unique(), // vote_pubkey

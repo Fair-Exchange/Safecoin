@@ -3,7 +3,7 @@ use log::*;
 use serde::{Deserialize, Serialize};
 use safecoin_client::{client_error::Result as ClientResult, rpc_client::RpcClient};
 use solana_metrics::{datapoint_error, datapoint_info};
-use solana_sdk::{
+use safecoin_sdk::{
     clock::Slot, native_token::LAMPORTS_PER_SAFE, program_utils::limited_deserialize,
     pubkey::Pubkey, signature::Signature, transaction::Transaction,
 };
@@ -360,9 +360,9 @@ mod test {
     use super::*;
     use serial_test::serial;
     use safecoin_client::rpc_config::RpcSendTransactionConfig;
-    use solana_core::{rpc::JsonRpcConfig, validator::ValidatorConfig};
+    use safecoin_core::{rpc::JsonRpcConfig, validator::ValidatorConfig};
     use solana_local_cluster::local_cluster::{ClusterConfig, LocalCluster};
-    use solana_sdk::{
+    use safecoin_sdk::{
         commitment_config::CommitmentConfig,
         genesis_config::ClusterType,
         message::Message,

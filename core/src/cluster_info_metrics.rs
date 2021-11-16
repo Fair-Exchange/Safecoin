@@ -1,6 +1,6 @@
 use crate::crds_gossip::CrdsGossip;
 use safecoin_measure::measure::Measure;
-use solana_sdk::pubkey::Pubkey;
+use safecoin_sdk::pubkey::Pubkey;
 use std::{
     collections::HashMap,
     sync::{

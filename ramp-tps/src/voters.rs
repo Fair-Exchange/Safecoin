@@ -2,7 +2,7 @@ use crate::utils;
 use log::*;
 use safecoin_client::{client_error::Result as ClientResult, rpc_client::RpcClient};
 use solana_notifier::Notifier;
-use solana_sdk::{
+use safecoin_sdk::{
     clock::Slot,
     epoch_schedule::EpochSchedule,
     message::Message,

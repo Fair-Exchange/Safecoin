@@ -10,7 +10,7 @@ use {
     },
     inflector::Inflector,
     serde_json::Value,
-    safecoin_account_decoder::parse_token::spl_token_id_v2_0,
+    safecoin_account_decoder::parse_token::safe_token_id_v2_0,
     safecoin_sdk::{instruction::CompiledInstruction, pubkey::Pubkey, stake, system_program},
     std::{
         collections::HashMap,
@@ -27,7 +27,7 @@ lazy_static! {
     static ref MEMO_V3_PROGRAM_ID: Pubkey = safe_memo_id_v3();
     static ref STAKE_PROGRAM_ID: Pubkey = stake::program::id();
     static ref SYSTEM_PROGRAM_ID: Pubkey = system_program::id();
-    static ref TOKEN_PROGRAM_ID: Pubkey = spl_token_id_v2_0();
+    static ref TOKEN_PROGRAM_ID: Pubkey = safe_token_id_v2_0();
     static ref VOTE_PROGRAM_ID: Pubkey = solana_vote_program::id();
     static ref PARSABLE_PROGRAM_IDS: HashMap<Pubkey, ParsableProgram> = {
         let mut m = HashMap::new();

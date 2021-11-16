@@ -6,7 +6,7 @@ use rand::{thread_rng, Rng};
 use safecoin_client::thin_client::{create_client, ThinClient};
 use solana_perf::recycler::Recycler;
 use solana_runtime::bank_forks::BankForks;
-use solana_sdk::{
+use safecoin_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
 };
@@ -350,8 +350,8 @@ mod tests {
     fn test_gossip_services_spy() {
         const TIMEOUT: Duration = Duration::from_secs(5);
         let keypair = Keypair::new();
-        let peer0 = solana_sdk::pubkey::new_rand();
-        let peer1 = solana_sdk::pubkey::new_rand();
+        let peer0 = safecoin_sdk::pubkey::new_rand();
+        let peer1 = safecoin_sdk::pubkey::new_rand();
         let contact_info = ContactInfo::new_localhost(&keypair.pubkey(), 0);
         let peer0_info = ContactInfo::new_localhost(&peer0, 0);
         let peer1_info = ContactInfo::new_localhost(&peer1, 0);
@@ -379,7 +379,7 @@ mod tests {
             spy_ref.clone(),
             None,
             TIMEOUT,
-            Some(solana_sdk::pubkey::new_rand()),
+            Some(safecoin_sdk::pubkey::new_rand()),
             None,
         );
         assert_eq!(met_criteria, false);
@@ -393,7 +393,7 @@ mod tests {
             spy_ref.clone(),
             Some(1),
             TIMEOUT,
-            Some(solana_sdk::pubkey::new_rand()),
+            Some(safecoin_sdk::pubkey::new_rand()),
             None,
         );
         assert_eq!(met_criteria, false);

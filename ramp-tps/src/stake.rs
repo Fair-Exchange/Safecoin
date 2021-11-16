@@ -1,7 +1,7 @@
 use crate::utils;
 use log::*;
 use safecoin_client::rpc_client::RpcClient;
-use solana_sdk::{
+use safecoin_sdk::{
     account::from_account,
     clock::Epoch,
     epoch_info::EpochInfo,

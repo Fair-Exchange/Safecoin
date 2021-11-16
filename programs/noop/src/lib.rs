@@ -1,10 +1,10 @@
 use log::*;
-use solana_sdk::{
+use safecoin_sdk::{
     instruction::InstructionError, keyed_account::KeyedAccount, process_instruction::InvokeContext,
     pubkey::Pubkey,
 };
 
-solana_sdk::declare_program!(
+safecoin_sdk::declare_program!(
     "Noop111111111111111111111111111111111111111",
     solana_noop_program,
     process_instruction

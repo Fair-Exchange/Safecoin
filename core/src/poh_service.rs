@@ -4,7 +4,7 @@ use crate::poh_recorder::{PohRecorder, Record};
 use crossbeam_channel::Receiver;
 use solana_ledger::poh::Poh;
 use safecoin_measure::measure::Measure;
-use solana_sdk::poh_config::PohConfig;
+use safecoin_sdk::poh_config::PohConfig;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, sleep, Builder, JoinHandle};
@@ -357,10 +357,10 @@ mod tests {
     use safecoin_measure::measure::Measure;
     use solana_perf::test_tx::test_tx;
     use solana_runtime::bank::Bank;
-    use solana_sdk::clock;
-    use solana_sdk::hash::hash;
-    use solana_sdk::pubkey::Pubkey;
-    use solana_sdk::timing;
+    use safecoin_sdk::clock;
+    use safecoin_sdk::hash::hash;
+    use safecoin_sdk::pubkey::Pubkey;
+    use safecoin_sdk::timing;
     use std::time::Duration;
 
     #[test]

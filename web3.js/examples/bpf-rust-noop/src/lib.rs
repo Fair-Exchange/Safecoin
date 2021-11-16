@@ -1,7 +1,7 @@
 //! @brief Example Rust-based BPF program that prints out the parameters passed to it
 
 
-use solana_program::{
+use safecoin_program::{
     account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, msg, log::*, pubkey::Pubkey,
 };
 

@@ -1,7 +1,7 @@
 use crate::{
     args::{BalancesArgs, DistributeTokensArgs, SenderStakeArgs, StakeArgs, TransactionLogArgs},
     db::{self, TransactionInfo},
-    spl_token::*,
+    safe_token::*,
     token_display::Token,
 };
 use chrono::prelude::*;
@@ -12,7 +12,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use pickledb::PickleDb;
 use serde::{Deserialize, Serialize};
 use safecoin_account_decoder::parse_token::{
-    pubkey_from_spl_token_v2_0, real_number_string, spl_token_v2_0_pubkey,
+    pubkey_from_safe_token_v2_0, real_number_string, safe_token_v2_0_pubkey,
 };
 use safecoin_client::{
     client_error::{ClientError, Result as ClientResult},
@@ -37,7 +37,7 @@ use safecoin_sdk::{
 };
 use safecoin_transaction_status::TransactionStatus;
 use safe_associated_token_account_v1_0::get_associated_token_address;
-use spl_token_v2_0::safecoin_program::program_error::ProgramError;
+use safe_token_v2_0::safecoin_program::program_error::ProgramError;
 use std::{
     cmp::{self},
     io,
@@ -179,8 +179,8 @@ fn distribution_instructions(
     lockup_date: Option<DateTime<Utc>>,
     do_create_associated_token_account: bool,
 ) -> Vec<Instruction> {
-    if args.spl_token_args.is_some() {
-        return build_spl_token_instructions(allocation, args, do_create_associated_token_account);
+    if args.safe_token_args.is_some() {
+        return build_safe_token_instructions(allocation, args, do_create_associated_token_account);
     }
 
     match &args.stake_args {
@@ -305,15 +305,15 @@ fn build_messages(
             Some(allocation.lockup_date.parse::<DateTime<Utc>>().unwrap())
         };
 
-        let do_create_associated_token_account = if let Some(spl_token_args) = &args.spl_token_args
+        let do_create_associated_token_account = if let Some(safe_token_args) = &args.safe_token_args
         {
             let wallet_address = allocation.recipient.parse().unwrap();
             let associated_token_address = get_associated_token_address(
                 &wallet_address,
-                &spl_token_v2_0_pubkey(&spl_token_args.mint),
+                &safe_token_v2_0_pubkey(&safe_token_args.mint),
             );
             let do_create_associated_token_account = client
-                .get_multiple_accounts(&[pubkey_from_spl_token_v2_0(&associated_token_address)])?
+                .get_multiple_accounts(&[pubkey_from_safe_token_v2_0(&associated_token_address)])?
                 [0]
             .is_none();
             if do_create_associated_token_account {
@@ -322,7 +322,7 @@ fn build_messages(
             println!(
                 "{:<44}  {:>24}",
                 allocation.recipient,
-                real_number_string(allocation.amount, spl_token_args.decimals)
+                real_number_string(allocation.amount, safe_token_args.decimals)
             );
             do_create_associated_token_account
         } else {
@@ -452,8 +452,8 @@ fn distribute_allocations(
         .iter()
         .map(|message| message.header.num_required_signatures as usize)
         .sum();
-    if args.spl_token_args.is_some() {
-        check_spl_token_balances(num_signatures, allocations, client, args, created_accounts)?;
+    if args.safe_token_args.is_some() {
+        check_safe_token_balances(num_signatures, allocations, client, args, created_accounts)?;
     } else {
         check_payer_balances(num_signatures, allocations, client, args)?;
     }
@@ -546,12 +546,12 @@ pub fn process_allocations(
         &args.input_csv,
         args.transfer_amount,
         require_lockup_heading,
-        args.spl_token_args.is_some(),
+        args.safe_token_args.is_some(),
     )?;
 
     let starting_total_tokens = allocations.iter().map(|x| x.amount).sum();
-    let starting_total_tokens = if let Some(spl_token_args) = &args.spl_token_args {
-        Token::spl_token(starting_total_tokens, spl_token_args.decimals)
+    let starting_total_tokens = if let Some(safe_token_args) = &args.safe_token_args {
+        Token::safe_token(starting_total_tokens, safe_token_args.decimals)
     } else {
         Token::sol(starting_total_tokens)
     };
@@ -577,10 +577,10 @@ pub fn process_allocations(
     let distributed_tokens = transaction_infos.iter().map(|x| x.amount).sum();
     let undistributed_tokens = allocations.iter().map(|x| x.amount).sum();
     let (distributed_tokens, undistributed_tokens) =
-        if let Some(spl_token_args) = &args.spl_token_args {
+        if let Some(safe_token_args) = &args.safe_token_args {
             (
-                Token::spl_token(distributed_tokens, spl_token_args.decimals),
-                Token::spl_token(undistributed_tokens, spl_token_args.decimals),
+                Token::safe_token(distributed_tokens, safe_token_args.decimals),
+                Token::safe_token(undistributed_tokens, safe_token_args.decimals),
             )
         } else {
             (
@@ -820,11 +820,11 @@ fn check_payer_balances(
 
 pub fn process_balances(client: &RpcClient, args: &BalancesArgs) -> Result<(), Error> {
     let allocations: Vec<Allocation> =
-        read_allocations(&args.input_csv, None, false, args.spl_token_args.is_some())?;
+        read_allocations(&args.input_csv, None, false, args.safe_token_args.is_some())?;
     let allocations = merge_allocations(&allocations);
 
-    let token = if let Some(spl_token_args) = &args.spl_token_args {
-        spl_token_args.mint.to_string()
+    let token = if let Some(safe_token_args) = &args.safe_token_args {
+        safe_token_args.mint.to_string()
     } else {
         "◎".to_string()
     };
@@ -840,8 +840,8 @@ pub fn process_balances(client: &RpcClient, args: &BalancesArgs) -> Result<(), E
     );
 
     for allocation in &allocations {
-        if let Some(spl_token_args) = &args.spl_token_args {
-            print_token_balances(client, allocation, spl_token_args)?;
+        if let Some(safe_token_args) = &args.safe_token_args {
+            print_token_balances(client, allocation, safe_token_args)?;
         } else {
             let address: Pubkey = allocation.recipient.parse().unwrap();
             let expected = lamports_to_sol(allocation.amount);
@@ -926,7 +926,7 @@ pub fn test_process_distribute_tokens_with_client(
         transaction_db: transaction_db.clone(),
         output_path: Some(output_path.clone()),
         stake_args: None,
-        spl_token_args: None,
+        safe_token_args: None,
         transfer_amount,
     };
     let confirmations = process_allocations(client, &args, exit.clone()).unwrap();
@@ -1032,7 +1032,7 @@ pub fn test_process_create_stake_with_client(client: &RpcClient, sender_keypair:
         transaction_db: transaction_db.clone(),
         output_path: Some(output_path.clone()),
         stake_args: Some(stake_args),
-        spl_token_args: None,
+        safe_token_args: None,
         sender_keypair: Box::new(sender_keypair),
         transfer_amount: None,
     };
@@ -1160,7 +1160,7 @@ pub fn test_process_distribute_stake_with_client(client: &RpcClient, sender_keyp
         transaction_db: transaction_db.clone(),
         output_path: Some(output_path.clone()),
         stake_args: Some(stake_args),
-        spl_token_args: None,
+        safe_token_args: None,
         sender_keypair: Box::new(sender_keypair),
         transfer_amount: None,
     };
@@ -1511,7 +1511,7 @@ mod tests {
             transaction_db: "".to_string(),
             output_path: None,
             stake_args: Some(stake_args),
-            spl_token_args: None,
+            safe_token_args: None,
             sender_keypair: Box::new(Keypair::new()),
             transfer_amount: None,
         };
@@ -1561,7 +1561,7 @@ mod tests {
             transaction_db: "".to_string(),
             output_path: None,
             stake_args,
-            spl_token_args: None,
+            safe_token_args: None,
             transfer_amount: None,
         };
         (allocations, args)
@@ -2016,7 +2016,7 @@ mod tests {
             transaction_db: "".to_string(),
             output_path: None,
             stake_args: None,
-            spl_token_args: None,
+            safe_token_args: None,
             transfer_amount: None,
         };
         let allocation = Allocation {
@@ -2138,7 +2138,7 @@ mod tests {
             transaction_db: "".to_string(),
             output_path: None,
             stake_args: None,
-            spl_token_args: None,
+            safe_token_args: None,
             transfer_amount: None,
         };
         let allocation = Allocation {
@@ -2258,7 +2258,7 @@ mod tests {
             transaction_db: "".to_string(),
             output_path: None,
             stake_args: None,
-            spl_token_args: None,
+            safe_token_args: None,
             transfer_amount: None,
         };
 

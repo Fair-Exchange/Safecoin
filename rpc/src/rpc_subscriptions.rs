@@ -13,7 +13,7 @@ use {
     },
     crossbeam_channel::{Receiver, RecvTimeoutError, SendError, Sender},
     serde::Serialize,
-    safecoin_account_decoder::{parse_token::spl_token_id_v2_0, UiAccount, UiAccountEncoding},
+    safecoin_account_decoder::{parse_token::safe_token_id_v2_0, UiAccount, UiAccountEncoding},
     safecoin_client::{
         rpc_filter::RpcFilterType,
         rpc_response::{
@@ -289,7 +289,7 @@ fn filter_account_result(
     // If last_modified_slot < last_notified_slot this means that we last notified for a fork
     // and should notify that the account state has been reverted.
     let results: Box<dyn Iterator<Item = UiAccount>> = if last_modified_slot != last_notified_slot {
-        if account.owner() == &spl_token_id_v2_0()
+        if account.owner() == &safe_token_id_v2_0()
             && params.encoding == UiAccountEncoding::JsonParsed
         {
             Box::new(iter::once(get_parsed_token_account(
@@ -343,7 +343,7 @@ fn filter_program_results(
         })
     });
     let accounts: Box<dyn Iterator<Item = RpcKeyedAccount>> = if params.pubkey
-        == spl_token_id_v2_0()
+        == safe_token_id_v2_0()
         && params.encoding == UiAccountEncoding::JsonParsed
         && !accounts_is_empty
     {

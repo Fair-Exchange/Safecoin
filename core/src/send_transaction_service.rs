@@ -4,7 +4,7 @@ use crate::poh_recorder::PohRecorder;
 use log::*;
 use solana_metrics::{datapoint_warn, inc_new_counter_info};
 use solana_runtime::{bank::Bank, bank_forks::BankForks};
-use solana_sdk::{
+use safecoin_sdk::{
     clock::{Slot, NUM_CONSECUTIVE_LEADER_SLOTS},
     hash::Hash,
     nonce_account,
@@ -335,7 +335,7 @@ mod test {
     use solana_runtime::genesis_utils::{
         create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
     };
-    use solana_sdk::{
+    use safecoin_sdk::{
         account::AccountSharedData,
         fee_calculator::FeeCalculator,
         genesis_config::create_genesis_config,

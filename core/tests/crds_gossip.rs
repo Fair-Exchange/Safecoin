@@ -4,7 +4,7 @@ use log::*;
 use rayon::prelude::*;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use serial_test::serial;
-use solana_core::{
+use safecoin_core::{
     cluster_info,
     contact_info::ContactInfo,
     crds_gossip::*,
@@ -15,7 +15,7 @@ use solana_core::{
     ping_pong::PingCache,
 };
 use safecoin_rayon_threadlimit::get_thread_count;
-use solana_sdk::{
+use safecoin_sdk::{
     hash::hash,
     pubkey::Pubkey,
     signature::{Keypair, Signer},

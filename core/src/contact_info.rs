@@ -1,11 +1,11 @@
 use crate::crds_value::MAX_WALLCLOCK;
-use solana_sdk::pubkey::Pubkey;
+use safecoin_sdk::pubkey::Pubkey;
 #[cfg(test)]
-use solana_sdk::rpc_port;
-use solana_sdk::sanitize::{Sanitize, SanitizeError};
+use safecoin_sdk::rpc_port;
+use safecoin_sdk::sanitize::{Sanitize, SanitizeError};
 #[cfg(test)]
-use solana_sdk::signature::{Keypair, Signer};
-use solana_sdk::timing::timestamp;
+use safecoin_sdk::signature::{Keypair, Signer};
+use safecoin_sdk::timing::timestamp;
 use std::net::{IpAddr, SocketAddr};
 
 /// Structure representing a node on the network
@@ -106,7 +106,7 @@ impl ContactInfo {
     pub(crate) fn new_rand<R: rand::Rng>(rng: &mut R, pubkey: Option<Pubkey>) -> Self {
         let delay = 10 * 60 * 1000; // 10 minutes
         let now = timestamp() - delay + rng.gen_range(0, 2 * delay);
-        let pubkey = pubkey.unwrap_or_else(solana_sdk::pubkey::new_rand);
+        let pubkey = pubkey.unwrap_or_else(safecoin_sdk::pubkey::new_rand);
         ContactInfo::new_localhost(&pubkey, now)
     }
 
@@ -116,7 +116,7 @@ impl ContactInfo {
         let addr = socketaddr!("224.0.1.255:1000");
         assert!(addr.ip().is_multicast());
         Self {
-            id: solana_sdk::pubkey::new_rand(),
+            id: safecoin_sdk::pubkey::new_rand(),
             gossip: addr,
             tvu: addr,
             tvu_forwards: addr,

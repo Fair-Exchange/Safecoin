@@ -2,9 +2,9 @@
 extern crate test;
 
 use solana_ledger::entry::{next_entry_mut, Entry, EntrySlice};
-use solana_sdk::hash::{hash, Hash};
-use solana_sdk::signature::{Keypair, Signer};
-use solana_sdk::system_transaction;
+use safecoin_sdk::hash::{hash, Hash};
+use safecoin_sdk::signature::{Keypair, Signer};
+use safecoin_sdk::system_transaction;
 use test::Bencher;
 
 const NUM_HASHES: u64 = 400;

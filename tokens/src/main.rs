@@ -1,6 +1,6 @@
 use safecoin_cli_config::{Config, CONFIG_FILE};
 use safecoin_client::rpc_client::RpcClient;
-use safecoin_tokens::{arg_parser::parse_args, args::Command, commands, spl_token};
+use safecoin_tokens::{arg_parser::parse_args, args::Command, commands, safe_token};
 use std::{
     env,
     error::Error,
@@ -37,11 +37,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match command_args.command {
         Command::DistributeTokens(mut args) => {
-            spl_token::update_token_args(&client, &mut args.spl_token_args)?;
+            safe_token::update_token_args(&client, &mut args.safe_token_args)?;
             commands::process_allocations(&client, &args, exit)?;
         }
         Command::Balances(mut args) => {
-            spl_token::update_decimals(&client, &mut args.spl_token_args)?;
+            safe_token::update_decimals(&client, &mut args.safe_token_args)?;
             commands::process_balances(&client, &args)?;
         }
         Command::TransactionLog(args) => {

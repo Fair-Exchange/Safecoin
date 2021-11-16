@@ -4,7 +4,7 @@
 //! and iteratively selects the rest of the group by shifting that distance
 //! its treating the set of voters as a ring
 
-use solana_sdk::{
+use safecoin_sdk::{
     pubkey::Pubkey,
     hash::Hash,
 };
@@ -27,7 +27,7 @@ pub struct VoteGroupGenerator {
 
 impl VoteGroupGenerator {
     pub fn always_voter() -> Pubkey {
-         solana_sdk::pubkey::Pubkey::from_str(SAFECOIN_ALWAYS_VOTER).unwrap()
+         safecoin_sdk::pubkey::Pubkey::from_str(SAFECOIN_ALWAYS_VOTER).unwrap()
     }
 
     pub fn new(map: &HashMap<Pubkey, Pubkey>, size: usize) -> VoteGroupGenerator {
@@ -166,7 +166,7 @@ impl VoteGroupGenerator {
 
     #[test]
     fn test_vgg_magic() {
-        let magic = solana_sdk::pubkey::Pubkey::from_str(SAFECOIN_ALWAYS_VOTER).unwrap();
+        let magic = safecoin_sdk::pubkey::Pubkey::from_str(SAFECOIN_ALWAYS_VOTER).unwrap();
         let mut hm: HashMap<Pubkey, Pubkey> = HashMap::new();
         hm.insert(magic, Pubkey::new_unique());
 

@@ -3,12 +3,12 @@
 extern crate test;
 
 use rand::{thread_rng, Rng};
-use solana_core::{
+use safecoin_core::{
     crds::{Crds, VersionedCrdsValue},
     crds_shards::CrdsShards,
     crds_value::CrdsValue,
 };
-use solana_sdk::timing::timestamp;
+use safecoin_sdk::timing::timestamp;
 use std::iter::repeat_with;
 use test::Bencher;
 

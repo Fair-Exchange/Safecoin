@@ -19,7 +19,7 @@ use {
     },
     solana_metrics::datapoint_info,
     solana_notifier::Notifier,
-    solana_sdk::{
+    safecoin_sdk::{
         account_utils::StateMut,
         clock::{Epoch, Slot},
         commitment_config::CommitmentConfig,

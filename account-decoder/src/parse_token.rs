@@ -3,7 +3,7 @@ use crate::{
     StringAmount, StringDecimals,
 };
 use safecoin_sdk::pubkey::Pubkey;
-use spl_token_v2_0::{
+use safe_token_v2_0::{
     safecoin_program::{
         program_option::COption, program_pack::Pack, pubkey::Pubkey as SafeTokenPubkey,
     },
@@ -11,25 +11,25 @@ use spl_token_v2_0::{
 };
 use std::str::FromStr;
 
-// A helper function to convert spl_token_v2_0::id() as spl_sdk::pubkey::Pubkey to
+// A helper function to convert safe_token_v2_0::id() as spl_sdk::pubkey::Pubkey to
 // safecoin_sdk::pubkey::Pubkey
-pub fn spl_token_id_v2_0() -> Pubkey {
-    Pubkey::new_from_array(spl_token_v2_0::id().to_bytes())
+pub fn safe_token_id_v2_0() -> Pubkey {
+    Pubkey::new_from_array(safe_token_v2_0::id().to_bytes())
 }
 
-// A helper function to convert spl_token_v2_0::native_mint::id() as spl_sdk::pubkey::Pubkey to
+// A helper function to convert safe_token_v2_0::native_mint::id() as spl_sdk::pubkey::Pubkey to
 // safecoin_sdk::pubkey::Pubkey
-pub fn spl_token_v2_0_native_mint() -> Pubkey {
-    Pubkey::new_from_array(spl_token_v2_0::native_mint::id().to_bytes())
+pub fn safe_token_v2_0_native_mint() -> Pubkey {
+    Pubkey::new_from_array(safe_token_v2_0::native_mint::id().to_bytes())
 }
 
 // A helper function to convert a safecoin_sdk::pubkey::Pubkey to spl_sdk::pubkey::Pubkey
-pub fn spl_token_v2_0_pubkey(pubkey: &Pubkey) -> SafeTokenPubkey {
+pub fn safe_token_v2_0_pubkey(pubkey: &Pubkey) -> SafeTokenPubkey {
     SafeTokenPubkey::new_from_array(pubkey.to_bytes())
 }
 
 // A helper function to convert a spl_sdk::pubkey::Pubkey to safecoin_sdk::pubkey::Pubkey
-pub fn pubkey_from_spl_token_v2_0(pubkey: &SafeTokenPubkey) -> Pubkey {
+pub fn pubkey_from_safe_token_v2_0(pubkey: &SafeTokenPubkey) -> Pubkey {
     Pubkey::new_from_array(pubkey.to_bytes())
 }
 

@@ -19,13 +19,13 @@ use solana_ledger::entry::Entry;
 use solana_ledger::leader_schedule_cache::LeaderScheduleCache;
 use solana_ledger::poh::Poh;
 use solana_runtime::bank::Bank;
-pub use solana_sdk::clock::Slot;
-use solana_sdk::clock::NUM_CONSECUTIVE_LEADER_SLOTS;
-use solana_sdk::hash::Hash;
-use solana_sdk::poh_config::PohConfig;
-use solana_sdk::pubkey::Pubkey;
-use solana_sdk::timing;
-use solana_sdk::transaction::Transaction;
+pub use safecoin_sdk::clock::Slot;
+use safecoin_sdk::clock::NUM_CONSECUTIVE_LEADER_SLOTS;
+use safecoin_sdk::hash::Hash;
+use safecoin_sdk::poh_config::PohConfig;
+use safecoin_sdk::pubkey::Pubkey;
+use safecoin_sdk::timing;
+use safecoin_sdk::transaction::Transaction;
 use std::cmp;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -739,8 +739,8 @@ mod tests {
     use solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
     use solana_ledger::{blockstore::Blockstore, blockstore_meta::SlotMeta, get_tmp_ledger_path};
     use solana_perf::test_tx::test_tx;
-    use solana_sdk::clock::DEFAULT_TICKS_PER_SLOT;
-    use solana_sdk::hash::hash;
+    use safecoin_sdk::clock::DEFAULT_TICKS_PER_SLOT;
+    use safecoin_sdk::hash::hash;
     use std::sync::mpsc::sync_channel;
 
     #[test]

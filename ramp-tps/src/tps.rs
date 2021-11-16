@@ -2,7 +2,7 @@ use log::*;
 use safecoin_client::perf_utils::{sample_txs, SampleStats};
 use safecoin_client::thin_client::ThinClient;
 use solana_notifier::Notifier;
-use solana_sdk::timing::duration_as_s;
+use safecoin_sdk::timing::duration_as_s;
 use std::{
     net::SocketAddr,
     sync::{

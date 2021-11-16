@@ -13,7 +13,7 @@ use {
     jsonrpc_derive::rpc,
     serde::{Deserialize, Serialize},
     safecoin_account_decoder::{
-        parse_token::{spl_token_id_v2_0, token_amount_to_ui_amount, UiTokenAmount},
+        parse_token::{safe_token_id_v2_0, token_amount_to_ui_amount, UiTokenAmount},
         UiAccount, UiAccountEncoding, UiDataSliceConfig, MAX_BASE58_BYTES,
     },
     safecoin_client::{
@@ -46,7 +46,7 @@ use {
         bank::Bank,
         bank_forks::{BankForks, SnapshotConfig},
         commitment::{BlockCommitmentArray, BlockCommitmentCache, CommitmentSlots},
-        inline_spl_token_v2_0::{SPL_TOKEN_ACCOUNT_MINT_OFFSET, SPL_TOKEN_ACCOUNT_OWNER_OFFSET},
+        inline_safe_token_v2_0::{SAFE_TOKEN_ACCOUNT_MINT_OFFSET, SAFE_TOKEN_ACCOUNT_OWNER_OFFSET},
         non_circulating_supply::calculate_non_circulating_supply,
         snapshot_utils::get_highest_snapshot_archive_path,
     },
@@ -74,7 +74,7 @@ use {
         TransactionConfirmationStatus, TransactionStatus, UiConfirmedBlock, UiTransactionEncoding,
     },
     solana_vote_program::vote_state::{VoteState, MAX_LOCKOUT_HISTORY},
-    spl_token_v2_0::{
+    safe_token_v2_0::{
         safecoin_program::program_pack::Pack,
         state::{Account as TokenAccount, Mint},
     },
@@ -374,15 +374,15 @@ impl JsonRpcRequestProcessor {
         check_slice_and_encoding(&encoding, data_slice_config.is_some())?;
         optimize_filters(&mut filters);
         let keyed_accounts = {
-            if let Some(owner) = get_spl_token_owner_filter(program_id, &filters) {
-                self.get_filtered_spl_token_accounts_by_owner(&bank, &owner, filters)?
-            } else if let Some(mint) = get_spl_token_mint_filter(program_id, &filters) {
-                self.get_filtered_spl_token_accounts_by_mint(&bank, &mint, filters)?
+            if let Some(owner) = get_safe_token_owner_filter(program_id, &filters) {
+                self.get_filtered_safe_token_accounts_by_owner(&bank, &owner, filters)?
+            } else if let Some(mint) = get_safe_token_mint_filter(program_id, &filters) {
+                self.get_filtered_safe_token_accounts_by_mint(&bank, &mint, filters)?
             } else {
                 self.get_filtered_program_accounts(&bank, program_id, filters)?
             }
         };
-        let result = if program_id == &spl_token_id_v2_0()
+        let result = if program_id == &safe_token_id_v2_0()
             && encoding == UiAccountEncoding::JsonParsed
         {
             get_parsed_token_accounts(bank.clone(), keyed_accounts.into_iter()).collect()
@@ -1596,7 +1596,7 @@ impl JsonRpcRequestProcessor {
             Error::invalid_params("Invalid param: could not find account".to_string())
         })?;
 
-        if account.owner() != &spl_token_id_v2_0() {
+        if account.owner() != &safe_token_id_v2_0() {
             return Err(Error::invalid_params(
                 "Invalid param: not a v2.0 Token account".to_string(),
             ));
@@ -1620,7 +1620,7 @@ impl JsonRpcRequestProcessor {
         let mint_account = bank.get_account(mint).ok_or_else(|| {
             Error::invalid_params("Invalid param: could not find account".to_string())
         })?;
-        if mint_account.owner() != &spl_token_id_v2_0() {
+        if mint_account.owner() != &safe_token_id_v2_0() {
             return Err(Error::invalid_params(
                 "Invalid param: not a v2.0 Token mint".to_string(),
             ));
@@ -1640,13 +1640,13 @@ impl JsonRpcRequestProcessor {
     ) -> Result<RpcResponse<Vec<RpcTokenAccountBalance>>> {
         let bank = self.bank(commitment);
         let (mint_owner, decimals) = get_mint_owner_and_decimals(&bank, mint)?;
-        if mint_owner != spl_token_id_v2_0() {
+        if mint_owner != safe_token_id_v2_0() {
             return Err(Error::invalid_params(
                 "Invalid param: not a v2.0 Token mint".to_string(),
             ));
         }
         let mut token_balances: Vec<RpcTokenAccountBalance> = self
-            .get_filtered_spl_token_accounts_by_mint(&bank, mint, vec![])?
+            .get_filtered_safe_token_accounts_by_mint(&bank, mint, vec![])?
             .into_iter()
             .map(|(address, account)| {
                 let amount = TokenAccount::unpack(account.data())
@@ -1695,7 +1695,7 @@ impl JsonRpcRequestProcessor {
         }
 
         let keyed_accounts =
-            self.get_filtered_spl_token_accounts_by_owner(&bank, owner, filters)?;
+            self.get_filtered_safe_token_accounts_by_owner(&bank, owner, filters)?;
         let accounts = if encoding == UiAccountEncoding::JsonParsed {
             get_parsed_token_accounts(bank.clone(), keyed_accounts.into_iter()).collect()
         } else {
@@ -1745,7 +1745,7 @@ impl JsonRpcRequestProcessor {
         ];
         // Optional filter on Mint address, uses mint account index for scan
         let keyed_accounts = if let Some(mint) = mint {
-            self.get_filtered_spl_token_accounts_by_mint(&bank, &mint, filters)?
+            self.get_filtered_safe_token_accounts_by_mint(&bank, &mint, filters)?
         } else {
             // Filter on Token Account state
             filters.push(RpcFilterType::DataSize(
@@ -1819,7 +1819,7 @@ impl JsonRpcRequestProcessor {
     }
 
     /// Get an iterator of safe-token accounts by owner address
-    fn get_filtered_spl_token_accounts_by_owner(
+    fn get_filtered_safe_token_accounts_by_owner(
         &self,
         bank: &Arc<Bank>,
         owner_key: &Pubkey,
@@ -1836,7 +1836,7 @@ impl JsonRpcRequestProcessor {
         ));
         // Filter on Owner address
         filters.push(RpcFilterType::Memcmp(Memcmp {
-            offset: SPL_TOKEN_ACCOUNT_OWNER_OFFSET,
+            offset: SAFE_TOKEN_ACCOUNT_OWNER_OFFSET,
             bytes: MemcmpEncodedBytes::Bytes(owner_key.to_bytes().into()),
             encoding: None,
         }));
@@ -1853,7 +1853,7 @@ impl JsonRpcRequestProcessor {
             }
             Ok(bank
                 .get_filtered_indexed_accounts(&IndexKey::SafeTokenOwner(*owner_key), |account| {
-                    account.owner() == &spl_token_id_v2_0()
+                    account.owner() == &safe_token_id_v2_0()
                         && filters.iter().all(|filter_type| match filter_type {
                             RpcFilterType::DataSize(size) => account.data().len() as u64 == *size,
                             RpcFilterType::Memcmp(compare) => compare.bytes_match(account.data()),
@@ -1863,12 +1863,12 @@ impl JsonRpcRequestProcessor {
                     message: e.to_string(),
                 })?)
         } else {
-            self.get_filtered_program_accounts(bank, &spl_token_id_v2_0(), filters)
+            self.get_filtered_program_accounts(bank, &safe_token_id_v2_0(), filters)
         }
     }
 
     /// Get an iterator of safe-token accounts by mint address
-    fn get_filtered_spl_token_accounts_by_mint(
+    fn get_filtered_safe_token_accounts_by_mint(
         &self,
         bank: &Arc<Bank>,
         mint_key: &Pubkey,
@@ -1885,7 +1885,7 @@ impl JsonRpcRequestProcessor {
         ));
         // Filter on Mint address
         filters.push(RpcFilterType::Memcmp(Memcmp {
-            offset: SPL_TOKEN_ACCOUNT_MINT_OFFSET,
+            offset: SAFE_TOKEN_ACCOUNT_MINT_OFFSET,
             bytes: MemcmpEncodedBytes::Bytes(mint_key.to_bytes().into()),
             encoding: None,
         }));
@@ -1901,7 +1901,7 @@ impl JsonRpcRequestProcessor {
             }
             Ok(bank
                 .get_filtered_indexed_accounts(&IndexKey::SafeTokenMint(*mint_key), |account| {
-                    account.owner() == &spl_token_id_v2_0()
+                    account.owner() == &safe_token_id_v2_0()
                         && filters.iter().all(|filter_type| match filter_type {
                             RpcFilterType::DataSize(size) => account.data().len() as u64 == *size,
                             RpcFilterType::Memcmp(compare) => compare.bytes_match(account.data()),
@@ -1911,7 +1911,7 @@ impl JsonRpcRequestProcessor {
                     message: e.to_string(),
                 })?)
         } else {
-            self.get_filtered_program_accounts(bank, &spl_token_id_v2_0(), filters)
+            self.get_filtered_program_accounts(bank, &safe_token_id_v2_0(), filters)
         }
     }
 }
@@ -2054,7 +2054,7 @@ fn get_encoded_account(
 ) -> Result<Option<UiAccount>> {
     match bank.get_account(pubkey) {
         Some(account) => {
-            let response = if account.owner() == &spl_token_id_v2_0()
+            let response = if account.owner() == &safe_token_id_v2_0()
                 && encoding == UiAccountEncoding::JsonParsed
             {
                 get_parsed_token_account(bank.clone(), pubkey, account)
@@ -2093,8 +2093,8 @@ fn encode_account<T: ReadableAccount>(
 /// owner.
 /// NOTE: `optimize_filters()` should almost always be called before using this method because of
 /// the strict match on `MemcmpEncodedBytes::Bytes`.
-fn get_spl_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Option<Pubkey> {
-    if program_id != &spl_token_id_v2_0() {
+fn get_safe_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Option<Pubkey> {
+    if program_id != &safe_token_id_v2_0() {
         return None;
     }
     let mut data_size_filter: Option<u64> = None;
@@ -2104,7 +2104,7 @@ fn get_spl_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) ->
         match filter {
             RpcFilterType::DataSize(size) => data_size_filter = Some(*size),
             RpcFilterType::Memcmp(Memcmp {
-                offset: SPL_TOKEN_ACCOUNT_OWNER_OFFSET,
+                offset: SAFE_TOKEN_ACCOUNT_OWNER_OFFSET,
                 bytes: MemcmpEncodedBytes::Bytes(bytes),
                 ..
             }) => {
@@ -2120,13 +2120,13 @@ fn get_spl_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) ->
     if data_size_filter == Some(TokenAccount::get_packed_len() as u64) {
         if let Some(incorrect_owner_len) = incorrect_owner_len {
             info!(
-                "Incorrect num bytes ({:?}) provided for spl_token_owner_filter",
+                "Incorrect num bytes ({:?}) provided for safe_token_owner_filter",
                 incorrect_owner_len
             );
         }
         owner_key
     } else {
-        debug!("spl_token program filters do not match by-owner index requisites");
+        debug!("safe_token program filters do not match by-owner index requisites");
         None
     }
 }
@@ -2135,8 +2135,8 @@ fn get_spl_token_owner_filter(program_id: &Pubkey, filters: &[RpcFilterType]) ->
 /// mint.
 /// NOTE: `optimize_filters()` should almost always be called before using this method because of
 /// the strict match on `MemcmpEncodedBytes::Bytes`.
-fn get_spl_token_mint_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Option<Pubkey> {
-    if program_id != &spl_token_id_v2_0() {
+fn get_safe_token_mint_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> Option<Pubkey> {
+    if program_id != &safe_token_id_v2_0() {
         return None;
     }
     let mut data_size_filter: Option<u64> = None;
@@ -2146,7 +2146,7 @@ fn get_spl_token_mint_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> 
         match filter {
             RpcFilterType::DataSize(size) => data_size_filter = Some(*size),
             RpcFilterType::Memcmp(Memcmp {
-                offset: SPL_TOKEN_ACCOUNT_MINT_OFFSET,
+                offset: SAFE_TOKEN_ACCOUNT_MINT_OFFSET,
                 bytes: MemcmpEncodedBytes::Bytes(bytes),
                 ..
             }) => {
@@ -2162,13 +2162,13 @@ fn get_spl_token_mint_filter(program_id: &Pubkey, filters: &[RpcFilterType]) -> 
     if data_size_filter == Some(TokenAccount::get_packed_len() as u64) {
         if let Some(incorrect_mint_len) = incorrect_mint_len {
             info!(
-                "Incorrect num bytes ({:?}) provided for spl_token_mint_filter",
+                "Incorrect num bytes ({:?}) provided for safe_token_mint_filter",
                 incorrect_mint_len
             );
         }
         mint
     } else {
-        debug!("spl_token program filters do not match by-mint index requisites");
+        debug!("safe_token program filters do not match by-mint index requisites");
         None
     }
 }
@@ -2182,7 +2182,7 @@ fn get_token_program_id_and_mint(
     match token_account_filter {
         TokenAccountsFilter::Mint(mint) => {
             let (mint_owner, _) = get_mint_owner_and_decimals(bank, &mint)?;
-            if mint_owner != spl_token_id_v2_0() {
+            if mint_owner != safe_token_id_v2_0() {
                 return Err(Error::invalid_params(
                     "Invalid param: not a v2.0 Token mint".to_string(),
                 ));
@@ -2190,7 +2190,7 @@ fn get_token_program_id_and_mint(
             Ok((mint_owner, Some(mint)))
         }
         TokenAccountsFilter::ProgramId(program_id) => {
-            if program_id == spl_token_id_v2_0() {
+            if program_id == safe_token_id_v2_0() {
                 Ok((program_id, None))
             } else {
                 Err(Error::invalid_params(
@@ -4097,7 +4097,7 @@ pub mod tests {
             vote_instruction,
             vote_state::{BlockTimestamp, Vote, VoteInit, VoteStateVersions, MAX_LOCKOUT_HISTORY},
         },
-        spl_token_v2_0::{
+        safe_token_v2_0::{
             safecoin_program::{program_option::COption, pubkey::Pubkey as SafeTokenPubkey},
             state::AccountState as TokenAccountState,
             state::Mint,
@@ -6941,7 +6941,7 @@ pub mod tests {
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
-            owner: spl_token_id_v2_0(),
+            owner: safe_token_id_v2_0(),
             ..Account::default()
         });
         let token_account_pubkey = safecoin_sdk::pubkey::new_rand();
@@ -6960,7 +6960,7 @@ pub mod tests {
         let mint_account = AccountSharedData::from(Account {
             lamports: 111,
             data: mint_data.to_vec(),
-            owner: spl_token_id_v2_0(),
+            owner: safe_token_id_v2_0(),
             ..Account::default()
         });
         bank.store_account(&Pubkey::from_str(&mint.to_string()).unwrap(), &mint_account);
@@ -7037,7 +7037,7 @@ pub mod tests {
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
-            owner: spl_token_id_v2_0(),
+            owner: safe_token_id_v2_0(),
             ..Account::default()
         });
         let token_with_different_mint_pubkey = safecoin_sdk::pubkey::new_rand();
@@ -7052,7 +7052,7 @@ pub mod tests {
                 "params":["{}", {{"programId": "{}"}}]
             }}"#,
             owner,
-            spl_token_id_v2_0(),
+            safe_token_id_v2_0(),
         );
         let res = io.handle_request_sync(&req, meta.clone());
         let result: Value = serde_json::from_str(&res.expect("actual response"))
@@ -7070,7 +7070,7 @@ pub mod tests {
                 "params":["{}", {{"programId": "{}"}}, {{"encoding": "jsonParsed"}}]
             }}"#,
             owner,
-            spl_token_id_v2_0(),
+            safe_token_id_v2_0(),
         );
         let res = io.handle_request_sync(&req, meta.clone());
         let result: Value = serde_json::from_str(&res.expect("actual response"))
@@ -7087,7 +7087,7 @@ pub mod tests {
                 "method":"getProgramAccounts",
                 "params":["{}", {{"encoding": "jsonParsed"}}]
             }}"#,
-            spl_token_id_v2_0(),
+            safe_token_id_v2_0(),
         );
         let res = io.handle_request_sync(&req, meta.clone());
         let result: Value = serde_json::from_str(&res.expect("actual response"))
@@ -7151,7 +7151,7 @@ pub mod tests {
                 "params":["{}", {{"programId": "{}"}}]
             }}"#,
             safecoin_sdk::pubkey::new_rand(),
-            spl_token_id_v2_0(),
+            safe_token_id_v2_0(),
         );
         let res = io.handle_request_sync(&req, meta.clone());
         let result: Value = serde_json::from_str(&res.expect("actual response"))
@@ -7169,7 +7169,7 @@ pub mod tests {
                 "params":["{}", {{"programId": "{}"}}]
             }}"#,
             delegate,
-            spl_token_id_v2_0(),
+            safe_token_id_v2_0(),
         );
         let res = io.handle_request_sync(&req, meta.clone());
         let result: Value = serde_json::from_str(&res.expect("actual response"))
@@ -7234,7 +7234,7 @@ pub mod tests {
                 "params":["{}", {{"programId": "{}"}}]
             }}"#,
             safecoin_sdk::pubkey::new_rand(),
-            spl_token_id_v2_0(),
+            safe_token_id_v2_0(),
         );
         let res = io.handle_request_sync(&req, meta.clone());
         let result: Value = serde_json::from_str(&res.expect("actual response"))
@@ -7256,7 +7256,7 @@ pub mod tests {
         let mint_account = AccountSharedData::from(Account {
             lamports: 111,
             data: mint_data.to_vec(),
-            owner: spl_token_id_v2_0(),
+            owner: safe_token_id_v2_0(),
             ..Account::default()
         });
         bank.store_account(
@@ -7278,7 +7278,7 @@ pub mod tests {
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
-            owner: spl_token_id_v2_0(),
+            owner: safe_token_id_v2_0(),
             ..Account::default()
         });
         let token_with_smaller_balance = safecoin_sdk::pubkey::new_rand();
@@ -7342,7 +7342,7 @@ pub mod tests {
         let token_account = AccountSharedData::from(Account {
             lamports: 111,
             data: account_data.to_vec(),
-            owner: spl_token_id_v2_0(),
+            owner: safe_token_id_v2_0(),
             ..Account::default()
         });
         let token_account_pubkey = safecoin_sdk::pubkey::new_rand();
@@ -7361,7 +7361,7 @@ pub mod tests {
         let mint_account = AccountSharedData::from(Account {
             lamports: 111,
             data: mint_data.to_vec(),
-            owner: spl_token_id_v2_0(),
+            owner: safe_token_id_v2_0(),
             ..Account::default()
         });
         bank.store_account(&Pubkey::from_str(&mint.to_string()).unwrap(), &mint_account);
@@ -7438,10 +7438,10 @@ pub mod tests {
     }
 
     #[test]
-    fn test_get_spl_token_owner_filter() {
+    fn test_get_safe_token_owner_filter() {
         let owner = Pubkey::new_unique();
         assert_eq!(
-            get_spl_token_owner_filter(
+            get_safe_token_owner_filter(
                 &Pubkey::from_str("7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD").unwrap(),
                 &[
                     RpcFilterType::Memcmp(Memcmp {
@@ -7457,7 +7457,7 @@ pub mod tests {
         );
 
         // Filtering on mint instead of owner
-        assert!(get_spl_token_owner_filter(
+        assert!(get_safe_token_owner_filter(
             &Pubkey::from_str("7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD").unwrap(),
             &[
                 RpcFilterType::Memcmp(Memcmp {
@@ -7471,7 +7471,7 @@ pub mod tests {
         .is_none());
 
         // Wrong program id
-        assert!(get_spl_token_owner_filter(
+        assert!(get_safe_token_owner_filter(
             &Pubkey::new_unique(),
             &[
                 RpcFilterType::Memcmp(Memcmp {

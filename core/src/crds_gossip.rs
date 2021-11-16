@@ -17,7 +17,7 @@ use crate::{
 use itertools::Itertools;
 use rayon::ThreadPool;
 use solana_ledger::shred::Shred;
-use solana_sdk::{
+use safecoin_sdk::{
     hash::Hash,
     pubkey::Pubkey,
     signature::{Keypair, Signer},
@@ -365,8 +365,8 @@ mod test {
     use super::*;
     use crate::contact_info::ContactInfo;
     use crate::crds_value::CrdsData;
-    use solana_sdk::hash::hash;
-    use solana_sdk::timing::timestamp;
+    use safecoin_sdk::hash::hash;
+    use safecoin_sdk::timing::timestamp;
 
     #[test]
     fn test_prune_errors() {

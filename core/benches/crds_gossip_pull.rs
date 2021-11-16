@@ -4,11 +4,11 @@ extern crate test;
 
 use rand::{thread_rng, Rng};
 use rayon::ThreadPoolBuilder;
-use solana_core::cluster_info::MAX_BLOOM_SIZE;
-use solana_core::crds::Crds;
-use solana_core::crds_gossip_pull::{CrdsFilter, CrdsGossipPull};
-use solana_core::crds_value::CrdsValue;
-use solana_sdk::hash;
+use safecoin_core::cluster_info::MAX_BLOOM_SIZE;
+use safecoin_core::crds::Crds;
+use safecoin_core::crds_gossip_pull::{CrdsFilter, CrdsGossipPull};
+use safecoin_core::crds_value::CrdsValue;
+use safecoin_sdk::hash;
 use test::Bencher;
 
 #[bench]

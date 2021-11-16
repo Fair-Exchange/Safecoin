@@ -132,7 +132,7 @@ mod test {
     use super::*;
     use crate::{crds::Crds, crds_value::CrdsValue};
     use rand::{thread_rng, Rng};
-    use solana_sdk::timing::timestamp;
+    use safecoin_sdk::timing::timestamp;
     use std::{collections::HashSet, iter::repeat_with, ops::Index};
 
     fn new_test_crds_value<R: Rng>(rng: &mut R) -> VersionedCrdsValue {

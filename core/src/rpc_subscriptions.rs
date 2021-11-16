@@ -10,7 +10,7 @@ use jsonrpc_pubsub::{
     SubscriptionId,
 };
 use serde::Serialize;
-use safecoin_account_decoder::{parse_token::spl_token_id_v2_0, UiAccount, UiAccountEncoding};
+use safecoin_account_decoder::{parse_token::safe_token_id_v2_0, UiAccount, UiAccountEncoding};
 use safecoin_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSignatureSubscribeConfig},
     rpc_filter::RpcFilterType,
@@ -27,7 +27,7 @@ use solana_runtime::{
     bank_forks::BankForks,
     commitment::{BlockCommitmentCache, CommitmentSlots},
 };
-use solana_sdk::{
+use safecoin_sdk::{
     account::{AccountSharedData, ReadableAccount},
     clock::{Slot, UnixTimestamp},
     commitment_config::CommitmentConfig,
@@ -290,7 +290,7 @@ fn filter_account_result(
     // and should notify that the account state has been reverted.
     let results: Box<dyn Iterator<Item = UiAccount>> = if last_modified_slot != last_notified_slot {
         let encoding = encoding.unwrap_or(UiAccountEncoding::Binary);
-        if account.owner == spl_token_id_v2_0() && encoding == UiAccountEncoding::JsonParsed {
+        if account.owner == safe_token_id_v2_0() && encoding == UiAccountEncoding::JsonParsed {
             Box::new(iter::once(get_parsed_token_account(bank, pubkey, account)))
         } else {
             Box::new(iter::once(UiAccount::encode(
@@ -336,7 +336,7 @@ fn filter_program_results(
             RpcFilterType::Memcmp(compare) => compare.bytes_match(&account.data()),
         })
     });
-    let accounts: Box<dyn Iterator<Item = RpcKeyedAccount>> = if program_id == &spl_token_id_v2_0()
+    let accounts: Box<dyn Iterator<Item = RpcKeyedAccount>> = if program_id == &safe_token_id_v2_0()
         && encoding == UiAccountEncoding::JsonParsed
         && !accounts_is_empty
     {
@@ -1337,7 +1337,7 @@ pub(crate) mod tests {
         commitment::BlockCommitment,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
     };
-    use solana_sdk::{
+    use safecoin_sdk::{
         message::Message,
         signature::{Keypair, Signer},
         system_instruction, system_program, system_transaction,
@@ -2094,7 +2094,7 @@ pub(crate) mod tests {
 
         let next_bank = Bank::new_from_parent(
             &bank_forks.get(0).unwrap().clone(),
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             1,
         );
         bank_forks.insert(next_bank);

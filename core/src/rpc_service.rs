@@ -25,7 +25,7 @@ use solana_runtime::{
     commitment::BlockCommitmentCache,
     snapshot_utils,
 };
-use solana_sdk::{hash::Hash, native_token::lamports_to_sol, pubkey::Pubkey};
+use safecoin_sdk::{hash::Hash, native_token::lamports_to_sol, pubkey::Pubkey};
 use std::{
     collections::HashSet,
     net::SocketAddr,
@@ -464,7 +464,7 @@ mod tests {
         get_tmp_ledger_path,
     };
     use solana_runtime::{bank::Bank, bank_forks::ArchiveFormat, snapshot_utils::SnapshotVersion};
-    use solana_sdk::{genesis_config::ClusterType, signature::Signer};
+    use safecoin_sdk::{genesis_config::ClusterType, signature::Signer};
     use std::io::Write;
     use std::net::{IpAddr, Ipv4Addr};
     use tokio::runtime::Runtime;
@@ -676,9 +676,9 @@ mod tests {
         let health_check_slot_distance = 123;
         let override_health_check = Arc::new(AtomicBool::new(false));
         let trusted_validators = vec![
-            solana_sdk::pubkey::new_rand(),
-            solana_sdk::pubkey::new_rand(),
-            solana_sdk::pubkey::new_rand(),
+            safecoin_sdk::pubkey::new_rand(),
+            safecoin_sdk::pubkey::new_rand(),
+            safecoin_sdk::pubkey::new_rand(),
         ];
 
         let health = Arc::new(RpcHealth::new(

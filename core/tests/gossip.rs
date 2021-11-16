@@ -3,7 +3,7 @@
 extern crate log;
 
 use rayon::iter::*;
-use solana_core::{
+use safecoin_core::{
     cluster_info::{ClusterInfo, Node},
     crds::Cursor,
     gossip_service::GossipService,
@@ -11,7 +11,7 @@ use solana_core::{
 use solana_runtime::bank_forks::BankForks;
 
 use solana_perf::packet::Packet;
-use solana_sdk::{
+use safecoin_sdk::{
     hash::Hash,
     pubkey::Pubkey,
     signature::{Keypair, Signer},

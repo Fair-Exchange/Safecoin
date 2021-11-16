@@ -6,7 +6,7 @@ use crate::{
 };
 use chrono::prelude::{DateTime, Utc};
 use log::*;
-use solana_sdk::{
+use safecoin_sdk::{
     account::{ReadableAccount, WritableAccount},
     hash::hash,
     instruction::InstructionError,
@@ -247,14 +247,14 @@ mod tests {
     use crate::id;
     use solana_runtime::bank::Bank;
     use solana_runtime::bank_client::BankClient;
-    use solana_sdk::account::{Account, AccountSharedData};
-    use solana_sdk::client::SyncClient;
-    use solana_sdk::genesis_config::create_genesis_config;
-    use solana_sdk::hash::hash;
-    use solana_sdk::instruction::InstructionError;
-    use solana_sdk::message::Message;
-    use solana_sdk::signature::{Keypair, Signer};
-    use solana_sdk::transaction::TransactionError;
+    use safecoin_sdk::account::{Account, AccountSharedData};
+    use safecoin_sdk::client::SyncClient;
+    use safecoin_sdk::genesis_config::create_genesis_config;
+    use safecoin_sdk::hash::hash;
+    use safecoin_sdk::instruction::InstructionError;
+    use safecoin_sdk::message::Message;
+    use safecoin_sdk::signature::{Keypair, Signer};
+    use safecoin_sdk::transaction::TransactionError;
 
     fn create_bank(lamports: u64) -> (Bank, Keypair) {
         let (genesis_config, mint_keypair) = create_genesis_config(lamports);
@@ -271,7 +271,7 @@ mod tests {
         let alice_pubkey = alice_keypair.pubkey();
         let budget_keypair = Keypair::new();
         let budget_pubkey = budget_keypair.pubkey();
-        let bob_pubkey = solana_sdk::pubkey::new_rand();
+        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
 
         let mut instructions =
             budget_instruction::payment(&alice_pubkey, &bob_pubkey, &budget_pubkey, 1);
@@ -292,7 +292,7 @@ mod tests {
         let (bank, alice_keypair) = create_bank(10_000);
         let bank_client = BankClient::new(bank);
         let alice_pubkey = alice_keypair.pubkey();
-        let bob_pubkey = solana_sdk::pubkey::new_rand();
+        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
         let budget_keypair = Keypair::new();
         let budget_pubkey = budget_keypair.pubkey();
         let instructions =
@@ -313,8 +313,8 @@ mod tests {
         // Initialize BudgetState
         let budget_keypair = Keypair::new();
         let budget_pubkey = budget_keypair.pubkey();
-        let bob_pubkey = solana_sdk::pubkey::new_rand();
-        let witness = solana_sdk::pubkey::new_rand();
+        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
+        let witness = safecoin_sdk::pubkey::new_rand();
         let instructions = budget_instruction::when_signed(
             &alice_pubkey,
             &bob_pubkey,
@@ -362,7 +362,7 @@ mod tests {
         // Initialize BudgetState
         let budget_keypair = Keypair::new();
         let budget_pubkey = budget_keypair.pubkey();
-        let bob_pubkey = solana_sdk::pubkey::new_rand();
+        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
         let dt = Utc::now();
         let instructions = budget_instruction::on_date(
             &alice_pubkey,
@@ -410,8 +410,8 @@ mod tests {
         let alice_pubkey = alice_keypair.pubkey();
         let budget_keypair = Keypair::new();
         let budget_pubkey = budget_keypair.pubkey();
-        let bob_pubkey = solana_sdk::pubkey::new_rand();
-        let mallory_pubkey = solana_sdk::pubkey::new_rand();
+        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
+        let mallory_pubkey = safecoin_sdk::pubkey::new_rand();
         let dt = Utc::now();
 
         let instructions = budget_instruction::on_date(
@@ -481,7 +481,7 @@ mod tests {
         let alice_pubkey = alice_keypair.pubkey();
         let budget_keypair = Keypair::new();
         let budget_pubkey = budget_keypair.pubkey();
-        let bob_pubkey = solana_sdk::pubkey::new_rand();
+        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
         let dt = Utc::now();
 
         let instructions = budget_instruction::on_date(
@@ -539,7 +539,7 @@ mod tests {
     #[test]
     fn test_pay_when_account_data() {
         let (bank, alice_keypair) = create_bank(42);
-        let game_pubkey = solana_sdk::pubkey::new_rand();
+        let game_pubkey = safecoin_sdk::pubkey::new_rand();
         let game_account = AccountSharedData::from(Account {
             lamports: 1,
             data: vec![1, 2, 3],

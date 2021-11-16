@@ -6,7 +6,7 @@ pub(crate) mod new_token_program {
 }
 
 /*
-    spl_token::state::Account {
+    safe_token::state::Account {
         mint: Pubkey,
         owner: Pubkey,
         amount: u64,
@@ -17,8 +17,8 @@ pub(crate) mod new_token_program {
         close_authority: COption<Pubkey>,
     }
 */
-pub const SPL_TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
-pub const SPL_TOKEN_ACCOUNT_OWNER_OFFSET: usize = 32;
+pub const SAFE_TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
+pub const SAFE_TOKEN_ACCOUNT_OWNER_OFFSET: usize = 32;
 
 pub mod state {
     const LEN: usize = 165;

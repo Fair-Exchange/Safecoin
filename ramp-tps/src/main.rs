@@ -12,7 +12,7 @@ use log::*;
 use results::Results;
 use safecoin_client::rpc_client::RpcClient;
 use solana_metrics::datapoint_info;
-use solana_sdk::{genesis_config::GenesisConfig, signature::read_keypair_file};
+use safecoin_sdk::{genesis_config::GenesisConfig, signature::read_keypair_file};
 use solana_stake_program::config::{id as stake_config_id, Config as StakeConfig};
 use std::{
     collections::HashMap,
@@ -174,7 +174,7 @@ fn main() {
             );
             exit(1);
         });
-    let pubkey_to_keybase = Rc::new(move |pubkey: &solana_sdk::pubkey::Pubkey| -> String {
+    let pubkey_to_keybase = Rc::new(move |pubkey: &safecoin_sdk::pubkey::Pubkey| -> String {
         let pubkey = pubkey.to_string();
         match pubkey_map.get(&pubkey) {
             Some(keybase) => format!("{} ({})", keybase, pubkey),

@@ -4,7 +4,7 @@ use safecoin_sdk::{
     rent::Rent,
 };
 
-mod spl_token {
+mod safe_token {
     safecoin_sdk::declare_id!("7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD");
 }
 mod safe_memo_1_0 {
@@ -18,7 +18,7 @@ mod safe_associated_token_account {
 }
 
 static SPL_PROGRAMS: &[(Pubkey, &[u8])] = &[
-    (spl_token::ID, include_bytes!("programs/spl_token-3.2.0.so")),
+    (safe_token::ID, include_bytes!("programs/safe_token-3.2.0.so")),
     (
         safe_memo_1_0::ID,
         include_bytes!("programs/safe_memo-1.0.0.so"),

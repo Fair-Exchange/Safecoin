@@ -3,7 +3,7 @@ use log::*;
 use safecoin_client::rpc_client::RpcClient;
 use solana_net_utils::parse_host;
 use solana_notifier::Notifier;
-use solana_sdk::{
+use safecoin_sdk::{
     clock::{Epoch, Slot},
     genesis_config::GenesisConfig,
     timing::duration_as_ms,
