@@ -56,9 +56,10 @@ reed-solomon-erasure = { version = "5.0.1", features = ["simd-accel"] }
 [dependencies.rocksdb]
 # Avoid the vendored bzip2 within rocksdb-sys that can cause linker conflicts
 # when also using the bzip2 crate
-version = "0.17.0"
+git = "https://github.com/rust-rocksdb/rust-rocksdb"
+branch = "master"
 default-features = false
-features = ["lz4"]
+features = ["lz4","snappy"]
 
 [dev-dependencies]
 assert_matches = "1.5.0"
