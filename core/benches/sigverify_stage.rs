@@ -1,22 +1,60 @@
 #![feature(test)]
 
-extern crate solana_core;
+extern crate safecoin_core;
 extern crate test;
 
 use crossbeam_channel::unbounded;
 use log::*;
 use rand::{thread_rng, Rng};
-use solana_core::sigverify::TransactionSigVerifier;
-use solana_core::sigverify_stage::SigVerifyStage;
+use safecoin_core::sigverify::TransactionSigVerifier;
+use safecoin_core::sigverify_stage::SigVerifyStage;
 use solana_perf::packet::to_packets_chunked;
 use solana_perf::test_tx::test_tx;
-use solana_sdk::hash::Hash;
-use solana_sdk::signature::{Keypair, Signer};
-use solana_sdk::system_transaction;
-use solana_sdk::timing::duration_as_ms;
+use safecoin_sdk::hash::Hash;
+use safecoin_sdk::signature::{Keypair, Signer};
+use safecoin_sdk::system_transaction;
+use safecoin_sdk::timing::duration_as_ms;
 use std::sync::mpsc::channel;
 use std::time::{Duration, Instant};
 use test::Bencher;
+
+#[bench]
+fn bench_packet_discard(bencher: &mut Bencher) {
+    solana_logger::setup();
+    let len = 30 * 1000;
+    let chunk_size = 1024;
+    let tx = test_tx();
+    let mut batches = to_packets_chunked(&vec![tx; len], chunk_size);
+
+    let mut total = 0;
+
+    let ips: Vec<_> = (0..10_000)
+        .into_iter()
+        .map(|_| {
+            let mut addr = [0u16; 8];
+            thread_rng().fill(&mut addr);
+            addr
+        })
+        .collect();
+
+    for batch in batches.iter_mut() {
+        total += batch.packets.len();
+        for p in batch.packets.iter_mut() {
+            let ip_index = thread_rng().gen_range(0, ips.len());
+            p.meta.addr = ips[ip_index];
+        }
+    }
+    info!("total packets: {}", total);
+
+    bencher.iter(move || {
+        SigVerifyStage::discard_excess_packets(&mut batches, 10_000);
+        for batch in batches.iter_mut() {
+            for p in batch.packets.iter_mut() {
+                p.meta.discard = false;
+            }
+        }
+    });
+}
 
 #[bench]
 fn bench_sigverify_stage(bencher: &mut Bencher) {

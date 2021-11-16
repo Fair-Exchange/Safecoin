@@ -3,7 +3,7 @@ use solana_ledger::{
     blockstore::{self, Blockstore},
     get_tmp_ledger_path,
 };
-use solana_sdk::hash::Hash;
+use safecoin_sdk::hash::Hash;
 use std::sync::Arc;
 use std::thread::Builder;
 

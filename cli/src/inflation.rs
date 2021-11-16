@@ -10,7 +10,7 @@ use safecoin_cli_output::{
 };
 use safecoin_client::rpc_client::RpcClient;
 use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
-use solana_sdk::{clock::Epoch, pubkey::Pubkey};
+use safecoin_sdk::{clock::Epoch, pubkey::Pubkey};
 use std::sync::Arc;
 
 #[derive(Debug, PartialEq)]
@@ -102,7 +102,7 @@ fn process_rewards(
     rewards_epoch: Option<Epoch>,
 ) -> ProcessResult {
     let rewards = rpc_client
-        .get_inflation_reward(&addresses, rewards_epoch)
+        .get_inflation_reward(addresses, rewards_epoch)
         .map_err(|err| {
             if let Some(epoch) = rewards_epoch {
                 format!("Rewards not available for epoch {}", epoch)

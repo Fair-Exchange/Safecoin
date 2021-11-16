@@ -88,7 +88,7 @@ Monitor a validator's stake during warmup by:
 - View your stake account, the delegation preference and details of your stake:`safecoin stake-account ~/validator-stake-keypair.json`
 - `safecoin validators` displays the current active stake of all validators, including yours
 - `safecoin stake-history` shows the history of stake warming up and cooling down over recent epochs
-- Look for log messages on your validator indicating your next leader slot: `[2019-09-27T20:16:00.319721164Z INFO solana_core::replay_stage] <VALIDATOR_IDENTITY_PUBKEY> voted and reset PoH at tick height ####. My next leader slot is ####`
+- Look for log messages on your validator indicating your next leader slot: `[2019-09-27T20:16:00.319721164Z INFO safecoin_core::replay_stage] <VALIDATOR_IDENTITY_PUBKEY> voted and reset PoH at tick height ####. My next leader slot is ####`
 - Once your stake is warmed up, you will see a stake balance listed for your validator by running `safecoin validators`
 
 ## Monitor Your Staked Validator

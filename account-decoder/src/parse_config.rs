@@ -5,11 +5,11 @@ use crate::{
 use bincode::deserialize;
 use serde_json::Value;
 use solana_config_program::{get_config_data, ConfigKeys};
-use solana_sdk::pubkey::Pubkey;
-use solana_stake_program::config::Config as StakeConfig;
+use safecoin_sdk::pubkey::Pubkey;
+use safecoin_sdk::stake::config::{self as stake_config, Config as StakeConfig};
 
 pub fn parse_config(data: &[u8], pubkey: &Pubkey) -> Result<ConfigAccountType, ParseAccountError> {
-    let parsed_account = if pubkey == &solana_stake_program::config::id() {
+    let parsed_account = if pubkey == &stake_config::id() {
         get_config_data(data)
             .ok()
             .and_then(|data| deserialize::<StakeConfig>(data).ok())
@@ -37,7 +37,7 @@ fn parse_config_data<T>(data: &[u8], keys: Vec<(Pubkey, bool)>) -> Option<UiConf
 where
     T: serde::de::DeserializeOwned,
 {
-    let config_data: T = deserialize(&get_config_data(data).ok()?).ok()?;
+    let config_data: T = deserialize(get_config_data(data).ok()?).ok()?;
     let keys = keys
         .iter()
         .map(|key| UiConfigKey {
@@ -91,7 +91,7 @@ mod test {
     use crate::validator_info::ValidatorInfo;
     use serde_json::json;
     use solana_config_program::create_config_account;
-    use solana_sdk::account::ReadableAccount;
+    use safecoin_sdk::account::ReadableAccount;
 
     #[test]
     fn test_parse_config() {
@@ -101,11 +101,7 @@ mod test {
         };
         let stake_config_account = create_config_account(vec![], &stake_config, 10);
         assert_eq!(
-            parse_config(
-                &stake_config_account.data(),
-                &solana_stake_program::config::id()
-            )
-            .unwrap(),
+            parse_config(stake_config_account.data(), &stake_config::id()).unwrap(),
             ConfigAccountType::StakeConfig(UiStakeConfig {
                 warmup_cooldown_rate: 0.25,
                 slash_penalty: 50,
@@ -118,14 +114,14 @@ mod test {
             }))
             .unwrap(),
         };
-        let info_pubkey = solana_sdk::pubkey::new_rand();
+        let info_pubkey = safecoin_sdk::pubkey::new_rand();
         let validator_info_config_account = create_config_account(
             vec![(validator_info::id(), false), (info_pubkey, true)],
             &validator_info,
             10,
         );
         assert_eq!(
-            parse_config(&validator_info_config_account.data(), &info_pubkey).unwrap(),
+            parse_config(validator_info_config_account.data(), &info_pubkey).unwrap(),
             ConfigAccountType::ValidatorInfo(UiConfig {
                 keys: vec![
                     UiConfigKey {

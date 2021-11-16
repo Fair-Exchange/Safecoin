@@ -8,6 +8,7 @@ use {
         QuietDisplay, VerboseDisplay,
     },
     chrono::{Local, TimeZone},
+    clap::ArgMatches,
     console::{style, Emoji},
     inflector::cases::titlecase::to_title_case,
     serde::{Deserialize, Serialize},
@@ -18,17 +19,17 @@ use {
         RpcAccountBalance, RpcContactInfo, RpcInflationGovernor, RpcInflationRate, RpcKeyedAccount,
         RpcSupply, RpcVoteAccountInfo,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Epoch, Slot, UnixTimestamp},
         epoch_info::EpochInfo,
         hash::Hash,
         native_token::lamports_to_sol,
         pubkey::Pubkey,
         signature::Signature,
+        stake::state::{Authorized, Lockup},
         stake_history::StakeHistoryEntry,
         transaction::{Transaction, TransactionError},
     },
-    solana_stake_program::stake_state::{Authorized, Lockup},
     safecoin_transaction_status::{
         EncodedConfirmedBlock, EncodedTransaction, TransactionConfirmationStatus,
         UiTransactionStatusMeta,
@@ -47,7 +48,7 @@ use {
 
 static WARNING: Emoji = Emoji("⚠️", "!");
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum OutputFormat {
     Display,
     Json,
@@ -76,6 +77,21 @@ impl OutputFormat {
             OutputFormat::Json => serde_json::to_string_pretty(item).unwrap(),
             OutputFormat::JsonCompact => serde_json::to_value(item).unwrap().to_string(),
         }
+    }
+
+    pub fn from_matches(matches: &ArgMatches<'_>, output_name: &str, verbose: bool) -> Self {
+        matches
+            .value_of(output_name)
+            .map(|value| match value {
+                "json" => OutputFormat::Json,
+                "json-compact" => OutputFormat::JsonCompact,
+                _ => unreachable!(),
+            })
+            .unwrap_or(if verbose {
+                OutputFormat::DisplayVerbose
+            } else {
+                OutputFormat::Display
+            })
     }
 }
 
@@ -1334,7 +1350,7 @@ impl fmt::Display for CliValidatorInfo {
             writeln_name_value(
                 f,
                 &format!("  {}:", to_title_case(key)),
-                &value.as_str().unwrap_or("?"),
+                value.as_str().unwrap_or("?"),
             )?;
         }
         Ok(())
@@ -1372,8 +1388,8 @@ impl fmt::Display for CliVoteAccount {
             build_balance_message(self.account_balance, self.use_lamports_unit, true)
         )?;
         writeln!(f, "Validator Identity: {}", self.validator_identity)?;
-        writeln!(f, "Authorized Voters: {}", self.authorized_voters)?;
-        writeln!(f, "Authorized Withdrawer: {}", self.authorized_withdrawer)?;
+        writeln!(f, "Vote Authority: {}", self.authorized_voters)?;
+        writeln!(f, "Withdraw Authority: {}", self.authorized_withdrawer)?;
         writeln!(f, "Credits: {}", self.credits)?;
         writeln!(f, "Commission: {}%", self.commission)?;
         writeln!(
@@ -1560,15 +1576,19 @@ impl fmt::Display for CliInflation {
             "Staking rate:            {:>5.2}%",
             self.current_rate.validator * 100.
         )?;
-        writeln!(
-            f,
-            "Foundation rate:         {:>5.2}%",
-            self.current_rate.foundation * 100.
-        )
+
+        if self.current_rate.foundation > 0. {
+            writeln!(
+                f,
+                "Foundation rate:         {:>5.2}%",
+                self.current_rate.foundation * 100.
+            )?;
+        }
+        Ok(())
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CliSignOnlyData {
     pub blockhash: String,
@@ -1818,7 +1838,7 @@ impl fmt::Display for CliTokenAccount {
         writeln_name_value(
             f,
             "Close authority:",
-            &account.close_authority.as_ref().unwrap_or(&String::new()),
+            account.close_authority.as_ref().unwrap_or(&String::new()),
         )?;
         Ok(())
     }
@@ -1910,6 +1930,9 @@ pub struct CliUpgradeableProgram {
     pub authority: String,
     pub last_deploy_slot: u64,
     pub data_len: usize,
+    pub lamports: u64,
+    #[serde(skip_serializing)]
+    pub use_lamports_unit: bool,
 }
 impl QuietDisplay for CliUpgradeableProgram {}
 impl VerboseDisplay for CliUpgradeableProgram {}
@@ -1930,11 +1953,77 @@ impl fmt::Display for CliUpgradeableProgram {
             "Data Length:",
             &format!("{:?} ({:#x?}) bytes", self.data_len, self.data_len),
         )?;
+        writeln_name_value(
+            f,
+            "Balance:",
+            &build_balance_message(self.lamports, self.use_lamports_unit, true),
+        )?;
         Ok(())
     }
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliUpgradeablePrograms {
+    pub programs: Vec<CliUpgradeableProgram>,
+    #[serde(skip_serializing)]
+    pub use_lamports_unit: bool,
+}
+impl QuietDisplay for CliUpgradeablePrograms {}
+impl VerboseDisplay for CliUpgradeablePrograms {}
+impl fmt::Display for CliUpgradeablePrograms {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f)?;
+        writeln!(
+            f,
+            "{}",
+            style(format!(
+                "{:<44} | {:<9} | {:<44} | {}",
+                "Program Id", "Slot", "Authority", "Balance"
+            ))
+            .bold()
+        )?;
+        for program in self.programs.iter() {
+            writeln!(
+                f,
+                "{}",
+                &format!(
+                    "{:<44} | {:<9} | {:<44} | {}",
+                    program.program_id,
+                    program.last_deploy_slot,
+                    program.authority,
+                    build_balance_message(program.lamports, self.use_lamports_unit, true)
+                )
+            )?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliUpgradeableProgramClosed {
+    pub program_id: String,
+    pub lamports: u64,
+    #[serde(skip_serializing)]
+    pub use_lamports_unit: bool,
+}
+impl QuietDisplay for CliUpgradeableProgramClosed {}
+impl VerboseDisplay for CliUpgradeableProgramClosed {}
+impl fmt::Display for CliUpgradeableProgramClosed {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f)?;
+        writeln!(
+            f,
+            "Closed Program Id {}, {} reclaimed",
+            &self.program_id,
+            &build_balance_message(self.lamports, self.use_lamports_unit, true)
+        )?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CliUpgradeableBuffer {
     pub address: String,
@@ -2020,6 +2109,11 @@ pub fn return_signers_with_config(
     output_format: &OutputFormat,
     config: &ReturnSignersConfig,
 ) -> Result<String, Box<dyn std::error::Error>> {
+    let cli_command = return_signers_data(tx, config);
+    Ok(output_format.formatted_string(&cli_command))
+}
+
+pub fn return_signers_data(tx: &Transaction, config: &ReturnSignersConfig) -> CliSignOnlyData {
     let verify_results = tx.verify_with_results();
     let mut signers = Vec::new();
     let mut absent = Vec::new();
@@ -2044,19 +2138,17 @@ pub fn return_signers_with_config(
         None
     };
 
-    let cli_command = CliSignOnlyData {
+    CliSignOnlyData {
         blockhash: tx.message.recent_blockhash.to_string(),
         message,
         signers,
         absent,
         bad_sig,
-    };
-
-    Ok(output_format.formatted_string(&cli_command))
+    }
 }
 
 pub fn parse_sign_only_reply_string(reply: &str) -> SignOnly {
-    let object: Value = serde_json::from_str(&reply).unwrap();
+    let object: Value = serde_json::from_str(reply).unwrap();
     let blockhash_str = object.get("blockhash").unwrap().as_str().unwrap();
     let blockhash = blockhash_str.parse::<Hash>().unwrap();
     let mut present_signers: Vec<(Pubkey, Signature)> = Vec::new();
@@ -2434,7 +2526,8 @@ impl VerboseDisplay for CliGossipNodes {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::{
+    use clap::{App, Arg};
+    use safecoin_sdk::{
         message::Message,
         pubkey::Pubkey,
         signature::{keypair_from_seed, NullSigner, Signature, Signer, SignerError},
@@ -2494,6 +2587,22 @@ mod tests {
         assert_eq!(sign_only.absent_signers[0], absent.pubkey());
         assert_eq!(sign_only.bad_signers[0], bad.pubkey());
 
+        let res_data = return_signers_data(&tx, &ReturnSignersConfig::default());
+        assert_eq!(
+            res_data,
+            CliSignOnlyData {
+                blockhash: blockhash.to_string(),
+                message: None,
+                signers: vec![format!(
+                    "{}={}",
+                    present.pubkey().to_string(),
+                    tx.signatures[1]
+                )],
+                absent: vec![absent.pubkey().to_string()],
+                bad_sig: vec![bad.pubkey().to_string()],
+            }
+        );
+
         let expected_msg = "AwECBwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDgTl3Dqh9\
             F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5QEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE\
             BAQEBAYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBQUFBQUFBQUFBQUFBQUFBQUF\
@@ -2507,10 +2616,26 @@ mod tests {
         let res = return_signers_with_config(&tx, &OutputFormat::JsonCompact, &config).unwrap();
         let sign_only = parse_sign_only_reply_string(&res);
         assert_eq!(sign_only.blockhash, blockhash);
-        assert_eq!(sign_only.message, Some(expected_msg));
+        assert_eq!(sign_only.message, Some(expected_msg.clone()));
         assert_eq!(sign_only.present_signers[0].0, present.pubkey());
         assert_eq!(sign_only.absent_signers[0], absent.pubkey());
         assert_eq!(sign_only.bad_signers[0], bad.pubkey());
+
+        let res_data = return_signers_data(&tx, &config);
+        assert_eq!(
+            res_data,
+            CliSignOnlyData {
+                blockhash: blockhash.to_string(),
+                message: Some(expected_msg),
+                signers: vec![format!(
+                    "{}={}",
+                    present.pubkey().to_string(),
+                    tx.signatures[1]
+                )],
+                absent: vec![absent.pubkey().to_string()],
+                bad_sig: vec![bad.pubkey().to_string()],
+            }
+        );
     }
 
     #[test]
@@ -2557,6 +2682,52 @@ mod tests {
         assert_eq!(
             &OutputFormat::DisplayVerbose.formatted_string(&f),
             "verbose"
+        );
+    }
+
+    #[test]
+    fn test_output_format_from_matches() {
+        let app = App::new("test").arg(
+            Arg::with_name("output_format")
+                .long("output")
+                .value_name("FORMAT")
+                .global(true)
+                .takes_value(true)
+                .possible_values(&["json", "json-compact"])
+                .help("Return information in specified output format"),
+        );
+        let matches = app
+            .clone()
+            .get_matches_from(vec!["test", "--output", "json"]);
+        assert_eq!(
+            OutputFormat::from_matches(&matches, "output_format", false),
+            OutputFormat::Json
+        );
+        assert_eq!(
+            OutputFormat::from_matches(&matches, "output_format", true),
+            OutputFormat::Json
+        );
+
+        let matches = app
+            .clone()
+            .get_matches_from(vec!["test", "--output", "json-compact"]);
+        assert_eq!(
+            OutputFormat::from_matches(&matches, "output_format", false),
+            OutputFormat::JsonCompact
+        );
+        assert_eq!(
+            OutputFormat::from_matches(&matches, "output_format", true),
+            OutputFormat::JsonCompact
+        );
+
+        let matches = app.clone().get_matches_from(vec!["test"]);
+        assert_eq!(
+            OutputFormat::from_matches(&matches, "output_format", false),
+            OutputFormat::Display
+        );
+        assert_eq!(
+            OutputFormat::from_matches(&matches, "output_format", true),
+            OutputFormat::DisplayVerbose
         );
     }
 }

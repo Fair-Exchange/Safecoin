@@ -1,14 +1,14 @@
 import React from "react";
 import { lamportsToSafeString } from "utils";
-import { ConfirmedBlock, PublicKey } from "@safecoin/web3.js";
+import { BlockResponse, PublicKey } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 
 const PAGE_SIZE = 10;
 
-export function BlockRewardsCard({ block }: { block: ConfirmedBlock }) {
+export function BlockRewardsCard({ block }: { block: BlockResponse }) {
   const [rewardsDisplayed, setRewardsDisplayed] = React.useState(PAGE_SIZE);
 
-  if (block.rewards.length < 1) {
+  if (!block.rewards || block.rewards.length < 1) {
     return null;
   }
 

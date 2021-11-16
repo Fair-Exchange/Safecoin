@@ -2,12 +2,12 @@
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(specialization))]
 #![cfg_attr(RUSTC_NEEDS_PROC_MACRO_HYGIENE, feature(proc_macro_hygiene))]
 
-// Allows macro expansion of `use ::solana_sdk::*` to work within this crate
-extern crate self as solana_sdk;
+// Allows macro expansion of `use ::safecoin_sdk::*` to work within this crate
+extern crate self as safecoin_sdk;
 
 #[cfg(feature = "full")]
 pub use signer::signers;
-pub use solana_program::*;
+pub use safecoin_program::*;
 
 pub mod account;
 pub mod account_utils;
@@ -21,6 +21,7 @@ pub mod entrypoint;
 pub mod entrypoint_deprecated;
 pub mod entrypoint_native;
 pub mod epoch_info;
+pub mod exit;
 pub mod feature;
 pub mod feature_set;
 pub mod genesis_config;
@@ -58,10 +59,10 @@ pub mod transport;
 /// # // wrapper is used so that the macro invocation occurs in the item position
 /// # // rather than in the statement position which isn't allowed.
 /// use std::str::FromStr;
-/// use solana_sdk::{declare_id, pubkey::Pubkey};
+/// use safecoin_sdk::{declare_id, pubkey::Pubkey};
 ///
 /// # mod item_wrapper {
-/// #   use solana_sdk::declare_id;
+/// #   use safecoin_sdk::declare_id;
 /// declare_id!("My11111111111111111111111111111111111111111");
 /// # }
 /// # use item_wrapper::id;
@@ -69,12 +70,12 @@ pub mod transport;
 /// let my_id = Pubkey::from_str("My11111111111111111111111111111111111111111").unwrap();
 /// assert_eq!(id(), my_id);
 /// ```
-pub use solana_sdk_macro::declare_id;
-pub use solana_sdk_macro::pubkeys;
+pub use safecoin_sdk_macro::declare_id;
+pub use safecoin_sdk_macro::pubkeys;
 #[rustversion::since(1.46.0)]
-pub use solana_sdk_macro::respan;
+pub use safecoin_sdk_macro::respan;
 
-// Unused `solana_sdk::program_stubs!()` macro retained for source backwards compatibility with older programs
+// Unused `safecoin_sdk::program_stubs!()` macro retained for source backwards compatibility with older programs
 #[macro_export]
 #[deprecated(
     since = "1.4.3",

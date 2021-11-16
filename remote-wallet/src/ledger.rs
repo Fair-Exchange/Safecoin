@@ -9,7 +9,7 @@ use {
     log::*,
     num_traits::FromPrimitive,
     semver::Version as FirmwareVersion,
-    solana_sdk::{derivation_path::DerivationPath, pubkey::Pubkey, signature::Signature},
+    safecoin_sdk::{derivation_path::DerivationPath, pubkey::Pubkey, signature::Signature},
     std::{cmp::min, convert::TryFrom, fmt, sync::Arc},
 };
 

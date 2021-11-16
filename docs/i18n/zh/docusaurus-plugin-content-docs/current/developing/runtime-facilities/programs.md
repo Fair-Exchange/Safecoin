@@ -11,7 +11,7 @@ Safecoin包含少量内置程序，这些程序是运行验证程序节点所必
 创建帐户并在它们之间转移Lamport
 
 - 程序ID：`11111111111111111111111111111111`
-- 说明：[SystemInstruction](https://docs.rs/safecoin-sdk/VERSION_FOR_DOCS_RS/solana_sdk/system_instruction/enum.SystemInstruction.html)
+- 说明：[SystemInstruction](https://docs.rs/safecoin-sdk/VERSION_FOR_DOCS_RS/safecoin_sdk/system_instruction/enum.SystemInstruction.html)
 
 ## 配置程序
 
@@ -41,7 +41,7 @@ Safecoin包含少量内置程序，这些程序是运行验证程序节点所必
 将程序添加到链中并执行它们。
 
 - 程序ID：`BPFLoader11111111111111111111111111111111111`
-- 说明：[LoaderInstruction](https://docs.rs/safecoin-sdk/VERSION_FOR_DOCS_RS/solana_sdk/loader_instruction/enum.LoaderInstruction.html)
+- 说明：[LoaderInstruction](https://docs.rs/safecoin-sdk/VERSION_FOR_DOCS_RS/safecoin_sdk/loader_instruction/enum.LoaderInstruction.html)
 
 BPF加载程序将其自身标记为它创建的用于存储程序的可执行帐户的“所有者”。 当用户通过程序ID调用指令时，Safecoin运行时将同时加载您的可执行帐户及其所有者BPF Loader。 然后，运行时将您的程序传递给BPF加载程序以处理指令。
 

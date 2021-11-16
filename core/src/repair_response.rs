@@ -3,7 +3,7 @@ use solana_ledger::{
     shred::{Nonce, SIZE_OF_NONCE},
 };
 use solana_perf::packet::limited_deserialize;
-use solana_sdk::{clock::Slot, packet::Packet};
+use safecoin_sdk::{clock::Slot, packet::Packet};
 use std::{io, net::SocketAddr};
 
 pub fn repair_response_packet(
@@ -53,7 +53,7 @@ mod test {
         shred::{Shred, Shredder},
         sigverify_shreds::verify_shred_cpu,
     };
-    use solana_sdk::signature::{Keypair, Signer};
+    use safecoin_sdk::signature::{Keypair, Signer};
     use std::{
         collections::HashMap,
         net::{IpAddr, Ipv4Addr},

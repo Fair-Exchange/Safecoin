@@ -7,7 +7,6 @@ import {
   PartiallyDecodedInstruction,
   PublicKey,
   SignatureResult,
-  Transaction,
   TransactionSignature,
 } from "@safecoin/web3.js";
 import { BpfLoaderDetailsCard } from "components/instruction/bpf-loader/BpfLoaderDetailsCard";
@@ -18,7 +17,9 @@ import { SystemDetailsCard } from "components/instruction/system/SystemDetailsCa
 import { TokenDetailsCard } from "components/instruction/token/TokenDetailsCard";
 import { TokenLendingDetailsCard } from "components/instruction/TokenLendingDetailsCard";
 import { TokenSwapDetailsCard } from "components/instruction/TokenSwapDetailsCard";
+import { WormholeDetailsCard } from "components/instruction/WormholeDetailsCard";
 import { UnknownDetailsCard } from "components/instruction/UnknownDetailsCard";
+import { BonfidaBotDetailsCard } from "components/instruction/BonfidaBotDetails";
 import {
   SignatureProps,
   INNER_INSTRUCTIONS_START_SLOT,
@@ -27,6 +28,7 @@ import { intoTransactionInstruction } from "utils/tx";
 import { isSerumInstruction } from "components/instruction/serum/types";
 import { isTokenLendingInstruction } from "components/instruction/token-lending/types";
 import { isTokenSwapInstruction } from "components/instruction/token-swap/types";
+import { isBonfidaBotInstruction } from "components/instruction/bonfida-bot/types";
 import { useFetchTransactionDetails } from "providers/transactions/details";
 import {
   useTransactionDetails,
@@ -35,6 +37,8 @@ import {
 import { Cluster, useCluster } from "providers/cluster";
 import { BpfUpgradeableLoaderDetailsCard } from "components/instruction/bpf-upgradeable-loader/BpfUpgradeableLoaderDetailsCard";
 import { VoteDetailsCard } from "components/instruction/vote/VoteDetailsCard";
+import { isWormholeInstruction } from "components/instruction/wormhole/types";
+import { AssociatedTokenDetailsCard } from "components/instruction/AssociatedTokenDetailsCard";
 
 export type InstructionDetailsProps = {
   tx: ParsedTransaction;
@@ -53,8 +57,6 @@ export function InstructionsSection({ signature }: SignatureProps) {
   const refreshDetails = () => fetchDetails(signature);
 
   if (!status?.data?.info || !details?.data?.transaction) return null;
-
-  const raw = details.data.raw?.transaction;
 
   const { transaction } = details.data.transaction;
   const { meta } = details.data.transaction;
@@ -101,7 +103,6 @@ export function InstructionsSection({ signature }: SignatureProps) {
             signature,
             tx: transaction,
             childIndex,
-            raw,
           });
 
           innerCards.push(res);
@@ -115,7 +116,6 @@ export function InstructionsSection({ signature }: SignatureProps) {
         signature,
         tx: transaction,
         innerCards,
-        raw,
       });
     }
   );
@@ -142,7 +142,6 @@ function renderInstructionCard({
   signature,
   innerCards,
   childIndex,
-  raw,
 }: {
   ix: ParsedInstruction | PartiallyDecodedInstruction;
   tx: ParsedTransaction;
@@ -151,7 +150,6 @@ function renderInstructionCard({
   signature: TransactionSignature;
   innerCards?: JSX.Element[];
   childIndex?: number;
-  raw?: Transaction;
 }) {
   const key = `${index}-${childIndex}`;
 
@@ -179,6 +177,8 @@ function renderInstructionCard({
         return <StakeDetailsCard {...props} />;
       case "safe-memo":
         return <MemoDetailsCard {...props} />;
+      case "safe-associated-token-account":
+        return <AssociatedTokenDetailsCard {...props} />;
       case "vote":
         return <VoteDetailsCard {...props} />;
       default:
@@ -206,12 +206,16 @@ function renderInstructionCard({
     childIndex,
   };
 
-  if (isSerumInstruction(transactionIx)) {
+  if (isBonfidaBotInstruction(transactionIx)) {
+    return <BonfidaBotDetailsCard key={key} {...props} />;
+  } else if (isSerumInstruction(transactionIx)) {
     return <SerumDetailsCard key={key} {...props} />;
   } else if (isTokenSwapInstruction(transactionIx)) {
     return <TokenSwapDetailsCard key={key} {...props} />;
   } else if (isTokenLendingInstruction(transactionIx)) {
     return <TokenLendingDetailsCard key={key} {...props} />;
+  } else if (isWormholeInstruction(transactionIx)) {
+    return <WormholeDetailsCard key={key} {...props} />;
   } else {
     return <UnknownDetailsCard key={key} {...props} />;
   }

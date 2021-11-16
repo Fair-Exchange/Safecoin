@@ -1,10 +1,12 @@
-use crate::parse_instruction::{
-    check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
-};
-use bincode::deserialize;
-use serde_json::json;
-use solana_sdk::{
-    instruction::CompiledInstruction, pubkey::Pubkey, system_instruction::SystemInstruction,
+use {
+    crate::parse_instruction::{
+        check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
+    },
+    bincode::deserialize,
+    serde_json::json,
+    safecoin_sdk::{
+        instruction::CompiledInstruction, pubkey::Pubkey, system_instruction::SystemInstruction,
+    },
 };
 
 pub fn parse_system(
@@ -197,15 +199,17 @@ fn check_num_system_accounts(accounts: &[u8], num: usize) -> Result<(), ParseIns
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use solana_sdk::{message::Message, pubkey::Pubkey, system_instruction};
+    use {
+        super::*,
+        safecoin_sdk::{message::Message, pubkey::Pubkey, system_instruction},
+    };
 
     #[test]
     #[allow(clippy::same_item_push)]
     fn test_parse_system_instruction() {
         let mut keys: Vec<Pubkey> = vec![];
         for _ in 0..6 {
-            keys.push(solana_sdk::pubkey::new_rand());
+            keys.push(safecoin_sdk::pubkey::new_rand());
         }
 
         let lamports = 55;
@@ -380,7 +384,7 @@ mod test {
     fn test_parse_system_instruction_nonce() {
         let mut keys: Vec<Pubkey> = vec![];
         for _ in 0..5 {
-            keys.push(solana_sdk::pubkey::new_rand());
+            keys.push(safecoin_sdk::pubkey::new_rand());
         }
 
         let instruction = system_instruction::advance_nonce_account(&keys[1], &keys[0]);

@@ -1,6 +1,6 @@
 use solana_bpf_rust_sysvar::process_instruction;
-use solana_program_test::*;
-use solana_sdk::{
+use safecoin_program_test::*;
+use safecoin_sdk::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     signature::Signer,

@@ -70,7 +70,7 @@ $ safecoin-install run safecoin-validator ...  # <-- runs a validator, restartin
 更新的压缩包本身在其他地方托管，不在链上，可以从指定的 `download_url` 获取。
 
 ```text
-use solana_sdk::signature::Signature;
+use safecoin_sdk::signature::Signature;
 
 /// Information required to download and apply a given update
 pub struct UpdateManifest {

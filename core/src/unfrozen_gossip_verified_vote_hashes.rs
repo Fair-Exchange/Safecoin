@@ -1,5 +1,5 @@
 use crate::latest_validator_votes_for_frozen_banks::LatestValidatorVotesForFrozenBanks;
-use solana_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey};
+use safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey};
 use std::collections::{BTreeMap, HashMap};
 
 #[derive(Default)]
@@ -116,7 +116,7 @@ mod tests {
             if *unfrozen_vote_slot >= frozen_vote_slot {
                 let vote_hashes_map = unfrozen_gossip_verified_vote_hashes
                     .votes_per_slot
-                    .get(&unfrozen_vote_slot)
+                    .get(unfrozen_vote_slot)
                     .unwrap();
                 assert_eq!(vote_hashes_map.len(), num_duplicate_hashes);
                 for pubkey_votes in vote_hashes_map.values() {

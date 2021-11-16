@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use log::*;
-    use solana_core::ledger_cleanup_service::LedgerCleanupService;
+    use safecoin_core::ledger_cleanup_service::LedgerCleanupService;
     use solana_ledger::blockstore::{make_many_slot_entries, Blockstore};
     use solana_ledger::get_tmp_ledger_path;
     use solana_ledger::shred::Shred;

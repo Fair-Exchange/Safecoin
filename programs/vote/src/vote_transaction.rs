@@ -1,4 +1,4 @@
-use solana_sdk::{
+use safecoin_sdk::{
     clock::Slot,
     hash::Hash,
     program_utils::limited_deserialize,
@@ -19,7 +19,7 @@ pub fn parse_vote_transaction(tx: &Transaction) -> Option<(Pubkey, Vote, Option<
         let prog_id_idx = first_instruction.program_id_index as usize;
         match message.account_keys.get(prog_id_idx) {
             Some(program_id) => {
-                if !crate::check_id(&program_id) {
+                if !crate::check_id(program_id) {
                     return None;
                 }
             }
@@ -83,7 +83,7 @@ pub fn new_vote_transaction(
 #[cfg(test)]
 mod test {
     use super::*;
-    use solana_sdk::hash::hash;
+    use safecoin_sdk::hash::hash;
 
     fn run_test_parse_vote_transaction(input_hash: Option<Hash>) {
         let node_keypair = Keypair::new();

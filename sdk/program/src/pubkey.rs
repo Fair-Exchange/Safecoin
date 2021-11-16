@@ -1,16 +1,16 @@
-use crate::{
-    bpf_loader, bpf_loader_deprecated, config, decode_error::DecodeError, feature, hash::hashv,
-    secp256k1_program, stake, system_program, sysvar, vote,
+#![allow(clippy::integer_arithmetic)]
+use {
+    crate::{decode_error::DecodeError, hash::hashv},
+    borsh::{BorshDeserialize, BorshSchema, BorshSerialize},
+    bytemuck::{Pod, Zeroable},
+    num_derive::{FromPrimitive, ToPrimitive},
+    std::{
+        convert::{Infallible, TryFrom},
+        fmt, mem,
+        str::FromStr,
+    },
+    thiserror::Error,
 };
-
-use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use num_derive::{FromPrimitive, ToPrimitive};
-use std::{
-    convert::{Infallible, TryFrom},
-    fmt, mem,
-    str::FromStr,
-};
-use thiserror::Error;
 
 /// Number of bytes in a pubkey
 pub const PUBKEY_BYTES: usize = 32;
@@ -50,20 +50,22 @@ impl From<u64> for PubkeyError {
 
 #[repr(transparent)]
 #[derive(
-    Serialize,
-    Deserialize,
-    BorshSerialize,
+    AbiExample,
     BorshDeserialize,
     BorshSchema,
+    BorshSerialize,
     Clone,
     Copy,
     Default,
+    Deserialize,
     Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
     Hash,
-    AbiExample,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Pod,
+    Serialize,
+    Zeroable,
 )]
 pub struct Pubkey([u8; 32]);
 
@@ -213,10 +215,6 @@ impl Pubkey {
             }
         }
 
-        if program_id.is_native_program_id() {
-            return Err(PubkeyError::IllegalOwner);
-        }
-
         // Perform the calculation inline, calling this from within a program is
         // not supported
         #[cfg(not(target_arch = "bpf"))]
@@ -244,7 +242,7 @@ impl Pubkey {
                     program_id_addr: *const u8,
                     address_bytes_addr: *const u8,
                 ) -> u64;
-            };
+            }
             let mut bytes = [0; 32];
             let result = unsafe {
                 sol_create_program_address(
@@ -327,7 +325,7 @@ impl Pubkey {
                     address_bytes_addr: *const u8,
                     bump_seed_addr: *const u8,
                 ) -> u64;
-            };
+            }
             let mut bytes = [0; 32];
             let mut bump_seed = std::u8::MAX;
             let result = unsafe {
@@ -360,34 +358,24 @@ impl Pubkey {
         {
             extern "C" {
                 fn sol_log_pubkey(pubkey_addr: *const u8);
-            };
+            }
             unsafe { sol_log_pubkey(self.as_ref() as *const _ as *const u8) };
         }
 
         #[cfg(not(target_arch = "bpf"))]
         crate::program_stubs::sol_log(&self.to_string());
     }
-
-    pub fn is_native_program_id(&self) -> bool {
-        let all_program_ids = [
-            bpf_loader::id(),
-            bpf_loader_deprecated::id(),
-            feature::id(),
-            config::program::id(),
-            stake::program::id(),
-            stake::config::id(),
-            vote::program::id(),
-            secp256k1_program::id(),
-            system_program::id(),
-            sysvar::id(),
-        ];
-        all_program_ids.contains(self)
-    }
 }
 
 impl AsRef<[u8]> for Pubkey {
     fn as_ref(&self) -> &[u8] {
         &self.0[..]
+    }
+}
+
+impl AsMut<[u8]> for Pubkey {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0[..]
     }
 }
 
@@ -513,6 +501,43 @@ mod tests {
     fn test_create_program_address() {
         let exceeded_seed = &[127; MAX_SEED_LEN + 1];
         let max_seed = &[0; MAX_SEED_LEN];
+        let exceeded_seeds: &[&[u8]] = &[
+            &[1],
+            &[2],
+            &[3],
+            &[4],
+            &[5],
+            &[6],
+            &[7],
+            &[8],
+            &[9],
+            &[10],
+            &[11],
+            &[12],
+            &[13],
+            &[14],
+            &[15],
+            &[16],
+            &[17],
+        ];
+        let max_seeds: &[&[u8]] = &[
+            &[1],
+            &[2],
+            &[3],
+            &[4],
+            &[5],
+            &[6],
+            &[7],
+            &[8],
+            &[9],
+            &[10],
+            &[11],
+            &[12],
+            &[13],
+            &[14],
+            &[15],
+            &[16],
+        ];
         let program_id = Pubkey::from_str("BPFLoaderUpgradeab1e11111111111111111111111").unwrap();
         let public_key = Pubkey::from_str("SeedPubey1111111111111111111111111111111111").unwrap();
 
@@ -525,6 +550,11 @@ mod tests {
             Err(PubkeyError::MaxSeedLengthExceeded)
         );
         assert!(Pubkey::create_program_address(&[max_seed], &program_id).is_ok());
+        assert_eq!(
+            Pubkey::create_program_address(exceeded_seeds, &program_id),
+            Err(PubkeyError::MaxSeedLengthExceeded)
+        );
+        assert!(Pubkey::create_program_address(max_seeds, &program_id).is_ok());
         assert_eq!(
             Pubkey::create_program_address(&[b"", &[1]], &program_id),
             Ok("BwqrghZA2htAcqq8dzP1WDAhTXYTYWj7CHxF5j7TDBAe"
@@ -591,20 +621,6 @@ mod tests {
                     .unwrap()
             );
         }
-    }
-
-    #[test]
-    fn test_is_native_program_id() {
-        assert!(bpf_loader::id().is_native_program_id());
-        assert!(bpf_loader_deprecated::id().is_native_program_id());
-        assert!(config::program::id().is_native_program_id());
-        assert!(feature::id().is_native_program_id());
-        assert!(secp256k1_program::id().is_native_program_id());
-        assert!(stake::program::id().is_native_program_id());
-        assert!(stake::config::id().is_native_program_id());
-        assert!(system_program::id().is_native_program_id());
-        assert!(sysvar::id().is_native_program_id());
-        assert!(vote::program::id().is_native_program_id());
     }
 
     fn pubkey_from_seed_by_marker(marker: &[u8]) -> Result<Pubkey, PubkeyError> {

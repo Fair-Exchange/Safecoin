@@ -1,7 +1,7 @@
 use chrono::prelude::*;
 use pickledb::{error::Error, PickleDb, PickleDbDumpPolicy};
 use serde::{Deserialize, Serialize};
-use solana_sdk::{clock::Slot, pubkey::Pubkey, signature::Signature, transaction::Transaction};
+use safecoin_sdk::{clock::Slot, pubkey::Pubkey, signature::Signature, transaction::Transaction};
 use safecoin_transaction_status::TransactionStatus;
 use std::{cmp::Ordering, fs, io, path::Path};
 
@@ -12,7 +12,7 @@ pub struct TransactionInfo {
     pub new_stake_account_address: Option<Pubkey>,
     pub finalized_date: Option<DateTime<Utc>>,
     pub transaction: Transaction,
-    pub last_valid_slot: Slot,
+    pub last_valid_block_height: Slot,
     pub lockup_date: Option<DateTime<Utc>>,
 }
 
@@ -38,7 +38,7 @@ impl Default for TransactionInfo {
             new_stake_account_address: None,
             finalized_date: None,
             transaction,
-            last_valid_slot: 0,
+            last_valid_block_height: 0,
             lockup_date: None,
         }
     }
@@ -108,7 +108,7 @@ pub fn set_transaction_info(
     transaction: &Transaction,
     new_stake_account_address: Option<&Pubkey>,
     finalized: bool,
-    last_valid_slot: Slot,
+    last_valid_block_height: u64,
     lockup_date: Option<DateTime<Utc>>,
 ) -> Result<(), Error> {
     let finalized_date = if finalized { Some(Utc::now()) } else { None };
@@ -118,7 +118,7 @@ pub fn set_transaction_info(
         new_stake_account_address: new_stake_account_address.cloned(),
         finalized_date,
         transaction: transaction.clone(),
-        last_valid_slot,
+        last_valid_block_height,
         lockup_date,
     };
     let signature = transaction.signatures[0];
@@ -134,11 +134,11 @@ pub fn update_finalized_transaction(
     db: &mut PickleDb,
     signature: &Signature,
     opt_transaction_status: Option<TransactionStatus>,
-    last_valid_slot: Slot,
-    root_slot: Slot,
+    last_valid_block_height: u64,
+    finalized_block_height: u64,
 ) -> Result<Option<usize>, Error> {
     if opt_transaction_status.is_none() {
-        if root_slot > last_valid_slot {
+        if finalized_block_height > last_valid_block_height {
             eprintln!(
                 "Signature not found {} and blockhash expired. Transaction either dropped or the validator purged the transaction status.",
                 signature
@@ -210,7 +210,7 @@ pub(crate) fn check_output_file(path: &str, db: &PickleDb) {
 mod tests {
     use super::*;
     use csv::{ReaderBuilder, Trim};
-    use solana_sdk::transaction::TransactionError;
+    use safecoin_sdk::transaction::TransactionError;
     use safecoin_transaction_status::TransactionConfirmationStatus;
     use tempfile::NamedTempFile;
 
@@ -226,7 +226,7 @@ mod tests {
         };
         let info2 = TransactionInfo::default();
         let info3 = TransactionInfo {
-            recipient: solana_sdk::pubkey::new_rand(),
+            recipient: safecoin_sdk::pubkey::new_rand(),
             ..TransactionInfo::default()
         };
 

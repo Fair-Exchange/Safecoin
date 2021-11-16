@@ -1,23 +1,22 @@
 use {
-    crate::{
-        cluster_info::Node,
-        gossip_service::discover_cluster,
-        rpc::JsonRpcConfig,
-        validator::{Validator, ValidatorConfig, ValidatorExit, ValidatorStartProgress},
-    },
+    crate::validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     safecoin_client::rpc_client::RpcClient,
+    safecoin_gossip::{cluster_info::Node, gossip_service::discover_cluster, socketaddr},
     solana_ledger::{blockstore::create_new_ledger, create_new_tmp_ledger},
     solana_net_utils::PortRange,
+    solana_rpc::rpc::JsonRpcConfig,
     solana_runtime::{
         bank_forks::{ArchiveFormat, SnapshotConfig, SnapshotVersion},
         genesis_utils::create_genesis_config_with_leader_ex,
         hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
+        snapshot_utils::DEFAULT_MAX_SNAPSHOTS_TO_RETAIN,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{Account, AccountSharedData},
         clock::{Slot, DEFAULT_MS_PER_SLOT},
         commitment_config::CommitmentConfig,
         epoch_schedule::EpochSchedule,
+        exit::Exit,
         fee_calculator::{FeeCalculator, FeeRateGovernor},
         hash::Hash,
         native_token::sol_to_lamports,
@@ -25,6 +24,7 @@ use {
         rent::Rent,
         signature::{read_keypair_file, write_keypair_file, Keypair, Signer},
     },
+    solana_streamer::socket::SocketAddrSpace,
     std::{
         collections::HashMap,
         fs::remove_dir_all,
@@ -79,7 +79,7 @@ pub struct TestValidatorGenesis {
     programs: Vec<ProgramInfo>,
     epoch_schedule: Option<EpochSchedule>,
     node_config: TestValidatorNodeConfig,
-    pub validator_exit: Arc<RwLock<ValidatorExit>>,
+    pub validator_exit: Arc<RwLock<Exit>>,
     pub start_progress: Arc<RwLock<ValidatorStartProgress>>,
     pub authorized_voter_keypairs: Arc<RwLock<Vec<Arc<Keypair>>>>,
     pub max_ledger_shreds: Option<u64>,
@@ -199,8 +199,8 @@ impl TestValidatorGenesis {
             address,
             AccountSharedData::from(Account {
                 lamports,
-                data: solana_program_test::read_file(
-                    solana_program_test::find_file(filename).unwrap_or_else(|| {
+                data: safecoin_program_test::read_file(
+                    safecoin_program_test::find_file(filename).unwrap_or_else(|| {
                         panic!("Unable to locate {}", filename);
                     }),
                 ),
@@ -238,12 +238,12 @@ impl TestValidatorGenesis {
     /// `program_name` will also used to locate the BPF shared object in the current or fixtures
     /// directory.
     pub fn add_program(&mut self, program_name: &str, program_id: Pubkey) -> &mut Self {
-        let program_path = solana_program_test::find_file(&format!("{}.so", program_name))
+        let program_path = safecoin_program_test::find_file(&format!("{}.so", program_name))
             .unwrap_or_else(|| panic!("Unable to locate program {}", program_name));
 
         self.programs.push(ProgramInfo {
             program_id,
-            loader: solana_sdk::bpf_loader::id(),
+            loader: safecoin_sdk::bpf_loader::id(),
             program_path,
         });
         self
@@ -264,8 +264,9 @@ impl TestValidatorGenesis {
     pub fn start_with_mint_address(
         &self,
         mint_address: Pubkey,
+        socket_addr_space: SocketAddrSpace,
     ) -> Result<TestValidator, Box<dyn std::error::Error>> {
-        TestValidator::start(mint_address, self)
+        TestValidator::start(mint_address, self, socket_addr_space)
     }
 
     /// Start a test validator
@@ -275,8 +276,21 @@ impl TestValidatorGenesis {
     ///
     /// This function panics on initialization failure.
     pub fn start(&self) -> (TestValidator, Keypair) {
+        self.start_with_socket_addr_space(SocketAddrSpace::new(/*allow_private_addr=*/ true))
+    }
+
+    /// Start a test validator with the given `SocketAddrSpace`
+    ///
+    /// Returns a new `TestValidator` as well as the keypair for the mint account that will receive tokens
+    /// created at genesis.
+    ///
+    /// This function panics on initialization failure.
+    pub fn start_with_socket_addr_space(
+        &self,
+        socket_addr_space: SocketAddrSpace,
+    ) -> (TestValidator, Keypair) {
         let mint_keypair = Keypair::new();
-        TestValidator::start(mint_keypair.pubkey(), self)
+        TestValidator::start(mint_keypair.pubkey(), self, socket_addr_space)
             .map(|test_validator| (test_validator, mint_keypair))
             .expect("Test validator failed to start")
     }
@@ -298,7 +312,11 @@ impl TestValidator {
     /// Faucet optional.
     ///
     /// This function panics on initialization failure.
-    pub fn with_no_fees(mint_address: Pubkey, faucet_addr: Option<SocketAddr>) -> Self {
+    pub fn with_no_fees(
+        mint_address: Pubkey,
+        faucet_addr: Option<SocketAddr>,
+        socket_addr_space: SocketAddrSpace,
+    ) -> Self {
         TestValidatorGenesis::default()
             .fee_rate_governor(FeeRateGovernor::new(0, 0))
             .rent(Rent {
@@ -307,7 +325,7 @@ impl TestValidator {
                 ..Rent::default()
             })
             .faucet_addr(faucet_addr)
-            .start_with_mint_address(mint_address)
+            .start_with_mint_address(mint_address, socket_addr_space)
             .expect("validator start failed")
     }
 
@@ -319,6 +337,7 @@ impl TestValidator {
         mint_address: Pubkey,
         target_lamports_per_signature: u64,
         faucet_addr: Option<SocketAddr>,
+        socket_addr_space: SocketAddrSpace,
     ) -> Self {
         TestValidatorGenesis::default()
             .fee_rate_governor(FeeRateGovernor::new(target_lamports_per_signature, 0))
@@ -328,7 +347,7 @@ impl TestValidator {
                 ..Rent::default()
             })
             .faucet_addr(faucet_addr)
-            .start_with_mint_address(mint_address)
+            .start_with_mint_address(mint_address, socket_addr_space)
             .expect("validator start failed")
     }
 
@@ -345,16 +364,16 @@ impl TestValidator {
         let validator_identity = Keypair::new();
         let validator_vote_account = Keypair::new();
         let validator_stake_account = Keypair::new();
-        let validator_identity_lamports = sol_to_lamports(33_406_471.);
-        let validator_stake_lamports = sol_to_lamports(10_000.);
-        let mint_lamports = sol_to_lamports(500.);
+        let validator_identity_lamports = sol_to_lamports(500.);
+        let validator_stake_lamports = sol_to_lamports(1_000_000.);
+        let mint_lamports = sol_to_lamports(33_370_166.);
 
         let mut accounts = config.accounts.clone();
-        for (address, account) in solana_program_test::programs::spl_programs(&config.rent) {
+        for (address, account) in safecoin_program_test::programs::spl_programs(&config.rent) {
             accounts.entry(address).or_insert(account);
         }
         for program in &config.programs {
-            let data = solana_program_test::read_file(&program.program_path);
+            let data = safecoin_program_test::read_file(&program.program_path);
             accounts.insert(
                 program.program_id,
                 AccountSharedData::from(Account {
@@ -377,7 +396,7 @@ impl TestValidator {
             validator_identity_lamports,
             config.fee_rate_governor.clone(),
             config.rent,
-            solana_sdk::genesis_config::ClusterType::Development,
+            safecoin_sdk::genesis_config::ClusterType::Development,
             accounts.into_iter().collect(),
         );
         genesis_config.epoch_schedule = config
@@ -431,6 +450,7 @@ impl TestValidator {
     fn start(
         mint_address: Pubkey,
         config: &TestValidatorGenesis,
+        socket_addr_space: SocketAddrSpace,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let preserve_ledger = config.ledger_path.is_some();
         let ledger_path = TestValidator::initialize_ledger(mint_address, config)?;
@@ -492,6 +512,7 @@ impl TestValidator {
                 snapshot_package_output_path: ledger_path.to_path_buf(),
                 archive_format: ArchiveFormat::Tar,
                 snapshot_version: SnapshotVersion::default(),
+                maximum_snapshots_to_retain: DEFAULT_MAX_SNAPSHOTS_TO_RETAIN,
             }),
             enforce_ulimit_nofile: false,
             warp_slot: config.warp_slot,
@@ -513,11 +534,12 @@ impl TestValidator {
             &validator_config,
             true, // should_check_duplicate_instance
             config.start_progress.clone(),
+            socket_addr_space,
         ));
 
         // Needed to avoid panics in `solana-responder-gossip` in tests that create a number of
         // test validators concurrently...
-        discover_cluster(&gossip, 1)
+        discover_cluster(&gossip, 1, socket_addr_space)
             .map_err(|err| format!("TestValidator startup failed: {:?}", err))?;
 
         // This is a hack to delay until the fees are non-zero for test consistency

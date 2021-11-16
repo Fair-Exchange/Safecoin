@@ -2,7 +2,7 @@ use crate::{
     stakes::{create_and_add_stakes, StakerInfo},
     unlocks::UnlockInfo,
 };
-use solana_sdk::{genesis_config::GenesisConfig, native_token::LAMPORTS_PER_SAFE};
+use safecoin_sdk::{genesis_config::GenesisConfig, native_token::LAMPORTS_PER_SAFE};
 
 // 9 month schedule is 100% after 9 months
 const UNLOCKS_ALL_AT_9_MONTHS: UnlockInfo = UnlockInfo {
@@ -231,20 +231,20 @@ pub fn add_genesis_accounts(genesis_config: &mut GenesisConfig, mut issued_lampo
 
     issued_lamports += add_stakes(
         genesis_config,
-        &CREATOR_STAKER_INFOS,
+        CREATOR_STAKER_INFOS,
         &UNLOCKS_HALF_AT_9_MONTHS,
     ) + add_stakes(
         genesis_config,
-        &SERVICE_STAKER_INFOS,
+        SERVICE_STAKER_INFOS,
         &UNLOCKS_ALL_AT_9_MONTHS,
     ) + add_stakes(
         genesis_config,
-        &FOUNDATION_STAKER_INFOS,
+        FOUNDATION_STAKER_INFOS,
         &UNLOCKS_ALL_DAY_ZERO,
-    ) + add_stakes(genesis_config, &GRANTS_STAKER_INFOS, &UNLOCKS_ALL_DAY_ZERO)
+    ) + add_stakes(genesis_config, GRANTS_STAKER_INFOS, &UNLOCKS_ALL_DAY_ZERO)
         + add_stakes(
             genesis_config,
-            &COMMUNITY_STAKER_INFOS,
+            COMMUNITY_STAKER_INFOS,
             &UNLOCKS_ALL_DAY_ZERO,
         );
 

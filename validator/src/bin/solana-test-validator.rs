@@ -1,6 +1,6 @@
 use {
-    clap::{value_t, value_t_or_exit, App, Arg},
-    fd_lock::FdLock,
+    clap::{crate_name, value_t, value_t_or_exit, App, Arg},
+    log::*,
     safecoin_clap_utils::{
         input_parsers::{pubkey_of, pubkeys_of, value_of},
         input_validators::{
@@ -9,9 +9,9 @@ use {
         },
     },
     safecoin_client::rpc_client::RpcClient,
-    solana_core::rpc::JsonRpcConfig,
     safecoin_faucet::faucet::{run_local_faucet_with_port, FAUCET_PORT},
-    solana_sdk::{
+    solana_rpc::rpc::JsonRpcConfig,
+    safecoin_sdk::{
         account::AccountSharedData,
         clock::Slot,
         epoch_schedule::{EpochSchedule, MINIMUM_SLOTS_PER_EPOCH},
@@ -22,9 +22,10 @@ use {
         signature::{read_keypair_file, write_keypair_file, Keypair, Signer},
         system_program,
     },
+    solana_streamer::socket::SocketAddrSpace,
     safecoin_validator::{
-        admin_rpc_service, dashboard::Dashboard, println_name_value, redirect_stderr_to_file,
-        test_validator::*,
+        admin_rpc_service, dashboard::Dashboard, ledger_lockfile, lock_ledger, println_name_value,
+        redirect_stderr_to_file, test_validator::*,
     },
     std::{
         collections::HashSet,
@@ -69,7 +70,7 @@ fn main() {
                 .takes_value(true)
                 .help("Configuration file to use");
             if let Some(ref config_file) = *safecoin_cli_config::CONFIG_FILE {
-                arg.default_value(&config_file)
+                arg.default_value(config_file)
             } else {
                 arg
             }
@@ -167,7 +168,7 @@ fn main() {
             Arg::with_name("no_bpf_jit")
                 .long("no-bpf-jit")
                 .takes_value(false)
-                .help("Disable the just-in-time compiler and instead use the interpreter for BPF"),
+                .help("Disable the just-in-time compiler and instead use the interpreter for BPF. Windows always disables JIT."),
         )
         .arg(
             Arg::with_name("slots_per_epoch")
@@ -281,6 +282,70 @@ fn main() {
         )
         .get_matches();
 
+    let output = if matches.is_present("quiet") {
+        Output::None
+    } else if matches.is_present("log") {
+        Output::Log
+    } else {
+        Output::Dashboard
+    };
+
+    let ledger_path = value_t_or_exit!(matches, "ledger_path", PathBuf);
+    let reset_ledger = matches.is_present("reset");
+
+    if !ledger_path.exists() {
+        fs::create_dir(&ledger_path).unwrap_or_else(|err| {
+            println!(
+                "Error: Unable to create directory {}: {}",
+                ledger_path.display(),
+                err
+            );
+            exit(1);
+        });
+    }
+
+    let mut ledger_lock = ledger_lockfile(&ledger_path);
+    let _ledger_write_guard = lock_ledger(&ledger_path, &mut ledger_lock);
+    if reset_ledger {
+        remove_directory_contents(&ledger_path).unwrap_or_else(|err| {
+            println!("Error: Unable to remove {}: {}", ledger_path.display(), err);
+            exit(1);
+        })
+    }
+    solana_runtime::snapshot_utils::remove_tmp_snapshot_archives(&ledger_path);
+
+    let validator_log_symlink = ledger_path.join("validator.log");
+
+    let logfile = if output != Output::Log {
+        let validator_log_with_timestamp = format!(
+            "validator-{}.log",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+        );
+
+        let _ = fs::remove_file(&validator_log_symlink);
+        symlink::symlink_file(&validator_log_with_timestamp, &validator_log_symlink).unwrap();
+
+        Some(
+            ledger_path
+                .join(validator_log_with_timestamp)
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        )
+    } else {
+        None
+    };
+    let _logger_thread = redirect_stderr_to_file(logfile);
+
+    info!("{} {}", crate_name!(), solana_version::version!());
+    info!("Starting validator with: {:#?}", std::env::args_os());
+    safecoin_core::validator::report_target_features();
+
+    // TODO: Ideally test-validator should *only* allow private addresses.
+    let socket_addr_space = SocketAddrSpace::new(/*allow_private_addr=*/ true);
     let cli_config = if let Some(config_file) = matches.value_of("config_file") {
         safecoin_cli_config::Config::load(config_file).unwrap_or_default()
     } else {
@@ -299,15 +364,6 @@ fn main() {
                 .unwrap_or_else(|_| (Keypair::new().pubkey(), true))
         });
 
-    let ledger_path = value_t_or_exit!(matches, "ledger_path", PathBuf);
-    let reset_ledger = matches.is_present("reset");
-    let output = if matches.is_present("quiet") {
-        Output::None
-    } else if matches.is_present("log") {
-        Output::Log
-    } else {
-        Output::Dashboard
-    };
     let rpc_port = value_t_or_exit!(matches, "rpc_port", u16);
     let faucet_port = value_t_or_exit!(matches, "faucet_port", u16);
     let slots_per_epoch = value_t!(matches, "slots_per_epoch", Slot).ok();
@@ -335,6 +391,10 @@ fn main() {
         IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
         faucet_port,
     ));
+    // JIT not supported on the BPF VM in Windows currently: https://github.com/solana-labs/rbpf/issues/217
+    #[cfg(target_family = "windows")]
+    let bpf_jit = false;
+    #[cfg(not(target_family = "windows"))]
     let bpf_jit = !matches.is_present("no_bpf_jit");
 
     let mut programs = vec![];
@@ -359,7 +419,7 @@ fn main() {
 
                     programs.push(ProgramInfo {
                         program_id: address,
-                        loader: solana_sdk::bpf_loader::id(),
+                        loader: safecoin_sdk::bpf_loader::id(),
                         program_path,
                     });
                 }
@@ -390,59 +450,6 @@ fn main() {
     } else {
         None
     };
-
-    if !ledger_path.exists() {
-        fs::create_dir(&ledger_path).unwrap_or_else(|err| {
-            println!(
-                "Error: Unable to create directory {}: {}",
-                ledger_path.display(),
-                err
-            );
-            exit(1);
-        });
-    }
-
-    let mut ledger_fd_lock = FdLock::new(fs::File::open(&ledger_path).unwrap());
-    let _ledger_lock = ledger_fd_lock.try_lock().unwrap_or_else(|_| {
-        println!(
-            "Error: Unable to lock {} directory. Check if another validator is running",
-            ledger_path.display()
-        );
-        exit(1);
-    });
-
-    if reset_ledger {
-        remove_directory_contents(&ledger_path).unwrap_or_else(|err| {
-            println!("Error: Unable to remove {}: {}", ledger_path.display(), err);
-            exit(1);
-        })
-    }
-    solana_runtime::snapshot_utils::remove_tmp_snapshot_archives(&ledger_path);
-
-    let validator_log_symlink = ledger_path.join("validator.log");
-    let logfile = if output != Output::Log {
-        let validator_log_with_timestamp = format!(
-            "validator-{}.log",
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis()
-        );
-
-        let _ = fs::remove_file(&validator_log_symlink);
-        symlink::symlink_file(&validator_log_with_timestamp, &validator_log_symlink).unwrap();
-
-        Some(
-            ledger_path
-                .join(validator_log_with_timestamp)
-                .into_os_string()
-                .into_string()
-                .unwrap(),
-        )
-    } else {
-        None
-    };
-    let _logger_thread = redirect_stderr_to_file(logfile);
 
     let faucet_lamports = sol_to_lamports(value_of(&matches, "faucet_sol").unwrap());
     let faucet_keypair_file = ledger_path.join("faucet-keypair.json");
@@ -582,7 +589,7 @@ fn main() {
         genesis.bind_ip_addr(bind_address);
     }
 
-    match genesis.start_with_mint_address(mint_address) {
+    match genesis.start_with_mint_address(mint_address, socket_addr_space) {
         Ok(test_validator) => {
             if let Some(dashboard) = dashboard {
                 dashboard.run(Duration::from_millis(250));

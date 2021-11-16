@@ -1,5 +1,5 @@
 use crate::{
-    args::{BalancesArgs, DistributeTokensArgs, StakeArgs, TransactionLogArgs},
+    args::{BalancesArgs, DistributeTokensArgs, SenderStakeArgs, StakeArgs, TransactionLogArgs},
     db::{self, TransactionInfo},
     spl_token::*,
     token_display::Token,
@@ -19,24 +19,25 @@ use safecoin_client::{
     rpc_client::RpcClient,
     rpc_config::RpcSendTransactionConfig,
     rpc_request::MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS,
+    rpc_response::Fees,
 };
-use solana_sdk::{
+use safecoin_sdk::{
     clock::Slot,
     commitment_config::CommitmentConfig,
     instruction::Instruction,
     message::Message,
     native_token::{lamports_to_sol, sol_to_lamports},
     signature::{unique_signers, Signature, Signer},
+    stake::{
+        instruction::{self as stake_instruction, LockupArgs},
+        state::{Authorized, Lockup, StakeAuthorize},
+    },
     system_instruction,
     transaction::Transaction,
 };
-use solana_stake_program::{
-    stake_instruction::{self, LockupArgs},
-    stake_state::{Authorized, Lockup, StakeAuthorize},
-};
 use safecoin_transaction_status::TransactionStatus;
 use safe_associated_token_account_v1_0::get_associated_token_address;
-use spl_token_v2_0::solana_program::program_error::ProgramError;
+use spl_token_v2_0::safecoin_program::program_error::ProgramError;
 use std::{
     cmp::{self},
     io,
@@ -139,7 +140,7 @@ fn apply_previous_transactions(
     for transaction_info in transaction_infos {
         let mut amount = transaction_info.amount;
         for allocation in allocations.iter_mut() {
-            if !has_same_recipient(&allocation, &transaction_info) {
+            if !has_same_recipient(allocation, transaction_info) {
                 continue;
             }
             if allocation.amount >= amount {
@@ -161,7 +162,7 @@ fn transfer<S: Signer>(
     to_pubkey: &Pubkey,
 ) -> ClientResult<Transaction> {
     let create_instruction =
-        system_instruction::transfer(&sender_keypair.pubkey(), &to_pubkey, lamports);
+        system_instruction::transfer(&sender_keypair.pubkey(), to_pubkey, lamports);
     let message = Message::new(&[create_instruction], Some(&sender_keypair.pubkey()));
     let (recent_blockhash, _fees) = client.get_recent_blockhash()?;
     Ok(Transaction::new(
@@ -178,77 +179,108 @@ fn distribution_instructions(
     lockup_date: Option<DateTime<Utc>>,
     do_create_associated_token_account: bool,
 ) -> Vec<Instruction> {
-    if args.stake_args.is_none() && args.spl_token_args.is_none() {
-        let from = args.sender_keypair.pubkey();
-        let to = allocation.recipient.parse().unwrap();
-        let lamports = allocation.amount;
-        let instruction = system_instruction::transfer(&from, &to, lamports);
-        return vec![instruction];
-    }
-
     if args.spl_token_args.is_some() {
         return build_spl_token_instructions(allocation, args, do_create_associated_token_account);
     }
 
-    let stake_args = args.stake_args.as_ref().unwrap();
-    let unlocked_sol = stake_args.unlocked_sol;
-    let sender_pubkey = args.sender_keypair.pubkey();
-    let stake_authority = stake_args.stake_authority.pubkey();
-    let withdraw_authority = stake_args.withdraw_authority.pubkey();
+    match &args.stake_args {
+        // No stake args; a simple token transfer.
+        None => {
+            let from = args.sender_keypair.pubkey();
+            let to = allocation.recipient.parse().unwrap();
+            let lamports = allocation.amount;
+            let instruction = system_instruction::transfer(&from, &to, lamports);
+            vec![instruction]
+        }
 
-    let mut instructions = stake_instruction::split(
-        &stake_args.stake_account_address,
-        &stake_authority,
-        allocation.amount - unlocked_sol,
-        &new_stake_account_address,
-    );
+        // Stake args provided, so create a recipient stake account.
+        Some(stake_args) => {
+            let unlocked_sol = stake_args.unlocked_sol;
+            let sender_pubkey = args.sender_keypair.pubkey();
+            let recipient = allocation.recipient.parse().unwrap();
 
-    let recipient = allocation.recipient.parse().unwrap();
+            let mut instructions = match &stake_args.sender_stake_args {
+                // No source stake account, so create a recipient stake account directly.
+                None => {
+                    // Make the recipient both the new stake and withdraw authority
+                    let authorized = Authorized {
+                        staker: recipient,
+                        withdrawer: recipient,
+                    };
+                    let mut lockup = Lockup::default();
+                    if let Some(lockup_date) = lockup_date {
+                        lockup.unix_timestamp = lockup_date.timestamp();
+                    }
+                    if let Some(lockup_authority) = stake_args.lockup_authority {
+                        lockup.custodian = lockup_authority;
+                    }
+                    stake_instruction::create_account(
+                        &sender_pubkey,
+                        new_stake_account_address,
+                        &authorized,
+                        &lockup,
+                        allocation.amount - unlocked_sol,
+                    )
+                }
 
-    // Make the recipient the new stake authority
-    instructions.push(stake_instruction::authorize(
-        &new_stake_account_address,
-        &stake_authority,
-        &recipient,
-        StakeAuthorize::Staker,
-        None,
-    ));
+                // A sender stake account was provided, so create a recipient stake account by
+                // splitting the sender account.
+                Some(sender_stake_args) => {
+                    let stake_authority = sender_stake_args.stake_authority.pubkey();
+                    let withdraw_authority = sender_stake_args.withdraw_authority.pubkey();
+                    let mut instructions = stake_instruction::split(
+                        &sender_stake_args.stake_account_address,
+                        &stake_authority,
+                        allocation.amount - unlocked_sol,
+                        new_stake_account_address,
+                    );
 
-    // Make the recipient the new withdraw authority
-    instructions.push(stake_instruction::authorize(
-        &new_stake_account_address,
-        &withdraw_authority,
-        &recipient,
-        StakeAuthorize::Withdrawer,
-        None,
-    ));
+                    // Make the recipient the new stake authority
+                    instructions.push(stake_instruction::authorize(
+                        new_stake_account_address,
+                        &stake_authority,
+                        &recipient,
+                        StakeAuthorize::Staker,
+                        None,
+                    ));
 
-    // Add lockup
-    if let Some(lockup_date) = lockup_date {
-        let lockup_authority = stake_args
-            .lockup_authority
-            .as_ref()
-            .map(|signer| signer.pubkey())
-            .unwrap();
-        let lockup = LockupArgs {
-            unix_timestamp: Some(lockup_date.timestamp()),
-            epoch: None,
-            custodian: None,
-        };
-        instructions.push(stake_instruction::set_lockup(
-            &new_stake_account_address,
-            &lockup,
-            &lockup_authority,
-        ));
+                    // Make the recipient the new withdraw authority
+                    instructions.push(stake_instruction::authorize(
+                        new_stake_account_address,
+                        &withdraw_authority,
+                        &recipient,
+                        StakeAuthorize::Withdrawer,
+                        None,
+                    ));
+
+                    // Add lockup
+                    if let Some(lockup_date) = lockup_date {
+                        let lockup = LockupArgs {
+                            unix_timestamp: Some(lockup_date.timestamp()),
+                            epoch: None,
+                            custodian: None,
+                        };
+                        instructions.push(stake_instruction::set_lockup(
+                            new_stake_account_address,
+                            &lockup,
+                            &stake_args.lockup_authority.unwrap(),
+                        ));
+                    }
+
+                    instructions
+                }
+            };
+
+            // Transfer some unlocked tokens to recipient, which they can use for transaction fees.
+            instructions.push(system_instruction::transfer(
+                &sender_pubkey,
+                &recipient,
+                unlocked_sol,
+            ));
+
+            instructions
+        }
     }
-
-    instructions.push(system_instruction::transfer(
-        &sender_pubkey,
-        &recipient,
-        unlocked_sol,
-    ));
-
-    instructions
 }
 
 fn build_messages(
@@ -336,14 +368,17 @@ fn send_messages(
 
         let mut signers = vec![&*args.fee_payer, &*args.sender_keypair];
         if let Some(stake_args) = &args.stake_args {
-            signers.push(&*stake_args.stake_authority);
-            signers.push(&*stake_args.withdraw_authority);
             signers.push(&new_stake_account_keypair);
-            if !allocation.lockup_date.is_empty() {
-                if let Some(lockup_authority) = &stake_args.lockup_authority {
-                    signers.push(&**lockup_authority);
-                } else {
-                    return Err(Error::MissingLockupAuthority);
+            if let Some(sender_stake_args) = &stake_args.sender_stake_args {
+                signers.push(&*sender_stake_args.stake_authority);
+                signers.push(&*sender_stake_args.withdraw_authority);
+                signers.push(&new_stake_account_keypair);
+                if !allocation.lockup_date.is_empty() {
+                    if let Some(lockup_authority) = &sender_stake_args.lockup_authority {
+                        signers.push(&**lockup_authority);
+                    } else {
+                        return Err(Error::MissingLockupAuthority);
+                    }
                 }
             }
         }
@@ -352,8 +387,12 @@ fn send_messages(
             if args.dry_run {
                 Ok((Transaction::new_unsigned(message), std::u64::MAX))
             } else {
-                let (blockhash, _fee_calculator, last_valid_slot) = client
-                    .get_recent_blockhash_with_commitment(CommitmentConfig::default())?
+                let Fees {
+                    blockhash,
+                    last_valid_block_height,
+                    ..
+                } = client
+                    .get_fees_with_commitment(CommitmentConfig::default())?
                     .value;
                 let transaction = Transaction::new(&signers, message, blockhash);
                 let config = RpcSendTransactionConfig {
@@ -361,19 +400,21 @@ fn send_messages(
                     ..RpcSendTransactionConfig::default()
                 };
                 client.send_transaction_with_config(&transaction, config)?;
-                Ok((transaction, last_valid_slot))
+                Ok((transaction, last_valid_block_height))
             }
         };
         match result {
-            Ok((transaction, last_valid_slot)) => {
+            Ok((transaction, last_valid_block_height)) => {
+                let new_stake_account_address_option =
+                    args.stake_args.as_ref().map(|_| &new_stake_account_address);
                 db::set_transaction_info(
                     db,
                     &allocation.recipient.parse().unwrap(),
                     allocation.amount,
                     &transaction,
-                    args.stake_args.as_ref().map(|_| &new_stake_account_address),
+                    new_stake_account_address_option,
                     false,
-                    last_valid_slot,
+                    last_valid_block_height,
                     lockup_date,
                 )?;
             }
@@ -423,6 +464,7 @@ fn distribute_allocations(
     Ok(())
 }
 
+#[allow(clippy::needless_collect)]
 fn read_allocations(
     input_csv: &str,
     transfer_amount: Option<u64>,
@@ -621,7 +663,7 @@ fn update_finalized_transactions(
             if info.finalized_date.is_some() {
                 None
             } else {
-                Some((&info.transaction, info.last_valid_slot))
+                Some((&info.transaction, info.last_valid_block_height))
             }
         })
         .collect();
@@ -636,7 +678,7 @@ fn update_finalized_transactions(
     {
         statuses.extend(
             client
-                .get_signature_statuses(&unconfirmed_signatures_chunk)?
+                .get_signature_statuses(unconfirmed_signatures_chunk)?
                 .value
                 .into_iter(),
         );
@@ -663,8 +705,8 @@ fn log_transaction_confirmations(
     statuses: Vec<Option<TransactionStatus>>,
     confirmations: &mut Option<usize>,
 ) -> Result<(), Error> {
-    let root_slot = client.get_slot()?;
-    for ((transaction, last_valid_slot), opt_transaction_status) in unconfirmed_transactions
+    let finalized_block_height = client.get_block_height()?;
+    for ((transaction, last_valid_block_height), opt_transaction_status) in unconfirmed_transactions
         .into_iter()
         .zip(statuses.into_iter())
     {
@@ -672,8 +714,8 @@ fn log_transaction_confirmations(
             db,
             &transaction.signatures[0],
             opt_transaction_status,
-            last_valid_slot,
-            root_slot,
+            last_valid_block_height,
+            finalized_block_height,
         ) {
             Ok(Some(confs)) => {
                 *confirmations = Some(cmp::min(confs, confirmations.unwrap_or(usize::MAX)));
@@ -707,8 +749,13 @@ fn check_payer_balances(
     let (distribution_source, unlocked_sol_source) = if let Some(stake_args) = &args.stake_args {
         let total_unlocked_sol = allocations.len() as u64 * stake_args.unlocked_sol;
         undistributed_tokens -= total_unlocked_sol;
+        let from_pubkey = if let Some(sender_stake_args) = &stake_args.sender_stake_args {
+            sender_stake_args.stake_account_address
+        } else {
+            args.sender_keypair.pubkey()
+        };
         (
-            stake_args.stake_account_address,
+            from_pubkey,
             Some((args.sender_keypair.pubkey(), total_unlocked_sol)),
         )
     } else {
@@ -819,7 +866,7 @@ pub fn process_transaction_log(args: &TransactionLogArgs) -> Result<(), Error> {
 }
 
 use crate::db::check_output_file;
-use solana_sdk::{pubkey::Pubkey, signature::Keypair};
+use safecoin_sdk::{pubkey::Pubkey, signature::Keypair};
 use tempfile::{tempdir, NamedTempFile};
 pub fn test_process_distribute_tokens_with_client(
     client: &RpcClient,
@@ -848,7 +895,7 @@ pub fn test_process_distribute_tokens_with_client(
     } else {
         sol_to_lamports(1000.0)
     };
-    let alice_pubkey = solana_sdk::pubkey::new_rand();
+    let alice_pubkey = safecoin_sdk::pubkey::new_rand();
     let allocations_file = NamedTempFile::new().unwrap();
     let input_csv = allocations_file.path().to_str().unwrap().to_string();
     let mut wtr = csv::WriterBuilder::new().from_writer(allocations_file);
@@ -908,6 +955,128 @@ pub fn test_process_distribute_tokens_with_client(
     check_output_file(&output_path, &db::open_db(&transaction_db, true).unwrap());
 }
 
+pub fn test_process_create_stake_with_client(client: &RpcClient, sender_keypair: Keypair) {
+    let exit = Arc::new(AtomicBool::default());
+    let fee_payer = Keypair::new();
+    let transaction = transfer(
+        client,
+        sol_to_lamports(1.0),
+        &sender_keypair,
+        &fee_payer.pubkey(),
+    )
+    .unwrap();
+    client
+        .send_and_confirm_transaction_with_spinner(&transaction)
+        .unwrap();
+
+    let stake_account_keypair = Keypair::new();
+    let stake_account_address = stake_account_keypair.pubkey();
+    let stake_authority = Keypair::new();
+    let withdraw_authority = Keypair::new();
+
+    let authorized = Authorized {
+        staker: stake_authority.pubkey(),
+        withdrawer: withdraw_authority.pubkey(),
+    };
+    let lockup = Lockup::default();
+    let instructions = stake_instruction::create_account(
+        &sender_keypair.pubkey(),
+        &stake_account_address,
+        &authorized,
+        &lockup,
+        sol_to_lamports(3000.0),
+    );
+    let message = Message::new(&instructions, Some(&sender_keypair.pubkey()));
+    let signers = [&sender_keypair, &stake_account_keypair];
+    let (blockhash, _fees) = client.get_recent_blockhash().unwrap();
+    let transaction = Transaction::new(&signers, message, blockhash);
+    client
+        .send_and_confirm_transaction_with_spinner(&transaction)
+        .unwrap();
+
+    let expected_amount = sol_to_lamports(1000.0);
+    let alice_pubkey = safecoin_sdk::pubkey::new_rand();
+    let file = NamedTempFile::new().unwrap();
+    let input_csv = file.path().to_str().unwrap().to_string();
+    let mut wtr = csv::WriterBuilder::new().from_writer(file);
+    wtr.write_record(&["recipient", "amount", "lockup_date"])
+        .unwrap();
+    wtr.write_record(&[
+        alice_pubkey.to_string(),
+        lamports_to_sol(expected_amount).to_string(),
+        "".to_string(),
+    ])
+    .unwrap();
+    wtr.flush().unwrap();
+
+    let dir = tempdir().unwrap();
+    let transaction_db = dir
+        .path()
+        .join("transactions.db")
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    let output_file = NamedTempFile::new().unwrap();
+    let output_path = output_file.path().to_str().unwrap().to_string();
+
+    let stake_args = StakeArgs {
+        lockup_authority: None,
+        unlocked_sol: sol_to_lamports(1.0),
+        sender_stake_args: None,
+    };
+    let args = DistributeTokensArgs {
+        fee_payer: Box::new(fee_payer),
+        dry_run: false,
+        input_csv,
+        transaction_db: transaction_db.clone(),
+        output_path: Some(output_path.clone()),
+        stake_args: Some(stake_args),
+        spl_token_args: None,
+        sender_keypair: Box::new(sender_keypair),
+        transfer_amount: None,
+    };
+    let confirmations = process_allocations(client, &args, exit.clone()).unwrap();
+    assert_eq!(confirmations, None);
+
+    let transaction_infos =
+        db::read_transaction_infos(&db::open_db(&transaction_db, true).unwrap());
+    assert_eq!(transaction_infos.len(), 1);
+    assert_eq!(transaction_infos[0].recipient, alice_pubkey);
+    assert_eq!(transaction_infos[0].amount, expected_amount);
+
+    assert_eq!(
+        client.get_balance(&alice_pubkey).unwrap(),
+        sol_to_lamports(1.0),
+    );
+    let new_stake_account_address = transaction_infos[0].new_stake_account_address.unwrap();
+    assert_eq!(
+        client.get_balance(&new_stake_account_address).unwrap(),
+        expected_amount - sol_to_lamports(1.0),
+    );
+
+    check_output_file(&output_path, &db::open_db(&transaction_db, true).unwrap());
+
+    // Now, run it again, and check there's no double-spend.
+    process_allocations(client, &args, exit).unwrap();
+    let transaction_infos =
+        db::read_transaction_infos(&db::open_db(&transaction_db, true).unwrap());
+    assert_eq!(transaction_infos.len(), 1);
+    assert_eq!(transaction_infos[0].recipient, alice_pubkey);
+    assert_eq!(transaction_infos[0].amount, expected_amount);
+
+    assert_eq!(
+        client.get_balance(&alice_pubkey).unwrap(),
+        sol_to_lamports(1.0),
+    );
+    assert_eq!(
+        client.get_balance(&new_stake_account_address).unwrap(),
+        expected_amount - sol_to_lamports(1.0),
+    );
+
+    check_output_file(&output_path, &db::open_db(&transaction_db, true).unwrap());
+}
+
 pub fn test_process_distribute_stake_with_client(client: &RpcClient, sender_keypair: Keypair) {
     let exit = Arc::new(AtomicBool::default());
     let fee_payer = Keypair::new();
@@ -948,7 +1117,7 @@ pub fn test_process_distribute_stake_with_client(client: &RpcClient, sender_keyp
         .unwrap();
 
     let expected_amount = sol_to_lamports(1000.0);
-    let alice_pubkey = solana_sdk::pubkey::new_rand();
+    let alice_pubkey = safecoin_sdk::pubkey::new_rand();
     let file = NamedTempFile::new().unwrap();
     let input_csv = file.path().to_str().unwrap().to_string();
     let mut wtr = csv::WriterBuilder::new().from_writer(file);
@@ -973,12 +1142,16 @@ pub fn test_process_distribute_stake_with_client(client: &RpcClient, sender_keyp
     let output_file = NamedTempFile::new().unwrap();
     let output_path = output_file.path().to_str().unwrap().to_string();
 
-    let stake_args = StakeArgs {
+    let sender_stake_args = SenderStakeArgs {
         stake_account_address,
         stake_authority: Box::new(stake_authority),
         withdraw_authority: Box::new(withdraw_authority),
         lockup_authority: None,
+    };
+    let stake_args = StakeArgs {
         unlocked_sol: sol_to_lamports(1.0),
+        lockup_authority: None,
+        sender_stake_args: Some(sender_stake_args),
     };
     let args = DistributeTokensArgs {
         fee_payer: Box::new(fee_payer),
@@ -1035,15 +1208,19 @@ pub fn test_process_distribute_stake_with_client(client: &RpcClient, sender_keyp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_core::test_validator::TestValidator;
-    use solana_sdk::signature::{read_keypair_file, write_keypair_file, Signer};
-    use solana_stake_program::stake_instruction::StakeInstruction;
+    use safecoin_core::test_validator::TestValidator;
+    use safecoin_sdk::{
+        signature::{read_keypair_file, write_keypair_file, Signer},
+        stake::instruction::StakeInstruction,
+    };
+    use solana_streamer::socket::SocketAddrSpace;
     use safecoin_transaction_status::TransactionConfirmationStatus;
 
     #[test]
     fn test_process_token_allocations() {
         let alice = Keypair::new();
-        let test_validator = TestValidator::with_no_fees(alice.pubkey(), None);
+        let test_validator =
+            TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
         let url = test_validator.rpc_url();
 
         let client = RpcClient::new_with_commitment(url, CommitmentConfig::processed());
@@ -1053,7 +1230,8 @@ mod tests {
     #[test]
     fn test_process_transfer_amount_allocations() {
         let alice = Keypair::new();
-        let test_validator = TestValidator::with_no_fees(alice.pubkey(), None);
+        let test_validator =
+            TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
         let url = test_validator.rpc_url();
 
         let client = RpcClient::new_with_commitment(url, CommitmentConfig::processed());
@@ -1061,9 +1239,21 @@ mod tests {
     }
 
     #[test]
+    fn test_create_stake_allocations() {
+        let alice = Keypair::new();
+        let test_validator =
+            TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
+        let url = test_validator.rpc_url();
+
+        let client = RpcClient::new_with_commitment(url, CommitmentConfig::processed());
+        test_process_create_stake_with_client(&client, alice);
+    }
+
+    #[test]
     fn test_process_stake_allocations() {
         let alice = Keypair::new();
-        let test_validator = TestValidator::with_no_fees(alice.pubkey(), None);
+        let test_validator =
+            TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
         let url = test_validator.rpc_url();
 
         let client = RpcClient::new_with_commitment(url, CommitmentConfig::processed());
@@ -1072,7 +1262,7 @@ mod tests {
 
     #[test]
     fn test_read_allocations() {
-        let alice_pubkey = solana_sdk::pubkey::new_rand();
+        let alice_pubkey = safecoin_sdk::pubkey::new_rand();
         let allocation = Allocation {
             recipient: alice_pubkey.to_string(),
             amount: 42,
@@ -1111,8 +1301,8 @@ mod tests {
 
     #[test]
     fn test_read_allocations_no_lockup() {
-        let pubkey0 = solana_sdk::pubkey::new_rand();
-        let pubkey1 = solana_sdk::pubkey::new_rand();
+        let pubkey0 = safecoin_sdk::pubkey::new_rand();
+        let pubkey1 = safecoin_sdk::pubkey::new_rand();
         let file = NamedTempFile::new().unwrap();
         let input_csv = file.path().to_str().unwrap().to_string();
         let mut wtr = csv::WriterBuilder::new().from_writer(file);
@@ -1143,8 +1333,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_read_allocations_malformed() {
-        let pubkey0 = solana_sdk::pubkey::new_rand();
-        let pubkey1 = solana_sdk::pubkey::new_rand();
+        let pubkey0 = safecoin_sdk::pubkey::new_rand();
+        let pubkey1 = safecoin_sdk::pubkey::new_rand();
         let file = NamedTempFile::new().unwrap();
         let input_csv = file.path().to_str().unwrap().to_string();
         let mut wtr = csv::WriterBuilder::new().from_writer(file);
@@ -1174,9 +1364,9 @@ mod tests {
 
     #[test]
     fn test_read_allocations_transfer_amount() {
-        let pubkey0 = solana_sdk::pubkey::new_rand();
-        let pubkey1 = solana_sdk::pubkey::new_rand();
-        let pubkey2 = solana_sdk::pubkey::new_rand();
+        let pubkey0 = safecoin_sdk::pubkey::new_rand();
+        let pubkey1 = safecoin_sdk::pubkey::new_rand();
+        let pubkey2 = safecoin_sdk::pubkey::new_rand();
         let file = NamedTempFile::new().unwrap();
         let input_csv = file.path().to_str().unwrap().to_string();
         let mut wtr = csv::WriterBuilder::new().from_writer(file);
@@ -1213,8 +1403,8 @@ mod tests {
 
     #[test]
     fn test_apply_previous_transactions() {
-        let alice = solana_sdk::pubkey::new_rand();
-        let bob = solana_sdk::pubkey::new_rand();
+        let alice = safecoin_sdk::pubkey::new_rand();
+        let bob = safecoin_sdk::pubkey::new_rand();
         let mut allocations = vec![
             Allocation {
                 recipient: alice.to_string(),
@@ -1242,8 +1432,8 @@ mod tests {
 
     #[test]
     fn test_has_same_recipient() {
-        let alice_pubkey = solana_sdk::pubkey::new_rand();
-        let bob_pubkey = solana_sdk::pubkey::new_rand();
+        let alice_pubkey = safecoin_sdk::pubkey::new_rand();
+        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
         let lockup0 = "2021-01-07T00:00:00Z".to_string();
         let lockup1 = "9999-12-31T23:59:59Z".to_string();
         let alice_alloc = Allocation {
@@ -1292,22 +1482,27 @@ mod tests {
     const SET_LOCKUP_INDEX: usize = 5;
 
     #[test]
-    fn test_set_stake_lockup() {
+    fn test_set_split_stake_lockup() {
         let lockup_date_str = "2021-01-07T00:00:00Z";
         let allocation = Allocation {
             recipient: Pubkey::default().to_string(),
             amount: sol_to_lamports(1.0),
             lockup_date: lockup_date_str.to_string(),
         };
-        let stake_account_address = solana_sdk::pubkey::new_rand();
-        let new_stake_account_address = solana_sdk::pubkey::new_rand();
+        let stake_account_address = safecoin_sdk::pubkey::new_rand();
+        let new_stake_account_address = safecoin_sdk::pubkey::new_rand();
         let lockup_authority = Keypair::new();
-        let stake_args = StakeArgs {
+        let lockup_authority_address = lockup_authority.pubkey();
+        let sender_stake_args = SenderStakeArgs {
             stake_account_address,
             stake_authority: Box::new(Keypair::new()),
             withdraw_authority: Box::new(Keypair::new()),
             lockup_authority: Some(Box::new(lockup_authority)),
+        };
+        let stake_args = StakeArgs {
+            lockup_authority: Some(lockup_authority_address),
             unlocked_sol: sol_to_lamports(1.0),
+            sender_stake_args: Some(sender_stake_args),
         };
         let args = DistributeTokensArgs {
             fee_payer: Box::new(Keypair::new()),
@@ -1352,7 +1547,7 @@ mod tests {
         fee_payer: &str,
         stake_args: Option<StakeArgs>,
     ) -> (Vec<Allocation>, DistributeTokensArgs) {
-        let recipient = solana_sdk::pubkey::new_rand();
+        let recipient = safecoin_sdk::pubkey::new_rand();
         let allocations = vec![Allocation {
             recipient: recipient.to_string(),
             amount: allocation_amount,
@@ -1378,7 +1573,12 @@ mod tests {
         let fees_in_sol = lamports_to_sol(fees);
 
         let alice = Keypair::new();
-        let test_validator = TestValidator::with_custom_fees(alice.pubkey(), fees, None);
+        let test_validator = TestValidator::with_custom_fees(
+            alice.pubkey(),
+            fees,
+            None,
+            SocketAddrSpace::Unspecified,
+        );
         let url = test_validator.rpc_url();
 
         let client = RpcClient::new_with_commitment(url, CommitmentConfig::processed());
@@ -1461,7 +1661,12 @@ mod tests {
         let fees = 10_000;
         let fees_in_sol = lamports_to_sol(fees);
         let alice = Keypair::new();
-        let test_validator = TestValidator::with_custom_fees(alice.pubkey(), fees, None);
+        let test_validator = TestValidator::with_custom_fees(
+            alice.pubkey(),
+            fees,
+            None,
+            SocketAddrSpace::Unspecified,
+        );
         let url = test_validator.rpc_url();
 
         let client = RpcClient::new_with_commitment(url, CommitmentConfig::processed());
@@ -1557,12 +1762,17 @@ mod tests {
             .send_and_confirm_transaction_with_spinner(&transaction)
             .unwrap();
 
-        StakeArgs {
+        let sender_stake_args = SenderStakeArgs {
             stake_account_address,
             stake_authority: Box::new(stake_authority),
             withdraw_authority: Box::new(withdraw_authority),
             lockup_authority: None,
+        };
+
+        StakeArgs {
+            lockup_authority: None,
             unlocked_sol,
+            sender_stake_args: Some(sender_stake_args),
         }
     }
 
@@ -1571,7 +1781,12 @@ mod tests {
         let fees = 10_000;
         let fees_in_sol = lamports_to_sol(fees);
         let alice = Keypair::new();
-        let test_validator = TestValidator::with_custom_fees(alice.pubkey(), fees, None);
+        let test_validator = TestValidator::with_custom_fees(
+            alice.pubkey(),
+            fees,
+            None,
+            SocketAddrSpace::Unspecified,
+        );
         let url = test_validator.rpc_url();
         let client = RpcClient::new_with_commitment(url, CommitmentConfig::processed());
 
@@ -1599,7 +1814,7 @@ mod tests {
         // Underfunded stake-account
         let expensive_allocation_amount = 5000.0;
         let expensive_allocations = vec![Allocation {
-            recipient: solana_sdk::pubkey::new_rand().to_string(),
+            recipient: safecoin_sdk::pubkey::new_rand().to_string(),
             amount: sol_to_lamports(expensive_allocation_amount),
             lockup_date: "".to_string(),
         }];
@@ -1680,7 +1895,12 @@ mod tests {
         let fees = 10_000;
         let fees_in_sol = lamports_to_sol(fees);
         let alice = Keypair::new();
-        let test_validator = TestValidator::with_custom_fees(alice.pubkey(), fees, None);
+        let test_validator = TestValidator::with_custom_fees(
+            alice.pubkey(),
+            fees,
+            None,
+            SocketAddrSpace::Unspecified,
+        );
         let url = test_validator.rpc_url();
 
         let client = RpcClient::new_with_commitment(url, CommitmentConfig::processed());
@@ -1767,7 +1987,7 @@ mod tests {
         let sender = Keypair::new();
         let recipient = Pubkey::new_unique();
         let amount = sol_to_lamports(1.0);
-        let last_valid_slot = 222;
+        let last_valid_block_height = 222;
         let transaction = transfer(&client, amount, &sender, &recipient).unwrap();
 
         // Queue db data
@@ -1778,7 +1998,7 @@ mod tests {
             &transaction,
             None,
             false,
-            last_valid_slot,
+            last_valid_block_height,
             None,
         )
         .unwrap();
@@ -1867,7 +2087,7 @@ mod tests {
                 new_stake_account_address: None,
                 finalized_date: None,
                 transaction,
-                last_valid_slot,
+                last_valid_block_height,
                 lockup_date: None,
             }
         );
@@ -1889,7 +2109,7 @@ mod tests {
         let sender = Keypair::new();
         let recipient = Pubkey::new_unique();
         let amount = sol_to_lamports(1.0);
-        let last_valid_slot = 222;
+        let last_valid_block_height = 222;
         let transaction = transfer(&client, amount, &sender, &recipient).unwrap();
 
         // Queue db data
@@ -1900,7 +2120,7 @@ mod tests {
             &transaction,
             None,
             false,
-            last_valid_slot,
+            last_valid_block_height,
             None,
         )
         .unwrap();
@@ -1971,7 +2191,7 @@ mod tests {
             new_stake_account_address: None,
             finalized_date: None,
             transaction,
-            last_valid_slot,
+            last_valid_block_height,
             lockup_date: None,
         }));
         assert!(transaction_info.contains(&TransactionInfo {
@@ -1980,7 +2200,7 @@ mod tests {
             new_stake_account_address: None,
             finalized_date: None,
             transaction: Transaction::new_unsigned(message),
-            last_valid_slot: std::u64::MAX,
+            last_valid_block_height: std::u64::MAX,
             lockup_date: None,
         }));
 
@@ -1995,7 +2215,11 @@ mod tests {
     #[test]
     fn test_distribute_allocations_dump_db() {
         let sender_keypair = Keypair::new();
-        let test_validator = TestValidator::with_no_fees(sender_keypair.pubkey(), None);
+        let test_validator = TestValidator::with_no_fees(
+            sender_keypair.pubkey(),
+            None,
+            SocketAddrSpace::Unspecified,
+        );
         let url = test_validator.rpc_url();
         let client = RpcClient::new_with_commitment(url, CommitmentConfig::processed());
 
@@ -2062,7 +2286,7 @@ mod tests {
         let sender = Keypair::new();
         let recipient = Pubkey::new_unique();
         let amount = sol_to_lamports(1.0);
-        let last_valid_slot = 222;
+        let last_valid_block_height = 222;
         let transaction = transfer(&client, amount, &sender, &recipient).unwrap();
 
         // Queue unconfirmed transaction into db
@@ -2073,7 +2297,7 @@ mod tests {
             &transaction,
             None,
             false,
-            last_valid_slot,
+            last_valid_block_height,
             None,
         )
         .unwrap();
@@ -2155,7 +2379,7 @@ mod tests {
         let sender = Keypair::new();
         let recipient = Pubkey::new_unique();
         let amount = sol_to_lamports(1.0);
-        let last_valid_slot = 222;
+        let last_valid_block_height = 222;
         let transaction = transfer(&client, amount, &sender, &recipient).unwrap();
 
         // Queue unconfirmed transaction into db
@@ -2166,7 +2390,7 @@ mod tests {
             &transaction,
             None,
             false,
-            last_valid_slot,
+            last_valid_block_height,
             None,
         )
         .unwrap();

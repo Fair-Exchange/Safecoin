@@ -6,7 +6,7 @@ use {
     },
     log::*,
     parking_lot::{Mutex, RwLock},
-    solana_sdk::{
+    safecoin_sdk::{
         derivation_path::{DerivationPath, DerivationPathError},
         pubkey::Pubkey,
         signature::{Signature, SignerError},
@@ -114,10 +114,10 @@ impl RemoteWalletManager {
             is_valid_hid_device(device_info.usage_page(), device_info.interface_number())
                 && is_valid_ledger(device_info.vendor_id(), device_info.product_id())
         }) {
-            match usb.open_path(&device_info.path()) {
+            match usb.open_path(device_info.path()) {
                 Ok(device) => {
                     let mut ledger = LedgerWallet::new(device);
-                    let result = ledger.read_device(&device_info);
+                    let result = ledger.read_device(device_info);
                     match result {
                         Ok(info) => {
                             ledger.pretty_path = info.get_pretty_path();
@@ -213,7 +213,7 @@ pub trait RemoteWallet {
         confirm_key: bool,
     ) -> Result<Pubkey, RemoteWalletError>;
 
-    /// Sign transaction data with wallet managing pubkey at derivation path m/44'/19165'/<account>'/<change>'.
+    /// Sign transaction data with wallet managing pubkey at derivation path m/44'/501'/<account>'/<change>'.
     fn sign_message(
         &self,
         derivation_path: &DerivationPath,
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_parse_locator() {
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let locator = Locator {
             manufacturer: Manufacturer::Ledger,
             pubkey: Some(pubkey),
@@ -334,7 +334,7 @@ mod tests {
 
     #[test]
     fn test_remote_wallet_info_matches() {
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let info = RemoteWalletInfo {
             manufacturer: Manufacturer::Ledger,
             model: "Nano S".to_string(),
@@ -356,7 +356,7 @@ mod tests {
         assert!(info.matches(&test_info));
         test_info.host_device_path = "/host/device/path".to_string();
         assert!(info.matches(&test_info));
-        let another_pubkey = solana_sdk::pubkey::new_rand();
+        let another_pubkey = safecoin_sdk::pubkey::new_rand();
         test_info.pubkey = another_pubkey;
         assert!(!info.matches(&test_info));
         test_info.pubkey = pubkey;
@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn test_get_pretty_path() {
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let pubkey_str = pubkey.to_string();
         let remote_wallet_info = RemoteWalletInfo {
             model: "nano-s".to_string(),

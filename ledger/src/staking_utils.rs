@@ -1,5 +1,5 @@
 use solana_runtime::bank::Bank;
-use solana_sdk::{
+use safecoin_sdk::{
     clock::{Epoch, Slot},
     pubkey::Pubkey,
 };
@@ -11,7 +11,7 @@ pub fn get_supermajority_slot(bank: &Bank, epoch: Epoch) -> Option<u64> {
     // Find the amount of stake needed for supermajority
     let stakes_and_lockouts = epoch_stakes_and_lockouts(bank, epoch);
     let total_stake: u64 = stakes_and_lockouts.iter().map(|s| s.0).sum();
-    let supermajority_stake = total_stake * 1 / 2;
+    let supermajority_stake = total_stake * 2 / 3;
 
     // Filter out the states that don't have a max lockout
     find_supermajority_slot(supermajority_stake, stakes_and_lockouts.iter())
@@ -67,19 +67,19 @@ pub(crate) mod tests {
     };
     use rand::Rng;
     use solana_runtime::vote_account::{ArcVoteAccount, VoteAccounts};
-    use solana_sdk::{
+    use safecoin_sdk::{
         account::{from_account, AccountSharedData},
         clock::Clock,
         instruction::Instruction,
         pubkey::Pubkey,
         signature::{Keypair, Signer},
         signers::Signers,
+        stake::{
+            instruction as stake_instruction,
+            state::{Authorized, Delegation, Lockup, Stake},
+        },
         sysvar::stake_history::{self, StakeHistory},
         transaction::Transaction,
-    };
-    use solana_stake_program::{
-        stake_instruction,
-        stake_state::{Authorized, Delegation, Lockup, Stake},
     };
     use solana_vote_program::{
         vote_instruction,
@@ -201,10 +201,7 @@ pub(crate) mod tests {
         let result: Vec<_> = epoch_stakes_and_lockouts(&bank, first_leader_schedule_epoch);
         assert_eq!(
             result,
-            vec![(
-                leader_stake.stake(first_leader_schedule_epoch, None, true),
-                None
-            )]
+            vec![(leader_stake.stake(first_leader_schedule_epoch, None), None)]
         );
 
         // epoch stakes and lockouts are saved off for the future epoch, should
@@ -215,14 +212,8 @@ pub(crate) mod tests {
             from_account::<StakeHistory, _>(&bank.get_account(&stake_history::id()).unwrap())
                 .unwrap();
         let mut expected = vec![
-            (
-                leader_stake.stake(bank.epoch(), Some(&stake_history), true),
-                None,
-            ),
-            (
-                other_stake.stake(bank.epoch(), Some(&stake_history), true),
-                None,
-            ),
+            (leader_stake.stake(bank.epoch(), Some(&stake_history)), None),
+            (other_stake.stake(bank.epoch(), Some(&stake_history)), None),
         ];
 
         expected.sort();
@@ -279,7 +270,7 @@ pub(crate) mod tests {
     #[test]
     fn test_to_staked_nodes() {
         let mut stakes = Vec::new();
-        let node1 = solana_sdk::pubkey::new_rand();
+        let node1 = safecoin_sdk::pubkey::new_rand();
 
         // Node 1 has stake of 3
         for i in 0..3 {
@@ -296,7 +287,7 @@ pub(crate) mod tests {
         }
 
         // Node 1 has stake of 5
-        let node2 = solana_sdk::pubkey::new_rand();
+        let node2 = safecoin_sdk::pubkey::new_rand();
 
         stakes.push((
             5,

@@ -25,6 +25,7 @@ pub struct Meta {
     pub seed: [u8; 32],
     pub slot: Slot,
     pub is_tracer_tx: bool,
+    pub is_simple_vote_tx: bool,
 }
 
 #[derive(Clone)]
@@ -72,6 +73,7 @@ impl fmt::Debug for Packet {
     }
 }
 
+#[allow(clippy::uninit_assumed_init)]
 impl Default for Packet {
     fn default() -> Packet {
         Packet {

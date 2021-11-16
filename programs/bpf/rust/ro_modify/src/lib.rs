@@ -1,4 +1,4 @@
-use solana_program::{
+use safecoin_program::{
     account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, msg, program::invoke,
     program_error::ProgramError, pubkey::Pubkey, system_instruction,
 };

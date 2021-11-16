@@ -1,12 +1,12 @@
 #![feature(test)]
 
-extern crate solana_core;
+extern crate safecoin_core;
 extern crate test;
 
-use solana_core::consensus::Tower;
+use safecoin_core::consensus::Tower;
 use solana_runtime::bank::Bank;
 use solana_runtime::bank_forks::BankForks;
-use solana_sdk::{
+use safecoin_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
 };
@@ -24,10 +24,10 @@ fn bench_save_tower(bench: &mut Bencher) {
     let heaviest_bank = BankForks::new(Bank::default()).working_bank();
     let tower = Tower::new(
         &node_keypair.pubkey(),
-        &vote_account_pubkey,
+        vote_account_pubkey,
         0,
         &heaviest_bank,
-        &path,
+        path,
     );
 
     bench.iter(move || {

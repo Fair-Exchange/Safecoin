@@ -1,5 +1,5 @@
-use solana_sdk::instruction::Instruction;
-use solana_sdk::pubkey::Pubkey;
+use safecoin_sdk::instruction::Instruction;
+use safecoin_sdk::pubkey::Pubkey;
 use safe_memo::id;
 
 pub trait WithMemo {

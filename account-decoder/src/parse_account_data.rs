@@ -9,14 +9,14 @@ use crate::{
 };
 use inflector::Inflector;
 use serde_json::Value;
-use solana_sdk::{instruction::InstructionError, pubkey::Pubkey, system_program, sysvar};
+use safecoin_sdk::{instruction::InstructionError, pubkey::Pubkey, stake, system_program, sysvar};
 use std::collections::HashMap;
 use thiserror::Error;
 
 lazy_static! {
-    static ref BPF_UPGRADEABLE_LOADER_PROGRAM_ID: Pubkey = solana_sdk::bpf_loader_upgradeable::id();
+    static ref BPF_UPGRADEABLE_LOADER_PROGRAM_ID: Pubkey = safecoin_sdk::bpf_loader_upgradeable::id();
     static ref CONFIG_PROGRAM_ID: Pubkey = solana_config_program::id();
-    static ref STAKE_PROGRAM_ID: Pubkey = solana_stake_program::id();
+    static ref STAKE_PROGRAM_ID: Pubkey = stake::program::id();
     static ref SYSTEM_PROGRAM_ID: Pubkey = system_program::id();
     static ref SYSVAR_PROGRAM_ID: Pubkey = sysvar::id();
     static ref TOKEN_PROGRAM_ID: Pubkey = spl_token_id_v2_0();
@@ -113,7 +113,7 @@ pub fn parse_account_data(
 #[cfg(test)]
 mod test {
     use super::*;
-    use solana_sdk::nonce::{
+    use safecoin_sdk::nonce::{
         state::{Data, Versions},
         State,
     };
@@ -121,8 +121,8 @@ mod test {
 
     #[test]
     fn test_parse_account_data() {
-        let account_pubkey = solana_sdk::pubkey::new_rand();
-        let other_program = solana_sdk::pubkey::new_rand();
+        let account_pubkey = safecoin_sdk::pubkey::new_rand();
+        let other_program = safecoin_sdk::pubkey::new_rand();
         let data = vec![0; 4];
         assert!(parse_account_data(&account_pubkey, &other_program, &data, None).is_err());
 

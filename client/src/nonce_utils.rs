@@ -1,6 +1,6 @@
 use {
     crate::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_sdk::{
         account::{Account, ReadableAccount},
         account_utils::StateMut,
         commitment_config::CommitmentConfig,

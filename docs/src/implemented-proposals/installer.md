@@ -4,7 +4,7 @@ title: Cluster Software Installation and Updates
 
 Currently users are required to build the safecoin cluster software themselves from the git repository and manually update it, which is error prone and inconvenient.
 
-This document proposes an easy to use software install and updater that can be used to deploy pre-built binaries for supported platforms. Users may elect to use binaries supplied by Safecoin or any other party they trust. Deployment of updates is managed using an on-chain update manifest program.
+This document proposes an easy to use software install and updater that can be used to deploy pre-built binaries for supported platforms. Users may elect to use binaries supplied by Safecoin or any other party provider. Deployment of updates is managed using an on-chain update manifest program.
 
 ## Motivating Examples
 
@@ -70,7 +70,7 @@ An update manifest is used to advertise the deployment of new release tarballs o
 The update tarball itself is hosted elsewhere, off-chain and can be fetched from the specified `download_url`.
 
 ```text
-use solana_sdk::signature::Signature;
+use safecoin_sdk::signature::Signature;
 
 /// Information required to download and apply a given update
 pub struct UpdateManifest {

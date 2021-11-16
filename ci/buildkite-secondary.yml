@@ -7,11 +7,6 @@ steps:
       - "queue=release-build"
     timeout_in_minutes: 60
     name: "publish tarball"
-  - command: "ci/publish-bpf-sdk.sh"
-    agents:
-      - "queue=release-build"
-    timeout_in_minutes: 5
-    name: "publish bpf sdk"
   - wait
   - command: "sdk/docker-solana/build.sh"
     agents:

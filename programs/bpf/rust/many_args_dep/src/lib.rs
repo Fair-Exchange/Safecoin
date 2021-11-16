@@ -1,7 +1,7 @@
 //! @brief Safecoin Rust-based BPF program utility functions and types
 
-extern crate solana_program;
-use solana_program::msg;
+extern crate safecoin_program;
+use safecoin_program::msg;
 
 pub fn many_args(
     arg1: u64,

@@ -2,10 +2,10 @@
 
 #![allow(unreachable_code)]
 
-extern crate solana_program;
+extern crate safecoin_program;
 
 use solana_bpf_rust_invoked::instruction::*;
-use solana_program::{
+use safecoin_program::{
     account_info::AccountInfo,
     entrypoint,
     entrypoint::{ProgramResult, MAX_PERMITTED_DATA_INCREASE},
@@ -98,7 +98,7 @@ fn process_instruction(
                 let from_lamports = accounts[FROM_INDEX].lamports();
                 let to_lamports = accounts[DERIVED_KEY1_INDEX].lamports();
                 assert_eq!(accounts[DERIVED_KEY1_INDEX].data_len(), 0);
-                assert!(solana_program::system_program::check_id(
+                assert!(safecoin_program::system_program::check_id(
                     accounts[DERIVED_KEY1_INDEX].owner
                 ));
 
@@ -263,10 +263,9 @@ fn process_instruction(
                     )?,
                     accounts[DERIVED_KEY1_INDEX].key
                 );
-                let not_native_program_id = Pubkey::new_from_array([6u8; 32]);
-                assert!(!not_native_program_id.is_native_program_id());
+                let new_program_id = Pubkey::new_from_array([6u8; 32]);
                 assert_eq!(
-                    Pubkey::create_program_address(&[b"You pass butter"], &not_native_program_id)
+                    Pubkey::create_program_address(&[b"You pass butter"], &new_program_id)
                         .unwrap_err(),
                     PubkeyError::InvalidSeeds
                 );
@@ -278,10 +277,9 @@ fn process_instruction(
                     Pubkey::try_find_program_address(&[b"You pass butter"], program_id).unwrap();
                 assert_eq!(&address, accounts[DERIVED_KEY1_INDEX].key);
                 assert_eq!(bump_seed, bump_seed1);
-                let not_native_program_id = Pubkey::new_from_array([6u8; 32]);
-                assert!(!not_native_program_id.is_native_program_id());
+                let new_program_id = Pubkey::new_from_array([6u8; 32]);
                 assert_eq!(
-                    Pubkey::create_program_address(&[b"You pass butter"], &not_native_program_id)
+                    Pubkey::create_program_address(&[b"You pass butter"], &new_program_id)
                         .unwrap_err(),
                     PubkeyError::InvalidSeeds
                 );
@@ -652,17 +650,4 @@ fn process_instruction(
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn create_program_address_is_defined() {
-        assert_eq!(
-            Pubkey::create_program_address(&[b"You pass butter"], &Pubkey::default()).unwrap_err(),
-            PubkeyError::InvalidSeeds
-        );
-    }
 }

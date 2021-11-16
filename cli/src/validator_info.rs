@@ -18,7 +18,7 @@ use safecoin_cli_output::{CliValidatorInfo, CliValidatorInfoVec};
 use safecoin_client::rpc_client::RpcClient;
 use solana_config_program::{config_instruction, get_config_data, ConfigKeys, ConfigState};
 use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
-use solana_sdk::{
+use safecoin_sdk::{
     account::Account,
     message::Message,
     pubkey::Pubkey,
@@ -70,7 +70,7 @@ fn verify_keybase(
 ) -> Result<(), Box<dyn error::Error>> {
     if let Some(keybase_username) = keybase_username.as_str() {
         let url = format!(
-            "https://keybase.pub/{}/safecoin/validator-{:?}",
+            "https://keybase.pub/{}/solana/validator-{:?}",
             keybase_username, validator_pubkey
         );
         let client = Client::new();
@@ -119,7 +119,7 @@ fn parse_validator_info(
     let key_list: ConfigKeys = deserialize(&account.data)?;
     if !key_list.keys.is_empty() {
         let (validator_pubkey, _) = key_list.keys[1];
-        let validator_info_string: String = deserialize(&get_config_data(&account.data)?)?;
+        let validator_info_string: String = deserialize(get_config_data(&account.data)?)?;
         let validator_info: Map<_, _> = serde_json::from_str(&validator_info_string)?;
         Ok((validator_pubkey, validator_info))
     } else {
@@ -246,7 +246,7 @@ pub fn process_set_validator_info(
 ) -> ProcessResult {
     // Validate keybase username
     if let Some(string) = validator_info.get("keybaseUsername") {
-        let result = verify_keybase(&config.signers[0].pubkey(), &string);
+        let result = verify_keybase(&config.signers[0].pubkey(), string);
         if result.is_err() {
             if force_keybase {
                 println!("--force supplied, ignoring: {:?}", result);
@@ -272,7 +272,7 @@ pub fn process_set_validator_info(
             },
         )
         .find(|(pubkey, account)| {
-            let (validator_pubkey, _) = parse_validator_info(&pubkey, &account).unwrap();
+            let (validator_pubkey, _) = parse_validator_info(pubkey, account).unwrap();
             validator_pubkey == config.signers[0].pubkey()
         });
 
@@ -393,7 +393,7 @@ pub fn process_get_validator_info(
     }
     for (validator_info_pubkey, validator_info_account) in validator_info.iter() {
         let (validator_pubkey, validator_info) =
-            parse_validator_info(&validator_info_pubkey, &validator_info_account)?;
+            parse_validator_info(validator_info_pubkey, validator_info_account)?;
         validator_info_list.push(CliValidatorInfo {
             identity_pubkey: validator_pubkey.to_string(),
             info_pubkey: validator_info_pubkey.to_string(),
@@ -408,7 +408,7 @@ pub fn process_get_validator_info(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::app;
+    use crate::clap_app::get_clap_app;
     use bincode::{serialize, serialized_size};
     use serde_json::json;
 
@@ -432,7 +432,7 @@ mod tests {
 
     #[test]
     fn test_parse_args() {
-        let matches = app("test", "desc", "version").get_matches_from(vec![
+        let matches = get_clap_app("test", "desc", "version").get_matches_from(vec![
             "test",
             "validator-info",
             "publish",
@@ -451,7 +451,7 @@ mod tests {
             "name": "Alice",
             "keybaseUsername": "alice_keybase",
         });
-        assert_eq!(parse_args(&matches), expected);
+        assert_eq!(parse_args(matches), expected);
     }
 
     #[test]
@@ -483,7 +483,7 @@ mod tests {
 
     #[test]
     fn test_parse_validator_info() {
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let keys = vec![(validator_info::id(), false), (pubkey, true)];
         let config = ConfigKeys { keys };
 

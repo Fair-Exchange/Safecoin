@@ -5,13 +5,15 @@ use safecoin_bench_tps::{
     cli::Config,
 };
 use safecoin_client::thin_client::create_client;
-use solana_core::{cluster_info::VALIDATOR_PORT_RANGE, validator::ValidatorConfig};
+use safecoin_core::validator::ValidatorConfig;
 use safecoin_faucet::faucet::run_local_faucet_with_port;
+use safecoin_gossip::cluster_info::VALIDATOR_PORT_RANGE;
 use solana_local_cluster::{
     local_cluster::{ClusterConfig, LocalCluster},
     validator_configs::make_identical_validator_configs,
 };
-use solana_sdk::signature::{Keypair, Signer};
+use safecoin_sdk::signature::{Keypair, Signer};
+use solana_streamer::socket::SocketAddrSpace;
 use std::{
     sync::{mpsc::channel, Arc},
     time::Duration,
@@ -22,13 +24,19 @@ fn test_bench_tps_local_cluster(config: Config) {
 
     solana_logger::setup();
     const NUM_NODES: usize = 1;
-    let cluster = LocalCluster::new(&mut ClusterConfig {
-        node_stakes: vec![999_990; NUM_NODES],
-        cluster_lamports: 1_000,
-        validator_configs: make_identical_validator_configs(&ValidatorConfig::default(), NUM_NODES),
-        native_instruction_processors,
-        ..ClusterConfig::default()
-    });
+    let cluster = LocalCluster::new(
+        &mut ClusterConfig {
+            node_stakes: vec![999_990; NUM_NODES],
+            cluster_lamports: 1_000,
+            validator_configs: make_identical_validator_configs(
+                &ValidatorConfig::default(),
+                NUM_NODES,
+            ),
+            native_instruction_processors,
+            ..ClusterConfig::default()
+        },
+        SocketAddrSpace::Unspecified,
+    );
 
     let faucet_keypair = Keypair::new();
     cluster.transfer(

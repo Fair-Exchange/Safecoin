@@ -7,7 +7,7 @@ use {
     crate::{rpc_client::RpcClient, rpc_config::RpcProgramAccountsConfig, rpc_response::Response},
     bincode::{serialize_into, serialized_size},
     log::*,
-    solana_sdk::{
+    safecoin_sdk::{
         account::Account,
         client::{AsyncClient, Client, SyncClient},
         clock::{Slot, MAX_PROCESSING_AGE},
@@ -451,7 +451,7 @@ impl SyncClient for ThinClient {
     ) -> TransportResult<Option<transaction::Result<()>>> {
         let status = self
             .rpc_client()
-            .get_signature_status(&signature)
+            .get_signature_status(signature)
             .map_err(|err| {
                 io::Error::new(
                     io::ErrorKind::Other,
@@ -468,7 +468,7 @@ impl SyncClient for ThinClient {
     ) -> TransportResult<Option<transaction::Result<()>>> {
         let status = self
             .rpc_client()
-            .get_signature_status_with_commitment(&signature, commitment_config)
+            .get_signature_status_with_commitment(signature, commitment_config)
             .map_err(|err| {
                 io::Error::new(
                     io::ErrorKind::Other,

@@ -1,10 +1,11 @@
 //! @brief Example Rust-based BPF program that tests sysvar use
 
-extern crate solana_program;
-use solana_program::{
+extern crate safecoin_program;
+use safecoin_program::{
     account_info::AccountInfo,
     entrypoint,
     entrypoint::ProgramResult,
+    fee_calculator::FeeCalculator,
     msg,
     program_error::ProgramError,
     pubkey::Pubkey,
@@ -47,6 +48,8 @@ pub fn process_instruction(
         msg!("Fees identifier:");
         sysvar::fees::id().log();
         let fees = Fees::from_account_info(&accounts[4]).unwrap();
+        let fee_calculator = fees.fee_calculator.clone();
+        assert_ne!(fee_calculator, FeeCalculator::default());
         let got_fees = Fees::get()?;
         assert_eq!(fees, got_fees);
     }
@@ -70,6 +73,7 @@ pub fn process_instruction(
         msg!("Rent identifier:");
         sysvar::rent::id().log();
         let rent = Rent::from_account_info(&accounts[7]).unwrap();
+        assert_eq!(rent, Rent::default());
         let got_rent = Rent::get()?;
         assert_eq!(rent, got_rent);
     }

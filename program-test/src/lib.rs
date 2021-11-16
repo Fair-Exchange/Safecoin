@@ -13,18 +13,18 @@ use {
         commitment::BlockCommitmentCache,
         genesis_utils::{create_genesis_config_with_leader_ex, GenesisConfigInfo},
     },
-    solana_sdk::{
-        account::{Account, AccountSharedData, ReadableAccount},
+    safecoin_sdk::{
+        account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
         account_info::AccountInfo,
         clock::{Clock, Slot},
         entrypoint::{ProgramResult, SUCCESS},
         epoch_schedule::EpochSchedule,
+        feature_set::demote_program_write_locks,
         fee_calculator::{FeeCalculator, FeeRateGovernor},
         genesis_config::{ClusterType, GenesisConfig},
         hash::Hash,
         instruction::Instruction,
         instruction::InstructionError,
-        keyed_account::KeyedAccount,
         message::Message,
         native_token::sol_to_lamports,
         process_instruction::{
@@ -96,18 +96,27 @@ fn get_invoke_context<'a>() -> &'a mut dyn InvokeContext {
 }
 
 pub fn builtin_process_instruction(
-    process_instruction: solana_sdk::entrypoint::ProcessInstruction,
+    process_instruction: safecoin_sdk::entrypoint::ProcessInstruction,
     program_id: &Pubkey,
-    keyed_accounts: &[KeyedAccount],
     input: &[u8],
     invoke_context: &mut dyn InvokeContext,
 ) -> Result<(), InstructionError> {
     set_invoke_context(invoke_context);
 
+    let logger = invoke_context.get_logger();
+    stable_log::program_invoke(&logger, program_id, invoke_context.invoke_depth());
+
+    let keyed_accounts = invoke_context.get_keyed_accounts()?;
+
     // Copy all the accounts into a HashMap to ensure there are no duplicates
-    let mut accounts: HashMap<Pubkey, AccountSharedData> = keyed_accounts
+    let mut accounts: HashMap<Pubkey, Account> = keyed_accounts
         .iter()
-        .map(|ka| (*ka.unsigned_key(), ka.account.borrow().clone()))
+        .map(|ka| {
+            (
+                *ka.unsigned_key(),
+                Account::from(ka.account.borrow().clone()),
+            )
+        })
         .collect();
 
     // Create shared references to each account's lamports/data/owner
@@ -145,14 +154,19 @@ pub fn builtin_process_instruction(
         .collect();
 
     // Execute the program
-    process_instruction(program_id, &account_infos, input).map_err(u64::from)?;
+    process_instruction(program_id, &account_infos, input).map_err(|err| {
+        let err = u64::from(err);
+        stable_log::program_failure(&logger, program_id, &err.into());
+        err
+    })?;
+    stable_log::program_success(&logger, program_id);
 
     // Commit AccountInfo changes back into KeyedAccounts
     for keyed_account in keyed_accounts {
         let mut account = keyed_account.account.borrow_mut();
         let key = keyed_account.unsigned_key();
         let (lamports, data, _owner) = &account_refs[key];
-        account.lamports = **lamports.borrow();
+        account.set_lamports(**lamports.borrow());
         account.set_data(data.borrow().to_vec());
     }
 
@@ -166,13 +180,11 @@ macro_rules! processor {
     ($process_instruction:expr) => {
         Some(
             |program_id: &Pubkey,
-             keyed_accounts: &[solana_sdk::keyed_account::KeyedAccount],
              input: &[u8],
-             invoke_context: &mut dyn solana_sdk::process_instruction::InvokeContext| {
+             invoke_context: &mut dyn safecoin_sdk::process_instruction::InvokeContext| {
                 $crate::builtin_process_instruction(
                     $process_instruction,
                     program_id,
-                    keyed_accounts,
                     input,
                     invoke_context,
                 )
@@ -219,7 +231,7 @@ fn get_sysvar<T: Default + Sysvar + Sized + serde::de::DeserializeOwned>(
 }
 
 struct SyscallStubs {}
-impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
+impl safecoin_sdk::program_stubs::SyscallStubs for SyscallStubs {
     fn sol_log(&self, message: &str) {
         let invoke_context = get_invoke_context();
         let logger = invoke_context.get_logger();
@@ -255,12 +267,14 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
             }
             panic!("Program id {} wasn't found in account_infos", program_id);
         };
+        let demote_program_write_locks =
+            invoke_context.is_feature_active(&demote_program_write_locks::id());
         // TODO don't have the caller's keyed_accounts so can't validate writer or signer escalation or deescalation yet
         let caller_privileges = message
             .account_keys
             .iter()
             .enumerate()
-            .map(|(i, _)| message.is_writable(i))
+            .map(|(i, _)| message.is_writable(i, demote_program_write_locks))
             .collect::<Vec<bool>>();
 
         stable_log::program_invoke(&logger, &program_id, invoke_context.invoke_depth());
@@ -284,7 +298,7 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
         'outer: for key in &message.account_keys {
             for account_info in account_infos {
                 if account_info.unsigned_key() == key {
-                    accounts.push(Rc::new(RefCell::new(ai_to_a(account_info))));
+                    accounts.push((*key, Rc::new(RefCell::new(ai_to_a(account_info)))));
                     continue 'outer;
                 }
             }
@@ -305,7 +319,7 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
                 {
                     let mut program_signer = false;
                     for seeds in signers_seeds.iter() {
-                        let signer = Pubkey::create_program_address(&seeds, &caller).unwrap();
+                        let signer = Pubkey::create_program_address(seeds, &caller).unwrap();
                         if instruction_account.pubkey == signer {
                             program_signer = true;
                             break;
@@ -318,7 +332,7 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
             }
         }
 
-        invoke_context.record_instruction(&instruction);
+        invoke_context.record_instruction(instruction);
 
         solana_runtime::message_processor::MessageProcessor::process_cross_program_instruction(
             &message,
@@ -330,26 +344,24 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
         .map_err(|err| ProgramError::try_from(err).unwrap_or_else(|err| panic!("{}", err)))?;
 
         // Copy writeable account modifications back into the caller's AccountInfos
-        for (i, account_pubkey) in message.account_keys.iter().enumerate() {
-            if !message.is_writable(i) {
+        for (i, (pubkey, account)) in accounts.iter().enumerate().take(message.account_keys.len()) {
+            if !message.is_writable(i, demote_program_write_locks) {
                 continue;
             }
-
             for account_info in account_infos {
-                if account_info.unsigned_key() == account_pubkey {
-                    let account = &accounts[i];
-                    **account_info.try_borrow_mut_lamports().unwrap() = account.borrow().lamports;
+                if account_info.unsigned_key() == pubkey {
+                    **account_info.try_borrow_mut_lamports().unwrap() = account.borrow().lamports();
 
                     let mut data = account_info.try_borrow_mut_data()?;
                     let account_borrow = account.borrow();
                     let new_data = account_borrow.data();
-                    if *account_info.owner != account.borrow().owner {
+                    if account_info.owner != account.borrow().owner() {
                         // TODO Figure out a better way to allow the System Program to set the account owner
                         #[allow(clippy::transmute_ptr_to_ptr)]
                         #[allow(mutable_transmutes)]
                         let account_info_mut =
                             unsafe { transmute::<&Pubkey, &mut Pubkey>(account_info.owner) };
-                        *account_info_mut = account.borrow().owner;
+                        *account_info_mut = *account.borrow().owner();
                     }
                     if data.len() != new_data.len() {
                         // TODO: Figure out how to allow the System Program to resize the account data
@@ -463,6 +475,7 @@ pub struct ProgramTest {
     builtins: Vec<Builtin>,
     bpf_compute_max_units: Option<u64>,
     prefer_bpf: bool,
+    use_bpf_jit: bool,
 }
 
 impl Default for ProgramTest {
@@ -483,7 +496,7 @@ impl Default for ProgramTest {
             "solana_rbpf::vm=debug,\
              solana_runtime::message_processor=debug,\
              solana_runtime::system_instruction_processor=trace,\
-             solana_program_test=info",
+             safecoin_program_test=info",
         );
         let prefer_bpf = std::env::var("BPF_OUT_DIR").is_ok();
 
@@ -492,6 +505,7 @@ impl Default for ProgramTest {
             builtins: vec![],
             bpf_compute_max_units: None,
             prefer_bpf,
+            use_bpf_jit: false,
         }
     }
 }
@@ -522,6 +536,11 @@ impl ProgramTest {
     /// Override the BPF compute budget
     pub fn set_bpf_compute_max_units(&mut self, bpf_compute_max_units: u64) {
         self.bpf_compute_max_units = Some(bpf_compute_max_units);
+    }
+
+    /// Execute the BPF program with JIT if true, interpreted if false
+    pub fn use_bpf_jit(&mut self, use_bpf_jit: bool) {
+        self.use_bpf_jit = use_bpf_jit;
     }
 
     /// Add an account to the test environment
@@ -616,7 +635,7 @@ impl ProgramTest {
                 Account {
                     lamports: Rent::default().minimum_balance(data.len()).min(1),
                     data,
-                    owner: solana_sdk::bpf_loader::id(),
+                    owner: safecoin_sdk::bpf_loader::id(),
                     executable: true,
                     rent_epoch: 0,
                 },
@@ -695,6 +714,20 @@ impl ProgramTest {
         }
     }
 
+    /// Add a builtin program to the test environment.
+    ///
+    /// Note that builtin programs are responsible for their own `stable_log` output.
+    pub fn add_builtin_program(
+        &mut self,
+        program_name: &str,
+        program_id: Pubkey,
+        process_instruction: ProcessInstructionWithContext,
+    ) {
+        info!("\"{}\" builtin program", program_name);
+        self.builtins
+            .push(Builtin::new(program_name, program_id, process_instruction));
+    }
+
     fn setup_bank(
         &self,
     ) -> (
@@ -708,7 +741,7 @@ impl ProgramTest {
             static ONCE: Once = Once::new();
 
             ONCE.call_once(|| {
-                solana_sdk::program_stubs::set_syscall_stubs(Box::new(SyscallStubs {}));
+                safecoin_sdk::program_stubs::set_syscall_stubs(Box::new(SyscallStubs {}));
             });
         }
 
@@ -739,17 +772,24 @@ impl ProgramTest {
 
         let mut bank = Bank::new(&genesis_config);
 
-        for loader in &[
-            solana_bpf_loader_deprecated_program!(),
-            solana_bpf_loader_program!(),
-            solana_bpf_loader_upgradeable_program!(),
-        ] {
-            bank.add_builtin(&loader.0, loader.1, loader.2);
+        // Add loaders
+        macro_rules! add_builtin {
+            ($b:expr) => {
+                bank.add_builtin(&$b.0, $b.1, $b.2)
+            };
+        }
+        add_builtin!(solana_bpf_loader_deprecated_program!());
+        if self.use_bpf_jit {
+            add_builtin!(solana_bpf_loader_program_with_jit!());
+            add_builtin!(solana_bpf_loader_upgradeable_program_with_jit!());
+        } else {
+            add_builtin!(solana_bpf_loader_program!());
+            add_builtin!(solana_bpf_loader_upgradeable_program!());
         }
 
         // Add commonly-used SPL programs as a convenience to the user
         for (program_id, account) in programs::spl_programs(&Rent::default()).iter() {
-            bank.store_account(program_id, &account);
+            bank.store_account(program_id, account);
         }
 
         // User-supplied additional builtins
@@ -762,10 +802,10 @@ impl ProgramTest {
         }
 
         for (address, account) in self.accounts.iter() {
-            if bank.get_account(&address).is_some() {
+            if bank.get_account(address).is_some() {
                 info!("Overriding account at {}", address);
             }
-            bank.store_account(&address, &account);
+            bank.store_account(address, account);
         }
         bank.set_capitalization();
         if let Some(max_units) = self.bpf_compute_max_units {

@@ -1,3 +1,4 @@
+#![allow(clippy::integer_arithmetic)]
 //! @brief Safecoin Rust-based BPF program entry point supported by the original
 //!  and now deprecated BPFLoader.  For more information see
 //!  './bpf_loader_deprecated.rs'

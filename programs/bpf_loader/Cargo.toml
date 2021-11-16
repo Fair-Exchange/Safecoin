@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-bpf-loader-program"
-version = "1.6.25"
+version = "1.7.17"
 description = "Safecoin BPF loader"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -16,14 +16,16 @@ log = "0.4.11"
 num-derive = "0.3"
 num-traits = "0.2"
 rand_core = "0.6.2"
+libsecp256k1 = "0.5.0"
 sha3 = "0.9.1"
-safecoin-measure = { path = "../../measure", version = "=1.6.25" }
-safecoin-runtime = { path = "../../runtime", version = "=1.6.25" }
-safecoin-sdk = { path = "../../sdk", version = "=1.6.25" }
-solana_rbpf = "=0.2.9"
+safecoin-measure = { path = "../../measure", version = "=1.7.17" }
+safecoin-runtime = { path = "../../runtime", version = "=1.7.17" }
+safecoin-sdk = { path = "../../sdk", version = "=1.7.17" }
+solana_rbpf = "=0.2.11"
 thiserror = "1.0"
 
 [dev-dependencies]
+curve25519-dalek = "3.0.0"
 rand = "0.7.3"
 rustversion = "1.0.4"
 

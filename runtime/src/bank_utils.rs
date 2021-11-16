@@ -4,7 +4,7 @@ use crate::{
     hashed_transaction::HashedTransaction,
     vote_sender_types::ReplayVoteSender,
 };
-use solana_sdk::{pubkey::Pubkey, signature::Signer};
+use safecoin_sdk::{pubkey::Pubkey, signature::Signer};
 use solana_vote_program::vote_transaction;
 
 pub fn setup_bank_and_vote_pubkeys(num_vote_accounts: usize, stake: u64) -> (Bank, Vec<Pubkey>) {

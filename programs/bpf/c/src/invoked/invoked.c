@@ -2,7 +2,7 @@
  * @brief Example C-based BPF program that tests cross-program invocations
  */
 #include "instruction.h"
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 extern uint64_t entrypoint(const uint8_t *input) {
   sol_log("Invoked C program");

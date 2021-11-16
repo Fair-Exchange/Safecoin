@@ -13,17 +13,24 @@ mkdir -p "$SAFEANA_CONFIG_DIR"/bootstrap-validator
 if [[ -r $FAUCET_KEYPAIR ]]; then
   cp -f "$FAUCET_KEYPAIR" "$SAFEANA_CONFIG_DIR"/faucet.json
 else
-  $safecoin_keygen new --no-passphrase -fso "$SAFEANA_CONFIG_DIR"/faucet.json
+  $solana_keygen new --no-passphrase -fso "$SAFEANA_CONFIG_DIR"/faucet.json
 fi
 
 if [[ -f $BOOTSTRAP_VALIDATOR_IDENTITY_KEYPAIR ]]; then
   cp -f "$BOOTSTRAP_VALIDATOR_IDENTITY_KEYPAIR" "$SAFEANA_CONFIG_DIR"/bootstrap-validator/identity.json
 else
-  $safecoin_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/identity.json
+  $solana_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/identity.json
 fi
-
-$safecoin_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/vote-account.json
-$safecoin_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/stake-account.json
+if [[ -f $BOOTSTRAP_VALIDATOR_STAKE_KEYPAIR ]]; then
+  cp -f "$BOOTSTRAP_VALIDATOR_STAKE_KEYPAIR" "$SAFEANA_CONFIG_DIR"/bootstrap-validator/stake-account.json
+else
+  $solana_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/stake-account.json
+fi
+if [[ -f $BOOTSTRAP_VALIDATOR_VOTE_KEYPAIR ]]; then
+  cp -f "$BOOTSTRAP_VALIDATOR_VOTE_KEYPAIR" "$SAFEANA_CONFIG_DIR"/bootstrap-validator/vote-account.json
+else
+  $solana_keygen new --no-passphrase -so "$SAFEANA_CONFIG_DIR"/bootstrap-validator/vote-account.json
+fi
 
 args=(
   "$@"
@@ -44,8 +51,8 @@ fi
 
 default_arg --ledger "$SAFEANA_CONFIG_DIR"/bootstrap-validator
 default_arg --faucet-pubkey "$SAFEANA_CONFIG_DIR"/faucet.json
-default_arg --faucet-lamports 1000
+default_arg --faucet-lamports 500000000000000000
 default_arg --hashes-per-tick auto
-default_arg --cluster-type mainnet-beta
+default_arg --cluster-type development
 
 $safecoin_genesis "${args[@]}"

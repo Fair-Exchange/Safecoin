@@ -1,10 +1,10 @@
 //! @brief SHA Syscall test
 
-extern crate solana_program;
-use solana_program::{custom_panic_default, msg};
+extern crate safecoin_program;
+use safecoin_program::{custom_panic_default, msg};
 
 fn test_sha256_hasher() {
-    use solana_program::hash::{hashv, Hasher};
+    use safecoin_program::hash::{hashv, Hasher};
     let vals = &["Gaggablaghblagh!".as_ref(), "flurbos".as_ref()];
     let mut hasher = Hasher::default();
     hasher.hashv(vals);
@@ -12,7 +12,7 @@ fn test_sha256_hasher() {
 }
 
 fn test_keccak256_hasher() {
-    use solana_program::keccak::{hashv, Hasher};
+    use safecoin_program::keccak::{hashv, Hasher};
     let vals = &["Gaggablaghblagh!".as_ref(), "flurbos".as_ref()];
     let mut hasher = Hasher::default();
     hasher.hashv(vals);

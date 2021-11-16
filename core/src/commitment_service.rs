@@ -1,13 +1,12 @@
-use crate::{rpc_subscriptions::RpcSubscriptions};
+use crate::consensus::Stake;
 use safecoin_measure::measure::Measure;
 use solana_metrics::datapoint_info;
+use solana_rpc::rpc_subscriptions::RpcSubscriptions;
 use solana_runtime::{
-    bank::{
-    Bank,BankVoteThreshold,
-    },
-    commitment::{BlockCommitment, BlockCommitmentCache, CommitmentSlots},
+    bank::Bank,
+    commitment::{BlockCommitment, BlockCommitmentCache, CommitmentSlots, VOTE_THRESHOLD_SIZE},
 };
-use solana_sdk::clock::Slot;
+use safecoin_sdk::clock::Slot;
 use solana_vote_program::vote_state::VoteState;
 use std::{
     cmp::max,
@@ -22,26 +21,26 @@ use std::{
 pub struct CommitmentAggregationData {
     bank: Arc<Bank>,
     root: Slot,
+    total_stake: Stake,
 }
 
 impl CommitmentAggregationData {
-    pub fn new(bank: Arc<Bank>, root: Slot) -> Self {
+    pub fn new(bank: Arc<Bank>, root: Slot, total_stake: Stake) -> Self {
         Self {
             bank,
             root,
+            total_stake,
         }
     }
 }
 
-fn get_highest_confirmed_root(mut rooted_stake: Vec<(Slot, u64)>, bank:&dyn BankVoteThreshold) -> Slot {
-    if let Some(threshold) = bank.epoch_vote_threshold() {
-        rooted_stake.sort_by(|a, b| a.0.cmp(&b.0).reverse());
-        let mut stake_sum = 0;
-        for (root, stake) in rooted_stake {
-            stake_sum += stake;
-            if stake_sum as f64 > threshold {
-                return root;
-            }
+fn get_highest_confirmed_root(mut rooted_stake: Vec<(Slot, u64)>, total_stake: u64) -> Slot {
+    rooted_stake.sort_by(|a, b| a.0.cmp(&b.0).reverse());
+    let mut stake_sum = 0;
+    for (root, stake) in rooted_stake {
+        stake_sum += stake;
+        if (stake_sum as f64 / total_stake as f64) > VOTE_THRESHOLD_SIZE {
+            return root;
         }
     }
     0
@@ -142,17 +141,13 @@ impl AggregateCommitmentService {
     ) -> CommitmentSlots {
         let (block_commitment, rooted_stake) =
             Self::aggregate_commitment(&ancestors, &aggregation_data.bank);
-        let bvt: &dyn BankVoteThreshold = aggregation_data.bank.threshold_delegate();
-        let highest_confirmed_root =
-            get_highest_confirmed_root(rooted_stake, bvt);
 
-        let mut threshold = 0.6;
-        if let Some(hasthresh) = bvt.epoch_vote_threshold() {
-            threshold = hasthresh;
-        }
+        let highest_confirmed_root =
+            get_highest_confirmed_root(rooted_stake, aggregation_data.total_stake);
+
         let mut new_block_commitment = BlockCommitmentCache::new(
             block_commitment,
-            threshold,
+            aggregation_data.total_stake,
             CommitmentSlots {
                 slot: aggregation_data.bank.slot(),
                 root: aggregation_data.root,
@@ -257,33 +252,22 @@ mod tests {
     use solana_runtime::{
         accounts_background_service::AbsRequestSender,
         bank_forks::BankForks,
-        bank::BankVoteThreshold,
         genesis_utils::{create_genesis_config_with_vote_accounts, ValidatorVoteKeypairs},
     };
-    use solana_sdk::{account::Account, pubkey::Pubkey, signature::Signer};
+    use safecoin_sdk::{account::Account, pubkey::Pubkey, signature::Signer};
     use solana_stake_program::stake_state;
     use solana_vote_program::{
         vote_state::{self, VoteStateVersions},
         vote_transaction,
     };
-    pub struct MockBankThreshold {
-        val : f64,
-    }
-
-    impl BankVoteThreshold for MockBankThreshold {
-        fn epoch_vote_threshold(&self) -> Option<f64> {
-            Some(self.val)
-        }
-    }
 
     #[test]
     fn test_get_highest_confirmed_root() {
-        let mbt = MockBankThreshold{val:0.66};
-        assert_eq!(get_highest_confirmed_root(vec![], &mbt), 0);
+        assert_eq!(get_highest_confirmed_root(vec![], 10), 0);
         let rooted_stake = vec![(0, 5), (1, 5)];
-        assert_eq!(get_highest_confirmed_root(rooted_stake,&mbt), 0);
+        assert_eq!(get_highest_confirmed_root(rooted_stake, 10), 0);
         let rooted_stake = vec![(1, 5), (0, 10), (2, 5), (1, 4)];
-        assert_eq!(get_highest_confirmed_root(rooted_stake,&mbt), 1);
+        assert_eq!(get_highest_confirmed_root(rooted_stake, 10), 1);
     }
 
     #[test]
@@ -368,15 +352,15 @@ mod tests {
             if *a <= root {
                 let mut expected = BlockCommitment::default();
                 expected.increase_rooted_stake(lamports);
-                assert_eq!(*commitment.get(&a).unwrap(), expected);
+                assert_eq!(*commitment.get(a).unwrap(), expected);
             } else if i <= 4 {
                 let mut expected = BlockCommitment::default();
                 expected.increase_confirmation_stake(2, lamports);
-                assert_eq!(*commitment.get(&a).unwrap(), expected);
+                assert_eq!(*commitment.get(a).unwrap(), expected);
             } else if i <= 6 {
                 let mut expected = BlockCommitment::default();
                 expected.increase_confirmation_stake(1, lamports);
-                assert_eq!(*commitment.get(&a).unwrap(), expected);
+                assert_eq!(*commitment.get(a).unwrap(), expected);
             }
         }
         assert_eq!(rooted_stake[0], (root, lamports));
@@ -391,22 +375,22 @@ mod tests {
 
         let rooted_stake_amount = 40;
 
-        let sk1 = solana_sdk::pubkey::new_rand();
-        let pk1 = solana_sdk::pubkey::new_rand();
+        let sk1 = safecoin_sdk::pubkey::new_rand();
+        let pk1 = safecoin_sdk::pubkey::new_rand();
         let mut vote_account1 =
-            vote_state::create_account(&pk1, &solana_sdk::pubkey::new_rand(), 0, 100);
+            vote_state::create_account(&pk1, &safecoin_sdk::pubkey::new_rand(), 0, 100);
         let stake_account1 =
             stake_state::create_account(&sk1, &pk1, &vote_account1, &genesis_config.rent, 100);
-        let sk2 = solana_sdk::pubkey::new_rand();
-        let pk2 = solana_sdk::pubkey::new_rand();
+        let sk2 = safecoin_sdk::pubkey::new_rand();
+        let pk2 = safecoin_sdk::pubkey::new_rand();
         let mut vote_account2 =
-            vote_state::create_account(&pk2, &solana_sdk::pubkey::new_rand(), 0, 50);
+            vote_state::create_account(&pk2, &safecoin_sdk::pubkey::new_rand(), 0, 50);
         let stake_account2 =
             stake_state::create_account(&sk2, &pk2, &vote_account2, &genesis_config.rent, 50);
-        let sk3 = solana_sdk::pubkey::new_rand();
-        let pk3 = solana_sdk::pubkey::new_rand();
+        let sk3 = safecoin_sdk::pubkey::new_rand();
+        let pk3 = safecoin_sdk::pubkey::new_rand();
         let mut vote_account3 =
-            vote_state::create_account(&pk3, &solana_sdk::pubkey::new_rand(), 0, 1);
+            vote_state::create_account(&pk3, &safecoin_sdk::pubkey::new_rand(), 0, 1);
         let stake_account3 = stake_state::create_account(
             &sk3,
             &pk3,
@@ -414,10 +398,10 @@ mod tests {
             &genesis_config.rent,
             rooted_stake_amount,
         );
-        let sk4 = solana_sdk::pubkey::new_rand();
-        let pk4 = solana_sdk::pubkey::new_rand();
+        let sk4 = safecoin_sdk::pubkey::new_rand();
+        let pk4 = safecoin_sdk::pubkey::new_rand();
         let mut vote_account4 =
-            vote_state::create_account(&pk4, &solana_sdk::pubkey::new_rand(), 0, 1);
+            vote_state::create_account(&pk4, &safecoin_sdk::pubkey::new_rand(), 0, 1);
         let stake_account4 = stake_state::create_account(
             &sk4,
             &pk4,
@@ -496,8 +480,7 @@ mod tests {
             }
         }
         assert_eq!(rooted_stake.len(), 2);
-	let mbt = MockBankThreshold{val:0.66};
-        assert_eq!(get_highest_confirmed_root(rooted_stake, &mbt), 1)
+        assert_eq!(get_highest_confirmed_root(rooted_stake, 100), 1)
     }
 
     #[test]
@@ -583,6 +566,7 @@ mod tests {
             CommitmentAggregationData {
                 bank: working_bank,
                 root: 0,
+                total_stake: 100,
             },
             ancestors,
         );
@@ -611,6 +595,7 @@ mod tests {
             CommitmentAggregationData {
                 bank: working_bank,
                 root: 1,
+                total_stake: 100,
             },
             ancestors,
         );
@@ -650,6 +635,7 @@ mod tests {
             CommitmentAggregationData {
                 bank: working_bank,
                 root: 0,
+                total_stake: 100,
             },
             ancestors,
         );

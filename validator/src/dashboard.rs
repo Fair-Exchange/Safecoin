@@ -4,9 +4,10 @@ use {
     safecoin_client::{
         client_error, rpc_client::RpcClient, rpc_request, rpc_response::RpcContactInfo,
     },
-    solana_core::validator::ValidatorStartProgress,
-    solana_sdk::{
-        clock::Slot, commitment_config::CommitmentConfig, native_token::Safe, pubkey::Pubkey,
+    safecoin_core::validator::ValidatorStartProgress,
+    safecoin_sdk::{
+        clock::Slot, commitment_config::CommitmentConfig, exit::Exit, native_token::Safe,
+        pubkey::Pubkey,
     },
     std::{
         io,
@@ -31,7 +32,7 @@ impl Dashboard {
     pub fn new(
         ledger_path: &Path,
         log_path: Option<&Path>,
-        validator_exit: Option<&mut solana_core::validator::ValidatorExit>,
+        validator_exit: Option<&mut Exit>,
     ) -> Result<Self, io::Error> {
         println_name_value("Ledger location:", &format!("{}", ledger_path.display()));
         if let Some(log_path) = log_path {
@@ -194,7 +195,7 @@ async fn wait_for_validator_startup(
         }
 
         if admin_client.is_none() {
-            match admin_rpc_service::connect(&ledger_path).await {
+            match admin_rpc_service::connect(ledger_path).await {
                 Ok(new_admin_client) => admin_client = Some(new_admin_client),
                 Err(err) => {
                     progress_bar.set_message(&format!("Unable to connect to validator: {}", err));

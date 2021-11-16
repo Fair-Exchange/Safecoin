@@ -5,7 +5,7 @@ use crate::{
 use clap::ArgMatches;
 use safecoin_clap_utils::{input_parsers::lamports_of_sol, offline::SIGN_ONLY_ARG};
 use safecoin_client::rpc_client::RpcClient;
-use solana_sdk::{
+use safecoin_sdk::{
     commitment_config::CommitmentConfig, fee_calculator::FeeCalculator, message::Message,
     native_token::lamports_to_sol, pubkey::Pubkey,
 };
@@ -92,7 +92,7 @@ where
         Ok((message, spend))
     } else {
         let from_balance = rpc_client
-            .get_balance_with_commitment(&from_pubkey, commitment)?
+            .get_balance_with_commitment(from_pubkey, commitment)?
             .value;
         let (message, SpendAndFee { spend, fee }) = resolve_spend_message(
             amount,

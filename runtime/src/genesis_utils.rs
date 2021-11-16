@@ -1,4 +1,4 @@
-use solana_sdk::{
+use safecoin_sdk::{
     account::Account,
     account::AccountSharedData,
     feature::{self, Feature},
@@ -8,10 +8,10 @@ use solana_sdk::{
     pubkey::Pubkey,
     rent::Rent,
     signature::{Keypair, Signer},
+    stake::state::StakeState,
     system_program,
 };
 use solana_stake_program::stake_state;
-use solana_stake_program::stake_state::StakeState;
 use solana_vote_program::vote_state;
 use std::borrow::Borrow;
 
@@ -54,7 +54,7 @@ pub struct GenesisConfigInfo {
 }
 
 pub fn create_genesis_config(mint_lamports: u64) -> GenesisConfigInfo {
-    create_genesis_config_with_leader(mint_lamports, &solana_sdk::pubkey::new_rand(), 0)
+    create_genesis_config_with_leader(mint_lamports, &safecoin_sdk::pubkey::new_rand(), 0)
 }
 
 pub fn create_genesis_config_with_vote_accounts(
@@ -145,7 +145,7 @@ pub fn create_genesis_config_with_leader(
         &mint_keypair.pubkey(),
         validator_pubkey,
         &voting_keypair.pubkey(),
-        &solana_sdk::pubkey::new_rand(),
+        &safecoin_sdk::pubkey::new_rand(),
         validator_stake_lamports,
         VALIDATOR_LAMPORTS,
         FeeRateGovernor::new(0, 0), // most tests can't handle transaction fees
@@ -191,15 +191,15 @@ pub fn create_genesis_config_with_leader_ex(
     mut initial_accounts: Vec<(Pubkey, AccountSharedData)>,
 ) -> GenesisConfig {
     let validator_vote_account = vote_state::create_account(
-        &validator_vote_account_pubkey,
-        &validator_pubkey,
+        validator_vote_account_pubkey,
+        validator_pubkey,
         0,
         validator_stake_lamports,
     );
 
     let validator_stake_account = stake_state::create_account(
         validator_stake_account_pubkey,
-        &validator_vote_account_pubkey,
+        validator_vote_account_pubkey,
         &validator_vote_account,
         &rent,
         validator_stake_lamports,

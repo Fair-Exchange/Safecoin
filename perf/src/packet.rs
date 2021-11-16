@@ -2,7 +2,7 @@
 use crate::{cuda_runtime::PinnedVec, recycler::Recycler};
 use bincode::config::Options;
 use serde::Serialize;
-pub use solana_sdk::packet::{Meta, Packet, PACKET_DATA_SIZE};
+pub use safecoin_sdk::packet::{Meta, Packet, PACKET_DATA_SIZE};
 use std::net::SocketAddr;
 
 pub const NUM_PACKETS: usize = 1024 * 8;
@@ -28,26 +28,45 @@ impl Packets {
         Packets { packets }
     }
 
-    pub fn new_with_recycler(recycler: PacketsRecycler, size: usize) -> Option<Self> {
-        let maybe_packets = recycler.allocate();
-        maybe_packets.map(|mut packets| {
-            packets.reserve_and_pin(size);
-            Packets { packets }
-        })
+    pub fn new_unpinned_with_recycler(
+        recycler: PacketsRecycler,
+        size: usize,
+        name: &'static str,
+    ) -> Self {
+        let mut packets = recycler.allocate(name);
+        packets.reserve(size);
+        Packets { packets }
     }
+
+    pub fn new_with_recycler(recycler: PacketsRecycler, size: usize, name: &'static str) -> Self {
+        let mut packets = recycler.allocate(name);
+        packets.reserve_and_pin(size);
+        Packets { packets }
+    }
+
     pub fn new_with_recycler_data(
         recycler: &PacketsRecycler,
+        name: &'static str,
         mut packets: Vec<Packet>,
-    ) -> Option<Self> {
-        Self::new_with_recycler(recycler.clone(), packets.len()).map(|mut vec| {
-            vec.packets.append(&mut packets);
-            vec
-        })
+    ) -> Self {
+        let mut vec = Self::new_with_recycler(recycler.clone(), packets.len(), name);
+        vec.packets.append(&mut packets);
+        vec
+    }
+
+    pub fn new_unpinned_with_recycler_data(
+        recycler: &PacketsRecycler,
+        name: &'static str,
+        mut packets: Vec<Packet>,
+    ) -> Self {
+        let mut vec = Self::new_unpinned_with_recycler(recycler.clone(), packets.len(), name);
+        vec.packets.append(&mut packets);
+        vec
     }
 
     pub fn set_addr(&mut self, addr: &SocketAddr) {
         for m in self.packets.iter_mut() {
-            m.meta.set_addr(&addr);
+            m.meta.set_addr(addr);
         }
     }
 
@@ -78,7 +97,11 @@ pub fn to_packets_with_destination<T: Serialize>(
     recycler: PacketsRecycler,
     dests_and_data: &[(SocketAddr, T)],
 ) -> Packets {
-    let mut out = Packets::new_with_recycler(recycler, dests_and_data.len()).unwrap();
+    let mut out = Packets::new_unpinned_with_recycler(
+        recycler,
+        dests_and_data.len(),
+        "to_packets_with_destination",
+    );
     out.packets.resize(dests_and_data.len(), Packet::default());
     for (dest_and_data, o) in dests_and_data.iter().zip(out.packets.iter_mut()) {
         if !dest_and_data.0.ip().is_unspecified() && dest_and_data.0.port() != 0 {
@@ -109,9 +132,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::hash::Hash;
-    use solana_sdk::signature::{Keypair, Signer};
-    use solana_sdk::system_transaction;
+    use safecoin_sdk::hash::Hash;
+    use safecoin_sdk::signature::{Keypair, Signer};
+    use safecoin_sdk::system_transaction;
 
     #[test]
     fn test_to_packets() {
@@ -136,9 +159,9 @@ mod tests {
 
     #[test]
     fn test_to_packets_pinning() {
-        let recycler = PacketsRecycler::new_without_limit("");
+        let recycler = PacketsRecycler::default();
         for i in 0..2 {
-            let _first_packets = Packets::new_with_recycler(recycler.clone(), i + 1);
+            let _first_packets = Packets::new_with_recycler(recycler.clone(), i + 1, "first one");
         }
     }
 }

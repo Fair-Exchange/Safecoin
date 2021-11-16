@@ -8,7 +8,7 @@ use safecoin_clap_utils::{
     input_validators::{is_amount, is_rfc3339_datetime, is_valid_pubkey, is_valid_signer},
 };
 use safecoin_cli_config::CONFIG_FILE;
-use solana_sdk::native_token::sol_to_lamports;
+use safecoin_sdk::native_token::sol_to_lamports;
 use std::ffi::OsString;
 use std::process::exit;
 

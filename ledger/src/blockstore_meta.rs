@@ -1,6 +1,6 @@
 use crate::erasure::ErasureConfig;
 use serde::{Deserialize, Serialize};
-use solana_sdk::{clock::Slot, hash::Hash};
+use safecoin_sdk::{clock::Slot, hash::Hash};
 use std::{collections::BTreeSet, ops::RangeBounds};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
@@ -151,6 +151,10 @@ impl ShredIndex {
         for (idx, present) in presence.into_iter() {
             self.set_present(idx, present);
         }
+    }
+
+    pub fn largest(&self) -> Option<u64> {
+        self.index.iter().rev().next().copied()
     }
 }
 

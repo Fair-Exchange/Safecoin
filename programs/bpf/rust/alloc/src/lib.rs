@@ -2,7 +2,7 @@
 
 #[macro_use]
 extern crate alloc;
-use solana_program::{custom_panic_default, entrypoint::SUCCESS, msg};
+use safecoin_program::{custom_panic_default, entrypoint::SUCCESS, msg};
 use std::{alloc::Layout, mem};
 
 #[no_mangle]

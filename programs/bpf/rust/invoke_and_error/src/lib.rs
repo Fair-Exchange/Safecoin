@@ -1,7 +1,7 @@
 //! @brief Invokes an instruction and returns an error, the instruction invoked
 //! uses the instruction data provided and all the accounts
 
-use solana_program::{
+use safecoin_program::{
     account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, instruction::AccountMeta,
     instruction::Instruction, program::invoke, pubkey::Pubkey,
 };
@@ -26,7 +26,7 @@ fn process_instruction(
         data: instruction_data.to_owned(),
         program_id: *to_call,
     };
-    let _ = invoke(&instruction, &infos);
+    let _ = invoke(&instruction, infos);
 
     Err(42.into())
 }

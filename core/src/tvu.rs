@@ -5,7 +5,6 @@ use crate::{
     accounts_hash_verifier::AccountsHashVerifier,
     broadcast_stage::RetransmitSlotsSender,
     cache_block_meta_service::CacheBlockMetaSender,
-    cluster_info::ClusterInfo,
     cluster_info_vote_listener::{
         GossipDuplicateConfirmedSlotsReceiver, GossipVerifiedVoteHashReceiver,
         VerifiedVoteReceiver, VoteTracker,
@@ -14,13 +13,9 @@ use crate::{
     completed_data_sets_service::CompletedDataSetsSender,
     consensus::Tower,
     ledger_cleanup_service::LedgerCleanupService,
-    max_slots::MaxSlots,
-    optimistically_confirmed_bank_tracker::BankNotificationSender,
-    poh_recorder::PohRecorder,
     replay_stage::{ReplayStage, ReplayStageConfig},
     retransmit_stage::RetransmitStage,
     rewards_recorder_service::RewardsRecorderSender,
-    rpc_subscriptions::RpcSubscriptions,
     shred_fetch_stage::ShredFetchStage,
     sigverify_shreds::ShredSigVerifier,
     sigverify_stage::SigVerifyStage,
@@ -28,21 +23,26 @@ use crate::{
     voting_service::VotingService,
 };
 use crossbeam_channel::unbounded;
+use safecoin_gossip::cluster_info::ClusterInfo;
 use solana_ledger::{
-    blockstore::{Blockstore, CompletedSlotsReceiver},
-    blockstore_processor::TransactionStatusSender,
+    blockstore::Blockstore, blockstore_processor::TransactionStatusSender,
     leader_schedule_cache::LeaderScheduleCache,
+};
+use solana_poh::poh_recorder::PohRecorder;
+use solana_rpc::{
+    max_slots::MaxSlots, optimistically_confirmed_bank_tracker::BankNotificationSender,
+    rpc_subscriptions::RpcSubscriptions,
 };
 use solana_runtime::{
     accounts_background_service::{
-        AbsRequestHandler, AbsRequestSender, AccountsBackgroundService, SendDroppedBankCallback,
-        SnapshotRequestHandler,
+        AbsRequestHandler, AbsRequestSender, AccountsBackgroundService, SnapshotRequestHandler,
     },
+    accounts_db::AccountShrinkThreshold,
     bank_forks::{BankForks, SnapshotConfig},
     commitment::BlockCommitmentCache,
     vote_sender_types::ReplayVoteSender,
 };
-use solana_sdk::{
+use safecoin_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
 };
@@ -90,6 +90,8 @@ pub struct TvuConfig {
     pub rocksdb_compaction_interval: Option<u64>,
     pub rocksdb_max_compaction_jitter: Option<u64>,
     pub wait_for_vote_to_start_leader: bool,
+    pub accounts_shrink_ratio: AccountShrinkThreshold,
+    pub disable_epoch_boundary_optimization: bool,
 }
 
 impl Tvu {
@@ -108,12 +110,11 @@ impl Tvu {
         sockets: Sockets,
         blockstore: Arc<Blockstore>,
         ledger_signal_receiver: Receiver<bool>,
-        subscriptions: &Arc<RpcSubscriptions>,
+        rpc_subscriptions: &Arc<RpcSubscriptions>,
         poh_recorder: &Arc<Mutex<PohRecorder>>,
         tower: Tower,
         leader_schedule_cache: &Arc<LeaderScheduleCache>,
         exit: &Arc<AtomicBool>,
-        completed_slots_receivers: [CompletedSlotsReceiver; 2],
         block_commitment_cache: Arc<RwLock<BlockCommitmentCache>>,
         cfg: Option<Arc<AtomicBool>>,
         transaction_status_sender: Option<TransactionStatusSender>,
@@ -152,8 +153,7 @@ impl Tvu {
             repair_socket.clone(),
             &fetch_sender,
             Some(bank_forks.clone()),
-            &exit,
-            None,
+            exit,
         );
 
         let (verified_sender, verified_receiver) = unbounded();
@@ -168,16 +168,17 @@ impl Tvu {
         let compaction_interval = tvu_config.rocksdb_compaction_interval;
         let max_compaction_jitter = tvu_config.rocksdb_max_compaction_jitter;
         let (duplicate_slots_sender, duplicate_slots_receiver) = unbounded();
+        let (cluster_slots_update_sender, cluster_slots_update_receiver) = unbounded();
         let retransmit_stage = RetransmitStage::new(
             bank_forks.clone(),
-            leader_schedule_cache,
+            leader_schedule_cache.clone(),
             blockstore.clone(),
-            &cluster_info,
+            cluster_info.clone(),
             Arc::new(retransmit_sockets),
             repair_socket,
             verified_receiver,
-            &exit,
-            completed_slots_receivers,
+            exit.clone(),
+            cluster_slots_update_receiver,
             *bank_forks.read().unwrap().working_bank().epoch_schedule(),
             cfg,
             tvu_config.shred_version,
@@ -186,8 +187,8 @@ impl Tvu {
             verified_vote_receiver,
             tvu_config.repair_validators,
             completed_data_sets_sender,
-            max_slots,
-            Some(subscriptions.clone()),
+            max_slots.clone(),
+            Some(rpc_subscriptions.clone()),
             duplicate_slots_sender,
         );
 
@@ -211,7 +212,7 @@ impl Tvu {
             accounts_hash_receiver,
             pending_snapshot_package,
             exit,
-            &cluster_info,
+            cluster_info,
             tvu_config.trusted_validators.clone(),
             tvu_config.halt_on_trusted_validators_accounts_hash_mismatch,
             tvu_config.accounts_hash_fault_injection_slots,
@@ -237,10 +238,18 @@ impl Tvu {
         let (pruned_banks_sender, pruned_banks_receiver) = unbounded();
 
         // Before replay starts, set the callbacks in each of the banks in BankForks
+        // Note after this callback is created, only the AccountsBackgroundService should be calling
+        // AccountsDb::purge_slot() to clean up dropped banks.
+        let callback = bank_forks
+            .read()
+            .unwrap()
+            .root_bank()
+            .rc
+            .accounts
+            .accounts_db
+            .create_drop_bank_callback(pruned_banks_sender);
         for bank in bank_forks.read().unwrap().banks().values() {
-            bank.set_callback(Some(Box::new(SendDroppedBankCallback::new(
-                pruned_banks_sender.clone(),
-            ))));
+            bank.set_callback(Some(Box::new(callback.clone())));
         }
 
         let accounts_background_request_sender = AbsRequestSender::new(snapshot_request_sender);
@@ -255,7 +264,7 @@ impl Tvu {
             vote_account: *vote_account,
             authorized_voter_keypairs,
             exit: exit.clone(),
-            subscriptions: subscriptions.clone(),
+            rpc_subscriptions: rpc_subscriptions.clone(),
             leader_schedule_cache: leader_schedule_cache.clone(),
             latest_root_senders: vec![ledger_cleanup_slot_sender],
             accounts_background_request_sender,
@@ -265,11 +274,16 @@ impl Tvu {
             cache_block_meta_sender,
             bank_notification_sender,
             wait_for_vote_to_start_leader: tvu_config.wait_for_vote_to_start_leader,
+            disable_epoch_boundary_optimization: tvu_config.disable_epoch_boundary_optimization,
         };
 
         let (voting_sender, voting_receiver) = channel();
-        let voting_service =
-            VotingService::new(voting_receiver, cluster_info.clone(), poh_recorder.clone());
+        let voting_service = VotingService::new(
+            voting_receiver,
+            cluster_info.clone(),
+            poh_recorder.clone(),
+            bank_forks.clone(),
+        );
 
         let replay_stage = ReplayStage::new(
             replay_stage_config,
@@ -287,6 +301,7 @@ impl Tvu {
             replay_vote_sender,
             gossip_confirmed_slots_receiver,
             gossip_verified_vote_hash_receiver,
+            cluster_slots_update_sender,
             voting_sender,
         );
 
@@ -295,7 +310,7 @@ impl Tvu {
                 ledger_cleanup_slot_receiver,
                 blockstore.clone(),
                 max_ledger_shreds,
-                &exit,
+                exit,
                 compaction_interval,
                 max_compaction_jitter,
             )
@@ -303,7 +318,7 @@ impl Tvu {
 
         let accounts_background_service = AccountsBackgroundService::new(
             bank_forks.clone(),
-            &exit,
+            exit,
             accounts_background_request_handler,
             tvu_config.accounts_db_caching_enabled,
             tvu_config.test_hash_calculation,
@@ -340,18 +355,18 @@ impl Tvu {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{
-        banking_stage::create_test_recorder,
-        cluster_info::{ClusterInfo, Node},
-        optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
-    };
     use serial_test::serial;
+    use safecoin_gossip::cluster_info::{ClusterInfo, Node};
     use solana_ledger::{
         blockstore::BlockstoreSignals,
         create_new_tmp_ledger,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
     };
+    use solana_poh::poh_recorder::create_test_recorder;
+    use solana_rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank;
     use solana_runtime::bank::Bank;
+    use safecoin_sdk::signature::{Keypair, Signer};
+    use solana_streamer::socket::SocketAddrSpace;
     use std::sync::atomic::Ordering;
 
     #[ignore]
@@ -369,7 +384,11 @@ pub mod tests {
         let bank_forks = BankForks::new(Bank::new(&genesis_config));
 
         //start cluster_info1
-        let cluster_info1 = ClusterInfo::new_with_invalid_keypair(target1.info.clone());
+        let cluster_info1 = ClusterInfo::new(
+            target1.info.clone(),
+            Arc::new(Keypair::new()),
+            SocketAddrSpace::Unspecified,
+        );
         cluster_info1.insert_info(leader.info);
         let cref1 = Arc::new(cluster_info1);
 
@@ -377,7 +396,6 @@ pub mod tests {
         let BlockstoreSignals {
             blockstore,
             ledger_signal_receiver,
-            completed_slots_receivers,
             ..
         } = Blockstore::open_with_signal(&blockstore_path, None, true)
             .expect("Expected to successfully open ledger");
@@ -411,7 +429,7 @@ pub mod tests {
             },
             blockstore,
             ledger_signal_receiver,
-            &Arc::new(RpcSubscriptions::new(
+            &Arc::new(RpcSubscriptions::new_for_tests(
                 &exit,
                 bank_forks.clone(),
                 block_commitment_cache.clone(),
@@ -421,7 +439,6 @@ pub mod tests {
             tower,
             &leader_schedule_cache,
             &exit,
-            completed_slots_receivers,
             block_commitment_cache,
             None,
             None,

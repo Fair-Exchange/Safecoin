@@ -1,11 +1,13 @@
-use crate::parse_instruction::{
-    check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
-};
-use bincode::deserialize;
-use serde_json::json;
-use solana_sdk::{
-    instruction::CompiledInstruction, loader_instruction::LoaderInstruction,
-    loader_upgradeable_instruction::UpgradeableLoaderInstruction, pubkey::Pubkey,
+use {
+    crate::parse_instruction::{
+        check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
+    },
+    bincode::deserialize,
+    serde_json::json,
+    safecoin_sdk::{
+        instruction::CompiledInstruction, loader_instruction::LoaderInstruction,
+        loader_upgradeable_instruction::UpgradeableLoaderInstruction, pubkey::Pubkey,
+    },
 };
 
 pub fn parse_bpf_loader(
@@ -154,9 +156,11 @@ fn check_num_bpf_upgradeable_loader_accounts(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use serde_json::Value;
-    use solana_sdk::{message::Message, pubkey};
+    use {
+        super::*,
+        serde_json::Value,
+        safecoin_sdk::{message::Message, pubkey},
+    };
 
     #[test]
     fn test_parse_bpf_loader_instructions() {
@@ -168,7 +172,7 @@ mod test {
         let account_keys = vec![fee_payer, account_pubkey];
         let missing_account_keys = vec![account_pubkey];
 
-        let instruction = solana_sdk::loader_instruction::write(
+        let instruction = safecoin_sdk::loader_instruction::write(
             &account_pubkey,
             &program_id,
             offset,
@@ -188,7 +192,7 @@ mod test {
         );
         assert!(parse_bpf_loader(&message.instructions[0], &missing_account_keys).is_err());
 
-        let instruction = solana_sdk::loader_instruction::finalize(&account_pubkey, &program_id);
+        let instruction = safecoin_sdk::loader_instruction::finalize(&account_pubkey, &program_id);
         let message = Message::new(&[instruction], Some(&fee_payer));
         assert_eq!(
             parse_bpf_loader(&message.instructions[0], &account_keys).unwrap(),
@@ -226,7 +230,7 @@ mod test {
         let bytes = vec![8; 99];
         let max_data_len = 54321;
 
-        let instructions = solana_sdk::bpf_loader_upgradeable::create_buffer(
+        let instructions = safecoin_sdk::bpf_loader_upgradeable::create_buffer(
             &keys[0],
             &keys[1],
             &keys[2],
@@ -248,7 +252,7 @@ mod test {
         assert!(parse_bpf_upgradeable_loader(&message.instructions[1], &keys[0..2]).is_err());
 
         let instruction =
-            solana_sdk::bpf_loader_upgradeable::write(&keys[1], &keys[0], offset, bytes.clone());
+            safecoin_sdk::bpf_loader_upgradeable::write(&keys[1], &keys[0], offset, bytes.clone());
         let message = Message::new(&[instruction], None);
         assert_eq!(
             parse_bpf_upgradeable_loader(&message.instructions[0], &keys[0..2]).unwrap(),
@@ -264,7 +268,7 @@ mod test {
         );
         assert!(parse_bpf_upgradeable_loader(&message.instructions[0], &keys[0..1]).is_err());
 
-        let instructions = solana_sdk::bpf_loader_upgradeable::deploy_with_max_program_len(
+        let instructions = safecoin_sdk::bpf_loader_upgradeable::deploy_with_max_program_len(
             &keys[0],
             &keys[1],
             &keys[4],
@@ -294,7 +298,7 @@ mod test {
         assert!(parse_bpf_upgradeable_loader(&message.instructions[1], &keys[0..7]).is_err());
 
         let instruction =
-            solana_sdk::bpf_loader_upgradeable::upgrade(&keys[2], &keys[3], &keys[0], &keys[4]);
+            safecoin_sdk::bpf_loader_upgradeable::upgrade(&keys[2], &keys[3], &keys[0], &keys[4]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
             parse_bpf_upgradeable_loader(&message.instructions[0], &keys[0..7]).unwrap(),
@@ -314,7 +318,7 @@ mod test {
         assert!(parse_bpf_upgradeable_loader(&message.instructions[0], &keys[0..6]).is_err());
 
         let instruction =
-            solana_sdk::bpf_loader_upgradeable::set_buffer_authority(&keys[1], &keys[0], &keys[2]);
+            safecoin_sdk::bpf_loader_upgradeable::set_buffer_authority(&keys[1], &keys[0], &keys[2]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
             parse_bpf_upgradeable_loader(&message.instructions[0], &keys[0..3]).unwrap(),
@@ -329,7 +333,7 @@ mod test {
         );
         assert!(parse_bpf_upgradeable_loader(&message.instructions[0], &keys[0..1]).is_err());
 
-        let instruction = solana_sdk::bpf_loader_upgradeable::set_upgrade_authority(
+        let instruction = safecoin_sdk::bpf_loader_upgradeable::set_upgrade_authority(
             &keys[1],
             &keys[0],
             Some(&keys[2]),
@@ -349,7 +353,7 @@ mod test {
         assert!(parse_bpf_upgradeable_loader(&message.instructions[0], &keys[0..1]).is_err());
 
         let instruction =
-            solana_sdk::bpf_loader_upgradeable::set_upgrade_authority(&keys[1], &keys[0], None);
+            safecoin_sdk::bpf_loader_upgradeable::set_upgrade_authority(&keys[1], &keys[0], None);
         let message = Message::new(&[instruction], None);
         assert_eq!(
             parse_bpf_upgradeable_loader(&message.instructions[0], &keys[0..2]).unwrap(),
@@ -364,7 +368,7 @@ mod test {
         );
         assert!(parse_bpf_upgradeable_loader(&message.instructions[0], &keys[0..1]).is_err());
 
-        let instruction = solana_sdk::bpf_loader_upgradeable::close(&keys[0], &keys[1], &keys[2]);
+        let instruction = safecoin_sdk::bpf_loader_upgradeable::close(&keys[0], &keys[1], &keys[2]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
             parse_bpf_upgradeable_loader(&message.instructions[0], &keys[..3]).unwrap(),

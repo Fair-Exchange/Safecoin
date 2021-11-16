@@ -7,7 +7,7 @@ use solana_perf::cuda_runtime::PinnedVec;
 use solana_perf::packet::{Packet, PacketsRecycler};
 use solana_perf::recycler::Recycler;
 use solana_runtime::bank_forks::BankForks;
-use solana_sdk::clock::{Slot, DEFAULT_MS_PER_SLOT};
+use safecoin_sdk::clock::{Slot, DEFAULT_MS_PER_SLOT};
 use solana_streamer::streamer::{self, PacketReceiver, PacketSender};
 use std::net::UdpSocket;
 use std::sync::atomic::AtomicBool;
@@ -145,11 +145,12 @@ impl ShredFetchStage {
             .map(|s| {
                 streamer::receiver(
                     s,
-                    &exit,
+                    exit,
                     packet_sender.clone(),
                     recycler.clone(),
                     "packet_modifier",
                     1,
+                    true,
                 )
             })
             .collect();
@@ -168,14 +169,12 @@ impl ShredFetchStage {
         sender: &PacketSender,
         bank_forks: Option<Arc<RwLock<BankForks>>>,
         exit: &Arc<AtomicBool>,
-        limit: Option<u32>,
     ) -> Self {
-        let recycler: PacketsRecycler =
-            Recycler::warmed(100, 1024, limit, "shred_fetch_stage_recycler_shrink");
+        let recycler: PacketsRecycler = Recycler::warmed(100, 1024);
 
         let (mut tvu_threads, tvu_filter) = Self::packet_modifier(
             sockets,
-            &exit,
+            exit,
             sender.clone(),
             recycler.clone(),
             bank_forks.clone(),
@@ -185,7 +184,7 @@ impl ShredFetchStage {
 
         let (tvu_forwards_threads, fwd_thread_hdl) = Self::packet_modifier(
             forward_sockets,
-            &exit,
+            exit,
             sender.clone(),
             recycler.clone(),
             bank_forks.clone(),
@@ -195,7 +194,7 @@ impl ShredFetchStage {
 
         let (repair_receiver, repair_handler) = Self::packet_modifier(
             vec![repair_socket],
-            &exit,
+            exit,
             sender.clone(),
             recycler,
             bank_forks,

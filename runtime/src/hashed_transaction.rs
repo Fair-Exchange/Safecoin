@@ -1,4 +1,4 @@
-use solana_sdk::{hash::Hash, transaction::Transaction};
+use safecoin_sdk::{hash::Hash, transaction::Transaction};
 use std::borrow::Cow;
 
 /// Transaction and the hash of its message

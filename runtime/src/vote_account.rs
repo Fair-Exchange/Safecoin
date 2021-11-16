@@ -1,11 +1,10 @@
 use serde::de::{Deserialize, Deserializer};
 use serde::ser::{Serialize, Serializer};
-use solana_sdk::{
+use safecoin_sdk::{
     account::Account, account::AccountSharedData, instruction::InstructionError, pubkey::Pubkey,
 };
 use solana_vote_program::vote_state::VoteState;
 use std::{
-    borrow::Borrow,
     cmp::Ordering,
     collections::{hash_map::Entry, HashMap},
     iter::FromIterator,
@@ -28,9 +27,11 @@ pub struct VoteAccount {
     vote_state_once: Once,
 }
 
+pub type VoteAccountsHashMap = HashMap<Pubkey, (/*stake:*/ u64, ArcVoteAccount)>;
+
 #[derive(Debug, AbiExample)]
 pub struct VoteAccounts {
-    vote_accounts: HashMap<Pubkey, (u64 /*stake*/, ArcVoteAccount)>,
+    vote_accounts: VoteAccountsHashMap,
     staked_nodes: RwLock<
         HashMap<
             Pubkey, // VoteAccount.vote_state.node_pubkey.
@@ -41,6 +42,10 @@ pub struct VoteAccounts {
 }
 
 impl VoteAccount {
+    pub fn account(&self) -> &Account {
+        &self.account
+    }
+
     pub fn lamports(&self) -> u64 {
         self.account.lamports
     }
@@ -185,6 +190,12 @@ impl From<Account> for ArcVoteAccount {
     }
 }
 
+impl AsRef<VoteAccount> for ArcVoteAccount {
+    fn as_ref(&self) -> &VoteAccount {
+        &self.0
+    }
+}
+
 impl From<AccountSharedData> for VoteAccount {
     fn from(account: AccountSharedData) -> Self {
         Self {
@@ -258,8 +269,6 @@ impl PartialEq<VoteAccounts> for VoteAccounts {
     }
 }
 
-type VoteAccountsHashMap = HashMap<Pubkey, (u64 /*stake*/, ArcVoteAccount)>;
-
 impl From<VoteAccountsHashMap> for VoteAccounts {
     fn from(vote_accounts: VoteAccountsHashMap) -> Self {
         Self {
@@ -270,8 +279,8 @@ impl From<VoteAccountsHashMap> for VoteAccounts {
     }
 }
 
-impl Borrow<VoteAccountsHashMap> for VoteAccounts {
-    fn borrow(&self) -> &VoteAccountsHashMap {
+impl AsRef<VoteAccountsHashMap> for VoteAccounts {
+    fn as_ref(&self) -> &VoteAccountsHashMap {
         &self.vote_accounts
     }
 }
@@ -309,14 +318,14 @@ mod tests {
     use super::*;
     use bincode::Options;
     use rand::Rng;
-    use solana_sdk::{pubkey::Pubkey, sysvar::clock::Clock};
+    use safecoin_sdk::{pubkey::Pubkey, sysvar::clock::Clock};
     use solana_vote_program::vote_state::{VoteInit, VoteStateVersions};
     use std::iter::repeat_with;
 
     fn new_rand_vote_account<R: Rng>(
         rng: &mut R,
         node_pubkey: Option<Pubkey>,
-    ) -> (AccountSharedData, VoteState) {
+    ) -> (Account, VoteState) {
         let vote_init = VoteInit {
             node_pubkey: node_pubkey.unwrap_or_else(Pubkey::new_unique),
             authorized_voter: Pubkey::new_unique(),
@@ -331,7 +340,7 @@ mod tests {
             unix_timestamp: rng.gen(),
         };
         let vote_state = VoteState::new(&vote_init, &clock);
-        let account = AccountSharedData::new_data(
+        let account = Account::new_data(
             rng.gen(), // lamports
             &VoteStateVersions::new_current(vote_state.clone()),
             &Pubkey::new_unique(), // owner

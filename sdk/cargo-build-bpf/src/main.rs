@@ -3,16 +3,19 @@ use {
     clap::{
         crate_description, crate_name, crate_version, value_t, value_t_or_exit, values_t, App, Arg,
     },
+    regex::Regex,
     solana_download_utils::download_file,
-    solana_sdk::signature::{write_keypair_file, Keypair},
+    safecoin_sdk::signature::{write_keypair_file, Keypair},
     std::{
+        collections::{HashMap, HashSet},
         env,
         ffi::OsStr,
         fs::{self, File},
-        io::BufReader,
+        io::{prelude::*, BufReader, BufWriter},
         path::{Path, PathBuf},
         process::exit,
         process::{Command, Stdio},
+        str::FromStr,
     },
     tar::Archive,
 };
@@ -36,7 +39,8 @@ impl Default for Config {
                 .parent()
                 .expect("Unable to get parent directory")
                 .to_path_buf()
-                .join("sdk/bpf"),
+                .join("sdk")
+                .join("bpf"),
             bpf_out_dir: None,
             dump: false,
             features: vec![],
@@ -87,10 +91,10 @@ fn install_if_missing(
     package: &str,
     version: &str,
     url: &str,
-    file: &Path,
+    download_file_name: &str,
 ) -> Result<(), String> {
     // Check whether the package is already in ~/.cache/solana.
-    // Donwload it and place in the proper location if not found.
+    // Download it and place in the proper location if not found.
     let home_dir = PathBuf::from(env::var("HOME").unwrap_or_else(|err| {
         eprintln!("Can't get home directory path: {}", err);
         exit(1);
@@ -100,26 +104,36 @@ fn install_if_missing(
         .join("solana")
         .join(version)
         .join(package);
-    if !target_path.is_dir() {
+
+    if !target_path.is_dir()
+        && !target_path
+            .symlink_metadata()
+            .map(|metadata| metadata.file_type().is_symlink())
+            .unwrap_or(false)
+    {
         if target_path.exists() {
             fs::remove_file(&target_path).map_err(|err| err.to_string())?;
         }
+        fs::create_dir_all(&target_path).map_err(|err| err.to_string())?;
         let mut url = String::from(url);
         url.push('/');
         url.push_str(version);
         url.push('/');
-        url.push_str(file.to_str().unwrap());
-        download_file(&url.as_str(), &file, true)?;
-        fs::create_dir_all(&target_path).map_err(|err| err.to_string())?;
-        let zip = File::open(&file).map_err(|err| err.to_string())?;
+        url.push_str(download_file_name);
+        let download_file_path = target_path.join(download_file_name);
+        if download_file_path.exists() {
+            fs::remove_file(&download_file_path).map_err(|err| err.to_string())?;
+        }
+        download_file(url.as_str(), &download_file_path, true, &mut None)?;
+        let zip = File::open(&download_file_path).map_err(|err| err.to_string())?;
         let tar = BzDecoder::new(BufReader::new(zip));
         let mut archive = Archive::new(tar);
         archive
             .unpack(&target_path)
             .map_err(|err| err.to_string())?;
-        fs::remove_file(file).map_err(|err| err.to_string())?;
+        fs::remove_file(download_file_path).map_err(|err| err.to_string())?;
     }
-    // Make a symbolyc link source_path -> target_path in the
+    // Make a symbolic link source_path -> target_path in the
     // sdk/bpf/dependencies directory if no valid link found.
     let source_base = config.bpf_sdk.join("dependencies");
     if !source_base.exists() {
@@ -127,20 +141,17 @@ fn install_if_missing(
     }
     let source_path = source_base.join(package);
     // Check whether the correct symbolic link exists.
-    let missing_source = if source_path.exists() {
-        let invalid_link = if let Ok(link_target) = source_path.read_link() {
-            link_target != target_path
-        } else {
-            true
-        };
-        if invalid_link {
+    let invalid_link = if let Ok(link_target) = source_path.read_link() {
+        if link_target != target_path {
             fs::remove_file(&source_path).map_err(|err| err.to_string())?;
+            true
+        } else {
+            false
         }
-        invalid_link
     } else {
         true
     };
-    if missing_source {
+    if invalid_link {
         #[cfg(unix)]
         std::os::unix::fs::symlink(target_path, source_path).map_err(|err| err.to_string())?;
         #[cfg(windows)]
@@ -148,6 +159,168 @@ fn install_if_missing(
             .map_err(|err| err.to_string())?;
     }
     Ok(())
+}
+
+// Process dump file attributing call instructions with callee function names
+fn postprocess_dump(program_dump: &Path) {
+    if !program_dump.exists() {
+        return;
+    }
+    let postprocessed_dump = program_dump.with_extension("postprocessed");
+    let head_re = Regex::new(r"^([0-9a-f]{16}) (.+)").unwrap();
+    let insn_re = Regex::new(r"^ +([0-9]+)((\s[0-9a-f]{2})+)\s.+").unwrap();
+    let call_re = Regex::new(r"^ +([0-9]+)(\s[0-9a-f]{2})+\scall (-?)0x([0-9a-f]+)").unwrap();
+    let relo_re = Regex::new(r"^([0-9a-f]{16})  [0-9a-f]{16} R_BPF_64_32 +0{16} (.+)").unwrap();
+    let mut a2n: HashMap<i64, String> = HashMap::new();
+    let mut rel: HashMap<u64, String> = HashMap::new();
+    let mut name = String::from("");
+    let mut state = 0;
+    let file = match File::open(program_dump) {
+        Ok(x) => x,
+        _ => return,
+    };
+    for line_result in BufReader::new(file).lines() {
+        let line = line_result.unwrap();
+        let line = line.trim_end();
+        if line == "Disassembly of section .text" {
+            state = 1;
+        }
+        if state == 0 {
+            if relo_re.is_match(line) {
+                let captures = relo_re.captures(line).unwrap();
+                let address = u64::from_str_radix(&captures[1], 16).unwrap();
+                let symbol = captures[2].to_string();
+                rel.insert(address, symbol);
+            }
+        } else if state == 1 {
+            if head_re.is_match(line) {
+                state = 2;
+                let captures = head_re.captures(line).unwrap();
+                name = captures[2].to_string();
+            }
+        } else if state == 2 {
+            state = 1;
+            if insn_re.is_match(line) {
+                let captures = insn_re.captures(line).unwrap();
+                let address = i64::from_str(&captures[1]).unwrap();
+                a2n.insert(address, name.clone());
+            }
+        }
+    }
+    let file = match File::create(&postprocessed_dump) {
+        Ok(x) => x,
+        _ => return,
+    };
+    let mut out = BufWriter::new(file);
+    let file = match File::open(program_dump) {
+        Ok(x) => x,
+        _ => return,
+    };
+    let mut pc = 0u64;
+    let mut step = 0u64;
+    for line_result in BufReader::new(file).lines() {
+        let line = line_result.unwrap();
+        let line = line.trim_end();
+        if head_re.is_match(line) {
+            let captures = head_re.captures(line).unwrap();
+            pc = u64::from_str_radix(&captures[1], 16).unwrap();
+            writeln!(out, "{}", line).unwrap();
+            continue;
+        }
+        if insn_re.is_match(line) {
+            let captures = insn_re.captures(line).unwrap();
+            step = if captures[2].len() > 24 { 16 } else { 8 };
+        }
+        if call_re.is_match(line) {
+            if rel.contains_key(&pc) {
+                writeln!(out, "{} ; {}", line, rel[&pc]).unwrap();
+            } else {
+                let captures = call_re.captures(line).unwrap();
+                let pc = i64::from_str(&captures[1]).unwrap().checked_add(1).unwrap();
+                let offset = i64::from_str_radix(&captures[4], 16).unwrap();
+                let offset = if &captures[3] == "-" {
+                    offset.checked_neg().unwrap()
+                } else {
+                    offset
+                };
+                let address = pc.checked_add(offset).unwrap();
+                if a2n.contains_key(&address) {
+                    writeln!(out, "{} ; {}", line, a2n[&address]).unwrap();
+                } else {
+                    writeln!(out, "{}", line).unwrap();
+                }
+            }
+        } else {
+            writeln!(out, "{}", line).unwrap();
+        }
+        pc = pc.checked_add(step).unwrap();
+    }
+    fs::rename(postprocessed_dump, program_dump).unwrap();
+}
+
+// Check whether the built .so file contains undefined symbols that are
+// not known to the runtime and warn about them if any.
+fn check_undefined_symbols(config: &Config, program: &Path) {
+    let syscalls: HashSet<String> = [
+        "abort",
+        "sol_panic_",
+        "sol_log_",
+        "sol_log_64_",
+        "sol_log_compute_units_",
+        "sol_log_pubkey",
+        "sol_create_program_address",
+        "sol_try_find_program_address",
+        "sol_sha256",
+        "sol_keccak256",
+        "sol_get_clock_sysvar",
+        "sol_get_epoch_schedule_sysvar",
+        "sol_get_fees_sysvar",
+        "sol_get_rent_sysvar",
+        "sol_memcpy_",
+        "sol_memmove_",
+        "sol_memcmp_",
+        "sol_memset_",
+        "sol_invoke_signed_c",
+        "sol_invoke_signed_rust",
+        "sol_alloc_free_",
+    ]
+    .iter()
+    .map(|&symbol| symbol.to_owned())
+    .collect();
+    let entry =
+        Regex::new(r"^ *[0-9]+: [0-9a-f]{16} +[0-9a-f]+ +NOTYPE +GLOBAL +DEFAULT +UND +(.+)")
+            .unwrap();
+    let readelf = config
+        .bpf_sdk
+        .join("dependencies")
+        .join("bpf-tools")
+        .join("llvm")
+        .join("bin")
+        .join("llvm-readelf");
+    let mut readelf_args = vec!["--dyn-symbols"];
+    readelf_args.push(program.to_str().unwrap());
+    let output = spawn(&readelf, &readelf_args);
+    if config.verbose {
+        println!("{}", output);
+    }
+    let mut unresolved_symbols: Vec<String> = Vec::new();
+    for line in output.lines() {
+        let line = line.trim_end();
+        if entry.is_match(line) {
+            let captures = entry.captures(line).unwrap();
+            let symbol = captures[1].to_string();
+            if !syscalls.contains(&symbol) {
+                unresolved_symbols.push(symbol);
+            }
+        }
+    }
+    if !unresolved_symbols.is_empty() {
+        println!(
+            "Warning: the following functions are undefined and not known syscalls {:?}.",
+            unresolved_symbols
+        );
+        println!("         Calling them will trigger a run-time error.");
+    }
 }
 
 // check whether custom BPF toolchain is linked, and link it if it is not.
@@ -252,20 +425,20 @@ fn build_bpf_package(config: &Config, target_directory: &Path, package: &cargo_m
     if legacy_program_feature_present {
         println!("Legacy program feature detected");
     }
-    let bpf_tools_filename = if cfg!(target_os = "macos") {
+    let bpf_tools_download_file_name = if cfg!(target_os = "macos") {
         "solana-bpf-tools-osx.tar.bz2"
     } else {
         "solana-bpf-tools-linux.tar.bz2"
     };
     install_if_missing(
-        &config,
+        config,
         "bpf-tools",
-        "v1.5",
+        "v1.12",
         "https://github.com/solana-labs/bpf-tools/releases/download",
-        &PathBuf::from(bpf_tools_filename),
+        bpf_tools_download_file_name,
     )
     .expect("Failed to install bpf-tools");
-    link_bpf_toolchain(&config);
+    link_bpf_toolchain(config);
 
     let llvm_bin = config
         .bpf_sdk
@@ -277,21 +450,9 @@ fn build_bpf_package(config: &Config, target_directory: &Path, package: &cargo_m
     env::set_var("AR", llvm_bin.join("llvm-ar"));
     env::set_var("OBJDUMP", llvm_bin.join("llvm-objdump"));
     env::set_var("OBJCOPY", llvm_bin.join("llvm-objcopy"));
-    let linker = llvm_bin.join("ld.lld");
-    let linker_script = config.bpf_sdk.join("rust").join("bpf.ld");
     let mut rust_flags = String::from("-C lto=no");
     rust_flags.push_str(" -C opt-level=2");
-    rust_flags.push_str(" -C link-arg=-z -C link-arg=notext");
-    rust_flags.push_str(" -C link-arg=-T");
-    rust_flags.push_str(linker_script.to_str().unwrap());
-    rust_flags.push_str(" -C link-arg=--Bdynamic");
-    rust_flags.push_str(" -C link-arg=-shared");
-    rust_flags.push_str(" -C link-arg=--threads=1");
-    rust_flags.push_str(" -C link-arg=--entry=entrypoint");
-    rust_flags.push_str(" -C linker=");
-    rust_flags.push_str(linker.to_str().unwrap());
     env::set_var("RUSTFLAGS", rust_flags);
-
     let cargo_build = PathBuf::from("cargo");
     let mut cargo_build_args = vec![
         "+bpf",
@@ -366,11 +527,16 @@ fn build_bpf_package(config: &Config, target_directory: &Path, package: &cargo_m
                 &config.bpf_sdk.join("scripts").join("dump.sh"),
                 &[&program_unstripped_so, &program_dump],
             );
+            postprocess_dump(&program_dump);
         }
+
+        check_undefined_symbols(config, &program_so);
 
         println!();
         println!("To deploy this program:");
         println!("  $ safecoin program deploy {}", program_so.display());
+        println!("The program address will default to this keypair (override with --program-id):");
+        println!("  {}", program_keypair.display());
     } else if config.dump {
         println!("Note: --dump is only available for crates with a cdylib target");
     }
@@ -438,7 +604,16 @@ fn main() {
         .about(crate_description!())
         .version(crate_version!())
         .arg(
+            Arg::with_name("bpf_out_dir")
+                .env("BPF_OUT_PATH")
+                .long("bpf-out-dir")
+                .value_name("DIRECTORY")
+                .takes_value(true)
+                .help("Place final BPF build artifacts in this directory"),
+        )
+        .arg(
             Arg::with_name("bpf_sdk")
+                .env("BPF_SDK_PATH")
                 .long("bpf-sdk")
                 .value_name("PATH")
                 .takes_value(true)
@@ -446,10 +621,37 @@ fn main() {
                 .help("Path to the Safecoin BPF SDK"),
         )
         .arg(
+            Arg::with_name("cargo_args")
+                .help("Arguments passed directly to `cargo build`")
+                .multiple(true)
+                .last(true),
+        )
+        .arg(
             Arg::with_name("dump")
                 .long("dump")
                 .takes_value(false)
                 .help("Dump ELF information to a text file on success"),
+        )
+        .arg(
+            Arg::with_name("features")
+                .long("features")
+                .value_name("FEATURES")
+                .takes_value(true)
+                .multiple(true)
+                .help("Space-separated list of features to activate"),
+        )
+        .arg(
+            Arg::with_name("manifest_path")
+                .long("manifest-path")
+                .value_name("PATH")
+                .takes_value(true)
+                .help("Path to Cargo.toml"),
+        )
+        .arg(
+            Arg::with_name("no_default_features")
+                .long("no-default-features")
+                .takes_value(false)
+                .help("Do not activate the `default` feature"),
         )
         .arg(
             Arg::with_name("offline")
@@ -463,34 +665,6 @@ fn main() {
                 .long("verbose")
                 .takes_value(false)
                 .help("Use verbose output"),
-        )
-        .arg(
-            Arg::with_name("features")
-                .long("features")
-                .value_name("FEATURES")
-                .takes_value(true)
-                .multiple(true)
-                .help("Space-separated list of features to activate"),
-        )
-        .arg(
-            Arg::with_name("no_default_features")
-                .long("no-default-features")
-                .takes_value(false)
-                .help("Do not activate the `default` feature"),
-        )
-        .arg(
-            Arg::with_name("manifest_path")
-                .long("manifest-path")
-                .value_name("PATH")
-                .takes_value(true)
-                .help("Path to Cargo.toml"),
-        )
-        .arg(
-            Arg::with_name("bpf_out_dir")
-                .long("bpf-out-dir")
-                .value_name("DIRECTORY")
-                .takes_value(true)
-                .help("Place final BPF build artifacts in this directory"),
         )
         .arg(
             Arg::with_name("workspace")

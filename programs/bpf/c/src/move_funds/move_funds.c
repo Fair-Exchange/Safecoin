@@ -2,7 +2,7 @@
  * @brief Example C-based BPF program that moves funds from one account to
  * another
  */
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 /**
  * Number of SafeKeyedAccount expected. The program should bail if an

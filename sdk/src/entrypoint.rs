@@ -1,9 +1,9 @@
-pub use solana_program::entrypoint::*;
+pub use safecoin_program::entrypoint::*;
 
 #[macro_export]
 #[deprecated(
     since = "1.4.3",
-    note = "use solana_program::entrypoint::entrypoint instead"
+    note = "use safecoin_program::entrypoint::entrypoint instead"
 )]
 macro_rules! entrypoint {
     ($process_instruction:ident) => {

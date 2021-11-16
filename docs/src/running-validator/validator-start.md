@@ -60,7 +60,7 @@ the latest recommended settings are applied.
 To run it:
 
 ```bash
-sudo safecoin-sys-tuner --user $(whoami) > sys-tuner.log 2>&1 &
+sudo $(command -v safecoin-sys-tuner) --user $(whoami) > sys-tuner.log 2>&1 &
 ```
 
 #### Manual
@@ -89,7 +89,7 @@ sudo sysctl -p /etc/sysctl.d/20-solana-udp-buffers.conf
 ```bash
 sudo bash -c "cat >/etc/sysctl.d/20-solana-mmaps.conf <<EOF
 # Increase memory mapped files limit
-vm.max_map_count = 700000
+vm.max_map_count = 1000000
 EOF"
 ```
 
@@ -100,14 +100,14 @@ sudo sysctl -p /etc/sysctl.d/20-solana-mmaps.conf
 Add
 
 ```
-LimitNOFILE=700000
+LimitNOFILE=1000000
 ```
 
 to the `[Service]` section of your systemd service file, if you use one,
 otherwise add
 
 ```
-DefaultLimitNOFILE=700000
+DefaultLimitNOFILE=1000000
 ```
 
 to the `[Manager]` section of `/etc/systemd/system.conf`.
@@ -119,7 +119,7 @@ sudo systemctl daemon-reload
 ```bash
 sudo bash -c "cat >/etc/security/limits.d/90-solana-nofiles.conf <<EOF
 # Increase process file descriptor count limit
-* - nofile 700000
+* - nofile 1000000
 EOF"
 ```
 
@@ -239,6 +239,23 @@ safecoin balance --lamports
 
 Read more about the [difference between SAFE and lamports here](../introduction.md#what-are-sols).
 
+## Create Authorized Withdrawer Account
+
+If you haven't already done so, create an authorized-withdrawer keypair to be used
+as the ultimate authority over your validator.  This keypair will have the
+authority to withdraw from your vote account, and will have the additional
+authority to change all other aspects of your vote account.  Needless to say,
+this is a very important keypair as anyone who possesses it can make any
+changes to your vote account, including taking ownership of it permanently.
+So it is very important to keep your authorized-withdrawer keypair in a safe
+location.  It does not need to be stored on your validator, and should not be
+stored anywhere from where it could be accessed by unauthorized parties.  To
+create your authorized-withdrawer keypair:
+
+```bash
+safecoin-keygen new -o ~/authorized-withdrawer-keypair.json
+```
+
 ## Create Vote Account
 
 If you haven’t already done so, create a vote-account keypair and create the
@@ -253,20 +270,22 @@ The following command can be used to create your vote account on the blockchain
 with all the default options:
 
 ```bash
-safecoin create-vote-account ~/vote-account-keypair.json ~/validator-keypair.json
+safecoin create-vote-account ~/vote-account-keypair.json ~/validator-keypair.json ~/authorized-withdrawer-keypair.json
 ```
+
+Remember to move your authorized withdrawer keypair into a very secure location after running the above command.
 
 Read more about [creating and managing a vote account](vote-accounts.md).
 
-## Trusted validators
+## Known validators
 
-If you know and trust other validator nodes, you can specify this on the command line with the `--trusted-validator <PUBKEY>`
-argument to `safecoin-validator`. You can specify multiple ones by repeating the argument `--trusted-validator <PUBKEY1> --trusted-validator <PUBKEY2>`.
-This has two effects, one is when the validator is booting with `--no-untrusted-rpc`, it will only ask that set of
-trusted nodes for downloading genesis and snapshot data. Another is that in combination with the `--halt-on-trusted-validator-hash-mismatch` option,
-it will monitor the merkle root hash of the entire accounts state of other trusted nodes on gossip and if the hashes produce any mismatch,
+If you know and respect other validator operators, you can specify this on the command line with the `--known-validator <PUBKEY>`
+argument to `safecoin-validator`. You can specify multiple ones by repeating the argument `--known-validator <PUBKEY1> --known-validator <PUBKEY2>`.
+This has two effects, one is when the validator is booting with `--only-known-rpc`, it will only ask that set of
+known nodes for downloading genesis and snapshot data. Another is that in combination with the `--halt-on-known-validator-hash-mismatch` option,
+it will monitor the merkle root hash of the entire accounts state of other known nodes on gossip and if the hashes produce any mismatch,
 the validator will halt the node to prevent the validator from voting or processing potentially incorrect state values. At the moment, the slot that
-the validator publishes the hash on is tied to the snapshot interval. For the feature to be effective, all validators in the trusted
+the validator publishes the hash on is tied to the snapshot interval. For the feature to be effective, all validators in the known
 set should be set to the same snapshot interval value or multiples of the same.
 
 It is highly recommended you use these options to prevent malicious snapshot state download or
@@ -349,7 +368,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=sol
-LimitNOFILE=700000
+LimitNOFILE=1000000
 LogRateLimitIntervalSec=0
 Environment="PATH=/bin:/usr/bin:/home/sol/.local/share/solana/install/active_release/bin"
 ExecStart=/home/sol/bin/validator.sh
@@ -358,8 +377,13 @@ ExecStart=/home/sol/bin/validator.sh
 WantedBy=multi-user.target
 ```
 
-Now create `/home/sol/bin/validator.sh` to include the desired `safecoin-validator`
-command-line. Ensure that running `/home/sol/bin/validator.sh` manually starts
+Now create `/home/sol/bin/validator.sh` to include the desired
+`safecoin-validator` command-line. Ensure that the 'exec' command is used to
+start the validator process (i.e. "exec safecoin-validator ...").  This is
+important because without it, logrotate will end up killing the validator
+every time the logs are rotated.
+
+Ensure that running `/home/sol/bin/validator.sh` manually starts
 the validator as expected. Don't forget to mark it executable with `chmod +x /home/sol/bin/validator.sh`
 
 Start the service with:
@@ -415,6 +439,12 @@ EOF
 sudo cp logrotate.sol /etc/logrotate.d/sol
 systemctl restart logrotate.service
 ```
+
+As mentioned earlier, be sure that if you use logrotate, any script you create
+which starts the safecoin validator process uses "exec" to do so (example: "exec
+safecoin-validator ..."); otherwise, when logrotate sends its signal to the
+validator, the enclosing script will die and take the validator process with
+it.
 
 ### Disable port checks to speed up restarts
 

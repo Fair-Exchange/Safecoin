@@ -1,15 +1,19 @@
-use crate::parse_instruction::{
-    check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
-};
-use serde_json::{json, Map, Value};
-use safecoin_account_decoder::parse_token::{pubkey_from_spl_token_v2_0, token_amount_to_ui_amount};
-use solana_sdk::{
-    instruction::{AccountMeta, CompiledInstruction, Instruction},
-    pubkey::Pubkey,
-};
-use spl_token_v2_0::{
-    instruction::{AuthorityType, TokenInstruction},
-    solana_program::{instruction::Instruction as SafeTokenInstruction, program_option::COption},
+use {
+    crate::parse_instruction::{
+        check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
+    },
+    serde_json::{json, Map, Value},
+    safecoin_account_decoder::parse_token::{pubkey_from_spl_token_v2_0, token_amount_to_ui_amount},
+    safecoin_sdk::{
+        instruction::{AccountMeta, CompiledInstruction, Instruction},
+        pubkey::Pubkey,
+    },
+    spl_token_v2_0::{
+        instruction::{AuthorityType, TokenInstruction},
+        safecoin_program::{
+            instruction::Instruction as SafeTokenInstruction, program_option::COption,
+        },
+    },
 };
 
 pub fn parse_token(
@@ -372,6 +376,15 @@ pub fn parse_token(
                 info: value,
             })
         }
+        TokenInstruction::SyncNative => {
+            check_num_token_accounts(&instruction.accounts, 1)?;
+            Ok(ParsedInstructionEnum {
+                instruction_type: "syncNative".to_string(),
+                info: json!({
+                    "account": account_keys[instruction.accounts[0] as usize].to_string(),
+                }),
+            })
+        }
     }
 }
 
@@ -443,16 +456,18 @@ pub fn spl_token_v2_0_instruction(instruction: SafeTokenInstruction) -> Instruct
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use solana_sdk::instruction::CompiledInstruction;
-    use spl_token_v2_0::{
-        instruction::*,
-        solana_program::{
-            instruction::CompiledInstruction as SafeTokenCompiledInstruction, message::Message,
-            pubkey::Pubkey as SafeTokenPubkey,
+    use {
+        super::*,
+        safecoin_sdk::instruction::CompiledInstruction,
+        spl_token_v2_0::{
+            instruction::*,
+            safecoin_program::{
+                instruction::CompiledInstruction as SafeTokenCompiledInstruction, message::Message,
+                pubkey::Pubkey as SafeTokenPubkey,
+            },
         },
+        std::str::FromStr,
     };
-    use std::str::FromStr;
 
     fn convert_pubkey(pubkey: Pubkey) -> SafeTokenPubkey {
         SafeTokenPubkey::from_str(&pubkey.to_string()).unwrap()
@@ -473,7 +488,7 @@ mod test {
     fn test_parse_token() {
         let mut keys: Vec<Pubkey> = vec![];
         for _ in 0..10 {
-            keys.push(solana_sdk::pubkey::new_rand());
+            keys.push(safecoin_sdk::pubkey::new_rand());
         }
 
         // Test InitializeMint variations
@@ -930,7 +945,7 @@ mod test {
             }
         );
 
-        // Test Approve2, incl multisig
+        // Test ApproveChecked, incl multisig
         let approve_ix = approve_checked(
             &spl_token_v2_0::id(),
             &convert_pubkey(keys[1]),
@@ -996,7 +1011,7 @@ mod test {
             }
         );
 
-        // Test MintTo2
+        // Test MintToChecked
         let mint_to_ix = mint_to_checked(
             &spl_token_v2_0::id(),
             &convert_pubkey(keys[1]),
@@ -1027,7 +1042,7 @@ mod test {
             }
         );
 
-        // Test Burn2
+        // Test BurnChecked
         let burn_ix = burn_checked(
             &spl_token_v2_0::id(),
             &convert_pubkey(keys[1]),
@@ -1057,6 +1072,20 @@ mod test {
                 })
             }
         );
+
+        // Test SyncNative
+        let sync_native_ix = sync_native(&spl_token_v2_0::id(), &convert_pubkey(keys[0])).unwrap();
+        let message = Message::new(&[sync_native_ix], None);
+        let compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
+        assert_eq!(
+            parse_token(&compiled_instruction, &keys).unwrap(),
+            ParsedInstructionEnum {
+                instruction_type: "syncNative".to_string(),
+                info: json!({
+                   "account": keys[0].to_string(),
+                })
+            }
+        );
     }
 
     #[test]
@@ -1064,7 +1093,7 @@ mod test {
     fn test_token_ix_not_enough_keys() {
         let mut keys: Vec<Pubkey> = vec![];
         for _ in 0..10 {
-            keys.push(solana_sdk::pubkey::new_rand());
+            keys.push(safecoin_sdk::pubkey::new_rand());
         }
 
         // Test InitializeMint variations
@@ -1418,6 +1447,15 @@ mod test {
         let message = Message::new(&[burn_ix], None);
         let mut compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
         assert!(parse_token(&compiled_instruction, &keys[0..2]).is_err());
+        compiled_instruction.accounts =
+            compiled_instruction.accounts[0..compiled_instruction.accounts.len() - 1].to_vec();
+        assert!(parse_token(&compiled_instruction, &keys).is_err());
+
+        // Test SyncNative
+        let sync_native_ix = sync_native(&spl_token_v2_0::id(), &convert_pubkey(keys[0])).unwrap();
+        let message = Message::new(&[sync_native_ix], None);
+        let mut compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
+        assert!(parse_token(&compiled_instruction, &[]).is_err());
         compiled_instruction.accounts =
             compiled_instruction.accounts[0..compiled_instruction.accounts.len() - 1].to_vec();
         assert!(parse_token(&compiled_instruction, &keys).is_err());

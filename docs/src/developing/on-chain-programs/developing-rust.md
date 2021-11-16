@@ -347,8 +347,8 @@ Then provide a custom implementation of the panic handler:
 #[cfg(all(feature = "custom-panic", target_arch = "bpf"))]
 #[no_mangle]
 fn custom_panic(info: &core::panic::PanicInfo<'_>) {
-    solana_program::msg!("program custom panic enabled");
-    solana_program::msg!("{}", info);
+    safecoin_program::msg!("program custom panic enabled");
+    safecoin_program::msg!("{}", info);
 }
 ```
 

@@ -1,8 +1,8 @@
 //! @brief Example Rust-based BPF program tests loop iteration
 
 mod helper;
-extern crate solana_program;
-use solana_program::{custom_panic_default, entrypoint::SUCCESS, msg};
+extern crate safecoin_program;
+use safecoin_program::{custom_panic_default, entrypoint::SUCCESS, msg};
 
 #[no_mangle]
 pub extern "C" fn entrypoint(_input: *mut u8) -> u64 {

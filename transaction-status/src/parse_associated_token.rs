@@ -1,11 +1,13 @@
-use crate::parse_instruction::{
-    check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
+use {
+    crate::parse_instruction::{
+        check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
+    },
+    serde_json::json,
+    safecoin_sdk::{instruction::CompiledInstruction, pubkey::Pubkey},
 };
-use serde_json::json;
-use solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey};
 
 // A helper function to convert safe_associated_token_account_v1_0::id() as spl_sdk::pubkey::Pubkey
-// to solana_sdk::pubkey::Pubkey
+// to safecoin_sdk::pubkey::Pubkey
 pub fn spl_associated_token_id_v1_0() -> Pubkey {
     Pubkey::new_from_array(safe_associated_token_account_v1_0::id().to_bytes())
 }
@@ -47,12 +49,14 @@ fn check_num_associated_token_accounts(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use safe_associated_token_account_v1_0::{
-        create_associated_token_account,
-        solana_program::{
-            instruction::CompiledInstruction as SplAssociatedTokenCompiledInstruction,
-            message::Message, pubkey::Pubkey as SplAssociatedTokenPubkey,
+    use {
+        super::*,
+        safe_associated_token_account_v1_0::{
+            create_associated_token_account,
+            safecoin_program::{
+                instruction::CompiledInstruction as SplAssociatedTokenCompiledInstruction,
+                message::Message, pubkey::Pubkey as SplAssociatedTokenPubkey,
+            },
         },
     };
 
@@ -74,7 +78,7 @@ mod test {
     fn test_parse_associated_token() {
         let mut keys: Vec<Pubkey> = vec![];
         for _ in 0..7 {
-            keys.push(solana_sdk::pubkey::new_rand());
+            keys.push(safecoin_sdk::pubkey::new_rand());
         }
 
         let create_ix = create_associated_token_account(

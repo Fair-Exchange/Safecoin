@@ -2,11 +2,7 @@
 #![allow(clippy::integer_arithmetic)]
 
 #[macro_use]
-extern crate solana_budget_program;
-#[macro_use]
 extern crate solana_exchange_program;
-#[macro_use]
-extern crate solana_vest_program;
 
 use clap::{crate_description, crate_name, value_t, value_t_or_exit, App, Arg, ArgMatches};
 use safecoin_clap_utils::{
@@ -18,8 +14,8 @@ use solana_ledger::{
     blockstore::create_new_ledger, blockstore_db::AccessType, poh::compute_hashes_per_tick,
 };
 use solana_runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE;
-use solana_sdk::{
-    account::{Account, AccountSharedData},
+use safecoin_sdk::{
+    account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
     clock,
     epoch_schedule::EpochSchedule,
     fee_calculator::FeeRateGovernor,
@@ -30,9 +26,10 @@ use solana_sdk::{
     pubkey::Pubkey,
     rent::Rent,
     signature::{Keypair, Signer},
+    stake::state::StakeState,
     system_program, timing,
 };
-use solana_stake_program::stake_state::{self, StakeState};
+use solana_stake_program::stake_state;
 use solana_vote_program::vote_state::{self, VoteState};
 use std::{
     collections::HashMap,
@@ -93,8 +90,8 @@ pub fn load_genesis_accounts(file: &str, genesis_config: &mut GenesisConfig) -> 
                 })?,
             );
         }
-        account.executable = account_details.executable;
-        lamports += account.lamports;
+        account.set_executable(account_details.executable);
+        lamports += account.lamports();
         genesis_config.add_account(pubkey, account);
     }
 
@@ -463,7 +460,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             ClusterType::Development => {
                 let hashes_per_tick =
                     compute_hashes_per_tick(poh_config.target_tick_duration, 1_000_000);
-                poh_config.hashes_per_tick = Some(hashes_per_tick);
+                poh_config.hashes_per_tick = Some(hashes_per_tick / 2); // use 50% of peak ability
             }
             ClusterType::Devnet | ClusterType::Testnet | ClusterType::MainnetBeta => {
                 poh_config.hashes_per_tick = Some(clock::DEFAULT_HASHES_PER_TICK);
@@ -494,11 +491,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     );
 
     let native_instruction_processors = if cluster_type == ClusterType::Development {
-        vec![
-            solana_vest_program!(),
-            solana_budget_program!(),
-            solana_exchange_program!(),
-        ]
+        vec![solana_exchange_program!()]
     } else {
         vec![]
     };
@@ -541,9 +534,9 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         );
 
         let vote_account = vote_state::create_account_with_authorized(
-            &identity_pubkey,
-            &identity_pubkey,
-            &identity_pubkey,
+            identity_pubkey,
+            identity_pubkey,
+            identity_pubkey,
             commission,
             VoteState::get_rent_exempt_reserve(&rent).max(1),
         );
@@ -553,8 +546,8 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             stake_state::create_account(
                 bootstrap_stake_authorized_pubkey
                     .as_ref()
-                    .unwrap_or(&identity_pubkey),
-                &vote_pubkey,
+                    .unwrap_or(identity_pubkey),
+                vote_pubkey,
                 &vote_account,
                 &rent,
                 bootstrap_validator_stake_lamports,
@@ -650,7 +643,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::genesis_config::GenesisConfig;
+    use safecoin_sdk::genesis_config::GenesisConfig;
     use std::collections::HashMap;
     use std::fs::remove_file;
     use std::io::Write;
@@ -665,27 +658,27 @@ mod tests {
 
         let mut genesis_accounts = HashMap::new();
         genesis_accounts.insert(
-            solana_sdk::pubkey::new_rand().to_string(),
+            safecoin_sdk::pubkey::new_rand().to_string(),
             Base64Account {
-                owner: solana_sdk::pubkey::new_rand().to_string(),
+                owner: safecoin_sdk::pubkey::new_rand().to_string(),
                 balance: 2,
                 executable: false,
                 data: String::from("aGVsbG8="),
             },
         );
         genesis_accounts.insert(
-            solana_sdk::pubkey::new_rand().to_string(),
+            safecoin_sdk::pubkey::new_rand().to_string(),
             Base64Account {
-                owner: solana_sdk::pubkey::new_rand().to_string(),
+                owner: safecoin_sdk::pubkey::new_rand().to_string(),
                 balance: 1,
                 executable: true,
                 data: String::from("aGVsbG8gd29ybGQ="),
             },
         );
         genesis_accounts.insert(
-            solana_sdk::pubkey::new_rand().to_string(),
+            safecoin_sdk::pubkey::new_rand().to_string(),
             Base64Account {
-                owner: solana_sdk::pubkey::new_rand().to_string(),
+                owner: safecoin_sdk::pubkey::new_rand().to_string(),
                 balance: 3,
                 executable: true,
                 data: String::from("bWUgaGVsbG8gdG8gd29ybGQ="),
@@ -738,27 +731,27 @@ mod tests {
         // Test more accounts can be appended
         let mut genesis_accounts1 = HashMap::new();
         genesis_accounts1.insert(
-            solana_sdk::pubkey::new_rand().to_string(),
+            safecoin_sdk::pubkey::new_rand().to_string(),
             Base64Account {
-                owner: solana_sdk::pubkey::new_rand().to_string(),
+                owner: safecoin_sdk::pubkey::new_rand().to_string(),
                 balance: 6,
                 executable: true,
                 data: String::from("eW91IGFyZQ=="),
             },
         );
         genesis_accounts1.insert(
-            solana_sdk::pubkey::new_rand().to_string(),
+            safecoin_sdk::pubkey::new_rand().to_string(),
             Base64Account {
-                owner: solana_sdk::pubkey::new_rand().to_string(),
+                owner: safecoin_sdk::pubkey::new_rand().to_string(),
                 balance: 5,
                 executable: false,
                 data: String::from("bWV0YSBzdHJpbmc="),
             },
         );
         genesis_accounts1.insert(
-            solana_sdk::pubkey::new_rand().to_string(),
+            safecoin_sdk::pubkey::new_rand().to_string(),
             Base64Account {
-                owner: solana_sdk::pubkey::new_rand().to_string(),
+                owner: safecoin_sdk::pubkey::new_rand().to_string(),
                 balance: 10,
                 executable: false,
                 data: String::from("YmFzZTY0IHN0cmluZw=="),
@@ -789,7 +782,7 @@ mod tests {
             let pubkey = &pubkey_str.parse().unwrap();
             assert_eq!(
                 b64_account.balance,
-                genesis_config.accounts[&pubkey].lamports,
+                genesis_config.accounts[pubkey].lamports,
             );
         }
 
@@ -823,7 +816,7 @@ mod tests {
         genesis_accounts2.insert(
             serde_json::to_string(&account_keypairs[0].to_bytes().to_vec()).unwrap(),
             Base64Account {
-                owner: solana_sdk::pubkey::new_rand().to_string(),
+                owner: safecoin_sdk::pubkey::new_rand().to_string(),
                 balance: 20,
                 executable: true,
                 data: String::from("Y2F0IGRvZw=="),
@@ -832,7 +825,7 @@ mod tests {
         genesis_accounts2.insert(
             serde_json::to_string(&account_keypairs[1].to_bytes().to_vec()).unwrap(),
             Base64Account {
-                owner: solana_sdk::pubkey::new_rand().to_string(),
+                owner: safecoin_sdk::pubkey::new_rand().to_string(),
                 balance: 15,
                 executable: false,
                 data: String::from("bW9ua2V5IGVsZXBoYW50"),
@@ -841,7 +834,7 @@ mod tests {
         genesis_accounts2.insert(
             serde_json::to_string(&account_keypairs[2].to_bytes().to_vec()).unwrap(),
             Base64Account {
-                owner: solana_sdk::pubkey::new_rand().to_string(),
+                owner: safecoin_sdk::pubkey::new_rand().to_string(),
                 balance: 30,
                 executable: true,
                 data: String::from("Y29tYSBtb2Nh"),

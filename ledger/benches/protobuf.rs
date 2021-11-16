@@ -9,7 +9,7 @@ use solana_ledger::{
     get_tmp_ledger_path,
 };
 use solana_runtime::bank::RewardType;
-use solana_sdk::{clock::Slot, pubkey};
+use safecoin_sdk::{clock::Slot, pubkey};
 use safecoin_transaction_status::{Reward, Rewards};
 use std::path::Path;
 use test::Bencher;

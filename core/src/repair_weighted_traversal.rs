@@ -4,7 +4,7 @@ use crate::{
 };
 use solana_ledger::blockstore::Blockstore;
 use solana_runtime::contains::Contains;
-use solana_sdk::{clock::Slot, hash::Hash};
+use safecoin_sdk::{clock::Slot, hash::Hash};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, PartialEq)]
@@ -101,7 +101,7 @@ pub fn get_best_repair_shreds<'a>(
                         let new_repairs = RepairService::generate_repairs_for_slot(
                             blockstore,
                             slot,
-                            &slot_meta,
+                            slot_meta,
                             max_repairs - repairs.len(),
                         );
                         repairs.extend(new_repairs);
@@ -139,7 +139,7 @@ pub mod test {
     use super::*;
     use solana_ledger::{get_tmp_ledger_path, shred::Shred};
     use solana_runtime::bank_utils;
-    use solana_sdk::hash::Hash;
+    use safecoin_sdk::hash::Hash;
     use trees::tr;
 
     #[test]

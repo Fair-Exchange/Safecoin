@@ -2,7 +2,7 @@
 use log::*;
 use solana_metrics::{datapoint_warn, inc_new_counter_info};
 use solana_runtime::{bank::Bank, bank_forks::BankForks};
-use solana_sdk::{clock::Slot, signature::Signature};
+use safecoin_sdk::signature::Signature;
 use std::{
     collections::HashMap,
     net::{SocketAddr, UdpSocket},
@@ -24,15 +24,19 @@ pub struct SendTransactionService {
 pub struct TransactionInfo {
     pub signature: Signature,
     pub wire_transaction: Vec<u8>,
-    pub last_valid_slot: Slot,
+    pub last_valid_block_height: u64,
 }
 
 impl TransactionInfo {
-    pub fn new(signature: Signature, wire_transaction: Vec<u8>, last_valid_slot: Slot) -> Self {
+    pub fn new(
+        signature: Signature,
+        wire_transaction: Vec<u8>,
+        last_valid_block_height: u64,
+    ) -> Self {
         Self {
             signature,
             wire_transaction,
-            last_valid_slot,
+            last_valid_block_height,
         }
     }
 }
@@ -124,7 +128,7 @@ impl SendTransactionService {
                 result.rooted += 1;
                 inc_new_counter_info!("send_transaction_service-rooted", 1);
                 false
-            } else if transaction_info.last_valid_slot < root_bank.slot() {
+            } else if transaction_info.last_valid_block_height < root_bank.block_height() {
                 info!("Dropping expired transaction: {}", signature);
                 result.expired += 1;
                 inc_new_counter_info!("send_transaction_service-expired", 1);
@@ -138,8 +142,8 @@ impl SendTransactionService {
                         result.retried += 1;
                         inc_new_counter_info!("send_transaction_service-retry", 1);
                         Self::send_transaction(
-                            &send_socket,
-                            &tpu_address,
+                            send_socket,
+                            tpu_address,
                             &transaction_info.wire_transaction,
                         );
                         true
@@ -180,7 +184,7 @@ impl SendTransactionService {
 #[cfg(test)]
 mod test {
     use super::*;
-    use solana_sdk::{
+    use safecoin_sdk::{
         genesis_config::create_genesis_config, pubkey::Pubkey, signature::Signer,
         system_transaction,
     };

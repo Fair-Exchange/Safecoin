@@ -1,5 +1,5 @@
 use crate::blockstore::*;
-use solana_sdk::clock::Slot;
+use safecoin_sdk::clock::Slot;
 
 pub struct AncestorIterator<'a> {
     current: Option<Slot>,
@@ -54,13 +54,13 @@ impl<'a> Iterator for AncestorIterator<'a> {
 mod tests {
     use super::*;
     use crate::blockstore_processor::fill_blockstore_slot_with_ticks;
-    use solana_sdk::hash::Hash;
+    use safecoin_sdk::hash::Hash;
 
     #[test]
     fn test_ancestor_iterator() {
         let blockstore_path = get_tmp_ledger_path!();
         let blockstore = Blockstore::open(&blockstore_path).unwrap();
-        blockstore.set_roots(&[0]).unwrap();
+        blockstore.set_roots(std::iter::once(&0)).unwrap();
         let ticks_per_slot = 5;
 
         /*

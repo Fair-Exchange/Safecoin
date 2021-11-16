@@ -1,7 +1,7 @@
 use crate::blockstore::Blockstore;
 use log::*;
 use safecoin_measure::measure::Measure;
-use solana_sdk::clock::Slot;
+use safecoin_sdk::clock::Slot;
 use std::{
     collections::HashSet,
     result::Result,

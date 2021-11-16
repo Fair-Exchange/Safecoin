@@ -1,10 +1,9 @@
 #![allow(incomplete_features)]
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(specialization))]
 #![cfg_attr(RUSTC_NEEDS_PROC_MACRO_HYGIENE, feature(proc_macro_hygiene))]
-#![allow(clippy::integer_arithmetic)]
 
-// Allows macro expansion of `use ::solana_program::*` to work within this crate
-extern crate self as solana_program;
+// Allows macro expansion of `use ::safecoin_program::*` to work within this crate
+extern crate self as safecoin_program;
 
 pub mod account_info;
 pub mod borsh;
@@ -22,6 +21,7 @@ pub mod hash;
 pub mod incinerator;
 pub mod instruction;
 pub mod keccak;
+pub mod lamports;
 pub mod loader_instruction;
 pub mod loader_upgradeable_instruction;
 pub mod log;
@@ -38,13 +38,14 @@ pub mod pubkey;
 pub mod rent;
 pub mod sanitize;
 pub mod secp256k1_program;
+pub mod secp256k1_recover;
 pub mod serialize_utils;
 pub mod short_vec;
 pub mod slot_hashes;
 pub mod slot_history;
+pub mod stake;
 pub mod stake_history;
 pub mod system_instruction;
-
 pub mod system_program;
 pub mod sysvar;
 
@@ -60,15 +61,6 @@ pub mod vote {
     }
 }
 
-pub mod stake {
-    pub mod config {
-        crate::declare_id!("StakeConfig11111111111111111111111111111111");
-    }
-
-    pub mod program {
-        crate::declare_id!("Stake11111111111111111111111111111111111111");
-    }
-}
 /// Convenience macro to declare a static public key and functions to interact with it
 ///
 /// Input: a single literal base58 string representation of a program's id
@@ -79,10 +71,10 @@ pub mod stake {
 /// # // wrapper is used so that the macro invocation occurs in the item position
 /// # // rather than in the statement position which isn't allowed.
 /// use std::str::FromStr;
-/// use solana_program::{declare_id, pubkey::Pubkey};
+/// use safecoin_program::{declare_id, pubkey::Pubkey};
 ///
 /// # mod item_wrapper {
-/// #   use solana_program::declare_id;
+/// #   use safecoin_program::declare_id;
 /// declare_id!("My11111111111111111111111111111111111111111");
 /// # }
 /// # use item_wrapper::id;
@@ -90,7 +82,7 @@ pub mod stake {
 /// let my_id = Pubkey::from_str("My11111111111111111111111111111111111111111").unwrap();
 /// assert_eq!(id(), my_id);
 /// ```
-pub use solana_sdk_macro::program_declare_id as declare_id;
+pub use safecoin_sdk_macro::program_declare_id as declare_id;
 
 #[macro_use]
 extern crate serde_derive;
@@ -105,7 +97,7 @@ extern crate safecoin_frozen_abi_macro;
 /// doctests to cover failure modes
 /// Literal denominator div-by-zero fails
 /// ```compile_fail
-/// # use solana_program::unchecked_div_by_const;
+/// # use safecoin_program::unchecked_div_by_const;
 /// # fn main() {
 /// # let _ = unchecked_div_by_const!(10, 0);
 /// # }
@@ -113,7 +105,7 @@ extern crate safecoin_frozen_abi_macro;
 /// #
 /// # Const denominator div-by-zero fails
 /// ```compile_fail
-/// # use solana_program::unchecked_div_by_const;
+/// # use safecoin_program::unchecked_div_by_const;
 /// # fn main() {
 /// # const D: u64 = 0;
 /// # let _ = unchecked_div_by_const!(10, D);
@@ -122,7 +114,7 @@ extern crate safecoin_frozen_abi_macro;
 /// #
 /// # Non-const denominator fails
 /// ```compile_fail
-/// # use solana_program::unchecked_div_by_const;
+/// # use safecoin_program::unchecked_div_by_const;
 /// # fn main() {
 /// # let d = 0;
 /// # let _ = unchecked_div_by_const!(10, d);
@@ -131,7 +123,7 @@ extern crate safecoin_frozen_abi_macro;
 /// #
 /// Literal denominator div-by-zero fails
 /// ```compile_fail
-/// # use solana_program::unchecked_div_by_const;
+/// # use safecoin_program::unchecked_div_by_const;
 /// # fn main() {
 /// # const N: u64 = 10;
 /// # let _ = unchecked_div_by_const!(N, 0);
@@ -140,7 +132,7 @@ extern crate safecoin_frozen_abi_macro;
 /// #
 /// # Const denominator div-by-zero fails
 /// ```compile_fail
-/// # use solana_program::unchecked_div_by_const;
+/// # use safecoin_program::unchecked_div_by_const;
 /// # fn main() {
 /// # const N: u64 = 10;
 /// # const D: u64 = 0;
@@ -150,7 +142,7 @@ extern crate safecoin_frozen_abi_macro;
 /// #
 /// # Non-const denominator fails
 /// ```compile_fail
-/// # use solana_program::unchecked_div_by_const;
+/// # use safecoin_program::unchecked_div_by_const;
 /// # fn main() {
 /// # const N: u64 = 10;
 /// # let d = 0;
@@ -160,7 +152,7 @@ extern crate safecoin_frozen_abi_macro;
 /// #
 /// Literal denominator div-by-zero fails
 /// ```compile_fail
-/// # use solana_program::unchecked_div_by_const;
+/// # use safecoin_program::unchecked_div_by_const;
 /// # fn main() {
 /// # let n = 10;
 /// # let _ = unchecked_div_by_const!(n, 0);
@@ -169,7 +161,7 @@ extern crate safecoin_frozen_abi_macro;
 /// #
 /// # Const denominator div-by-zero fails
 /// ```compile_fail
-/// # use solana_program::unchecked_div_by_const;
+/// # use safecoin_program::unchecked_div_by_const;
 /// # fn main() {
 /// # let n = 10;
 /// # const D: u64 = 0;
@@ -179,7 +171,7 @@ extern crate safecoin_frozen_abi_macro;
 /// #
 /// # Non-const denominator fails
 /// ```compile_fail
-/// # use solana_program::unchecked_div_by_const;
+/// # use safecoin_program::unchecked_div_by_const;
 /// # fn main() {
 /// # let n = 10;
 /// # let d = 0;

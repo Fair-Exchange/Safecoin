@@ -1,5 +1,5 @@
 use crate::{blockstore::*, blockstore_meta::SlotMeta};
-use solana_sdk::clock::Slot;
+use safecoin_sdk::clock::Slot;
 
 pub struct NextSlotsIterator<'a> {
     pending_slots: Vec<Slot>,
@@ -36,14 +36,14 @@ impl<'a> Iterator for NextSlotsIterator<'a> {
 mod tests {
     use super::*;
     use crate::blockstore_processor::fill_blockstore_slot_with_ticks;
-    use solana_sdk::hash::Hash;
+    use safecoin_sdk::hash::Hash;
     use std::collections::HashSet;
 
     #[test]
     fn test_next_slots_iterator() {
         let blockstore_path = get_tmp_ledger_path!();
         let blockstore = Blockstore::open(&blockstore_path).unwrap();
-        blockstore.set_roots(&[0]).unwrap();
+        blockstore.set_roots(std::iter::once(&0)).unwrap();
         let ticks_per_slot = 5;
         /*
             Build a blockstore in the ledger with the following fork structure:

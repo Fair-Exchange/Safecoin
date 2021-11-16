@@ -1,4 +1,4 @@
-use solana_sdk::message::Message;
+use safecoin_sdk::message::Message;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -13,7 +13,7 @@ pub fn parse_accounts(message: &Message) -> Vec<ParsedAccount> {
     for (i, account_key) in message.account_keys.iter().enumerate() {
         accounts.push(ParsedAccount {
             pubkey: account_key.to_string(),
-            writable: message.is_writable(i),
+            writable: message.is_writable(i, /*demote_program_write_locks=*/ true),
             signer: message.is_signer(i),
         });
     }
@@ -22,15 +22,14 @@ pub fn parse_accounts(message: &Message) -> Vec<ParsedAccount> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use solana_sdk::message::MessageHeader;
+    use {super::*, safecoin_sdk::message::MessageHeader};
 
     #[test]
     fn test_parse_accounts() {
-        let pubkey0 = solana_sdk::pubkey::new_rand();
-        let pubkey1 = solana_sdk::pubkey::new_rand();
-        let pubkey2 = solana_sdk::pubkey::new_rand();
-        let pubkey3 = solana_sdk::pubkey::new_rand();
+        let pubkey0 = safecoin_sdk::pubkey::new_rand();
+        let pubkey1 = safecoin_sdk::pubkey::new_rand();
+        let pubkey2 = safecoin_sdk::pubkey::new_rand();
+        let pubkey3 = safecoin_sdk::pubkey::new_rand();
         let message = Message {
             header: MessageHeader {
                 num_required_signatures: 2,

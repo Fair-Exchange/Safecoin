@@ -1,4 +1,4 @@
-use solana_sdk::pubkey::Pubkey;
+use safecoin_sdk::pubkey::Pubkey;
 use std::collections::HashSet;
 
 #[derive(Default)]
@@ -57,7 +57,7 @@ mod test {
         let total_epoch_stake = 10;
         let mut vote_stake_tracker = VoteStakeTracker::default();
         for i in 0..10 {
-            let pubkey = solana_sdk::pubkey::new_rand();
+            let pubkey = safecoin_sdk::pubkey::new_rand();
             let (is_confirmed_thresholds, is_new) = vote_stake_tracker.add_vote_pubkey(
                 pubkey,
                 1,

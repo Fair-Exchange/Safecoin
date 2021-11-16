@@ -9,7 +9,7 @@ use solana_ledger::{
     entry::{create_ticks, Entry},
     get_tmp_ledger_path,
 };
-use solana_sdk::{clock::Slot, hash::Hash};
+use safecoin_sdk::{clock::Slot, hash::Hash};
 use std::path::Path;
 use test::Bencher;
 

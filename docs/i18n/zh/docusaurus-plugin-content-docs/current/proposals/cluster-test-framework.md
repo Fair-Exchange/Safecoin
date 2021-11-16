@@ -24,7 +24,7 @@ CTF 的目标是提供一个不论该组部署在何处和如何部署的情况�
 
 ```text
 use crate::contact_info::ContactInfo;
-use solana_sdk::signature::{Keypair, Signer};
+use safecoin_sdk::signature::{Keypair, Signer};
 pub fn test_this_behavior(
     entry_point_info: &ContactInfo,
     funding_keypair: &Keypair,

@@ -67,7 +67,7 @@ pub enum UpgradeableLoaderInstruction {
     ///      authority
     ///   4. [] Rent sysvar.
     ///   5. [] Clock sysvar.
-    ///   6. [] System program (`solana_sdk::system_program::id()`).
+    ///   6. [] System program (`safecoin_sdk::system_program::id()`).
     ///   7. [signer] The program's authority
     DeployWithMaxDataLen {
         /// Maximum length that the program can be upgraded to.
@@ -112,8 +112,12 @@ pub enum UpgradeableLoaderInstruction {
     /// withdraws all the lamports
     ///
     /// # Account references
-    ///   0. `[writable]` The account to close.
+    ///   0. `[writable]` The account to close, if closing a program must be the
+    ///      ProgramData account.
     ///   1. `[writable]` The account to deposit the closed account's lamports.
-    ///   2. `[signer]` The account's authority.
+    ///   2. `[signer]` The account's authority, Optional, required for
+    ///      initialized accounts.
+    ///   3. `[writable]` The associated Program account if the account to close
+    ///      is a ProgramData account.
     Close,
 }

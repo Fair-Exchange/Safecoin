@@ -1,18 +1,23 @@
 use bincode::serialize;
 use jsonrpc_core::futures::StreamExt;
 use jsonrpc_core_client::transports::ws;
+
 use log::*;
 use reqwest::{self, header::CONTENT_TYPE};
 use serde_json::{json, Value};
 use safecoin_account_decoder::UiAccount;
 use safecoin_client::{
+    client_error::{ClientErrorKind, Result as ClientResult},
     rpc_client::RpcClient,
     rpc_config::{RpcAccountInfoConfig, RpcSignatureSubscribeConfig},
-    rpc_response::{Response, RpcSignatureResult, SlotUpdate},
+    rpc_request::RpcError,
+    rpc_response::{Response as RpcResponse, RpcSignatureResult, SlotUpdate},
     tpu_client::{TpuClient, TpuClientConfig},
 };
-use solana_core::{rpc_pubsub::gen_client::Client as PubsubClient, test_validator::TestValidator};
-use solana_sdk::{
+use safecoin_core::test_validator::TestValidator;
+use solana_rpc::rpc_pubsub::gen_client::Client as PubsubClient;
+
+use safecoin_sdk::{
     commitment_config::CommitmentConfig,
     hash::Hash,
     pubkey::Pubkey,
@@ -20,6 +25,8 @@ use solana_sdk::{
     system_transaction,
     transaction::Transaction,
 };
+use solana_streamer::socket::SocketAddrSpace;
+use safecoin_transaction_status::TransactionStatus;
 use std::{
     collections::HashSet,
     net::UdpSocket,
@@ -56,10 +63,11 @@ fn test_rpc_send_tx() {
     solana_logger::setup();
 
     let alice = Keypair::new();
-    let test_validator = TestValidator::with_no_fees(alice.pubkey(), None);
+    let test_validator =
+        TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
     let rpc_url = test_validator.rpc_url();
 
-    let bob_pubkey = solana_sdk::pubkey::new_rand();
+    let bob_pubkey = safecoin_sdk::pubkey::new_rand();
 
     let req = json_req!("getRecentBlockhash", json!([]));
     let json = post_rpc(req, &rpc_url);
@@ -81,20 +89,24 @@ fn test_rpc_send_tx() {
 
     let mut confirmed_tx = false;
 
-    let request = json_req!("confirmTransaction", [signature]);
+    let request = json_req!("getSignatureStatuses", [[signature]]);
 
-    for _ in 0..solana_sdk::clock::DEFAULT_TICKS_PER_SLOT {
+    for _ in 0..safecoin_sdk::clock::DEFAULT_TICKS_PER_SLOT {
         let json = post_rpc(request.clone(), &rpc_url);
 
-        if true == json["result"]["value"] {
-            confirmed_tx = true;
-            break;
+        let result: Option<TransactionStatus> =
+            serde_json::from_value(json["result"]["value"][0].clone()).unwrap();
+        if let Some(result) = result.as_ref() {
+            if result.err.is_none() {
+                confirmed_tx = true;
+                break;
+            }
         }
 
         sleep(Duration::from_millis(500));
     }
 
-    assert_eq!(confirmed_tx, true);
+    assert!(confirmed_tx);
 
     use safecoin_account_decoder::UiAccountEncoding;
     use safecoin_client::rpc_config::RpcAccountInfoConfig;
@@ -116,10 +128,11 @@ fn test_rpc_invalid_requests() {
     solana_logger::setup();
 
     let alice = Keypair::new();
-    let test_validator = TestValidator::with_no_fees(alice.pubkey(), None);
+    let test_validator =
+        TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
     let rpc_url = test_validator.rpc_url();
 
-    let bob_pubkey = solana_sdk::pubkey::new_rand();
+    let bob_pubkey = safecoin_sdk::pubkey::new_rand();
 
     // test invalid get_balance request
     let req = json_req!("getBalance", json!(["invalid9999"]));
@@ -147,7 +160,8 @@ fn test_rpc_invalid_requests() {
 fn test_rpc_slot_updates() {
     solana_logger::setup();
 
-    let test_validator = TestValidator::with_no_fees(Pubkey::new_unique(), None);
+    let test_validator =
+        TestValidator::with_no_fees(Pubkey::new_unique(), None, SocketAddrSpace::Unspecified);
 
     // Create the pub sub runtime
     let rt = Runtime::new().unwrap();
@@ -212,7 +226,8 @@ fn test_rpc_subscriptions() {
     solana_logger::setup();
 
     let alice = Keypair::new();
-    let test_validator = TestValidator::with_no_fees(alice.pubkey(), None);
+    let test_validator =
+        TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
 
     let transactions_socket = UdpSocket::bind("0.0.0.0:0").unwrap();
     transactions_socket.connect(test_validator.tpu()).unwrap();
@@ -225,7 +240,7 @@ fn test_rpc_subscriptions() {
         .map(|_| {
             system_transaction::transfer(
                 &alice,
-                &solana_sdk::pubkey::new_rand(),
+                &safecoin_sdk::pubkey::new_rand(),
                 1,
                 recent_blockhash,
             )
@@ -243,9 +258,9 @@ fn test_rpc_subscriptions() {
     // Track when subscriptions are ready
     let (ready_sender, ready_receiver) = channel::<()>();
     // Track account notifications are received
-    let (account_sender, account_receiver) = channel::<Response<UiAccount>>();
+    let (account_sender, account_receiver) = channel::<RpcResponse<UiAccount>>();
     // Track when status notifications are received
-    let (status_sender, status_receiver) = channel::<(String, Response<RpcSignatureResult>)>();
+    let (status_sender, status_receiver) = channel::<(String, RpcResponse<RpcSignatureResult>)>();
 
     // Create the pub sub runtime
     let rt = Runtime::new().unwrap();
@@ -379,7 +394,8 @@ fn test_rpc_subscriptions() {
 fn test_tpu_send_transaction() {
     let mint_keypair = Keypair::new();
     let mint_pubkey = mint_keypair.pubkey();
-    let test_validator = TestValidator::with_no_fees(mint_pubkey, None);
+    let test_validator =
+        TestValidator::with_no_fees(mint_pubkey, None, SocketAddrSpace::Unspecified);
     let rpc_client = Arc::new(RpcClient::new_with_commitment(
         test_validator.rpc_url(),
         CommitmentConfig::processed(),
@@ -405,6 +421,37 @@ fn test_tpu_send_transaction() {
         let statuses = rpc_client.get_signature_statuses(&signatures).unwrap();
         if statuses.value.get(0).is_some() {
             return;
+        }
+    }
+}
+
+#[test]
+fn deserialize_rpc_error() -> ClientResult<()> {
+    solana_logger::setup();
+
+    let alice = Keypair::new();
+    let validator = TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
+    let rpc_client = RpcClient::new(validator.rpc_url());
+
+    let bob = Keypair::new();
+    let lamports = 50;
+    let (recent_blockhash, _) = rpc_client.get_recent_blockhash()?;
+    let mut tx = system_transaction::transfer(&alice, &bob.pubkey(), lamports, recent_blockhash);
+
+    // This will cause an error
+    tx.signatures.clear();
+
+    let err = rpc_client.send_transaction(&tx);
+    let err = err.unwrap_err();
+
+    match err.kind {
+        ClientErrorKind::RpcError(RpcError::RpcRequestError { .. }) => {
+            // This is what used to happen
+            panic!()
+        }
+        ClientErrorKind::RpcError(RpcError::RpcResponseError { .. }) => Ok(()),
+        _ => {
+            panic!()
         }
     }
 }

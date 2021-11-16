@@ -6,7 +6,7 @@ use {
     chrono::DateTime,
     clap::ArgMatches,
     safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::UnixTimestamp,
         commitment_config::CommitmentConfig,
         genesis_config::ClusterType,
@@ -16,6 +16,9 @@ use {
     },
     std::{str::FromStr, sync::Arc},
 };
+
+// Sentinel value used to indicate to write to screen instead of file
+pub const STDOUT_OUTFILE_TOKEN: &str = "-";
 
 // Return parsed values from matches at `name`
 pub fn values_of<T>(matches: &ArgMatches<'_>, name: &str) -> Option<Vec<T>>
@@ -195,7 +198,7 @@ pub fn commitment_of(matches: &ArgMatches<'_>, name: &str) -> Option<CommitmentC
 mod tests {
     use super::*;
     use clap::{App, Arg};
-    use solana_sdk::signature::write_keypair_file;
+    use safecoin_sdk::signature::write_keypair_file;
     use std::fs;
 
     fn app<'ab, 'v>() -> App<'ab, 'v> {
@@ -226,8 +229,8 @@ mod tests {
         assert_eq!(values_of(&matches, "multiple"), Some(vec![50, 39]));
         assert_eq!(values_of::<u64>(&matches, "single"), None);
 
-        let pubkey0 = solana_sdk::pubkey::new_rand();
-        let pubkey1 = solana_sdk::pubkey::new_rand();
+        let pubkey0 = safecoin_sdk::pubkey::new_rand();
+        let pubkey1 = safecoin_sdk::pubkey::new_rand();
         let matches = app().clone().get_matches_from(vec![
             "test",
             "--multiple",
@@ -249,7 +252,7 @@ mod tests {
         assert_eq!(value_of(&matches, "single"), Some(50));
         assert_eq!(value_of::<u64>(&matches, "multiple"), None);
 
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let matches = app()
             .clone()
             .get_matches_from(vec!["test", "--single", &pubkey.to_string()]);
@@ -329,8 +332,8 @@ mod tests {
 
     #[test]
     fn test_pubkeys_sigs_of() {
-        let key1 = solana_sdk::pubkey::new_rand();
-        let key2 = solana_sdk::pubkey::new_rand();
+        let key1 = safecoin_sdk::pubkey::new_rand();
+        let key2 = safecoin_sdk::pubkey::new_rand();
         let sig1 = Keypair::new().sign_message(&[0u8]);
         let sig2 = Keypair::new().sign_message(&[1u8]);
         let signer1 = format!("{}={}", key1, sig1);

@@ -1,9 +1,10 @@
 use crate::{
     clock::{Epoch, INITIAL_RENT_EPOCH},
+    lamports::LamportsError,
     pubkey::Pubkey,
 };
-use solana_program::{account_info::AccountInfo, sysvar::Sysvar};
-use std::{cell::Ref, cell::RefCell, cmp, fmt, rc::Rc};
+use safecoin_program::{account_info::AccountInfo, sysvar::Sysvar};
+use std::{cell::Ref, cell::RefCell, cmp, fmt, rc::Rc, sync::Arc};
 
 /// An Account with data that is stored on chain
 #[repr(C)]
@@ -25,22 +26,20 @@ pub struct Account {
 }
 
 /// An Account with data that is stored on chain
-/// This will become a new in-memory representation of the 'Account' struct data.
+/// This will be the in-memory representation of the 'Account' struct data.
 /// The existing 'Account' structure cannot easily change due to downstream projects.
-/// This struct will shortly rely on something like the ReadableAccount trait for access to the fields.
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Default, AbiExample)]
+#[derive(PartialEq, Eq, Clone, Default, AbiExample)]
 pub struct AccountSharedData {
     /// lamports in the account
-    pub lamports: u64,
+    lamports: u64,
     /// data held in this account
-    #[serde(with = "serde_bytes")]
-    pub data: Vec<u8>, // will be: Arc<Vec<u8>>,
+    data: Arc<Vec<u8>>,
     /// the program that owns this account. If executable, the program that loads this account.
-    pub owner: Pubkey,
+    owner: Pubkey,
     /// this account's data contains a loaded program (and is now read-only)
-    pub executable: bool,
+    executable: bool,
     /// the epoch at which this account will next owe rent
-    pub rent_epoch: Epoch,
+    rent_epoch: Epoch,
 }
 
 /// Compares two ReadableAccounts
@@ -55,10 +54,11 @@ pub fn accounts_equal<T: ReadableAccount, U: ReadableAccount>(me: &T, other: &U)
 }
 
 impl From<AccountSharedData> for Account {
-    fn from(other: AccountSharedData) -> Self {
+    fn from(mut other: AccountSharedData) -> Self {
+        let account_data = Arc::make_mut(&mut other.data);
         Self {
             lamports: other.lamports,
-            data: other.data,
+            data: std::mem::take(account_data),
             owner: other.owner,
             executable: other.executable,
             rent_epoch: other.rent_epoch,
@@ -70,7 +70,7 @@ impl From<Account> for AccountSharedData {
     fn from(other: Account) -> Self {
         Self {
             lamports: other.lamports,
-            data: other.data,
+            data: Arc::new(other.data),
             owner: other.owner,
             executable: other.executable,
             rent_epoch: other.rent_epoch,
@@ -80,8 +80,25 @@ impl From<Account> for AccountSharedData {
 
 pub trait WritableAccount: ReadableAccount {
     fn set_lamports(&mut self, lamports: u64);
+    fn checked_add_lamports(&mut self, lamports: u64) -> Result<(), LamportsError> {
+        self.set_lamports(
+            self.lamports()
+                .checked_add(lamports)
+                .ok_or(LamportsError::ArithmeticOverflow)?,
+        );
+        Ok(())
+    }
+    fn checked_sub_lamports(&mut self, lamports: u64) -> Result<(), LamportsError> {
+        self.set_lamports(
+            self.lamports()
+                .checked_sub(lamports)
+                .ok_or(LamportsError::ArithmeticUnderflow)?,
+        );
+        Ok(())
+    }
     fn data_as_mut_slice(&mut self) -> &mut [u8];
     fn set_owner(&mut self, owner: Pubkey);
+    fn copy_into_owner_from_slice(&mut self, source: &[u8]);
     fn set_executable(&mut self, executable: bool);
     fn set_rent_epoch(&mut self, epoch: Epoch);
     fn create(
@@ -95,17 +112,26 @@ pub trait WritableAccount: ReadableAccount {
 
 pub trait ReadableAccount: Sized {
     fn lamports(&self) -> u64;
-    fn data(&self) -> &Vec<u8>;
+    fn data(&self) -> &[u8];
     fn owner(&self) -> &Pubkey;
     fn executable(&self) -> bool;
     fn rent_epoch(&self) -> Epoch;
+    fn to_account_shared_data(&self) -> AccountSharedData {
+        AccountSharedData::create(
+            self.lamports(),
+            self.data().to_vec(),
+            *self.owner(),
+            self.executable(),
+            self.rent_epoch(),
+        )
+    }
 }
 
 impl ReadableAccount for Account {
     fn lamports(&self) -> u64 {
         self.lamports
     }
-    fn data(&self) -> &Vec<u8> {
+    fn data(&self) -> &[u8] {
         &self.data
     }
     fn owner(&self) -> &Pubkey {
@@ -128,6 +154,9 @@ impl WritableAccount for Account {
     }
     fn set_owner(&mut self, owner: Pubkey) {
         self.owner = owner;
+    }
+    fn copy_into_owner_from_slice(&mut self, source: &[u8]) {
+        self.owner.as_mut().copy_from_slice(source);
     }
     fn set_executable(&mut self, executable: bool) {
         self.executable = executable;
@@ -157,10 +186,14 @@ impl WritableAccount for AccountSharedData {
         self.lamports = lamports;
     }
     fn data_as_mut_slice(&mut self) -> &mut [u8] {
-        &mut self.data
+        let data = Arc::make_mut(&mut self.data);
+        &mut data[..]
     }
     fn set_owner(&mut self, owner: Pubkey) {
         self.owner = owner;
+    }
+    fn copy_into_owner_from_slice(&mut self, source: &[u8]) {
+        self.owner.as_mut().copy_from_slice(source);
     }
     fn set_executable(&mut self, executable: bool) {
         self.executable = executable;
@@ -177,7 +210,7 @@ impl WritableAccount for AccountSharedData {
     ) -> Self {
         AccountSharedData {
             lamports,
-            data,
+            data: Arc::new(data),
             owner,
             executable,
             rent_epoch,
@@ -189,7 +222,7 @@ impl ReadableAccount for AccountSharedData {
     fn lamports(&self) -> u64 {
         self.lamports
     }
-    fn data(&self) -> &Vec<u8> {
+    fn data(&self) -> &[u8] {
         &self.data
     }
     fn owner(&self) -> &Pubkey {
@@ -207,7 +240,7 @@ impl ReadableAccount for Ref<'_, AccountSharedData> {
     fn lamports(&self) -> u64 {
         self.lamports
     }
-    fn data(&self) -> &Vec<u8> {
+    fn data(&self) -> &[u8] {
         &self.data
     }
     fn owner(&self) -> &Pubkey {
@@ -225,7 +258,7 @@ impl ReadableAccount for Ref<'_, Account> {
     fn lamports(&self) -> u64 {
         self.lamports
     }
-    fn data(&self) -> &Vec<u8> {
+    fn data(&self) -> &[u8] {
         &self.data
     }
     fn owner(&self) -> &Pubkey {
@@ -397,8 +430,16 @@ impl Account {
 }
 
 impl AccountSharedData {
+    pub fn set_data_from_slice(&mut self, data: &[u8]) {
+        let len = self.data.len();
+        let len_different = len != data.len();
+        let different = len_different || data != &self.data[..];
+        if different {
+            self.data = Arc::new(data.to_vec());
+        }
+    }
     pub fn set_data(&mut self, data: Vec<u8>) {
-        self.data = data;
+        self.data = Arc::new(data);
     }
     pub fn new(lamports: u64, space: usize, owner: &Pubkey) -> Self {
         shared_new(lamports, space, owner)
@@ -461,7 +502,7 @@ pub fn create_account_with_fields<S: Sysvar>(
     (lamports, rent_epoch): InheritableAccountFields,
 ) -> Account {
     let data_len = S::size_of().max(bincode::serialized_size(sysvar).unwrap() as usize);
-    let mut account = Account::new(lamports, data_len, &solana_program::sysvar::id());
+    let mut account = Account::new(lamports, data_len, &safecoin_program::sysvar::id());
     to_account::<S, Account>(sysvar, &mut account).unwrap();
     account.rent_epoch = rent_epoch;
     account
@@ -509,7 +550,7 @@ pub fn to_account<S: Sysvar, T: WritableAccount>(sysvar: &S, account: &mut T) ->
 
 /// Return the information required to construct an `AccountInfo`.  Used by the
 /// `AccountInfo` conversion implementations.
-impl solana_program::account_info::Account for Account {
+impl safecoin_program::account_info::Account for Account {
     fn get(&mut self) -> (&mut u64, &mut [u8], &Pubkey, bool, Epoch) {
         (
             &mut self.lamports,
@@ -547,7 +588,7 @@ pub mod tests {
     use super::*;
 
     fn make_two_accounts(key: &Pubkey) -> (Account, AccountSharedData) {
-        let mut account1 = Account::new(1, 2, &key);
+        let mut account1 = Account::new(1, 2, key);
         account1.executable = true;
         account1.rent_epoch = 4;
         let mut account2 = AccountSharedData::new(1, 2, key);
@@ -555,6 +596,38 @@ pub mod tests {
         account2.rent_epoch = 4;
         assert!(accounts_equal(&account1, &account2));
         (account1, account2)
+    }
+
+    #[test]
+    fn test_account_data_copy_as_slice() {
+        let key = Pubkey::new_unique();
+        let key2 = Pubkey::new_unique();
+        let (mut account1, mut account2) = make_two_accounts(&key);
+        account1.copy_into_owner_from_slice(key2.as_ref());
+        account2.copy_into_owner_from_slice(key2.as_ref());
+        assert!(accounts_equal(&account1, &account2));
+        assert_eq!(account1.owner(), &key2);
+    }
+
+    #[test]
+    fn test_account_set_data_from_slice() {
+        let key = Pubkey::new_unique();
+        let (_, mut account) = make_two_accounts(&key);
+        assert_eq!(account.data(), &vec![0, 0]);
+        account.set_data_from_slice(&[1, 2]);
+        assert_eq!(account.data(), &vec![1, 2]);
+        account.set_data_from_slice(&[1, 2, 3]);
+        assert_eq!(account.data(), &vec![1, 2, 3]);
+        account.set_data_from_slice(&[4, 5, 6]);
+        assert_eq!(account.data(), &vec![4, 5, 6]);
+        account.set_data_from_slice(&[4, 5, 6, 0]);
+        assert_eq!(account.data(), &vec![4, 5, 6, 0]);
+        account.set_data_from_slice(&[]);
+        assert_eq!(account.data().len(), 0);
+        account.set_data_from_slice(&[44]);
+        assert_eq!(account.data(), &vec![44]);
+        account.set_data_from_slice(&[44]);
+        assert_eq!(account.data(), &vec![44]);
     }
 
     #[test]
@@ -605,6 +678,17 @@ pub mod tests {
     }
 
     #[test]
+    fn test_to_account_shared_data() {
+        let key = Pubkey::new_unique();
+        let (account1, account2) = make_two_accounts(&key);
+        assert!(accounts_equal(&account1, &account2));
+        let account3 = account1.to_account_shared_data();
+        let account4 = account2.to_account_shared_data();
+        assert!(accounts_equal(&account1, &account3));
+        assert!(accounts_equal(&account1, &account4));
+    }
+
+    #[test]
     fn test_account_shared_data() {
         let key = Pubkey::new_unique();
         let (account1, account2) = make_two_accounts(&key);
@@ -616,8 +700,8 @@ pub mod tests {
         assert_eq!(account.data().len(), 2);
         assert_eq!(account.owner, key);
         assert_eq!(account.owner(), &key);
-        assert_eq!(account.executable, true);
-        assert_eq!(account.executable(), true);
+        assert!(account.executable);
+        assert!(account.executable());
         assert_eq!(account.rent_epoch, 4);
         assert_eq!(account.rent_epoch(), 4);
         let account = account2;
@@ -627,8 +711,8 @@ pub mod tests {
         assert_eq!(account.data().len(), 2);
         assert_eq!(account.owner, key);
         assert_eq!(account.owner(), &key);
-        assert_eq!(account.executable, true);
-        assert_eq!(account.executable(), true);
+        assert!(account.executable);
+        assert!(account.executable());
         assert_eq!(account.rent_epoch, 4);
         assert_eq!(account.rent_epoch(), 4);
     }
@@ -663,6 +747,53 @@ pub mod tests {
     }
 
     #[test]
+    fn test_account_add_sub_lamports() {
+        let key = Pubkey::new_unique();
+        let (mut account1, mut account2) = make_two_accounts(&key);
+        assert!(accounts_equal(&account1, &account2));
+        account1.checked_add_lamports(1).unwrap();
+        account2.checked_add_lamports(1).unwrap();
+        assert!(accounts_equal(&account1, &account2));
+        assert_eq!(account1.lamports(), 2);
+        account1.checked_sub_lamports(2).unwrap();
+        account2.checked_sub_lamports(2).unwrap();
+        assert!(accounts_equal(&account1, &account2));
+        assert_eq!(account1.lamports(), 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Overflow")]
+    fn test_account_checked_add_lamports_overflow() {
+        let key = Pubkey::new_unique();
+        let (mut account1, _account2) = make_two_accounts(&key);
+        account1.checked_add_lamports(u64::MAX).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Underflow")]
+    fn test_account_checked_sub_lamports_underflow() {
+        let key = Pubkey::new_unique();
+        let (mut account1, _account2) = make_two_accounts(&key);
+        account1.checked_sub_lamports(u64::MAX).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Overflow")]
+    fn test_account_checked_add_lamports_overflow2() {
+        let key = Pubkey::new_unique();
+        let (_account1, mut account2) = make_two_accounts(&key);
+        account2.checked_add_lamports(u64::MAX).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Underflow")]
+    fn test_account_checked_sub_lamports_underflow2() {
+        let key = Pubkey::new_unique();
+        let (_account1, mut account2) = make_two_accounts(&key);
+        account2.checked_sub_lamports(u64::MAX).unwrap();
+    }
+
+    #[test]
     #[allow(clippy::redundant_clone)]
     fn test_account_shared_data_all_fields() {
         let key = Pubkey::new_unique();
@@ -679,15 +810,15 @@ pub mod tests {
             for pass in 0..4 {
                 if field_index == 0 {
                     if pass == 0 {
-                        account1.lamports += 1;
+                        account1.checked_add_lamports(1).unwrap();
                     } else if pass == 1 {
-                        account_expected.lamports += 1;
+                        account_expected.checked_add_lamports(1).unwrap();
                         account2.set_lamports(account2.lamports + 1);
                     } else if pass == 2 {
                         account1.set_lamports(account1.lamports + 1);
                     } else if pass == 3 {
-                        account_expected.lamports += 1;
-                        account2.lamports += 1;
+                        account_expected.checked_add_lamports(1).unwrap();
+                        account2.checked_add_lamports(1).unwrap();
                     }
                 } else if field_index == 1 {
                     if pass == 0 {
@@ -699,7 +830,7 @@ pub mod tests {
                         account1.data_as_mut_slice()[0] = account1.data[0] + 1;
                     } else if pass == 3 {
                         account_expected.data[0] += 1;
-                        account2.data[0] += 1;
+                        account2.data_as_mut_slice()[0] += 1;
                     }
                 } else if field_index == 2 {
                     if pass == 0 {

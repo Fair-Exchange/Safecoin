@@ -1,13 +1,7 @@
 use crate::{
-    cluster_info::{ClusterInfo, GOSSIP_SLEEP_MILLIS},
-    crds::Cursor,
-    crds_value::CrdsValueLabel,
     optimistic_confirmation_verifier::OptimisticConfirmationVerifier,
-    optimistically_confirmed_bank_tracker::{BankNotification, BankNotificationSender},
-    poh_recorder::PohRecorder,
     replay_stage::DUPLICATE_THRESHOLD,
     result::{Error, Result},
-    rpc_subscriptions::RpcSubscriptions,
     sigverify,
     verified_vote_packets::VerifiedVotePackets,
     vote_stake_tracker::VoteStakeTracker,
@@ -17,9 +11,19 @@ use crossbeam_channel::{
 };
 use itertools::izip;
 use log::*;
+use safecoin_gossip::{
+    cluster_info::{ClusterInfo, GOSSIP_SLEEP_MILLIS},
+    crds::Cursor,
+    crds_value::CrdsValueLabel,
+};
 use solana_ledger::blockstore::Blockstore;
 use solana_metrics::inc_new_counter_debug;
 use solana_perf::packet::{self, Packets};
+use solana_poh::poh_recorder::PohRecorder;
+use solana_rpc::{
+    optimistically_confirmed_bank_tracker::{BankNotification, BankNotificationSender},
+    rpc_subscriptions::RpcSubscriptions,
+};
 use solana_runtime::{
     bank::Bank,
     bank_forks::BankForks,
@@ -28,8 +32,8 @@ use solana_runtime::{
     stakes::Stakes,
     vote_sender_types::{ReplayVoteReceiver, ReplayedVote},
 };
-use solana_sdk::{
-    clock::{Epoch, Slot, DEFAULT_MS_PER_SLOT},
+use safecoin_sdk::{
+    clock::{Epoch, Slot, DEFAULT_MS_PER_SLOT, DEFAULT_TICKS_PER_SLOT},
     epoch_schedule::EpochSchedule,
     hash::Hash,
     pubkey::Pubkey,
@@ -106,7 +110,7 @@ impl VoteTracker {
             epoch_schedule: *root_bank.epoch_schedule(),
             ..VoteTracker::default()
         };
-        vote_tracker.progress_with_new_root_bank(&root_bank);
+        vote_tracker.progress_with_new_root_bank(root_bank);
         assert_eq!(
             *vote_tracker.leader_schedule_epoch.read().unwrap(),
             root_bank.get_leader_schedule_epoch(root_bank.slot())
@@ -347,7 +351,10 @@ impl ClusterInfoVoteListener {
         labels: Vec<CrdsValueLabel>,
     ) -> (Vec<Transaction>, Vec<(CrdsValueLabel, Slot, Packets)>) {
         let mut msgs = packet::to_packets_chunked(&votes, 1);
-        sigverify::ed25519_verify_cpu(&mut msgs);
+
+        // Votes should already be filtered by this point.
+        let reject_non_vote = false;
+        sigverify::ed25519_verify_cpu(&mut msgs, reject_non_vote);
 
         let (vote_txs, packets) = izip!(labels.into_iter(), votes.into_iter(), msgs,)
             .filter_map(|(label, vote, packet)| {
@@ -380,15 +387,20 @@ impl ClusterInfoVoteListener {
                 return Ok(());
             }
 
+            let would_be_leader = poh_recorder
+                .lock()
+                .unwrap()
+                .would_be_leader(20 * DEFAULT_TICKS_PER_SLOT);
             if let Err(e) = verified_vote_packets.receive_and_process_vote_packets(
                 &verified_vote_label_packets_receiver,
                 &mut update_version,
+                would_be_leader,
             ) {
                 match e {
-                    Error::CrossbeamRecvTimeoutError(RecvTimeoutError::Disconnected) => {
+                    Error::CrossbeamRecvTimeout(RecvTimeoutError::Disconnected) => {
                         return Ok(());
                     }
-                    Error::CrossbeamRecvTimeoutError(RecvTimeoutError::Timeout) => (),
+                    Error::CrossbeamRecvTimeout(RecvTimeoutError::Timeout) => (),
                     _ => {
                         error!("thread {:?} error {:?}", thread::current().name(), e);
                     }
@@ -470,8 +482,8 @@ impl ClusterInfoVoteListener {
                         .add_new_optimistic_confirmed_slots(confirmed_slots.clone());
                 }
                 Err(e) => match e {
-                    Error::CrossbeamRecvTimeoutError(RecvTimeoutError::Timeout)
-                    | Error::ReadyTimeoutError => (),
+                    Error::CrossbeamRecvTimeout(RecvTimeoutError::Timeout)
+                    | Error::ReadyTimeout => (),
                     _ => {
                         error!("thread {:?} error {:?}", thread::current().name(), e);
                     }
@@ -594,7 +606,7 @@ impl ClusterInfoVoteListener {
             if slot == last_vote_slot {
                 let vote_accounts = Stakes::vote_accounts(epoch_stakes.stakes());
                 let stake = vote_accounts
-                    .get(&vote_pubkey)
+                    .get(vote_pubkey)
                     .map(|(stake, _)| *stake)
                     .unwrap_or_default();
                 let total_stake = epoch_stakes.total_stake();
@@ -683,7 +695,7 @@ impl ClusterInfoVoteListener {
         // voters trying to make votes for slots earlier than the epoch for
         // which they are authorized
         let actual_authorized_voter =
-            vote_tracker.get_authorized_voter(&vote_pubkey, *last_vote_slot);
+            vote_tracker.get_authorized_voter(vote_pubkey, *last_vote_slot);
 
         if actual_authorized_voter.is_none() {
             return false;
@@ -691,7 +703,7 @@ impl ClusterInfoVoteListener {
 
         // Voting without the correct authorized pubkey, dump the vote
         if !VoteTracker::vote_contains_authorized_voter(
-            &gossip_tx,
+            gossip_tx,
             &actual_authorized_voter.unwrap(),
         ) {
             return false;
@@ -729,7 +741,7 @@ impl ClusterInfoVoteListener {
             Self::track_new_votes_and_notify_confirmations(
                 vote,
                 &vote_pubkey,
-                &vote_tracker,
+                vote_tracker,
                 root_bank,
                 subscriptions,
                 verified_vote_sender,
@@ -824,15 +836,15 @@ impl ClusterInfoVoteListener {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank;
     use solana_perf::packet;
+    use solana_rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank;
     use solana_runtime::{
         bank::Bank,
         commitment::BlockCommitmentCache,
         genesis_utils::{self, GenesisConfigInfo, ValidatorVoteKeypairs},
         vote_sender_types::ReplayVoteSender,
     };
-    use solana_sdk::{
+    use safecoin_sdk::{
         hash::Hash,
         signature::{Keypair, Signature, Signer},
     };
@@ -936,7 +948,7 @@ mod tests {
         let (vote_tracker, bank, _, _) = setup();
 
         // Check outdated slots are purged with new root
-        let new_voter = solana_sdk::pubkey::new_rand();
+        let new_voter = safecoin_sdk::pubkey::new_rand();
         // Make separate copy so the original doesn't count toward
         // the ref count, which would prevent cleanup
         let new_voter_ = new_voter;
@@ -1522,7 +1534,7 @@ mod tests {
         let vote_tracker = VoteTracker::new(&bank);
         let optimistically_confirmed_bank =
             OptimisticallyConfirmedBank::locked_from_bank_forks_root(&bank_forks);
-        let subscriptions = Arc::new(RpcSubscriptions::new(
+        let subscriptions = Arc::new(RpcSubscriptions::new_for_tests(
             &exit,
             bank_forks,
             Arc::new(RwLock::new(BlockCommitmentCache::default())),
@@ -1641,7 +1653,7 @@ mod tests {
         let bank = bank_forks.read().unwrap().get(0).unwrap().clone();
         let optimistically_confirmed_bank =
             OptimisticallyConfirmedBank::locked_from_bank_forks_root(&bank_forks);
-        let subscriptions = Arc::new(RpcSubscriptions::new(
+        let subscriptions = Arc::new(RpcSubscriptions::new_for_tests(
             &exit,
             bank_forks,
             Arc::new(RwLock::new(BlockCommitmentCache::default())),
@@ -1712,7 +1724,7 @@ mod tests {
     fn run_test_verify_votes_1_pass(hash: Option<Hash>) {
         let vote_tx = test_vote_tx(hash);
         let votes = vec![vote_tx];
-        let labels = vec![CrdsValueLabel::Vote(0, solana_sdk::pubkey::new_rand())];
+        let labels = vec![CrdsValueLabel::Vote(0, safecoin_sdk::pubkey::new_rand())];
         let (vote_txs, packets) = ClusterInfoVoteListener::verify_votes(votes, labels);
         assert_eq!(vote_txs.len(), 1);
         verify_packets_len(&packets, 1);
@@ -1729,7 +1741,7 @@ mod tests {
         let mut bad_vote = vote_tx.clone();
         bad_vote.signatures[0] = Signature::default();
         let votes = vec![vote_tx.clone(), bad_vote, vote_tx];
-        let label = CrdsValueLabel::Vote(0, solana_sdk::pubkey::new_rand());
+        let label = CrdsValueLabel::Vote(0, safecoin_sdk::pubkey::new_rand());
         let labels: Vec<_> = (0..votes.len()).map(|_| label.clone()).collect();
         let (vote_txs, packets) = ClusterInfoVoteListener::verify_votes(votes, labels);
         assert_eq!(vote_txs.len(), 2);

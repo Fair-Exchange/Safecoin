@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-frozen-abi-macro"
-version = "1.6.25"
+version = "1.7.17"
 description = "Safecoin Frozen ABI Macro"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -16,7 +16,6 @@ proc-macro = true
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "1.0", features = ["full", "extra-traits"] }
-lazy_static = "1.4.0"
 
 [build-dependencies]
 rustc_version = "0.2"

@@ -2,7 +2,9 @@ use super::common::UnusedAccounts;
 #[cfg(all(test, RUSTC_WITH_SPECIALIZATION))]
 use safecoin_frozen_abi::abi_example::IgnoreAsHelper;
 use {super::*, safecoin_measure::measure::Measure, std::cell::RefCell};
-use crate::vote_group_gen::VoteGroupGenerator;
+
+use crate::ancestors::AncestorsForSerialization;
+
 type AccountsDbFields = super::AccountsDbFields<SerializableAccountStorageEntry>;
 
 // Serializable version of AccountStorageEntry for snapshot format
@@ -45,7 +47,7 @@ use std::sync::RwLock;
 #[derive(Clone, Deserialize)]
 pub(crate) struct DeserializableVersionedBank {
     pub(crate) blockhash_queue: BlockhashQueue,
-    pub(crate) ancestors: Ancestors,
+    pub(crate) ancestors: AncestorsForSerialization,
     pub(crate) hash: Hash,
     pub(crate) parent_hash: Hash,
     pub(crate) parent_slot: Slot,
@@ -80,17 +82,7 @@ pub(crate) struct DeserializableVersionedBank {
 }
 
 impl From<DeserializableVersionedBank> for BankFieldsToDeserialize {
-
     fn from(dvb: DeserializableVersionedBank) -> Self {
-        let xlate_map = |map: &HashMap<Epoch,EpochStakes>| -> HashMap<Epoch,VoteGroupGenerator> {
-            let mut ret : HashMap<Epoch, VoteGroupGenerator> = HashMap::new();
-            for (key, es ) in map.iter() {
-                let vgr: VoteGroupGenerator = es.make_group_generator();
-                ret.insert(*key, vgr);
-            }
-            ret
-        };
-        let new_map = xlate_map(&dvb.epoch_stakes);
         BankFieldsToDeserialize {
             blockhash_queue: dvb.blockhash_queue,
             ancestors: dvb.ancestors,
@@ -123,18 +115,16 @@ impl From<DeserializableVersionedBank> for BankFieldsToDeserialize {
             stakes: dvb.stakes,
             epoch_stakes: dvb.epoch_stakes,
             is_delta: dvb.is_delta,
-            group_generators: new_map,
         }
     }
 }
-
 
 // Serializable version of Bank, not Deserializable to avoid cloning by using refs.
 // Sync fields with DeserializableVersionedBank!
 #[derive(Serialize)]
 pub(crate) struct SerializableVersionedBank<'a> {
     pub(crate) blockhash_queue: &'a RwLock<BlockhashQueue>,
-    pub(crate) ancestors: &'a Ancestors,
+    pub(crate) ancestors: &'a AncestorsForSerialization,
     pub(crate) hash: Hash,
     pub(crate) parent_hash: Hash,
     pub(crate) parent_slot: Slot,
@@ -225,8 +215,10 @@ impl<'a> TypeContext<'a> for Context {
     where
         Self: std::marker::Sized,
     {
+        let ancestors = HashMap::from(&serializable_bank.bank.ancestors);
+        let fields = serializable_bank.bank.get_fields_to_serialize(&ancestors);
         (
-            SerializableVersionedBank::from(serializable_bank.bank.get_fields_to_serialize()),
+            SerializableVersionedBank::from(fields),
             SerializableAccountsDb::<'a, Self> {
                 accounts_db: &*serializable_bank.bank.rc.accounts.accounts_db,
                 slot: serializable_bank.bank.rc.slot,

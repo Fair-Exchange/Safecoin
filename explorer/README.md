@@ -1,5 +1,5 @@
 <p align="center">
-    <img alt="Safecoin" src="https://i.imgur.com/OMnvVEz.png" width="250" />
+    <img alt="Safecoin" src="https://i.imgur.com/IKyzQ6T.png" width="250" />
 </p>
 
 # Safecoin Explorer

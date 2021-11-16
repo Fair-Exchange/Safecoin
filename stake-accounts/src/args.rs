@@ -1,7 +1,7 @@
 use clap::ArgMatches;
 use safecoin_clap_utils::keypair::{pubkey_from_path, signer_from_path};
 use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
-use solana_sdk::{
+use safecoin_sdk::{
     clock::{Epoch, UnixTimestamp},
     pubkey::Pubkey,
     signature::Signer,
@@ -272,15 +272,15 @@ pub(crate) fn resolve_command(
             Ok(Command::Balance(resolved_args))
         }
         Command::Authorize(args) => {
-            let resolved_args = resolve_authorize_args(&mut wallet_manager, &args)?;
+            let resolved_args = resolve_authorize_args(&mut wallet_manager, args)?;
             Ok(Command::Authorize(resolved_args))
         }
         Command::SetLockup(args) => {
-            let resolved_args = resolve_set_lockup_args(&mut wallet_manager, &args)?;
+            let resolved_args = resolve_set_lockup_args(&mut wallet_manager, args)?;
             Ok(Command::SetLockup(resolved_args))
         }
         Command::Rebase(args) => {
-            let resolved_args = resolve_rebase_args(&mut wallet_manager, &args)?;
+            let resolved_args = resolve_rebase_args(&mut wallet_manager, args)?;
             Ok(Command::Rebase(resolved_args))
         }
         Command::Move(args) => {

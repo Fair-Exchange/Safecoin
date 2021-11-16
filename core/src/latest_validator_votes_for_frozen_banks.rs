@@ -1,5 +1,5 @@
 use crate::heaviest_subtree_fork_choice::SlotHashKey;
-use solana_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey};
+use safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey};
 use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Default)]
@@ -98,6 +98,10 @@ impl LatestValidatorVotesForFrozenBanks {
                     .collect::<Vec<(Pubkey, SlotHashKey)>>()
             })
             .collect()
+    }
+
+    pub(crate) fn max_gossip_frozen_votes(&self) -> &HashMap<Pubkey, (Slot, Vec<Hash>)> {
+        &self.max_gossip_frozen_votes
     }
 
     #[cfg(test)]

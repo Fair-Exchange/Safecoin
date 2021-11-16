@@ -1,7 +1,6 @@
-use crate::{stakes::Stakes, vote_account::ArcVoteAccount,commitment::VOTE_GROUP_COUNT,vote_group_gen::VoteGroupGenerator};
+use crate::{stakes::Stakes, vote_account::ArcVoteAccount};
 use serde::{Deserialize, Serialize};
-use solana_sdk::{clock::Epoch, pubkey::Pubkey};
-
+use safecoin_sdk::{clock::Epoch, pubkey::Pubkey};
 use std::{collections::HashMap, sync::Arc};
 
 pub type NodeIdToVoteAccounts = HashMap<Pubkey, NodeVoteAccounts>;
@@ -25,24 +24,14 @@ impl EpochStakes {
     pub fn new(stakes: &Stakes, leader_schedule_epoch: Epoch) -> Self {
         let epoch_vote_accounts = Stakes::vote_accounts(stakes);
         let (total_stake, node_id_to_vote_accounts, epoch_authorized_voters) =
-            Self::parse_epoch_vote_accounts(&epoch_vote_accounts, leader_schedule_epoch);  
-            Self {
+            Self::parse_epoch_vote_accounts(epoch_vote_accounts, leader_schedule_epoch);
+        Self {
             stakes: Arc::new(stakes.clone()),
             total_stake,
             node_id_to_vote_accounts: Arc::new(node_id_to_vote_accounts),
             epoch_authorized_voters: Arc::new(epoch_authorized_voters),
-       }
+        }
     }
-
-    pub fn make_group_generator (&self) -> VoteGroupGenerator {
-        let group_size = 
-        if self.epoch_authorized_voters.len() < VOTE_GROUP_COUNT 
-            { self.epoch_authorized_voters.len()} 
-        else 
-            { VOTE_GROUP_COUNT }; 
-        VoteGroupGenerator::new(&self.epoch_authorized_voters,group_size) 
-    }
-
 
     pub fn stakes(&self) -> &Stakes {
         &self.stakes
@@ -127,7 +116,7 @@ impl EpochStakes {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use solana_sdk::account::AccountSharedData;
+    use safecoin_sdk::account::AccountSharedData;
     use solana_vote_program::vote_state::create_account_with_authorized;
     use std::iter;
 
@@ -144,13 +133,13 @@ pub(crate) mod tests {
         // Create some vote accounts for each pubkey
         let vote_accounts_map: HashMap<Pubkey, Vec<VoteAccountInfo>> = (0..10)
             .map(|_| {
-                let node_id = solana_sdk::pubkey::new_rand();
+                let node_id = safecoin_sdk::pubkey::new_rand();
                 (
                     node_id,
                     iter::repeat_with(|| {
-                        let authorized_voter = solana_sdk::pubkey::new_rand();
+                        let authorized_voter = safecoin_sdk::pubkey::new_rand();
                         VoteAccountInfo {
-                            vote_account: solana_sdk::pubkey::new_rand(),
+                            vote_account: safecoin_sdk::pubkey::new_rand(),
                             account: create_account_with_authorized(
                                 &node_id,
                                 &authorized_voter,

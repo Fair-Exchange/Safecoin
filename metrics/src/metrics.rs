@@ -4,7 +4,7 @@ use crate::{counter::CounterPoint, datapoint::DataPoint};
 use gethostname::gethostname;
 use lazy_static::lazy_static;
 use log::*;
-use solana_sdk::hash::hash;
+use safecoin_sdk::hash::hash;
 use std::{
     collections::HashMap,
     convert::Into,

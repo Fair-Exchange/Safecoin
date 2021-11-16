@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-logger"
-version = "1.6.25"
+version = "1.7.17"
 description = "Safecoin Logger"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"

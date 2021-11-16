@@ -1,11 +1,9 @@
-use solana_sdk::{
-    instruction::InstructionError, keyed_account::KeyedAccount, process_instruction::InvokeContext,
-    pubkey::Pubkey,
+use safecoin_sdk::{
+    instruction::InstructionError, process_instruction::InvokeContext, pubkey::Pubkey,
 };
 
 pub fn process_instruction(
     _program_id: &Pubkey,
-    _keyed_accounts: &[KeyedAccount],
     _data: &[u8],
     _invoke_context: &mut dyn InvokeContext,
 ) -> Result<(), InstructionError> {
@@ -16,7 +14,7 @@ pub fn process_instruction(
 #[cfg(test)]
 pub mod test {
     use rand::{thread_rng, Rng};
-    use solana_sdk::{
+    use safecoin_sdk::{
         hash::Hash,
         secp256k1_instruction::{
             new_secp256k1_instruction, SecpSignatureOffsets, SIGNATURE_OFFSETS_SERIALIZED_SIZE,

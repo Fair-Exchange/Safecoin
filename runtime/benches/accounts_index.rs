@@ -7,7 +7,7 @@ use solana_runtime::{
     accounts_db::AccountInfo,
     accounts_index::{AccountSecondaryIndexes, AccountsIndex},
 };
-use solana_sdk::pubkey::{self, Pubkey};
+use safecoin_sdk::pubkey::{self, Pubkey};
 use test::Bencher;
 
 #[bench]

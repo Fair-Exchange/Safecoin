@@ -1,39 +1,22 @@
+#![allow(clippy::integer_arithmetic)]
 //! Defines a composable Instruction type and a memory-efficient CompiledInstruction.
 
 use crate::sanitize::Sanitize;
-use crate::{pubkey::Pubkey, short_vec,clock::Slot,hash::Hash};
+use crate::{pubkey::Pubkey, short_vec};
 use bincode::serialize;
 use borsh::BorshSerialize;
 use serde::Serialize;
 use thiserror::Error;
 
-pub trait VoterGroup {
-    fn in_group(&self,slot: Slot,hash : Hash, test_key: Pubkey) -> bool ;
-}
-#[derive(Debug, Clone)]
-pub struct MockVoterGrp {
-    pub a : u8,
-}
-
-impl VoterGroup for MockVoterGrp {
-    fn in_group(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
-        true
-    }
-}
-impl Default for MockVoterGrp {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl MockVoterGrp {
-    pub fn new() -> Self {
-        MockVoterGrp {
-            a: 1,
-        }
-    }
-}
-
 /// Reasons the runtime might have rejected an instruction.
+///
+/// Instructions errors are included in the bank hashes and therefore are
+/// included as part of the transaction results when determining consensus.
+/// Because of this, members of this enum must not be removed, but new ones can
+/// be added.  Also, it is crucial that meta-information if any that comes along
+/// with an error be consistent across software versions.  For example, it is
+/// dangerous to include error strings from 3rd party crates because they could
+/// change at any time and changes to them are difficult to detect.
 #[derive(
     Serialize, Deserialize, Debug, Error, PartialEq, Eq, Clone, AbiExample, AbiEnumVisitor,
 )]
@@ -222,6 +205,14 @@ pub enum InstructionError {
     IncorrectAuthority,
 
     /// Failed to serialize or deserialize account data
+    ///
+    /// Warning: This error should never be emitted by the runtime.
+    ///
+    /// This error includes strings from the underlying 3rd party Borsh crate
+    /// which can be dangerous beause the error strings could change across
+    /// Borsh versions. Only programs can use this error because they are
+    /// consistent across Safecoin software versions.
+    ///
     #[error("Failed to serialize or deserialize account data: {0}")]
     BorshIoError(String),
 
@@ -244,6 +235,8 @@ pub enum InstructionError {
     /// Illegal account owner
     #[error("Provided owner is not allowed")]
     IllegalOwner,
+    // Note: For any new error added here an equivilent ProgramError and it's
+    // conversions must also be added
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

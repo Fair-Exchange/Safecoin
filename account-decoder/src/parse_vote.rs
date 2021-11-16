@@ -1,5 +1,5 @@
 use crate::{parse_account_data::ParseAccountError, StringAmount};
-use solana_sdk::{
+use safecoin_sdk::{
     clock::{Epoch, Slot},
     pubkey::Pubkey,
 };

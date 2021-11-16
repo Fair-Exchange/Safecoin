@@ -2,7 +2,7 @@
  * @brief Example C-based BPF program that exercises duplicate keyed accounts
  * passed to it
  */
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 /**
  * Custom error for when input serialization fails

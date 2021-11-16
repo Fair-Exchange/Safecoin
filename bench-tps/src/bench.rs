@@ -2,11 +2,11 @@ use crate::cli::Config;
 use log::*;
 use rayon::prelude::*;
 use safecoin_client::perf_utils::{sample_txs, SampleStats};
-use solana_core::gen_keys::GenKeys;
+use safecoin_core::gen_keys::GenKeys;
 use safecoin_faucet::faucet::request_airdrop_transaction;
 use safecoin_measure::measure::Measure;
 use solana_metrics::{self, datapoint_info};
-use solana_sdk::{
+use safecoin_sdk::{
     client::Client,
     clock::{DEFAULT_S_PER_SLOT, MAX_PROCESSING_AGE},
     commitment_config::CommitmentConfig,
@@ -544,12 +544,12 @@ impl<'a> FundingTransactions<'a> for Vec<(&'a Keypair, Transaction)> {
 
             // re-sign retained to_fund_txes with updated blockhash
             self.sign(blockhash);
-            self.send(&client);
+            self.send(client);
 
             // Sleep a few slots to allow transactions to process
             sleep(Duration::from_secs(1));
 
-            self.verify(&client, to_lamports);
+            self.verify(client, to_lamports);
 
             // retry anything that seems to have dropped through cracks
             //  again since these txs are all or nothing, they're fine to
@@ -564,7 +564,7 @@ impl<'a> FundingTransactions<'a> for Vec<(&'a Keypair, Transaction)> {
         let to_fund_txs: Vec<(&Keypair, Transaction)> = to_fund
             .par_iter()
             .map(|(k, t)| {
-                let instructions = system_instruction::transfer_many(&k.pubkey(), &t);
+                let instructions = system_instruction::transfer_many(&k.pubkey(), t);
                 let message = Message::new(&instructions, Some(&k.pubkey()));
                 (*k, Transaction::new_unsigned(message))
             })
@@ -617,7 +617,7 @@ impl<'a> FundingTransactions<'a> for Vec<(&'a Keypair, Transaction)> {
                         return None;
                     }
 
-                    let verified = if verify_funding_transfer(&client, &tx, to_lamports) {
+                    let verified = if verify_funding_transfer(&client, tx, to_lamports) {
                         verified_txs.fetch_add(1, Ordering::Relaxed);
                         Some(k.pubkey())
                     } else {
@@ -733,7 +733,7 @@ pub fn airdrop_lamports<T: Client>(
         );
 
         let (blockhash, _fee_calculator) = get_recent_blockhash(client);
-        match request_airdrop_transaction(&faucet_addr, &id.pubkey(), airdrop_amount, blockhash) {
+        match request_airdrop_transaction(faucet_addr, &id.pubkey(), airdrop_amount, blockhash) {
             Ok(transaction) => {
                 let mut tries = 0;
                 loop {
@@ -927,9 +927,9 @@ mod tests {
     use super::*;
     use solana_runtime::bank::Bank;
     use solana_runtime::bank_client::BankClient;
-    use solana_sdk::client::SyncClient;
-    use solana_sdk::fee_calculator::FeeRateGovernor;
-    use solana_sdk::genesis_config::create_genesis_config;
+    use safecoin_sdk::client::SyncClient;
+    use safecoin_sdk::fee_calculator::FeeRateGovernor;
+    use safecoin_sdk::genesis_config::create_genesis_config;
 
     #[test]
     fn test_bench_tps_bank_client() {

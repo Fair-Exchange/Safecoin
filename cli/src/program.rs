@@ -14,7 +14,7 @@ use safecoin_clap_utils::{self, input_parsers::*, input_validators::*, keypair::
 use safecoin_cli_output::{
     display::new_spinner_progress_bar, CliProgram, CliProgramAccountType, CliProgramAuthority,
     CliProgramBuffer, CliProgramId, CliUpgradeableBuffer, CliUpgradeableBuffers,
-    CliUpgradeableProgram,
+    CliUpgradeableProgram, CliUpgradeableProgramClosed, CliUpgradeablePrograms,
 };
 use safecoin_client::{
     client_error::ClientErrorKind,
@@ -23,24 +23,25 @@ use safecoin_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
     rpc_request::MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS,
+    rpc_response::Fees,
     tpu_client::{TpuClient, TpuClientConfig},
 };
 use solana_rbpf::vm::{Config, Executable};
 use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
-use solana_sdk::{
+use safecoin_sdk::{
     account::Account,
     account_utils::StateMut,
     bpf_loader, bpf_loader_deprecated,
     bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-    clock::Slot,
     commitment_config::CommitmentConfig,
     instruction::Instruction,
     instruction::InstructionError,
     loader_instruction,
     message::Message,
     native_token::Safe,
+    packet::PACKET_DATA_SIZE,
     pubkey::Pubkey,
-    signature::{keypair_from_seed, read_keypair_file, Keypair, Signer},
+    signature::{keypair_from_seed, read_keypair_file, Keypair, Signature, Signer},
     signers::Signers,
     system_instruction::{self, SystemError},
     system_program,
@@ -53,13 +54,13 @@ use std::{
     error,
     fs::File,
     io::{Read, Write},
+    mem::size_of,
     path::PathBuf,
+    str::FromStr,
     sync::Arc,
     thread::sleep,
     time::Duration,
 };
-
-const DATA_CHUNK_SIZE: usize = 229; // Keep program chunks under PACKET_DATA_SIZE
 
 #[derive(Debug, PartialEq)]
 pub enum ProgramCliCommand {
@@ -94,6 +95,8 @@ pub enum ProgramCliCommand {
     Show {
         account_pubkey: Option<Pubkey>,
         authority_pubkey: Pubkey,
+        get_programs: bool,
+        get_buffers: bool,
         all: bool,
         use_lamports_unit: bool,
     },
@@ -150,7 +153,7 @@ impl ProgramSubCommands for App<'_, '_> {
                             pubkey!(Arg::with_name("program_id")
                                 .long("program-id")
                                 .value_name("PROGRAM_ID"),
-                                "Executable program's address, must be a signer for initial deploys, can be a pubkey for upgrades \
+                                "Executable program's address, must be a keypair for initial deploys, can be a pubkey for upgrades \
                                 [default: address of keypair at /path/to/program-keypair.json if present, otherwise a random address]"),
                         )
                         .arg(
@@ -282,16 +285,26 @@ impl ProgramSubCommands for App<'_, '_> {
                                 .help("Address of the buffer or program to show")
                         )
                         .arg(
+                            Arg::with_name("programs")
+                                .long("programs")
+                                .conflicts_with("account")
+                                .conflicts_with("buffers")
+                                .required_unless_one(&["account", "buffers"])
+                                .help("Show every upgradeable program that matches the authority")
+                        )
+                        .arg(
                             Arg::with_name("buffers")
                                 .long("buffers")
                                 .conflicts_with("account")
-                                .required_unless("account")
-                                .help("Show every buffer account that matches the authority")
+                                .conflicts_with("programs")
+                                .required_unless_one(&["account", "programs"])
+                                .help("Show every upgradeable buffer that matches the authority")
                         )
                         .arg(
                             Arg::with_name("all")
                                 .long("all")
                                 .conflicts_with("account")
+                                .conflicts_with("buffer_authority")
                                 .help("Show accounts for all authorities")
                         )
                         .arg(
@@ -330,29 +343,31 @@ impl ProgramSubCommands for App<'_, '_> {
                 )
                 .subcommand(
                     SubCommand::with_name("close")
-                        .about("Close an acount and withdraw all lamports")
+                        .about("Close a program or buffer account and withdraw all lamports")
                         .arg(
                             Arg::with_name("account")
                                 .index(1)
-                                .value_name("BUFFER_ACCOUNT_ADDRESS")
+                                .value_name("ACCOUNT_ADDRESS")
                                 .takes_value(true)
-                                .help("Address of the buffer account to close"),
+                                .help("Address of the program or buffer account to close"),
                         )
                         .arg(
                             Arg::with_name("buffers")
                                 .long("buffers")
                                 .conflicts_with("account")
                                 .required_unless("account")
-                                .help("Close every buffer accounts that match the authority")
+                                .help("Close all buffer accounts that match the authority")
                         )
                         .arg(
-                            Arg::with_name("buffer_authority")
-                                .long("buffer-authority")
+                            Arg::with_name("authority")
+                                .long("authority")
+                                .alias("buffer-authority")
                                 .value_name("AUTHORITY_SIGNER")
                                 .takes_value(true)
                                 .validator(is_valid_signer)
-                                .help("Authority [default: the default configured keypair]")
+                                .help("Upgrade or buffer authority [default: the default configured keypair]")
                         )
+
                         .arg(
                             pubkey!(Arg::with_name("recipient_account")
                                 .long("recipient")
@@ -366,6 +381,39 @@ impl ProgramSubCommands for App<'_, '_> {
                                 .help("Display balance in lamports instead of SAFE"),
                         ),
                 )
+        )
+        .subcommand(
+            SubCommand::with_name("deploy")
+                .about("Deploy a program")
+                .arg(
+                    Arg::with_name("program_location")
+                        .index(1)
+                        .value_name("PROGRAM_FILEPATH")
+                        .takes_value(true)
+                        .required(true)
+                        .help("/path/to/program.o"),
+                )
+                .arg(
+                    Arg::with_name("address_signer")
+                        .index(2)
+                        .value_name("PROGRAM_ADDRESS_SIGNER")
+                        .takes_value(true)
+                        .validator(is_valid_signer)
+                        .help("The signer for the desired address of the program [default: new random address]")
+                )
+                .arg(
+                    Arg::with_name("use_deprecated_loader")
+                        .long("use-deprecated-loader")
+                        .takes_value(false)
+                        .hidden(true) // Don't document this argument to discourage its use
+                        .help("Use the deprecated BPF loader")
+                )
+                .arg(
+                    Arg::with_name("allow_excessive_balance")
+                        .long("allow-excessive-deploy-account-balance")
+                        .takes_value(false)
+                        .help("Use the designated program id, even if the account already holds a large balance of SAFE")
+                ),
         )
     }
 }
@@ -539,12 +587,6 @@ pub fn parse_program_subcommand(
             }
         }
         ("show", Some(matches)) => {
-            let account_pubkey = if matches.is_present("buffers") {
-                None
-            } else {
-                pubkey_of(matches, "account")
-            };
-
             let authority_pubkey = if let Some(authority_pubkey) =
                 pubkey_of_signer(matches, "buffer_authority", wallet_manager)?
             {
@@ -557,8 +599,10 @@ pub fn parse_program_subcommand(
 
             CliCommandInfo {
                 command: CliCommand::Program(ProgramCliCommand::Show {
-                    account_pubkey,
+                    account_pubkey: pubkey_of(matches, "account"),
                     authority_pubkey,
+                    get_programs: matches.is_present("programs"),
+                    get_buffers: matches.is_present("buffers"),
                     all: matches.is_present("all"),
                     use_lamports_unit: matches.is_present("lamports"),
                 }),
@@ -590,7 +634,7 @@ pub fn parse_program_subcommand(
             };
 
             let (authority_signer, authority_pubkey) =
-                signer_of(matches, "buffer_authority", wallet_manager)?;
+                signer_of(matches, "authority", wallet_manager)?;
 
             let signer_info = default_signer.generate_unique_signers(
                 vec![
@@ -687,6 +731,8 @@ pub fn process_program_subcommand(
         ProgramCliCommand::Show {
             account_pubkey,
             authority_pubkey,
+            get_programs,
+            get_buffers,
             all,
             use_lamports_unit,
         } => process_show(
@@ -694,6 +740,8 @@ pub fn process_program_subcommand(
             config,
             *account_pubkey,
             *authority_pubkey,
+            *get_programs,
+            *get_buffers,
             *all,
             *use_lamports_unit,
         ),
@@ -767,7 +815,7 @@ fn process_program_deploy(
     };
     let upgrade_authority_signer = config.signers[upgrade_authority_signer_index];
 
-    let default_program_keypair = get_default_program_keypair(&program_location);
+    let default_program_keypair = get_default_program_keypair(program_location);
     let (program_signer, program_pubkey) = if let Some(i) = program_signer_index {
         (Some(config.signers[i]), config.signers[i].pubkey())
     } else if let Some(program_pubkey) = program_pubkey {
@@ -824,15 +872,17 @@ fn process_program_deploy(
                     false
                 } else {
                     return Err(format!(
-                        "{} is not an upgradeable loader ProgramData account",
-                        programdata_address
+                        "Program {} has been closed, use a new Program Id",
+                        program_pubkey
                     )
                     .into());
                 }
             } else {
-                return Err(
-                    format!("ProgramData account {} does not exist", programdata_address).into(),
-                );
+                return Err(format!(
+                    "Program {} has been closed, use a new Program Id",
+                    program_pubkey
+                )
+                .into());
             }
         } else {
             return Err(format!("{} is not an upgradeable program", program_pubkey).into());
@@ -843,7 +893,7 @@ fn process_program_deploy(
     };
 
     let (program_data, program_len) = if let Some(program_location) = program_location {
-        let program_data = read_and_verify_elf(&program_location)?;
+        let program_data = read_and_verify_elf(program_location)?;
         let program_len = program_data.len();
         (program_data, program_len)
     } else if buffer_provided {
@@ -886,6 +936,11 @@ fn process_program_deploy(
     )?;
 
     let result = if do_deploy {
+        if program_signer.is_none() {
+            return Err(
+                "Initial deployments require a keypair be provided for the program id".into(),
+            );
+        }
         do_process_program_write_and_deploy(
             rpc_client.clone(),
             config,
@@ -1079,24 +1134,152 @@ fn process_set_authority(
     Ok(config.output_format.formatted_string(&authority))
 }
 
+const ACCOUNT_TYPE_SIZE: usize = 4;
+const SLOT_SIZE: usize = size_of::<u64>();
+const OPTION_SIZE: usize = 1;
+const PUBKEY_LEN: usize = 32;
+
 fn get_buffers(
     rpc_client: &RpcClient,
     authority_pubkey: Option<Pubkey>,
-) -> Result<Vec<(Pubkey, Account)>, Box<dyn std::error::Error>> {
-    let mut bytes = vec![1, 0, 0, 0, 1];
-    let length = bytes.len() + 32; // Pubkey length
+    use_lamports_unit: bool,
+) -> Result<CliUpgradeableBuffers, Box<dyn std::error::Error>> {
+    let mut filters = vec![RpcFilterType::Memcmp(Memcmp {
+        offset: 0,
+        bytes: MemcmpEncodedBytes::Base58(bs58::encode(vec![1, 0, 0, 0]).into_string()),
+        encoding: None,
+    })];
     if let Some(authority_pubkey) = authority_pubkey {
-        bytes.extend_from_slice(authority_pubkey.as_ref());
+        filters.push(RpcFilterType::Memcmp(Memcmp {
+            offset: ACCOUNT_TYPE_SIZE,
+            bytes: MemcmpEncodedBytes::Base58(bs58::encode(vec![1]).into_string()),
+            encoding: None,
+        }));
+        filters.push(RpcFilterType::Memcmp(Memcmp {
+            offset: ACCOUNT_TYPE_SIZE + OPTION_SIZE,
+            bytes: MemcmpEncodedBytes::Base58(
+                bs58::encode(authority_pubkey.as_ref()).into_string(),
+            ),
+            encoding: None,
+        }));
     }
 
+    let results = get_accounts_with_filter(
+        rpc_client,
+        filters,
+        ACCOUNT_TYPE_SIZE + OPTION_SIZE + PUBKEY_LEN,
+    )?;
+
+    let mut buffers = vec![];
+    for (address, account) in results.iter() {
+        if let Ok(UpgradeableLoaderState::Buffer { authority_address }) = account.state() {
+            buffers.push(CliUpgradeableBuffer {
+                address: address.to_string(),
+                authority: authority_address
+                    .map(|pubkey| pubkey.to_string())
+                    .unwrap_or_else(|| "none".to_string()),
+                data_len: 0,
+                lamports: account.lamports,
+                use_lamports_unit,
+            });
+        } else {
+            return Err(format!("Error parsing Buffer account {}", address).into());
+        }
+    }
+    Ok(CliUpgradeableBuffers {
+        buffers,
+        use_lamports_unit,
+    })
+}
+
+fn get_programs(
+    rpc_client: &RpcClient,
+    authority_pubkey: Option<Pubkey>,
+    use_lamports_unit: bool,
+) -> Result<CliUpgradeablePrograms, Box<dyn std::error::Error>> {
+    let mut filters = vec![RpcFilterType::Memcmp(Memcmp {
+        offset: 0,
+        bytes: MemcmpEncodedBytes::Base58(bs58::encode(vec![3, 0, 0, 0]).into_string()),
+        encoding: None,
+    })];
+    if let Some(authority_pubkey) = authority_pubkey {
+        filters.push(RpcFilterType::Memcmp(Memcmp {
+            offset: ACCOUNT_TYPE_SIZE + SLOT_SIZE,
+            bytes: MemcmpEncodedBytes::Base58(bs58::encode(vec![1]).into_string()),
+            encoding: None,
+        }));
+        filters.push(RpcFilterType::Memcmp(Memcmp {
+            offset: ACCOUNT_TYPE_SIZE + SLOT_SIZE + OPTION_SIZE,
+            bytes: MemcmpEncodedBytes::Base58(
+                bs58::encode(authority_pubkey.as_ref()).into_string(),
+            ),
+            encoding: None,
+        }));
+    }
+
+    let results = get_accounts_with_filter(
+        rpc_client,
+        filters,
+        ACCOUNT_TYPE_SIZE + SLOT_SIZE + OPTION_SIZE + PUBKEY_LEN,
+    )?;
+
+    let mut programs = vec![];
+    for (programdata_address, programdata_account) in results.iter() {
+        if let Ok(UpgradeableLoaderState::ProgramData {
+            slot,
+            upgrade_authority_address,
+        }) = programdata_account.state()
+        {
+            let mut bytes = vec![2, 0, 0, 0];
+            bytes.extend_from_slice(programdata_address.as_ref());
+            let filters = vec![RpcFilterType::Memcmp(Memcmp {
+                offset: 0,
+                bytes: MemcmpEncodedBytes::Base58(bs58::encode(bytes).into_string()),
+                encoding: None,
+            })];
+
+            let results = get_accounts_with_filter(rpc_client, filters, 0)?;
+            if results.len() != 1 {
+                return Err(format!(
+                    "Error: More than one Program associated with ProgramData account {}",
+                    programdata_address
+                )
+                .into());
+            }
+            programs.push(CliUpgradeableProgram {
+                program_id: results[0].0.to_string(),
+                owner: programdata_account.owner.to_string(),
+                programdata_address: programdata_address.to_string(),
+                authority: upgrade_authority_address
+                    .map(|pubkey| pubkey.to_string())
+                    .unwrap_or_else(|| "none".to_string()),
+                last_deploy_slot: slot,
+                data_len: programdata_account.data.len()
+                    - UpgradeableLoaderState::programdata_data_offset()?,
+                lamports: programdata_account.lamports,
+                use_lamports_unit,
+            });
+        } else {
+            return Err(
+                format!("Error parsing ProgramData account {}", programdata_address).into(),
+            );
+        }
+    }
+    Ok(CliUpgradeablePrograms {
+        programs,
+        use_lamports_unit,
+    })
+}
+
+fn get_accounts_with_filter(
+    rpc_client: &RpcClient,
+    filters: Vec<RpcFilterType>,
+    length: usize,
+) -> Result<Vec<(Pubkey, Account)>, Box<dyn std::error::Error>> {
     let results = rpc_client.get_program_accounts_with_config(
         &bpf_loader_upgradeable::id(),
         RpcProgramAccountsConfig {
-            filters: Some(vec![RpcFilterType::Memcmp(Memcmp {
-                offset: 0,
-                bytes: MemcmpEncodedBytes::Binary(bs58::encode(bytes).into_string()),
-                encoding: None,
-            })]),
+            filters: Some(filters),
             account_config: RpcAccountInfoConfig {
                 encoding: Some(UiAccountEncoding::Base64),
                 data_slice: Some(UiDataSliceConfig { offset: 0, length }),
@@ -1113,6 +1296,8 @@ fn process_show(
     config: &CliConfig,
     account_pubkey: Option<Pubkey>,
     authority_pubkey: Pubkey,
+    programs: bool,
+    buffers: bool,
     all: bool,
     use_lamports_unit: bool,
 ) -> ProcessResult {
@@ -1153,19 +1338,14 @@ fn process_show(
                                     last_deploy_slot: slot,
                                     data_len: programdata_account.data.len()
                                         - UpgradeableLoaderState::programdata_data_offset()?,
+                                    lamports: programdata_account.lamports,
+                                    use_lamports_unit,
                                 }))
                         } else {
-                            Err(format!("Invalid associated ProgramData account {} found for the program {}",
-                                        programdata_address, account_pubkey)
-                                    .into(),
-                            )
+                            Err(format!("Program {} has been closed", account_pubkey).into())
                         }
                     } else {
-                        Err(format!(
-                            "Failed to find associated ProgramData account {} for the program {}",
-                            programdata_address, account_pubkey
-                        )
-                        .into())
+                        Err(format!("Program {} has been closed", account_pubkey).into())
                     }
                 } else if let Ok(UpgradeableLoaderState::Buffer { authority_address }) =
                     account.state()
@@ -1184,7 +1364,7 @@ fn process_show(
                         }))
                 } else {
                     Err(format!(
-                        "{} is not an upgradeble loader buffer or program account",
+                        "{} is not an upgradeable loader Buffer or Program account",
                         account_pubkey
                     )
                     .into())
@@ -1195,31 +1375,16 @@ fn process_show(
         } else {
             Err(format!("Unable to find the account {}", account_pubkey).into())
         }
-    } else {
+    } else if programs {
         let authority_pubkey = if all { None } else { Some(authority_pubkey) };
-        let mut buffers = vec![];
-        let results = get_buffers(rpc_client, authority_pubkey)?;
-        for (address, account) in results.iter() {
-            if let Ok(UpgradeableLoaderState::Buffer { authority_address }) = account.state() {
-                buffers.push(CliUpgradeableBuffer {
-                    address: address.to_string(),
-                    authority: authority_address
-                        .map(|pubkey| pubkey.to_string())
-                        .unwrap_or_else(|| "none".to_string()),
-                    data_len: 0,
-                    lamports: account.lamports,
-                    use_lamports_unit,
-                });
-            } else {
-                return Err(format!("Error parsing account {}", address).into());
-            }
-        }
-        Ok(config
-            .output_format
-            .formatted_string(&CliUpgradeableBuffers {
-                buffers,
-                use_lamports_unit,
-            }))
+        let programs = get_programs(rpc_client, authority_pubkey, use_lamports_unit)?;
+        Ok(config.output_format.formatted_string(&programs))
+    } else if buffers {
+        let authority_pubkey = if all { None } else { Some(authority_pubkey) };
+        let buffers = get_buffers(rpc_client, authority_pubkey, use_lamports_unit)?;
+        Ok(config.output_format.formatted_string(&buffers))
+    } else {
+        Err("Invalid parameters".to_string().into())
     }
 }
 
@@ -1254,31 +1419,23 @@ fn process_dump(
                                 UpgradeableLoaderState::programdata_data_offset().unwrap_or(0);
                             let program_data = &programdata_account.data[offset..];
                             let mut f = File::create(output_location)?;
-                            f.write_all(&program_data)?;
+                            f.write_all(program_data)?;
                             Ok(format!("Wrote program to {}", output_location))
                         } else {
-                            Err(
-                                format!("Invalid associated ProgramData account {} found for the program {}",
-                                        programdata_address, account_pubkey)
-                                    .into(),
-                            )
+                            Err(format!("Program {} has been closed", account_pubkey).into())
                         }
                     } else {
-                        Err(format!(
-                            "Failed to find associated ProgramData account {} for the program {}",
-                            programdata_address, account_pubkey
-                        )
-                        .into())
+                        Err(format!("Program {} has been closed", account_pubkey).into())
                     }
                 } else if let Ok(UpgradeableLoaderState::Buffer { .. }) = account.state() {
                     let offset = UpgradeableLoaderState::buffer_data_offset().unwrap_or(0);
                     let program_data = &account.data[offset..];
                     let mut f = File::create(output_location)?;
-                    f.write_all(&program_data)?;
+                    f.write_all(program_data)?;
                     Ok(format!("Wrote program to {}", output_location))
                 } else {
                     Err(format!(
-                        "{} is not an upgradeble loader buffer or program account",
+                        "{} is not an upgradeable loader buffer or program account",
                         account_pubkey
                     )
                     .into())
@@ -1300,14 +1457,16 @@ fn close(
     account_pubkey: &Pubkey,
     recipient_pubkey: &Pubkey,
     authority_signer: &dyn Signer,
+    program_pubkey: Option<&Pubkey>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (blockhash, _) = rpc_client.get_recent_blockhash()?;
 
     let mut tx = Transaction::new_unsigned(Message::new(
-        &[bpf_loader_upgradeable::close(
-            &account_pubkey,
-            &recipient_pubkey,
-            &authority_signer.pubkey(),
+        &[bpf_loader_upgradeable::close_any(
+            account_pubkey,
+            recipient_pubkey,
+            Some(&authority_signer.pubkey()),
+            program_pubkey,
         )],
         Some(&config.signers[0].pubkey()),
     ));
@@ -1329,6 +1488,12 @@ fn close(
         )) = err.kind()
         {
             return Err("Closing a buffer account is not supported by the cluster".into());
+        } else if let ClientErrorKind::TransactionError(TransactionError::InstructionError(
+            _,
+            InstructionError::InvalidArgument,
+        )) = err.kind()
+        {
+            return Err("Closing a program account is not supported by the cluster".into());
         } else {
             return Err(format!("Close failed: {}", err).into());
         }
@@ -1345,104 +1510,129 @@ fn process_close(
     use_lamports_unit: bool,
 ) -> ProcessResult {
     let authority_signer = config.signers[authority_index];
-    let mut buffers = vec![];
 
     if let Some(account_pubkey) = account_pubkey {
         if let Some(account) = rpc_client
             .get_account_with_commitment(&account_pubkey, config.commitment)?
             .value
         {
-            if let Ok(UpgradeableLoaderState::Buffer { authority_address }) = account.state() {
-                if authority_address != Some(authority_signer.pubkey()) {
-                    return Err(format!(
-                        "Buffer account authority {:?} does not match {:?}",
-                        authority_address,
-                        Some(authority_signer.pubkey())
-                    )
-                    .into());
-                } else {
-                    close(
-                        rpc_client,
-                        config,
-                        &account_pubkey,
-                        &recipient_pubkey,
-                        authority_signer,
-                    )?;
-
-                    buffers.push(CliUpgradeableBuffer {
-                        address: account_pubkey.to_string(),
-                        authority: authority_address
-                            .map(|pubkey| pubkey.to_string())
-                            .unwrap_or_else(|| "none".to_string()),
-                        data_len: 0,
-                        lamports: account.lamports,
-                        use_lamports_unit,
-                    });
+            match account.state() {
+                Ok(UpgradeableLoaderState::Buffer { authority_address }) => {
+                    if authority_address != Some(authority_signer.pubkey()) {
+                        return Err(format!(
+                            "Buffer account authority {:?} does not match {:?}",
+                            authority_address,
+                            Some(authority_signer.pubkey())
+                        )
+                        .into());
+                    } else {
+                        close(
+                            rpc_client,
+                            config,
+                            &account_pubkey,
+                            &recipient_pubkey,
+                            authority_signer,
+                            None,
+                        )?;
+                    }
+                    Ok(config
+                        .output_format
+                        .formatted_string(&CliUpgradeableBuffers {
+                            buffers: vec![CliUpgradeableBuffer {
+                                address: account_pubkey.to_string(),
+                                authority: authority_address
+                                    .map(|pubkey| pubkey.to_string())
+                                    .unwrap_or_else(|| "none".to_string()),
+                                data_len: 0,
+                                lamports: account.lamports,
+                                use_lamports_unit,
+                            }],
+                            use_lamports_unit,
+                        }))
                 }
-            } else {
-                return Err(format!(
-                    "{} is not an upgradeble loader buffer account",
-                    account_pubkey
-                )
-                .into());
+                Ok(UpgradeableLoaderState::Program {
+                    programdata_address: programdata_pubkey,
+                }) => {
+                    if let Some(account) = rpc_client
+                        .get_account_with_commitment(&programdata_pubkey, config.commitment)?
+                        .value
+                    {
+                        if let Ok(UpgradeableLoaderState::ProgramData {
+                            slot: _,
+                            upgrade_authority_address: authority_pubkey,
+                        }) = account.state()
+                        {
+                            if authority_pubkey != Some(authority_signer.pubkey()) {
+                                return Err(format!(
+                                    "Program authority {:?} does not match {:?}",
+                                    authority_pubkey,
+                                    Some(authority_signer.pubkey())
+                                )
+                                .into());
+                            } else {
+                                close(
+                                    rpc_client,
+                                    config,
+                                    &programdata_pubkey,
+                                    &recipient_pubkey,
+                                    authority_signer,
+                                    Some(&account_pubkey),
+                                )?;
+                                Ok(config.output_format.formatted_string(
+                                    &CliUpgradeableProgramClosed {
+                                        program_id: account_pubkey.to_string(),
+                                        lamports: account.lamports,
+                                        use_lamports_unit,
+                                    },
+                                ))
+                            }
+                        } else {
+                            return Err(
+                                format!("Program {} has been closed", account_pubkey).into()
+                            );
+                        }
+                    } else {
+                        return Err(format!("Program {} has been closed", account_pubkey).into());
+                    }
+                }
+                _ => {
+                    return Err(
+                        format!("{} is not a Program or Buffer account", account_pubkey).into(),
+                    );
+                }
             }
         } else {
             return Err(format!("Unable to find the account {}", account_pubkey).into());
         }
     } else {
-        let mut bytes = vec![1, 0, 0, 0, 1];
-        bytes.extend_from_slice(authority_signer.pubkey().as_ref());
-        let length = bytes.len();
-
-        let results = rpc_client.get_program_accounts_with_config(
-            &bpf_loader_upgradeable::id(),
-            RpcProgramAccountsConfig {
-                filters: Some(vec![RpcFilterType::Memcmp(Memcmp {
-                    offset: 0,
-                    bytes: MemcmpEncodedBytes::Binary(bs58::encode(bytes).into_string()),
-                    encoding: None,
-                })]),
-                account_config: RpcAccountInfoConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    data_slice: Some(UiDataSliceConfig { offset: 0, length }),
-                    ..RpcAccountInfoConfig::default()
-                },
-                ..RpcProgramAccountsConfig::default()
-            },
+        let buffers = get_buffers(
+            rpc_client,
+            Some(authority_signer.pubkey()),
+            use_lamports_unit,
         )?;
 
-        for (address, account) in results.iter() {
+        let mut closed = vec![];
+        for buffer in buffers.buffers.iter() {
             if close(
                 rpc_client,
                 config,
-                &address,
+                &Pubkey::from_str(&buffer.address)?,
                 &recipient_pubkey,
                 authority_signer,
+                None,
             )
             .is_ok()
             {
-                if let Ok(UpgradeableLoaderState::Buffer { authority_address }) = account.state() {
-                    buffers.push(CliUpgradeableBuffer {
-                        address: address.to_string(),
-                        authority: authority_address
-                            .map(|address| address.to_string())
-                            .unwrap_or_else(|| "none".to_string()),
-                        data_len: 0,
-                        lamports: account.lamports,
-                        use_lamports_unit,
-                    });
-                } else {
-                    return Err(format!("Error parsing account {}", address).into());
-                }
+                closed.push(buffer.clone());
             }
         }
+        Ok(config
+            .output_format
+            .formatted_string(&CliUpgradeableBuffers {
+                buffers: closed,
+                use_lamports_unit,
+            }))
     }
-    Ok(config
-        .output_format
-        .formatted_string(&CliUpgradeableBuffers {
-            buffers,
-            use_lamports_unit,
-        }))
 }
 
 /// Deploy using non-upgradeable loader
@@ -1490,6 +1680,23 @@ pub fn process_deploy(
     result
 }
 
+fn calculate_max_chunk_size<F>(create_msg: &F) -> usize
+where
+    F: Fn(u32, Vec<u8>) -> Message,
+{
+    let baseline_msg = create_msg(0, Vec::new());
+    let tx_size = bincode::serialized_size(&Transaction {
+        signatures: vec![
+            Signature::default();
+            baseline_msg.header.num_required_signatures as usize
+        ],
+        message: baseline_msg,
+    })
+    .unwrap() as usize;
+    // add 1 byte buffer to account for shortvec encoding
+    PACKET_DATA_SIZE.saturating_sub(tx_size).saturating_sub(1)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn do_process_program_write_and_deploy(
     rpc_client: Arc<RpcClient>,
@@ -1516,7 +1723,7 @@ fn do_process_program_write_and_deploy(
                 .value
             {
                 complete_partial_program_init(
-                    &loader_id,
+                    loader_id,
                     &config.signers[0].pubkey(),
                     buffer_pubkey,
                     &account,
@@ -1546,7 +1753,7 @@ fn do_process_program_write_and_deploy(
                         buffer_pubkey,
                         minimum_balance,
                         buffer_data_len as u64,
-                        &loader_id,
+                        loader_id,
                     )],
                     minimum_balance,
                 )
@@ -1562,25 +1769,25 @@ fn do_process_program_write_and_deploy(
 
             // Create and add write messages
 
-            let mut write_messages = vec![];
-            for (chunk, i) in program_data.chunks(DATA_CHUNK_SIZE).zip(0..) {
+            let payer_pubkey = config.signers[0].pubkey();
+            let create_msg = |offset: u32, bytes: Vec<u8>| {
                 let instruction = if loader_id == &bpf_loader_upgradeable::id() {
                     bpf_loader_upgradeable::write(
                         buffer_pubkey,
                         &buffer_authority_signer.pubkey(),
-                        (i * DATA_CHUNK_SIZE) as u32,
-                        chunk.to_vec(),
+                        offset,
+                        bytes,
                     )
                 } else {
-                    loader_instruction::write(
-                        buffer_pubkey,
-                        &loader_id,
-                        (i * DATA_CHUNK_SIZE) as u32,
-                        chunk.to_vec(),
-                    )
+                    loader_instruction::write(buffer_pubkey, loader_id, offset, bytes)
                 };
-                let message = Message::new(&[instruction], Some(&config.signers[0].pubkey()));
-                write_messages.push(message);
+                Message::new(&[instruction], Some(&payer_pubkey))
+            };
+
+            let mut write_messages = vec![];
+            let chunk_size = calculate_max_chunk_size(&create_msg);
+            for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
+                write_messages.push(create_msg((i * chunk_size) as u32, chunk.to_vec()));
             }
 
             (initial_message, Some(write_messages), balance_needed)
@@ -1618,7 +1825,7 @@ fn do_process_program_write_and_deploy(
             )
         } else {
             Message::new(
-                &[loader_instruction::finalize(buffer_pubkey, &loader_id)],
+                &[loader_instruction::finalize(buffer_pubkey, loader_id)],
                 Some(&config.signers[0].pubkey()),
             )
         };
@@ -1712,17 +1919,24 @@ fn do_process_program_upgrade(
                 None
             };
 
+            let buffer_signer_pubkey = buffer_signer.pubkey();
+            let upgrade_authority_pubkey = upgrade_authority.pubkey();
+            let payer_pubkey = config.signers[0].pubkey();
+            let create_msg = |offset: u32, bytes: Vec<u8>| {
+                let instruction = bpf_loader_upgradeable::write(
+                    &buffer_signer_pubkey,
+                    &upgrade_authority_pubkey,
+                    offset,
+                    bytes,
+                );
+                Message::new(&[instruction], Some(&payer_pubkey))
+            };
+
             // Create and add write messages
             let mut write_messages = vec![];
-            for (chunk, i) in program_data.chunks(DATA_CHUNK_SIZE).zip(0..) {
-                let instruction = bpf_loader_upgradeable::write(
-                    &buffer_signer.pubkey(),
-                    &upgrade_authority.pubkey(),
-                    (i * DATA_CHUNK_SIZE) as u32,
-                    chunk.to_vec(),
-                );
-                let message = Message::new(&[instruction], Some(&config.signers[0].pubkey()));
-                write_messages.push(message);
+            let chunk_size = calculate_max_chunk_size(&create_msg);
+            for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
+                write_messages.push(create_msg((i * chunk_size) as u32, chunk.to_vec()));
             }
 
             (initial_message, Some(write_messages), balance_needed)
@@ -1744,8 +1958,8 @@ fn do_process_program_upgrade(
     // Create and add final message
     let final_message = Message::new(
         &[bpf_loader_upgradeable::upgrade(
-            &program_id,
-            &buffer_pubkey,
+            program_id,
+            buffer_pubkey,
             &upgrade_authority.pubkey(),
             &config.signers[0].pubkey(),
         )],
@@ -1804,7 +2018,13 @@ fn complete_partial_program_init(
         return Err("Buffer account is already executable".into());
     }
     if account.owner != *loader_id && !system_program::check_id(&account.owner) {
-        return Err("Buffer account is already owned by another account".into());
+        return Err("Buffer account passed is already in use by another program".into());
+    }
+    if !account.data.is_empty() && account.data.len() < account_data_len {
+        return Err(
+            "Buffer account passed is not large enough, may have been for a different deploy?"
+                .into(),
+        );
     }
 
     if account.data.is_empty() && system_program::check_id(&account.owner) {
@@ -1813,26 +2033,26 @@ fn complete_partial_program_init(
             account_data_len as u64,
         ));
         if account.owner != *loader_id {
-            instructions.push(system_instruction::assign(elf_pubkey, &loader_id));
+            instructions.push(system_instruction::assign(elf_pubkey, loader_id));
         }
-    }
-    if account.lamports < minimum_balance {
-        let balance = minimum_balance - account.lamports;
-        instructions.push(system_instruction::transfer(
-            payer_pubkey,
-            elf_pubkey,
-            balance,
-        ));
-        balance_needed = balance;
-    } else if account.lamports > minimum_balance
-        && system_program::check_id(&account.owner)
-        && !allow_excessive_balance
-    {
-        return Err(format!(
-            "Buffer account has a balance: {:?}; it may already be in use",
-            Safe(account.lamports)
-        )
-        .into());
+        if account.lamports < minimum_balance {
+            let balance = minimum_balance - account.lamports;
+            instructions.push(system_instruction::transfer(
+                payer_pubkey,
+                elf_pubkey,
+                balance,
+            ));
+            balance_needed = balance;
+        } else if account.lamports > minimum_balance
+            && system_program::check_id(&account.owner)
+            && !allow_excessive_balance
+        {
+            return Err(format!(
+                "Buffer account has a balance: {:?}; it may already be in use",
+                Safe(account.lamports)
+            )
+            .into());
+        }
     }
     Ok((instructions, balance_needed))
 }
@@ -1885,7 +2105,7 @@ fn send_deploy_messages(
                 initial_transaction.try_sign(&[payer_signer], blockhash)?;
             }
             let result = rpc_client.send_and_confirm_transaction_with_spinner(&initial_transaction);
-            log_instruction_custom_error::<SystemError>(result, &config)
+            log_instruction_custom_error::<SystemError>(result, config)
                 .map_err(|err| format!("Account allocation failed: {}", err))?;
         } else {
             return Err("Buffer account not created yet, must provide a key pair".into());
@@ -1895,8 +2115,12 @@ fn send_deploy_messages(
     if let Some(write_messages) = write_messages {
         if let Some(write_signer) = write_signer {
             trace!("Writing program data");
-            let (blockhash, _, last_valid_slot) = rpc_client
-                .get_recent_blockhash_with_commitment(config.commitment)?
+            let Fees {
+                blockhash,
+                last_valid_block_height,
+                ..
+            } = rpc_client
+                .get_fees_with_commitment(config.commitment)?
                 .value;
             let mut write_transactions = vec![];
             for message in write_messages.iter() {
@@ -1911,7 +2135,7 @@ fn send_deploy_messages(
                 write_transactions,
                 &[payer_signer, write_signer],
                 config.commitment,
-                last_valid_slot,
+                last_valid_block_height,
             )
             .map_err(|err| format!("Data writes to account failed: {}", err))?;
         }
@@ -1981,7 +2205,7 @@ fn send_and_confirm_transactions_with_spinner<T: Signers>(
     mut transactions: Vec<Transaction>,
     signer_keys: &T,
     commitment: CommitmentConfig,
-    mut last_valid_slot: Slot,
+    mut last_valid_block_height: u64,
 ) -> Result<(), Box<dyn error::Error>> {
     let progress_bar = new_spinner_progress_bar();
     let mut send_retries = 5;
@@ -2021,7 +2245,7 @@ fn send_and_confirm_transactions_with_spinner<T: Signers>(
 
         // Collect statuses for all the transactions, drop those that are confirmed
         loop {
-            let mut slot = 0;
+            let mut block_height = 0;
             let pending_signatures = pending_transactions.keys().cloned().collect::<Vec<_>>();
             for pending_signatures_chunk in
                 pending_signatures.chunks(MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS)
@@ -2046,12 +2270,12 @@ fn send_and_confirm_transactions_with_spinner<T: Signers>(
                     }
                 }
 
-                slot = rpc_client.get_slot()?;
+                block_height = rpc_client.get_block_height()?;
                 progress_bar.set_message(&format!(
-                    "[{}/{}] Transactions confirmed. Retrying in {} slots",
+                    "[{}/{}] Transactions confirmed. Retrying in {} blocks",
                     num_transactions - pending_transactions.len(),
                     num_transactions,
-                    last_valid_slot.saturating_sub(slot)
+                    last_valid_block_height.saturating_sub(block_height)
                 ));
             }
 
@@ -2059,7 +2283,7 @@ fn send_and_confirm_transactions_with_spinner<T: Signers>(
                 return Ok(());
             }
 
-            if slot > last_valid_slot {
+            if block_height > last_valid_block_height {
                 break;
             }
 
@@ -2089,10 +2313,12 @@ fn send_and_confirm_transactions_with_spinner<T: Signers>(
         send_retries -= 1;
 
         // Re-sign any failed transactions with a new blockhash and retry
-        let (blockhash, _fee_calculator, new_last_valid_slot) = rpc_client
-            .get_recent_blockhash_with_commitment(commitment)?
-            .value;
-        last_valid_slot = new_last_valid_slot;
+        let Fees {
+            blockhash,
+            last_valid_block_height: new_last_valid_block_height,
+            ..
+        } = rpc_client.get_fees_with_commitment(commitment)?.value;
+        last_valid_block_height = new_last_valid_block_height;
         transactions = vec![];
         for (_, mut transaction) in pending_transactions.into_iter() {
             transaction.try_sign(signer_keys, blockhash)?;
@@ -2104,10 +2330,13 @@ fn send_and_confirm_transactions_with_spinner<T: Signers>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::{app, parse_command, process_command};
+    use crate::{
+        clap_app::get_clap_app,
+        cli::{parse_command, process_command},
+    };
     use serde_json::Value;
     use safecoin_cli_output::OutputFormat;
-    use solana_sdk::signature::write_keypair_file;
+    use safecoin_sdk::signature::write_keypair_file;
 
     fn make_tmp_path(name: &str) -> String {
         let out_dir = std::env::var("FARF_DIR").unwrap_or_else(|_| "farf".to_string());
@@ -2126,7 +2355,7 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_cli_parse_deploy() {
-        let test_commands = app("test", "desc", "version");
+        let test_commands = get_clap_app("test", "desc", "version");
 
         let default_keypair = Keypair::new();
         let keypair_file = make_tmp_path("keypair_file");
@@ -2334,7 +2563,7 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_cli_parse_write_buffer() {
-        let test_commands = app("test", "desc", "version");
+        let test_commands = get_clap_app("test", "desc", "version");
 
         let default_keypair = Keypair::new();
         let keypair_file = make_tmp_path("keypair_file");
@@ -2482,7 +2711,7 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_cli_parse_set_upgrade_authority() {
-        let test_commands = app("test", "desc", "version");
+        let test_commands = get_clap_app("test", "desc", "version");
 
         let default_keypair = Keypair::new();
         let keypair_file = make_tmp_path("keypair_file");
@@ -2590,7 +2819,7 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_cli_parse_set_buffer_authority() {
-        let test_commands = app("test", "desc", "version");
+        let test_commands = get_clap_app("test", "desc", "version");
 
         let default_keypair = Keypair::new();
         let keypair_file = make_tmp_path("keypair_file");
@@ -2647,7 +2876,7 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_cli_parse_show() {
-        let test_commands = app("test", "desc", "version");
+        let test_commands = get_clap_app("test", "desc", "version");
 
         let default_keypair = Keypair::new();
         let keypair_file = make_tmp_path("keypair_file");
@@ -2672,8 +2901,33 @@ mod tests {
                 command: CliCommand::Program(ProgramCliCommand::Show {
                     account_pubkey: Some(buffer_pubkey),
                     authority_pubkey: default_keypair.pubkey(),
+                    get_programs: false,
+                    get_buffers: false,
                     all: false,
                     use_lamports_unit: false,
+                }),
+                signers: vec![],
+            }
+        );
+
+        let test_command = test_commands.clone().get_matches_from(vec![
+            "test",
+            "program",
+            "show",
+            "--programs",
+            "--all",
+            "--lamports",
+        ]);
+        assert_eq!(
+            parse_command(&test_command, &default_signer, &mut None).unwrap(),
+            CliCommandInfo {
+                command: CliCommand::Program(ProgramCliCommand::Show {
+                    account_pubkey: None,
+                    authority_pubkey: default_keypair.pubkey(),
+                    get_programs: true,
+                    get_buffers: false,
+                    all: true,
+                    use_lamports_unit: true,
                 }),
                 signers: vec![],
             }
@@ -2693,6 +2947,8 @@ mod tests {
                 command: CliCommand::Program(ProgramCliCommand::Show {
                     account_pubkey: None,
                     authority_pubkey: default_keypair.pubkey(),
+                    get_programs: false,
+                    get_buffers: true,
                     all: true,
                     use_lamports_unit: true,
                 }),
@@ -2714,6 +2970,8 @@ mod tests {
                 command: CliCommand::Program(ProgramCliCommand::Show {
                     account_pubkey: None,
                     authority_pubkey: authority_keypair.pubkey(),
+                    get_programs: false,
+                    get_buffers: true,
                     all: false,
                     use_lamports_unit: false,
                 }),
@@ -2735,6 +2993,8 @@ mod tests {
                 command: CliCommand::Program(ProgramCliCommand::Show {
                     account_pubkey: None,
                     authority_pubkey: authority_keypair.pubkey(),
+                    get_programs: false,
+                    get_buffers: true,
                     all: false,
                     use_lamports_unit: false,
                 }),
@@ -2746,7 +3006,7 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_cli_parse_close() {
-        let test_commands = app("test", "desc", "version");
+        let test_commands = get_clap_app("test", "desc", "version");
 
         let default_keypair = Keypair::new();
         let keypair_file = make_tmp_path("keypair_file");

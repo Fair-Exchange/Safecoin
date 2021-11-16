@@ -89,9 +89,9 @@ checksum = "695579f0f2520f3774bb40461e5adb066459d4e0af4d59d20175484fb8e9edf1"
 
 [[package]]
 name = "async-trait"
-version = "0.1.50"
+version = "0.1.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b98e84bbb4cbcdd97da190ba0c58a1bb0de2c1fdf67d159e192ed766aeca722"
+checksum = "36ea56748e10732c49404c153638a15ec3d6211ec5ff35d9bb20e13b93576adf"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.6",
@@ -223,35 +223,12 @@ checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 
 [[package]]
 name = "borsh"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5a26c53ddf60281f18e7a29b20db7ba3db82a9d81b9650bfaa02d646f50d364"
-dependencies = [
- "borsh-derive 0.8.1",
- "hashbrown",
-]
-
-[[package]]
-name = "borsh"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fcabb02816fdadf90866dc9a7824491ccb63d69f55375a266dc03509ac68d36"
 dependencies = [
- "borsh-derive 0.9.0",
+ "borsh-derive",
  "hashbrown",
-]
-
-[[package]]
-name = "borsh-derive"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b637a47728b78a78cd7f4b85bf06d71ef4221840e059a38f048be2422bf673b2"
-dependencies = [
- "borsh-derive-internal 0.8.1",
- "borsh-schema-derive-internal 0.8.1",
- "proc-macro-crate",
- "proc-macro2 1.0.24",
- "syn 1.0.67",
 ]
 
 [[package]]
@@ -260,21 +237,10 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4bd16f0729b89f0a212b0e2e1d19cc6593df63f771161a11863967780e2d033d"
 dependencies = [
- "borsh-derive-internal 0.9.0",
- "borsh-schema-derive-internal 0.9.0",
+ "borsh-derive-internal",
+ "borsh-schema-derive-internal",
  "proc-macro-crate",
  "proc-macro2 1.0.24",
- "syn 1.0.67",
-]
-
-[[package]]
-name = "borsh-derive-internal"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d813fa25eb0bed78c36492cff4415f38c760d6de833d255ba9095bd8ebb7d725"
-dependencies = [
- "proc-macro2 1.0.24",
- "quote 1.0.6",
  "syn 1.0.67",
 ]
 
@@ -283,17 +249,6 @@ name = "borsh-derive-internal"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e321a130a3ac4b88eb59a6d670bde11eec9721a397b77e0f2079060e2a1b785"
-dependencies = [
- "proc-macro2 1.0.24",
- "quote 1.0.6",
- "syn 1.0.67",
-]
-
-[[package]]
-name = "borsh-schema-derive-internal"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcf78ee4a98c8cb9eba1bac3d3e2a1ea3d7673c719ce691e67b5cbafc472d3b7"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.6",
@@ -338,6 +293,26 @@ name = "byte-tools"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
+
+[[package]]
+name = "bytemuck"
+version = "1.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72957246c41db82b8ef88a5486143830adeb8227ef9837740bdec67724cf2c5b"
+dependencies = [
+ "bytemuck_derive",
+]
+
+[[package]]
+name = "bytemuck_derive"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e215f8c2f9f79cb53c8335e687ffd07d5bfcb6fe5fc80723762d0be46e7cc54"
+dependencies = [
+ "proc-macro2 1.0.24",
+ "quote 1.0.6",
+ "syn 1.0.67",
+]
 
 [[package]]
 name = "byteorder"
@@ -397,12 +372,11 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.49"
+version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e450b8da92aa6f274e7c6437692f9f2ce6d701fb73bacfcf87897b3f89a4c20e"
+checksum = "e3c69b077ad434294d3ce9f1f6143a2a4b89a8a2d54ef813d85003a4fd1137fd"
 dependencies = [
  "jobserver",
- "num_cpus",
 ]
 
 [[package]]
@@ -433,9 +407,9 @@ dependencies = [
 
 [[package]]
 name = "chrono-humanize"
-version = "0.1.2"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8164ae3089baf04ff71f32aeb70213283dcd236dce8bc976d00b17a458f5f71c"
+checksum = "2eddc119501d583fd930cb92144e605f44e0252c38dd89d9247fffa1993375cb"
 dependencies = [
  "chrono",
 ]
@@ -492,6 +466,21 @@ dependencies = [
  "unicode-width",
  "winapi 0.3.9",
  "winapi-util",
+]
+
+[[package]]
+name = "console"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3993e6445baa160675931ec041a5e03ca84b9c6e32a056150d3aa2bdda0a1f45"
+dependencies = [
+ "encode_unicode",
+ "lazy_static",
+ "libc",
+ "regex",
+ "terminal_size",
+ "unicode-width",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -695,7 +684,7 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f4aa86af7b19b40ef9cbef761ed411a49f0afa06b7b6dcd3dfe2f96a3c546138"
 dependencies = [
- "console",
+ "console 0.11.3",
  "lazy_static",
  "tempfile",
 ]
@@ -794,9 +783,9 @@ dependencies = [
 
 [[package]]
 name = "educe"
-version = "0.4.18"
+version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f86b50932a01e7ec5c06160492ab660fb19b6bb2a7878030dd6cd68d21df9d4d"
+checksum = "54ed56329d95e524ef98177ad672881bdfe7f22f254eb6ae80deb6fdd2ab20c4"
 dependencies = [
  "enum-ordinalize",
  "proc-macro2 1.0.24",
@@ -836,9 +825,9 @@ dependencies = [
 
 [[package]]
 name = "enum-ordinalize"
-version = "3.1.10"
+version = "3.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b166c9e378360dd5a6666a9604bb4f54ae0cac39023ffbac425e917a2a04fef"
+checksum = "2d52ff39419d3e16961ecfb9e32f5042bdaacf9a4cc553d2d688057117bae49b"
 dependencies = [
  "num-bigint",
  "num-traits",
@@ -948,12 +937,6 @@ dependencies = [
  "matches",
  "percent-encoding",
 ]
-
-[[package]]
-name = "fs_extra"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2022715d62ab30faffd124d40b76f4134a550a87792276512b18d63272333394"
 
 [[package]]
 name = "futures"
@@ -1334,7 +1317,7 @@ version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7baab56125e25686df467fe470785512329883aab42696d661247aca2a2896e4"
 dependencies = [
- "console",
+ "console 0.14.1",
  "lazy_static",
  "number_prefix",
  "regex",
@@ -1356,6 +1339,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61124eeebbd69b8190558df225adf7e4caafce0d743919e5d6b19652314ec5ec"
 dependencies = [
  "cfg-if 1.0.0",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1396,38 +1382,6 @@ name = "itoa"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
-
-[[package]]
-name = "jemalloc-ctl"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c502a5ff9dd2924f1ed32ba96e3b65735d837b4bfd978d3161b1702e66aca4b7"
-dependencies = [
- "jemalloc-sys",
- "libc",
- "paste",
-]
-
-[[package]]
-name = "jemalloc-sys"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d3b9f3f5c9b31aa0f5ed3260385ac205db665baa41d49bb8338008ae94ede45"
-dependencies = [
- "cc",
- "fs_extra",
- "libc",
-]
-
-[[package]]
-name = "jemallocator"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43ae63fcfc45e99ab3d1b29a46782ad679e98436c3169d15a167a1108a724b69"
-dependencies = [
- "jemalloc-sys",
- "libc",
-]
 
 [[package]]
 name = "jobserver"
@@ -1489,9 +1443,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.98"
+version = "0.2.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "320cfe77175da3a483efed4bc0adc1968ca050b098ce4f2f1c13a56626128790"
+checksum = "dd8f7255a17a627354f321ef0055d63b898c6fb27eff628af4d1b66b7331edf6"
 
 [[package]]
 name = "libloading"
@@ -1612,9 +1566,9 @@ dependencies = [
 
 [[package]]
 name = "memoffset"
-version = "0.6.1"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "157b4208e3059a8f9e78d559edc658e13df41410cb3ae03979c83130067fdd87"
+checksum = "59accc507f1338036a0477ef61afdae33cde60840f4dfe481319ce3ad116ddf9"
 dependencies = [
  "autocfg",
 ]
@@ -1700,14 +1654,15 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.19.1"
+version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2ccba0cfe4fdf15982d1674c69b1fd80bad427d293849982668dfe454bd61f2"
+checksum = "f5e06129fb611568ef4e868c14b326274959aa70ff7776e9d55323531c374945"
 dependencies = [
  "bitflags",
  "cc",
  "cfg-if 1.0.0",
  "libc",
+ "memoffset",
 ]
 
 [[package]]
@@ -1721,9 +1676,9 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
-version = "0.4.0"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e0d047c1062aa51e256408c560894e5251f08925980e53cf1aa5bd00eec6512"
+checksum = "7d0a3d5e207573f948a9e5376662aa743a2ea13f7c50a554d7af443a73fbfeba"
 dependencies = [
  "autocfg",
  "num-integer",
@@ -1817,9 +1772,9 @@ checksum = "9cbca9424c482ee628fa549d9c812e2cd22f1180b9222c9200fdfa6eb31aecb2"
 
 [[package]]
 name = "once_cell"
-version = "1.5.2"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13bd41f508810a131401606d54ac32a467c97172d74ba7662562ebba5ad07fa0"
+checksum = "692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56"
 dependencies = [
  "parking_lot 0.11.1",
 ]
@@ -1940,25 +1895,6 @@ dependencies = [
  "redox_syscall 0.1.56",
  "smallvec",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "paste"
-version = "0.1.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45ca20c77d80be666aef2b45486da86238fabe33e38306bd3118fe4af33fa880"
-dependencies = [
- "paste-impl",
- "proc-macro-hack",
-]
-
-[[package]]
-name = "paste-impl"
-version = "0.1.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d95a7db200b97ef370c8e6de0088252f7e0dfff7d047a28528e47456c0fc98b6"
-dependencies = [
- "proc-macro-hack",
 ]
 
 [[package]]
@@ -2283,21 +2219,20 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.3.9"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c3780fcf44b193bc4d09f36d2a3c87b251da4a046c87795a0d35f4f927ad8e6"
+checksum = "2a26af418b574bd56588335b3a3659a65725d4e636eb1016c2f9e3b38c7cc759"
 dependencies = [
  "aho-corasick",
  "memchr",
  "regex-syntax",
- "thread_local",
 ]
 
 [[package]]
 name = "regex-syntax"
-version = "0.6.18"
+version = "0.6.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26412eb97c6b088a6997e05f69403a802a92d520de2f8e63c2b65f9e0f47c4e8"
+checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "remove_dir_all"
@@ -2346,13 +2281,13 @@ dependencies = [
 
 [[package]]
 name = "ring"
-version = "0.16.12"
+version = "0.16.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ba5a8ec64ee89a76c98c549af81ff14813df09c3e6dc4766c3856da48597a0c"
+checksum = "3053cf52e236a3ed746dfc745aa9cacf1b791d846bdaf412f60a8d7d6e17c8fc"
 dependencies = [
  "cc",
- "lazy_static",
  "libc",
+ "once_cell",
  "spin",
  "untrusted",
  "web-sys",
@@ -2537,9 +2472,9 @@ dependencies = [
 
 [[package]]
 name = "serde_bytes"
-version = "0.11.4"
+version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3bf487fbf5c6239d7ea2ff8b10cb6b811cd4b5080d1c2aeed1dec18753c06e10"
+checksum = "16ae07dd2f88a366f15bd0632ba725227018c69a1c8550a927324f8eb8368bb9"
 dependencies = [
  "serde",
 ]
@@ -2678,7 +2613,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-account-decoder"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "Inflector",
  "base64 0.12.3",
@@ -2691,7 +2626,6 @@ dependencies = [
  "serde_json",
  "safecoin-config-program",
  "safecoin-sdk",
- "safecoin-stake-program",
  "safecoin-vote-program",
  "safe-token",
  "thiserror",
@@ -2700,15 +2634,15 @@ dependencies = [
 
 [[package]]
 name = "safecoin-banks-client"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "bincode",
- "borsh 0.9.0",
- "borsh-derive 0.9.0",
+ "borsh",
+ "borsh-derive",
  "futures",
  "mio",
  "safecoin-banks-interface",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
  "safecoin-sdk",
  "tarpc",
  "tokio",
@@ -2717,7 +2651,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-banks-interface"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "mio",
  "serde",
@@ -2727,7 +2661,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-banks-server"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "bincode",
  "futures",
@@ -2745,10 +2679,11 @@ dependencies = [
 
 [[package]]
 name = "safecoin-bpf-loader-program"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "bincode",
  "byteorder 1.3.4",
+ "libsecp256k1",
  "log",
  "num-derive 0.3.0",
  "num-traits",
@@ -2763,18 +2698,19 @@ dependencies = [
 
 [[package]]
 name = "safecoin-bpf-programs"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "bincode",
  "byteorder 1.3.4",
  "elf",
  "itertools 0.10.0",
+ "log",
  "miow 0.2.2",
  "net2",
  "safecoin-account-decoder",
  "safecoin-bpf-loader-program",
  "safecoin-cli-output",
- "safecoin-logger 1.6.25",
+ "safecoin-logger 1.7.17",
  "safecoin-measure",
  "safecoin-runtime",
  "safecoin-sdk",
@@ -2785,272 +2721,288 @@ dependencies = [
 
 [[package]]
 name = "solana-bpf-rust-128bit"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "solana-bpf-rust-128bit-dep",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-128bit-dep"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-alloc"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-call-depth"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-caller-access"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-custom-heap"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-dep-crate"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "byteorder 1.3.4",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-deprecated-loader"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-dup-accounts"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-error-handling"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "num-derive 0.2.5",
  "num-traits",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
  "thiserror",
 ]
 
 [[package]]
 name = "solana-bpf-rust-external-spend"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-finalize"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-instruction-introspection"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoke"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "solana-bpf-rust-invoked",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoke-and-error"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoke-and-ok"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoke-and-return"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-invoked"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-iter"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-many-args"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "solana-bpf-rust-many-args-dep",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-many-args-dep"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-mem"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
  "safecoin-program-test",
  "safecoin-sdk",
 ]
 
 [[package]]
 name = "solana-bpf-rust-membuiltins"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "solana-bpf-rust-mem",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-noop"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-panic"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-param-passing"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "solana-bpf-rust-param-passing-dep",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-param-passing-dep"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-rand"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "getrandom 0.1.14",
  "rand 0.7.3",
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
+]
+
+[[package]]
+name = "solana-bpf-rust-ro-account_modify"
+version = "1.7.17"
+dependencies = [
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-ro-modify"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-sanity"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
+]
+
+[[package]]
+name = "solana-bpf-rust-secp256k1-recover"
+version = "1.7.17"
+dependencies = [
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-sha"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-spoof1"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-spoof1-system"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-sysvar"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
+ "safecoin-program-test",
+ "safecoin-sdk",
 ]
 
 [[package]]
 name = "solana-bpf-rust-upgradeable"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "solana-bpf-rust-upgraded"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "safecoin-program 1.6.25",
+ "safecoin-program 1.7.17",
 ]
 
 [[package]]
 name = "safecoin-clap-utils"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "chrono",
  "clap",
@@ -3065,7 +3017,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-cli-config"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "dirs-next",
  "lazy_static",
@@ -3077,12 +3029,13 @@ dependencies = [
 
 [[package]]
 name = "safecoin-cli-output"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "Inflector",
  "base64 0.13.0",
  "chrono",
- "console",
+ "clap",
+ "console 0.14.1",
  "humantime",
  "indicatif",
  "serde",
@@ -3092,7 +3045,6 @@ dependencies = [
  "safecoin-clap-utils",
  "safecoin-client",
  "safecoin-sdk",
- "safecoin-stake-program",
  "safecoin-transaction-status",
  "safecoin-vote-program",
  "safe-memo",
@@ -3100,7 +3052,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-client"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "base64 0.13.0",
  "bincode",
@@ -3132,7 +3084,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-config-program"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "bincode",
  "chrono",
@@ -3145,7 +3097,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-crate-features"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "backtrace",
  "bytes 0.4.12",
@@ -3158,6 +3110,7 @@ dependencies = [
  "rand_chacha 0.2.2",
  "regex-syntax",
  "reqwest",
+ "ring",
  "serde",
  "syn 0.15.44",
  "syn 1.0.67",
@@ -3166,7 +3119,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-faucet"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "bincode",
  "byteorder 1.3.4",
@@ -3176,7 +3129,7 @@ dependencies = [
  "serde_derive",
  "safecoin-clap-utils",
  "safecoin-cli-config",
- "safecoin-logger 1.6.25",
+ "safecoin-logger 1.7.17",
  "safecoin-metrics",
  "safecoin-sdk",
  "safecoin-version",
@@ -3187,7 +3140,9 @@ dependencies = [
 
 [[package]]
 name = "safecoin-frozen-abi"
-version = "1.6.25"
+version = "1.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0b98d31e0662fedf3a1ee30919c655713874d578e19e65affe46109b1b927f9"
 dependencies = [
  "bs58",
  "bv",
@@ -3198,16 +3153,14 @@ dependencies = [
  "serde",
  "serde_derive",
  "sha2",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
+ "safecoin-frozen-abi-macro 1.7.6",
+ "safecoin-logger 1.7.6",
  "thiserror",
 ]
 
 [[package]]
 name = "safecoin-frozen-abi"
-version = "1.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95c481f0f29753f5b2d382628abae98a1dd87b572ddc7cbe5fe55ca62b6f7f07"
+version = "1.7.17"
 dependencies = [
  "bs58",
  "bv",
@@ -3218,16 +3171,17 @@ dependencies = [
  "serde",
  "serde_derive",
  "sha2",
- "safecoin-frozen-abi-macro 1.7.1",
- "safecoin-logger 1.7.1",
+ "safecoin-frozen-abi-macro 1.7.17",
+ "safecoin-logger 1.7.17",
  "thiserror",
 ]
 
 [[package]]
 name = "safecoin-frozen-abi-macro"
-version = "1.6.25"
+version = "1.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ceac6e8ad1a784c92ff5f3d6ad68a8d664d389b08055b674c38b2b9abb69e6d4"
 dependencies = [
- "lazy_static",
  "proc-macro2 1.0.24",
  "quote 1.0.6",
  "rustc_version",
@@ -3236,9 +3190,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-frozen-abi-macro"
-version = "1.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2068bcc47160ac9081893439b10a05e4bbe85cc0f6bccb6f1b0815423fbdd0c"
+version = "1.7.17"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.6",
@@ -3248,7 +3200,9 @@ dependencies = [
 
 [[package]]
 name = "safecoin-logger"
-version = "1.6.25"
+version = "1.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec7c514fe57f8c5042fa88c19f5711c67f264db723d9d79379fcb78dd1f09bbf"
 dependencies = [
  "env_logger",
  "lazy_static",
@@ -3257,9 +3211,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-logger"
-version = "1.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ea5932e186629f47859924b3773cfd8bcb4b8796898ac85c1fa0a6a2024e5c6"
+version = "1.7.17"
 dependencies = [
  "env_logger",
  "lazy_static",
@@ -3268,10 +3220,8 @@ dependencies = [
 
 [[package]]
 name = "safecoin-measure"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "jemalloc-ctl",
- "jemallocator",
  "log",
  "safecoin-metrics",
  "safecoin-sdk",
@@ -3279,7 +3229,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-metrics"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "env_logger",
  "gethostname",
@@ -3291,7 +3241,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-net-utils"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "bincode",
  "clap",
@@ -3302,7 +3252,8 @@ dependencies = [
  "serde_derive",
  "socket2 0.3.17",
  "safecoin-clap-utils",
- "safecoin-logger 1.6.25",
+ "safecoin-logger 1.7.17",
+ "safecoin-sdk",
  "safecoin-version",
  "tokio",
  "url",
@@ -3310,18 +3261,21 @@ dependencies = [
 
 [[package]]
 name = "safecoin-program"
-version = "1.6.25"
+version = "1.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bfe6a5dfc5372c0a946018ecdd8115e38af78cea8275bac48cf3d105c6b1fb3"
 dependencies = [
  "bincode",
  "blake3",
- "borsh 0.9.0",
- "borsh-derive 0.9.0",
+ "borsh",
+ "borsh-derive",
  "bs58",
  "bv",
  "curve25519-dalek 2.1.0",
  "hex",
  "itertools 0.9.0",
  "lazy_static",
+ "libsecp256k1",
  "log",
  "num-derive 0.3.0",
  "num-traits",
@@ -3333,29 +3287,29 @@ dependencies = [
  "serde_derive",
  "sha2",
  "sha3",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
- "safecoin-sdk-macro 1.6.25",
+ "safecoin-frozen-abi 1.7.6",
+ "safecoin-frozen-abi-macro 1.7.6",
+ "safecoin-logger 1.7.6",
+ "safecoin-sdk-macro 1.7.6",
  "thiserror",
 ]
 
 [[package]]
 name = "safecoin-program"
-version = "1.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a2df39c63e21c5b58e2012e7675bed5e8dd5100470ffddedcafb78f5a7e3abe"
+version = "1.7.17"
 dependencies = [
  "bincode",
  "blake3",
- "borsh 0.8.1",
- "borsh-derive 0.8.1",
+ "borsh",
+ "borsh-derive",
  "bs58",
  "bv",
+ "bytemuck",
  "curve25519-dalek 2.1.0",
  "hex",
  "itertools 0.9.0",
  "lazy_static",
+ "libsecp256k1",
  "log",
  "num-derive 0.3.0",
  "num-traits",
@@ -3367,16 +3321,16 @@ dependencies = [
  "serde_derive",
  "sha2",
  "sha3",
- "safecoin-frozen-abi 1.7.1",
- "safecoin-frozen-abi-macro 1.7.1",
- "safecoin-logger 1.7.1",
- "safecoin-sdk-macro 1.7.1",
+ "safecoin-frozen-abi 1.7.17",
+ "safecoin-frozen-abi-macro 1.7.17",
+ "safecoin-logger 1.7.17",
+ "safecoin-sdk-macro 1.7.17",
  "thiserror",
 ]
 
 [[package]]
 name = "safecoin-program-test"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
@@ -3390,7 +3344,7 @@ dependencies = [
  "safecoin-banks-client",
  "safecoin-banks-server",
  "safecoin-bpf-loader-program",
- "safecoin-logger 1.6.25",
+ "safecoin-logger 1.7.17",
  "safecoin-runtime",
  "safecoin-sdk",
  "safecoin-vote-program",
@@ -3400,7 +3354,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-rayon-threadlimit"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "lazy_static",
  "num_cpus",
@@ -3408,10 +3362,10 @@ dependencies = [
 
 [[package]]
 name = "safecoin-remote-wallet"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "base32",
- "console",
+ "console 0.14.1",
  "dialoguer",
  "hidapi",
  "log",
@@ -3427,7 +3381,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-runtime"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "arrayref",
  "bincode",
@@ -3457,9 +3411,9 @@ dependencies = [
  "serde",
  "serde_derive",
  "safecoin-config-program",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
+ "safecoin-frozen-abi 1.7.17",
+ "safecoin-frozen-abi-macro 1.7.17",
+ "safecoin-logger 1.7.17",
  "safecoin-measure",
  "safecoin-metrics",
  "safecoin-rayon-threadlimit",
@@ -3476,7 +3430,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-sdk"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "assert_matches",
  "bincode",
@@ -3512,18 +3466,20 @@ dependencies = [
  "sha2",
  "sha3",
  "safecoin-crate-features",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
- "safecoin-program 1.6.25",
- "safecoin-sdk-macro 1.6.25",
+ "safecoin-frozen-abi 1.7.17",
+ "safecoin-frozen-abi-macro 1.7.17",
+ "safecoin-logger 1.7.17",
+ "safecoin-program 1.7.17",
+ "safecoin-sdk-macro 1.7.17",
  "thiserror",
  "uriparse",
 ]
 
 [[package]]
 name = "safecoin-sdk-macro"
-version = "1.6.25"
+version = "1.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84710ce45a21cccd9f2b09d8e9aad529080bb2540f27b1253874b6e732b465b9"
 dependencies = [
  "bs58",
  "proc-macro2 1.0.24",
@@ -3534,9 +3490,7 @@ dependencies = [
 
 [[package]]
 name = "safecoin-sdk-macro"
-version = "1.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6473d8fa445520564c84e8803320721404d160ffd876a125326a726541f11534"
+version = "1.7.17"
 dependencies = [
  "bs58",
  "proc-macro2 1.0.24",
@@ -3547,20 +3501,14 @@ dependencies = [
 
 [[package]]
 name = "safecoin-secp256k1-program"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
- "bincode",
- "digest 0.9.0",
- "libsecp256k1",
- "rand 0.7.3",
- "sha3",
- "safecoin-logger 1.6.25",
  "safecoin-sdk",
 ]
 
 [[package]]
 name = "safecoin-stake-program"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "bincode",
  "log",
@@ -3570,8 +3518,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "safecoin-config-program",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
+ "safecoin-frozen-abi 1.7.17",
+ "safecoin-frozen-abi-macro 1.7.17",
  "safecoin-metrics",
  "safecoin-sdk",
  "safecoin-vote-program",
@@ -3580,20 +3528,22 @@ dependencies = [
 
 [[package]]
 name = "safecoin-transaction-status"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "Inflector",
  "base64 0.12.3",
  "bincode",
  "bs58",
  "lazy_static",
+ "log",
  "serde",
  "serde_derive",
  "serde_json",
  "safecoin-account-decoder",
+ "safecoin-measure",
+ "safecoin-metrics",
  "safecoin-runtime",
  "safecoin-sdk",
- "safecoin-stake-program",
  "safecoin-vote-program",
  "safe-associated-token-account",
  "safe-memo",
@@ -3603,21 +3553,21 @@ dependencies = [
 
 [[package]]
 name = "safecoin-version"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "log",
  "rustc_version",
  "serde",
  "serde_derive",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
+ "safecoin-frozen-abi 1.7.17",
+ "safecoin-frozen-abi-macro 1.7.17",
+ "safecoin-logger 1.7.17",
  "safecoin-sdk",
 ]
 
 [[package]]
 name = "safecoin-vote-program"
-version = "1.6.25"
+version = "1.7.17"
 dependencies = [
  "bincode",
  "log",
@@ -3626,9 +3576,9 @@ dependencies = [
  "rustc_version",
  "serde",
  "serde_derive",
- "safecoin-frozen-abi 1.6.25",
- "safecoin-frozen-abi-macro 1.6.25",
- "safecoin-logger 1.6.25",
+ "safecoin-frozen-abi 1.7.17",
+ "safecoin-frozen-abi-macro 1.7.17",
+ "safecoin-logger 1.7.17",
  "safecoin-metrics",
  "safecoin-sdk",
  "thiserror",
@@ -3636,9 +3586,9 @@ dependencies = [
 
 [[package]]
 name = "solana_rbpf"
-version = "0.2.9"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "debbc13545a1d972955a4fd3014e7c9d6d81da16c3626ee5f64bf3aa619548f8"
+checksum = "7c1c5bdfa63c68d848d95024c7f4335bae4b1917f7df2e48e2d945f4664a8b45"
 dependencies = [
  "byteorder 1.3.4",
  "combine",
@@ -3647,6 +3597,7 @@ dependencies = [
  "libc",
  "log",
  "rand 0.7.3",
+ "rustc-demangle",
  "scroll",
  "thiserror",
  "time",
@@ -3660,11 +3611,11 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "safe-associated-token-account"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4adc47eebe5d2b662cbaaba1843719c28a67e5ec5d0460bc3ca60900a51f74e2"
+checksum = "393e2240d521c3dd770806bff25c2c00d761ac962be106e14e22dd912007f428"
 dependencies = [
- "safecoin-program 1.7.1",
+ "safecoin-program 1.7.6",
  "safe-token",
 ]
 
@@ -3674,20 +3625,20 @@ version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd0dc6f70db6bacea7ff25870b016a65ba1d1b6013536f08e4fd79a8f9005325"
 dependencies = [
- "safecoin-program 1.7.1",
+ "safecoin-program 1.7.6",
 ]
 
 [[package]]
 name = "safe-token"
-version = "3.1.1"
+version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbfa8fd791aeb4d7ad5fedb7872478de9f4e8b4fcb02dfd9e7f2f9ae3f3ddd73"
+checksum = "93bfdd5bd7c869cb565c7d7635c4fafe189b988a0bdef81063cd9585c6b8dc01"
 dependencies = [
  "arrayref",
  "num-derive 0.3.0",
  "num-traits",
  "num_enum",
- "safecoin-program 1.7.1",
+ "safecoin-program 1.7.6",
  "thiserror",
 ]
 
@@ -3757,13 +3708,12 @@ dependencies = [
 
 [[package]]
 name = "tar"
-version = "0.4.29"
+version = "0.4.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8a4c1d0bee3230179544336c15eefb563cf0302955d962e456542323e8c2e8a"
+checksum = "d6f5515d3add52e0bbdcad7b83c388bb36ba7b754dda3b5f5bc2d38640cdba5c"
 dependencies = [
  "filetime",
  "libc",
- "redox_syscall 0.1.56",
  "xattr",
 ]
 
@@ -3871,15 +3821,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "thread_local"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d40c6d1b69745a6ec6fb1ca717914848da4b44ae29d9b3080cbee91d72a69b14"
-dependencies = [
- "lazy_static",
-]
-
-[[package]]
 name = "time"
 version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3891,13 +3832,14 @@ dependencies = [
 
 [[package]]
 name = "tiny-bip39"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9e44c4759bae7f1032e286a7ef990bd9ed23fe831b7eeba0beb97484c2e59b8"
+checksum = "524daa5624d9d4ffb5a0625971d35205b882111daa6b6338a7a6c578a3c36928"
 dependencies = [
  "anyhow",
  "hmac 0.8.1",
  "once_cell",
+ "parking_lot 0.11.1",
  "pbkdf2 0.4.0",
  "rand 0.7.3",
  "rustc-hash",
@@ -3944,9 +3886,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "1.2.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c49e3df43841dafb86046472506755d8501c5615673955f6aa17181125d13c37"
+checksum = "caf7b11a536f46a809a8a9f0bb4237020f70ecbf115b842360afb127ea2fda57"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.6",
@@ -3982,9 +3924,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.6"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8864d706fdb3cc0843a49647ac892720dac98a6eeb818b77190592cf4994066"
+checksum = "e177a5d8c3bf36de9ebe6d58537d8879e964332f93fb3339e43f618c81361af0"
 dependencies = [
  "futures-core",
  "pin-project-lite 0.2.7",
@@ -4402,9 +4344,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize_derive"
-version = "1.0.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de251eec69fc7c1bc3923403d18ececb929380e016afe103da75f396704f8ca2"
+checksum = "bdff2024a851a322b08f179173ae2ba620445aef1e838f0c196820eade4ae0c7"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.6",

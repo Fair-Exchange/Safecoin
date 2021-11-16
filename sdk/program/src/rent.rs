@@ -1,3 +1,4 @@
+#![allow(clippy::integer_arithmetic)]
 //! configuration for network rent
 use crate::clock::DEFAULT_SLOTS_PER_EPOCH;
 

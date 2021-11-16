@@ -3,7 +3,7 @@ use crate::account::{
     InheritableAccountFields, DUMMY_INHERITABLE_ACCOUNT_FIELDS,
 };
 use crate::clock::INITIAL_RENT_EPOCH;
-use solana_program::sysvar::recent_blockhashes::{
+use safecoin_program::sysvar::recent_blockhashes::{
     IntoIterSorted, IterItem, RecentBlockhashes, MAX_ENTRIES,
 };
 use std::{collections::BinaryHeap, iter::FromIterator};
@@ -60,7 +60,7 @@ mod tests {
     use super::*;
     use crate::account::from_account;
     use rand::{seq::SliceRandom, thread_rng};
-    use solana_program::{
+    use safecoin_program::{
         fee_calculator::FeeCalculator,
         hash::{Hash, HASH_BYTES},
         sysvar::recent_blockhashes::Entry,

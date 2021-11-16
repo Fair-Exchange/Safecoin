@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::leader_schedule::LeaderSchedule;
 use solana_runtime::bank::Bank;
-use solana_sdk::{
+use safecoin_sdk::{
     clock::{Epoch, Slot, NUM_CONSECUTIVE_LEADER_SLOTS},
     pubkey::Pubkey,
 };
@@ -63,9 +63,9 @@ fn sort_stakes(stakes: &mut Vec<(Pubkey, u64)>) {
     // Note: Use unstable sort, because we dedup right after to remove the equal elements.
     stakes.sort_unstable_by(|(l_pubkey, l_stake), (r_pubkey, r_stake)| {
         if r_stake == l_stake {
-            r_pubkey.cmp(&l_pubkey)
+            r_pubkey.cmp(l_pubkey)
         } else {
-            r_stake.cmp(&l_stake)
+            r_stake.cmp(l_stake)
         }
     });
 
@@ -82,7 +82,7 @@ mod tests {
 
     #[test]
     fn test_leader_schedule_via_bank() {
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let genesis_config =
             create_genesis_config_with_leader(0, &pubkey, bootstrap_validator_stake_lamports())
                 .genesis_config;
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_leader_scheduler1_basic() {
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let genesis_config =
             create_genesis_config_with_leader(42, &pubkey, bootstrap_validator_stake_lamports())
                 .genesis_config;
@@ -114,8 +114,8 @@ mod tests {
 
     #[test]
     fn test_sort_stakes_basic() {
-        let pubkey0 = solana_sdk::pubkey::new_rand();
-        let pubkey1 = solana_sdk::pubkey::new_rand();
+        let pubkey0 = safecoin_sdk::pubkey::new_rand();
+        let pubkey1 = safecoin_sdk::pubkey::new_rand();
         let mut stakes = vec![(pubkey0, 1), (pubkey1, 2)];
         sort_stakes(&mut stakes);
         assert_eq!(stakes, vec![(pubkey1, 2), (pubkey0, 1)]);
@@ -123,8 +123,8 @@ mod tests {
 
     #[test]
     fn test_sort_stakes_with_dup() {
-        let pubkey0 = solana_sdk::pubkey::new_rand();
-        let pubkey1 = solana_sdk::pubkey::new_rand();
+        let pubkey0 = safecoin_sdk::pubkey::new_rand();
+        let pubkey1 = safecoin_sdk::pubkey::new_rand();
         let mut stakes = vec![(pubkey0, 1), (pubkey1, 2), (pubkey0, 1)];
         sort_stakes(&mut stakes);
         assert_eq!(stakes, vec![(pubkey1, 2), (pubkey0, 1)]);
@@ -133,7 +133,7 @@ mod tests {
     #[test]
     fn test_sort_stakes_with_equal_stakes() {
         let pubkey0 = Pubkey::default();
-        let pubkey1 = solana_sdk::pubkey::new_rand();
+        let pubkey1 = safecoin_sdk::pubkey::new_rand();
         let mut stakes = vec![(pubkey0, 1), (pubkey1, 1)];
         sort_stakes(&mut stakes);
         assert_eq!(stakes, vec![(pubkey1, 1), (pubkey0, 1)]);

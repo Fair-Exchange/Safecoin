@@ -1,6 +1,6 @@
 use crate::metrics::submit_counter;
 use log::*;
-use solana_sdk::timing;
+use safecoin_sdk::timing;
 use std::env;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
@@ -222,7 +222,7 @@ mod tests {
             INIT_HOOK.call_once(|| {
                 ENV_LOCK = Some(RwLock::new(()));
             });
-            &ENV_LOCK.as_ref().unwrap()
+            ENV_LOCK.as_ref().unwrap()
         }
     }
 

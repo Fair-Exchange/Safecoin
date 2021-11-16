@@ -19,7 +19,7 @@ use safecoin_clap_utils::{
 use safecoin_cli_output::CliNonceAccount;
 use safecoin_client::{nonce_utils::*, rpc_client::RpcClient};
 use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
-use solana_sdk::{
+use safecoin_sdk::{
     account::Account,
     feature_set::merge_nonce_error_into_system_error,
     hash::Hash,
@@ -527,10 +527,10 @@ pub fn process_new_nonce(
 ) -> ProcessResult {
     check_unique_pubkeys(
         (&config.signers[0].pubkey(), "cli keypair".to_string()),
-        (&nonce_account, "nonce_account_pubkey".to_string()),
+        (nonce_account, "nonce_account_pubkey".to_string()),
     )?;
 
-    if let Err(err) = rpc_client.get_account(&nonce_account) {
+    if let Err(err) = rpc_client.get_account(nonce_account) {
         return Err(CliError::BadParameter(format!(
             "Unable to advance nonce account {}. error: {}",
             nonce_account, err
@@ -540,7 +540,7 @@ pub fn process_new_nonce(
 
     let nonce_authority = config.signers[nonce_authority];
     let ixs = vec![advance_nonce_account(
-        &nonce_account,
+        nonce_account,
         &nonce_authority.pubkey(),
     )]
     .with_memo(memo);
@@ -588,7 +588,7 @@ pub fn process_show_nonce_account(
             use_lamports_unit,
             ..CliNonceAccount::default()
         };
-        if let Some(ref data) = data {
+        if let Some(data) = data {
             nonce_account.nonce = Some(data.blockhash.to_string());
             nonce_account.lamports_per_signature = Some(data.fee_calculator.lamports_per_signature);
             nonce_account.authority = Some(data.authority.to_string());
@@ -651,8 +651,8 @@ pub fn process_withdraw_from_nonce_account(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::{app, parse_command};
-    use solana_sdk::{
+    use crate::{clap_app::get_clap_app, cli::parse_command};
+    use safecoin_sdk::{
         account::Account,
         account_utils::StateMut,
         fee_calculator::FeeCalculator,
@@ -671,7 +671,7 @@ mod tests {
 
     #[test]
     fn test_parse_command() {
-        let test_commands = app("test", "desc", "version");
+        let test_commands = get_clap_app("test", "desc", "version");
         let default_keypair = Keypair::new();
         let (default_keypair_file, mut tmp_file) = make_tmp_file();
         write_keypair(&default_keypair, tmp_file.as_file_mut()).unwrap();
@@ -917,7 +917,7 @@ mod tests {
     #[test]
     fn test_check_nonce_account() {
         let blockhash = Hash::default();
-        let nonce_pubkey = solana_sdk::pubkey::new_rand();
+        let nonce_pubkey = safecoin_sdk::pubkey::new_rand();
         let data = Versions::new_current(State::Initialized(nonce::state::Data {
             authority: nonce_pubkey,
             blockhash,
@@ -953,7 +953,7 @@ mod tests {
         }
 
         let data = Versions::new_current(State::Initialized(nonce::state::Data {
-            authority: solana_sdk::pubkey::new_rand(),
+            authority: safecoin_sdk::pubkey::new_rand(),
             blockhash,
             fee_calculator: FeeCalculator::default(),
         }));

@@ -6,7 +6,7 @@ use {
         faucet::{run_faucet, Faucet, FAUCET_PORT},
         socketaddr,
     },
-    solana_sdk::signature::read_keypair_file,
+    safecoin_sdk::signature::read_keypair_file,
     std::{
         collections::HashSet,
         net::{IpAddr, Ipv4Addr, SocketAddr},

@@ -1,6 +1,6 @@
 use solana_bpf_rust_mem::entrypoint::process_instruction;
-use solana_program_test::*;
-use solana_sdk::{
+use safecoin_program_test::*;
+use safecoin_sdk::{
     instruction::Instruction, pubkey::Pubkey, signature::Signer, transaction::Transaction,
 };
 

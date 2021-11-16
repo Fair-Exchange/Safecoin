@@ -10,7 +10,7 @@ use {
     log::*,
     serde_derive::{Deserialize, Serialize},
     solana_metrics::datapoint_info,
-    solana_sdk::{
+    safecoin_sdk::{
         hash::Hash,
         instruction::Instruction,
         message::Message,
@@ -495,7 +495,7 @@ impl LimitByTime for Pubkey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::system_instruction::SystemInstruction;
+    use safecoin_sdk::system_instruction::SystemInstruction;
     use std::time::Duration;
 
     #[test]
@@ -653,8 +653,8 @@ mod tests {
 
     #[test]
     fn test_process_faucet_request() {
-        let to = solana_sdk::pubkey::new_rand();
-        let blockhash = Hash::new(&to.as_ref());
+        let to = safecoin_sdk::pubkey::new_rand();
+        let blockhash = Hash::new(to.as_ref());
         let lamports = 50;
         let req = FaucetRequest::GetAirdrop {
             lamports,
@@ -679,6 +679,6 @@ mod tests {
         assert_eq!(expected_vec_with_length, response_vec);
 
         let bad_bytes = "bad bytes".as_bytes();
-        assert!(faucet.process_faucet_request(&bad_bytes, ip).is_err());
+        assert!(faucet.process_faucet_request(bad_bytes, ip).is_err());
     }
 }

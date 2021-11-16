@@ -7,7 +7,7 @@ include path/to/bpf.mk
 ```
 and `src/program.c` containing:
 ```c
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 bool entrypoint(const uint8_t *input) {
   SafeKeyedAccount ka[1];
@@ -41,4 +41,4 @@ Then run `make test`.
 
 ### Limitations
 * Programs must be fully contained within a single .c file
-* No libc is available but `solana_sdk.h` provides a minimal set of primitives
+* No libc is available but `safecoin_sdk.h` provides a minimal set of primitives

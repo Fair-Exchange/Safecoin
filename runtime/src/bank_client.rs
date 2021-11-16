@@ -1,5 +1,5 @@
 use crate::bank::Bank;
-use solana_sdk::{
+use safecoin_sdk::{
     account::Account,
     client::{AsyncClient, Client, SyncClient},
     commitment_config::CommitmentConfig,
@@ -113,7 +113,10 @@ impl SyncClient for BankClient {
     }
 
     fn get_account_data(&self, pubkey: &Pubkey) -> Result<Option<Vec<u8>>> {
-        Ok(self.bank.get_account(pubkey).map(|account| account.data))
+        Ok(self
+            .bank
+            .get_account(pubkey)
+            .map(|account| Account::from(account).data))
     }
 
     fn get_account(&self, pubkey: &Pubkey) -> Result<Option<Account>> {
@@ -153,6 +156,7 @@ impl SyncClient for BankClient {
         _commitment_config: CommitmentConfig,
     ) -> Result<(Hash, FeeCalculator, u64)> {
         let (blockhash, fee_calculator) = self.bank.last_blockhash_with_fee_calculator();
+        #[allow(deprecated)]
         let last_valid_slot = self
             .bank
             .get_blockhash_last_valid_slot(&blockhash)
@@ -304,7 +308,7 @@ impl BankClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::{genesis_config::create_genesis_config, instruction::AccountMeta};
+    use safecoin_sdk::{genesis_config::create_genesis_config, instruction::AccountMeta};
 
     #[test]
     fn test_bank_client_new_with_keypairs() {
@@ -317,7 +321,7 @@ mod tests {
         let bank_client = BankClient::new(bank);
 
         // Create 2-2 Multisig Transfer instruction.
-        let bob_pubkey = solana_sdk::pubkey::new_rand();
+        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
         let mut transfer_instruction = system_instruction::transfer(&john_pubkey, &bob_pubkey, 42);
         transfer_instruction
             .accounts

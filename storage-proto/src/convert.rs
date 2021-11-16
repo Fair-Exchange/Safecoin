@@ -1,7 +1,7 @@
 use {
     crate::{StoredExtendedRewards, StoredTransactionStatusMeta},
     safecoin_account_decoder::parse_token::{real_number_string_trimmed, UiTokenAmount},
-    solana_sdk::{
+    safecoin_sdk::{
         hash::Hash,
         instruction::CompiledInstruction,
         instruction::InstructionError,
@@ -408,6 +408,7 @@ impl From<TransactionTokenBalance> for generated::TokenBalance {
                 amount: value.ui_token_amount.amount,
                 ui_amount_string: value.ui_token_amount.ui_amount_string,
             }),
+            owner: value.owner,
         }
     }
 }
@@ -435,6 +436,7 @@ impl From<generated::TokenBalance> for TransactionTokenBalance {
                     )
                 },
             },
+            owner: value.owner,
         }
     }
 }
