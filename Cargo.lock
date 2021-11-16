@@ -2403,8 +2403,7 @@ checksum = "292a948cd991e376cf75541fe5b97a1081d713c618b4f1b9500f8844e49eb565"
 [[package]]
 name = "librocksdb-sys"
 version = "0.8.0+7.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "611804e4666a25136fcc5f8cf425ab4d26c7f74ea245ffe92ea23b85b6420b5d"
+source = "git+https://github.com/rust-rocksdb/rust-rocksdb?branch=master#6cd1c020b0f0f9517ebe962fa485008938a46aab"
 dependencies = [
  "bindgen",
  "bzip2-sys",
@@ -2412,6 +2411,7 @@ dependencies = [
  "glob",
  "libc",
  "libz-sys",
+ "lz4-sys",
 ]
 
 [[package]]
@@ -3896,8 +3896,7 @@ dependencies = [
 [[package]]
 name = "rocksdb"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e9562ea1d70c0cc63a34a22d977753b50cca91cc6b6527750463bd5dd8697bc"
+source = "git+https://github.com/rust-rocksdb/rust-rocksdb?branch=master#6cd1c020b0f0f9517ebe962fa485008938a46aab"
 dependencies = [
  "libc",
  "librocksdb-sys",
@@ -4405,6 +4404,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "safecoin-clap-v3-utils"
+version = "1.14.3"
+dependencies = [
+ "chrono",
+ "clap 3.2.22",
+ "rpassword",
+ "safecoin-perf",
+ "safecoin-remote-wallet",
+ "safecoin-sdk",
+ "tempfile",
+ "thiserror",
+ "tiny-bip39",
+ "uriparse",
+ "url 2.3.1",
+]
+
+[[package]]
 name = "safecoin-cli-config"
 version = "1.14.3"
 dependencies = [
@@ -4884,11 +4900,11 @@ dependencies = [
  "clap 3.2.22",
  "dirs-next",
  "num_cpus",
+ "safecoin-clap-v3-utils",
  "safecoin-cli-config",
  "safecoin-remote-wallet",
  "safecoin-sdk",
  "safecoin-version",
- "safecoin-clap-v3-utils",
  "tiny-bip39",
 ]
 
@@ -6271,23 +6287,6 @@ version = "1.14.3"
 dependencies = [
  "cargo_metadata",
  "clap 3.2.22",
-]
-
-[[package]]
-name = "safecoin-clap-v3-utils"
-version = "1.14.3"
-dependencies = [
- "chrono",
- "clap 3.2.22",
- "rpassword",
- "safecoin-perf",
- "safecoin-remote-wallet",
- "safecoin-sdk",
- "tempfile",
- "thiserror",
- "tiny-bip39",
- "uriparse",
- "url 2.3.1",
 ]
 
 [[package]]
