@@ -3667,9 +3667,9 @@ dependencies = [
 
 [[package]]
 name = "safe-memo"
-version = "3.0.4"
+version = "3.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f021a1ad001925374fb3aa9c8c55d5de146959e986c29512a8eb7948b44a2c72"
+checksum = "4073602c729f3cc3f3638aa4a9a21b715ea5fdf308f3ac30704407cd21e23d6b"
 dependencies = [
  "safecoin-program 1.7.17 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
