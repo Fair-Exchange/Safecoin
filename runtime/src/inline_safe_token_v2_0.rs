@@ -1,5 +1,5 @@
 // Partial SPL Token v2.0.x declarations inlined to avoid an external dependency on the safe-token crate
-safecoin_sdk::declare_id!("7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD");
+safecoin_sdk::declare_id!("ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN");
 
 pub(crate) mod new_token_program {
     safecoin_sdk::declare_id!("nTokHfnBtpt4V6xiEbBSduiGCrQ6wSF3rxC8WeWAQ9F");

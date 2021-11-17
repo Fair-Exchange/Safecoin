@@ -5,16 +5,16 @@ use safecoin_sdk::{
 };
 
 mod safe_token {
-    safecoin_sdk::declare_id!("7v5TwK92hUSqduoL3R8NtzTNfNzMA48nJL4mzPYMdDrD");
+    safecoin_sdk::declare_id!("ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN");
 }
 mod safe_memo_1_0 {
-    safecoin_sdk::declare_id!("4DDUJ1rA8Vd7e6SFWanf4V8JnsfapjCGNutQYw8Vtt45");
+    safecoin_sdk::declare_id!("MEMDqRW2fYAU19mcFnoDVoqG4Br4t7TdyWjjv38P6Nc");
 }
 mod safe_memo_3_0 {
-    safecoin_sdk::declare_id!("9h7wfE8nxQ6YsRedqNHwroEZbA5bMAmNsh8GdxwBTtaV");
+    safecoin_sdk::declare_id!("MEMWKbqsjEB8o972BvDHExZFSauzGZKvB4xHDVPFowh");
 }
 mod safe_associated_token_account {
-    safecoin_sdk::declare_id!("CWyEp7dp1Cv3334j6gCci2UrrjA8Q98bYa7AwGBpZ6iJ");
+    safecoin_sdk::declare_id!("AToD9iqHSc2fhEP9Jp7UYA6mRjHQ4CTWyzCsw8X3tH7K");
 }
 
 static SPL_PROGRAMS: &[(Pubkey, &[u8])] = &[
