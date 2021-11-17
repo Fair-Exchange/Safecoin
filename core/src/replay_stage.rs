@@ -1435,21 +1435,6 @@ impl ReplayStage {
             return None;
         }
 
-        log::trace!("authorized_voter_pubkey {}", vote_account_pubkey);
-        log::trace!("authorized_voter_pubkey_string {}", vote_account_pubkey.to_string());
-        log::trace!("vote_hash: {}", vote.hash);
-        let vote_ok = bank.vote_allowed(vote.slots[0],vote.hash,*vote_account_pubkey);
-        if vote_ok  {
-            warn!(
-                "I ({}) will vote if I can!!!",*vote_account_pubkey
-            );
-        } else {
-            warn!(
-                "Vote account has no authorized voter for slot.  Unable to vote"
-            );       
-            return None;
-        }
-
         let vote_account = match bank.get_vote_account(vote_account_pubkey) {
             None => {
                 warn!(
@@ -1482,6 +1467,26 @@ impl ReplayStage {
                 );
                 return None;
             };
+
+
+        log::trace!("authorized_voter_pubkey {}", authorized_voter_pubkey);
+        log::trace!("authorized_voter_pubkey_string {}", authorized_voter_pubkey.to_string());
+        log::trace!("vote_hash: {}", vote.hash);
+        let vote_ok = bank.vote_allowed(vote.slots[0],vote.hash,authorized_voter_pubkey);
+        if vote_ok  {
+            warn!(
+                "I ({}) will vote if I can!!!",*vote_account_pubkey
+            );
+        } else {
+            warn!(
+                "Vote account has no authorized voter for slot.  Unable to vote"
+            );
+            return None;
+        }
+
+
+
+
 
         let authorized_voter_keypair = match authorized_voter_keypairs
             .iter()
