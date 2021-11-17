@@ -185,6 +185,11 @@ pub mod stake_merge_with_unmatched_credits_observed {
     safecoin_sdk::declare_id!("BrbirQE6i85NmJ3eB6jRLJbuYMT26HhSeHFYdxrfbUkk");
 }
 
+pub mod gate_large_block {
+    safecoin_sdk::declare_id!("8oBgb4GCzTaLXjHNZfzQimCVS74vC6YcFGUz3Q91cwxz");
+>>>>>>> 0aacc0f83... update feature sets to v1.7.17
+}
+
 pub mod mem_overlap_fix {
     safecoin_sdk::declare_id!("B7hPRGNWY1uLvHmZPeZJKqes4jXjra9qwFQUojg9Fz8P");
 }
