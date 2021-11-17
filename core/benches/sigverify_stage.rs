@@ -1,13 +1,13 @@
 #![feature(test)]
 
-extern crate safecoin_core;
+extern crate solana_core;
 extern crate test;
 
 use crossbeam_channel::unbounded;
 use log::*;
 use rand::{thread_rng, Rng};
-use safecoin_core::sigverify::TransactionSigVerifier;
-use safecoin_core::sigverify_stage::SigVerifyStage;
+use solana_core::sigverify::TransactionSigVerifier;
+use solana_core::sigverify_stage::SigVerifyStage;
 use solana_perf::packet::to_packets_chunked;
 use solana_perf::test_tx::test_tx;
 use safecoin_sdk::hash::Hash;

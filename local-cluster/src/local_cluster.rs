@@ -6,7 +6,7 @@ use crate::{
 use itertools::izip;
 use log::*;
 use safecoin_client::thin_client::{create_client, ThinClient};
-use safecoin_core::validator::{Validator, ValidatorConfig, ValidatorStartProgress};
+use solana_core::validator::{Validator, ValidatorConfig, ValidatorStartProgress};
 use safecoin_gossip::{
     cluster_info::{Node, VALIDATOR_PORT_RANGE},
     contact_info::ContactInfo,

@@ -702,7 +702,7 @@ fn main() {
 #[cfg(test)]
 pub mod test {
     use super::*;
-    use safecoin_core::validator::ValidatorConfig;
+    use solana_core::validator::ValidatorConfig;
     use solana_local_cluster::{
         local_cluster::{ClusterConfig, LocalCluster},
         validator_configs::make_identical_validator_configs,

@@ -5,7 +5,7 @@ use safecoin_bench_tps::{
     cli::Config,
 };
 use safecoin_client::thin_client::create_client;
-use safecoin_core::validator::ValidatorConfig;
+use solana_core::validator::ValidatorConfig;
 use safecoin_faucet::faucet::run_local_faucet_with_port;
 use safecoin_gossip::cluster_info::VALIDATOR_PORT_RANGE;
 use solana_local_cluster::{

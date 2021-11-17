@@ -3,7 +3,7 @@ use clap::{crate_description, crate_name, value_t, value_t_or_exit, App, Arg};
 use log::*;
 use rand::{thread_rng, Rng};
 use safecoin_client::rpc_client::RpcClient;
-use safecoin_core::serve_repair::RepairProtocol;
+use solana_core::serve_repair::RepairProtocol;
 use safecoin_gossip::{contact_info::ContactInfo, gossip_service::discover};
 use safecoin_sdk::pubkey::Pubkey;
 use solana_streamer::socket::SocketAddrSpace;

@@ -10,7 +10,7 @@ use safecoin_client::{
     nonce_utils,
     rpc_client::RpcClient,
 };
-use safecoin_core::test_validator::TestValidator;
+use solana_core::test_validator::TestValidator;
 use safecoin_faucet::faucet::run_local_faucet;
 use safecoin_sdk::{
     account_utils::StateMut,

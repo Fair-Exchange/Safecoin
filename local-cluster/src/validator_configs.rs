@@ -1,4 +1,4 @@
-use safecoin_core::validator::ValidatorConfig;
+use solana_core::validator::ValidatorConfig;
 use safecoin_sdk::exit::Exit;
 use std::sync::{Arc, RwLock};
 

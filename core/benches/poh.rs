@@ -1,9 +1,9 @@
-// This bench attempts to justify the value of `safecoin_core::poh_service::NUM_HASHES_PER_BATCH`
+// This bench attempts to justify the value of `solana_core::poh_service::NUM_HASHES_PER_BATCH`
 
 #![feature(test)]
 extern crate test;
 
-use safecoin_core::poh_service::DEFAULT_HASHES_PER_BATCH;
+use solana_core::poh_service::DEFAULT_HASHES_PER_BATCH;
 use solana_ledger::poh::Poh;
 use safecoin_sdk::hash::Hash;
 use std::sync::atomic::{AtomicBool, Ordering};

@@ -1,11 +1,11 @@
 #![feature(test)]
 
-extern crate safecoin_core;
+extern crate solana_core;
 extern crate test;
 
 use {
     log::*,
-    safecoin_core::retransmit_stage::retransmitter,
+    solana_core::retransmit_stage::retransmitter,
     safecoin_gossip::{
         cluster_info::{ClusterInfo, Node},
         contact_info::ContactInfo,

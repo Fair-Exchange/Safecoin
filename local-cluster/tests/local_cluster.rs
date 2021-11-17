@@ -11,7 +11,7 @@ use safecoin_client::{
     rpc_response::RpcSignatureResult,
     thin_client::{create_client, ThinClient},
 };
-use safecoin_core::{
+use solana_core::{
     broadcast_stage::{BroadcastDuplicatesConfig, BroadcastStageType},
     consensus::{Tower, SWITCH_FORK_THRESHOLD, VOTE_THRESHOLD_DEPTH},
     optimistic_confirmation_verifier::OptimisticConfirmationVerifier,
@@ -74,7 +74,7 @@ use std::{
 use tempfile::TempDir;
 
 const RUST_LOG_FILTER: &str =
-    "error,safecoin_core::replay_stage=warn,solana_local_cluster=info,local_cluster=info";
+    "error,solana_core::replay_stage=warn,solana_local_cluster=info,local_cluster=info";
 
 #[test]
 #[serial]

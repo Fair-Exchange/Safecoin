@@ -39,7 +39,7 @@ mod tests {
     use crossbeam_channel::unbounded;
     use fs_extra::dir::CopyOptions;
     use itertools::Itertools;
-    use safecoin_core::snapshot_packager_service::{PendingSnapshotPackage, SnapshotPackagerService};
+    use solana_core::snapshot_packager_service::{PendingSnapshotPackage, SnapshotPackagerService};
     use safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo};
     use solana_runtime::{
         accounts_background_service::{AbsRequestSender, SnapshotRequestHandler},

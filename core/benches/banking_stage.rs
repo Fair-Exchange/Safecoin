@@ -7,7 +7,7 @@ use crossbeam_channel::unbounded;
 use log::*;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use safecoin_core::banking_stage::{BankingStage, BankingStageStats};
+use solana_core::banking_stage::{BankingStage, BankingStageStats};
 use safecoin_gossip::cluster_info::ClusterInfo;
 use safecoin_gossip::cluster_info::Node;
 use solana_ledger::blockstore_processor::process_entries;

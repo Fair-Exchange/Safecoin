@@ -1208,7 +1208,7 @@ pub fn test_process_distribute_stake_with_client(client: &RpcClient, sender_keyp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use safecoin_core::test_validator::TestValidator;
+    use solana_core::test_validator::TestValidator;
     use safecoin_sdk::{
         signature::{read_keypair_file, write_keypair_file, Signer},
         stake::instruction::StakeInstruction,

@@ -1,6 +1,6 @@
 use safecoin_client::thin_client::ThinClient;
-use safecoin_core::validator::Validator;
-use safecoin_core::validator::ValidatorConfig;
+use solana_core::validator::Validator;
+use solana_core::validator::ValidatorConfig;
 use safecoin_gossip::{cluster_info::Node, contact_info::ContactInfo};
 use safecoin_sdk::pubkey::Pubkey;
 use safecoin_sdk::signature::Keypair;

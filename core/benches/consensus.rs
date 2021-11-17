@@ -1,9 +1,9 @@
 #![feature(test)]
 
-extern crate safecoin_core;
+extern crate solana_core;
 extern crate test;
 
-use safecoin_core::consensus::Tower;
+use solana_core::consensus::Tower;
 use solana_runtime::bank::Bank;
 use solana_runtime::bank_forks::BankForks;
 use safecoin_sdk::{

@@ -1,5 +1,5 @@
 use safecoin_client::rpc_client::RpcClient;
-use safecoin_core::test_validator::TestValidator;
+use solana_core::test_validator::TestValidator;
 use safecoin_sdk::signature::{Keypair, Signer};
 use solana_streamer::socket::SocketAddrSpace;
 use safecoin_tokens::commands::test_process_distribute_tokens_with_client;

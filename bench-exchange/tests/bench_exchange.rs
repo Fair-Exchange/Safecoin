@@ -1,6 +1,6 @@
 use log::*;
 use safecoin_bench_exchange::bench::{airdrop_lamports, do_bench_exchange, Config};
-use safecoin_core::validator::ValidatorConfig;
+use solana_core::validator::ValidatorConfig;
 use solana_exchange_program::{
     exchange_processor::process_instruction, id, solana_exchange_program,
 };

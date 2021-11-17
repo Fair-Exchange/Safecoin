@@ -1,5 +1,5 @@
 #![allow(clippy::integer_arithmetic)]
-pub use safecoin_core::test_validator;
+pub use solana_core::test_validator;
 pub use safecoin_gossip::cluster_info::MINIMUM_VALIDATOR_PORT_RANGE_WIDTH;
 use {
     console::style,
