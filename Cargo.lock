@@ -2287,13 +2287,14 @@ dependencies = [
 [[package]]
 name = "librocksdb-sys"
 version = "6.20.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c309a9d2470844aceb9a4a098cf5286154d20596868b75a6b36357d2bb9ca25d"
+source = "git+https://github.com/rust-rocksdb/rust-rocksdb?branch=master#522b4967389881749405b5872f46d0b8d0625b81"
 dependencies = [
  "bindgen",
+ "bzip2-sys",
  "cc",
  "glob",
  "libc",
+ "libz-sys",
 ]
 
 [[package]]
@@ -2342,6 +2343,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67abfe149395e3aa1c48a2beb32b068e2334402df8181f818d3aee2b304c4f5d"
 dependencies = [
  "libsecp256k1-core",
+]
+
+[[package]]
+name = "libz-sys"
+version = "1.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de5435b8549c16d423ed0c03dbaafe57cf6c3344744f1242520d59c9d8ecec66"
+dependencies = [
+ "cc",
+ "pkg-config",
+ "vcpkg",
 ]
 
 [[package]]
@@ -3677,9 +3689,8 @@ dependencies = [
 
 [[package]]
 name = "rocksdb"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c749134fda8bfc90d0de643d59bfc841dcb3ac8a1062e12b6754bd60235c48b3"
+version = "0.17.0"
+source = "git+https://github.com/rust-rocksdb/rust-rocksdb?branch=master#522b4967389881749405b5872f46d0b8d0625b81"
 dependencies = [
  "libc",
  "librocksdb-sys",

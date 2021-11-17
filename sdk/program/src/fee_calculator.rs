@@ -7,6 +7,7 @@ use {
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, AbiExample)]
 #[serde(rename_all = "camelCase")]
 pub struct FeeCalculator {
+
     // The current cost of a signature  This amount may increase/decrease over time based on
     // cluster processing load.
     pub lamports_per_signature: u64,
@@ -71,8 +72,9 @@ pub struct FeeRateGovernor {
     pub burn_percent: u8,
 }
 
-pub const DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE: u64 = 200_000;
+pub const DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE: u64 = 50_000;
 pub const DEFAULT_TARGET_SIGNATURES_PER_SLOT: u64 = 10 * DEFAULT_MS_PER_SLOT;
+
 
 // Percentage of tx fees to burn
 pub const DEFAULT_BURN_PERCENT: u8 = 50;

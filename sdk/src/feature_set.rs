@@ -187,7 +187,6 @@ pub mod stake_merge_with_unmatched_credits_observed {
 
 pub mod gate_large_block {
     safecoin_sdk::declare_id!("8oBgb4GCzTaLXjHNZfzQimCVS74vC6YcFGUz3Q91cwxz");
->>>>>>> 0aacc0f83... update feature sets to v1.7.17
 }
 
 pub mod mem_overlap_fix {
@@ -238,9 +237,6 @@ pub mod tx_wide_compute_cap {
     safecoin_sdk::declare_id!("5ekBxc8itEnPv4NzGJtr8BVVQLNMQuLMNQQj7pHoLNZ9");
 }
 
-pub mod gate_large_block {
-    safecoin_sdk::declare_id!("8oBgb4GCzTaLXjHNZfzQimCVS74vC6YcFGUz3Q91cwxz");
-}
 
 pub mod remove_native_loader {
     safecoin_sdk::declare_id!("ATWHHk7mdfaatNZTuKPUMvcBc9iKZStmph9ASzaWoSSj");
