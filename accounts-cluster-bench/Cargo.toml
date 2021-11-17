@@ -27,7 +27,7 @@ safecoin-sdk = { path = "../sdk", version = "=1.7.17" }
 safecoin-streamer = { path = "../streamer", version = "=1.7.17" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.7.17" }
 safecoin-version = { path = "../version", version = "=1.7.17" }
-safe-token-v2-0 = { path = "../../safecoin-program-library/token/program", package = "safe-token", version = "=3.2.0", features = ["no-entrypoint"] }
+safe-token-v2-0 = {  package = "safe-token", version = "=3.2.0", features = ["no-entrypoint"] }
 
 [dev-dependencies]
 solana-local-cluster = { path = "../local-cluster", version = "=1.7.17" }
