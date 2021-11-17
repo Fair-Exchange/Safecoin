@@ -70,8 +70,8 @@ NDEBUG=1 ./multinode-demo/validator-x.sh
 
 ```bash
 ./fetch-perf-libs.sh
-NDEBUG=1 SAFEANA_CUDA=1 ./multinode-demo/bootstrap-validator.sh
-NDEBUG=1 SAFEANA_CUDA=1 ./multinode-demo/validator.sh
+NDEBUG=1 SAFECOIN_CUDA=1 ./multinode-demo/bootstrap-validator.sh
+NDEBUG=1 SAFECOIN_CUDA=1 ./multinode-demo/validator.sh
 ```
 
 ### 测试网客户端演示

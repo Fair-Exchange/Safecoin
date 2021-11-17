@@ -597,7 +597,7 @@ pub fn info(config_file: &str, local_info_only: bool, eval: bool) -> Result<(), 
 
     if eval {
         println!(
-            "SAFEANA_INSTALL_ACTIVE_RELEASE={}",
+            "SAFECOIN_INSTALL_ACTIVE_RELEASE={}",
             &config.active_release_dir().to_str().unwrap_or("")
         );
         config
@@ -607,7 +607,7 @@ pub fn info(config_file: &str, local_info_only: bool, eval: bool) -> Result<(), 
                 ExplicitRelease::Channel(channel) => channel,
             })
             .and_then(|channel| {
-                println!("SAFEANA_INSTALL_ACTIVE_CHANNEL={}", channel,);
+                println!("SAFECOIN_INSTALL_ACTIVE_CHANNEL={}", channel,);
                 Option::<String>::None
             });
         return Ok(());

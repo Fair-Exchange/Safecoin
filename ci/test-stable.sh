@@ -91,7 +91,7 @@ test-stable-perf)
     export TEST_PERF_LIBS_CUDA=1
 
     # Force CUDA in ci/localnet-sanity.sh
-    export SAFEANA_CUDA=1
+    export SAFECOIN_CUDA=1
   fi
 
   _ "$cargo" stable build --bins ${V:+--verbose}

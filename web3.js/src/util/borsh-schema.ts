@@ -8,11 +8,11 @@ export class Struct {
   }
 
   encode(): Buffer {
-    return Buffer.from(serialize(SAFEANA_SCHEMA, this));
+    return Buffer.from(serialize(SAFECOIN_SCHEMA, this));
   }
 
   static decode(data: Buffer): any {
-    return deserialize(SAFEANA_SCHEMA, this, data);
+    return deserialize(SAFECOIN_SCHEMA, this, data);
   }
 }
 
@@ -31,4 +31,4 @@ export class Enum extends Struct {
   }
 }
 
-export const SAFEANA_SCHEMA: Map<Function, any> = new Map();
+export const SAFECOIN_SCHEMA: Map<Function, any> = new Map();

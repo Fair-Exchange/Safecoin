@@ -4,7 +4,7 @@ import nacl from 'tweetnacl';
 import {sha256} from 'crypto-hash';
 import {Buffer} from 'buffer';
 
-import {Struct, SAFEANA_SCHEMA} from './util/borsh-schema';
+import {Struct, SAFECOIN_SCHEMA} from './util/borsh-schema';
 import {toBuffer} from './util/to-buffer';
 
 /**
@@ -190,7 +190,7 @@ export class PublicKey extends Struct {
   }
 }
 
-SAFEANA_SCHEMA.set(PublicKey, {
+SAFECOIN_SCHEMA.set(PublicKey, {
   kind: 'struct',
   fields: [['_bn', 'u256']],
 });

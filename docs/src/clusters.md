@@ -27,7 +27,7 @@ Explorers:
 - Metrics environment variable for Devnet:
 
 ```bash
-export SAFEANA_METRICS_CONFIG="host=https://metrics.safecoin.org:10016,db=devnet,u=scratch_writer,p=topsecret"
+export SAFECOIN_METRICS_CONFIG="host=https://metrics.safecoin.org:10016,db=devnet,u=scratch_writer,p=topsecret"
 ```
 
 - RPC URL for Devnet: `https://api.devnet.safecoin.org`
@@ -79,7 +79,7 @@ are operated by Safecoin Labs
 - Metrics environment variable for Testnet:
 
 ```bash
-export SAFEANA_METRICS_CONFIG="host=https://metrics.safecoin.org:10016,db=tds,u=testnet_write,p=c4fa841aa918bf8274e3e2a44d77568d9861b3ea"
+export SAFECOIN_METRICS_CONFIG="host=https://metrics.safecoin.org:10016,db=tds,u=testnet_write,p=c4fa841aa918bf8274e3e2a44d77568d9861b3ea"
 ```
 
 - RPC URL for Testnet: `https://api.testnet.safecoin.org`
@@ -133,7 +133,7 @@ A permissionless, persistent cluster for early token holders and launch partners
 - Metrics environment variable for Mainnet Beta:
 
 ```bash
-export SAFEANA_METRICS_CONFIG="host=https://metrics.safecoin.org:10016,db=mainnet-beta,u=mainnet-beta_write,p=password"
+export SAFECOIN_METRICS_CONFIG="host=https://metrics.safecoin.org:10016,db=mainnet-beta,u=mainnet-beta_write,p=password"
 ```
 
 - RPC URL for Mainnet Beta: `https://api.mainnet-beta.safecoin.org`

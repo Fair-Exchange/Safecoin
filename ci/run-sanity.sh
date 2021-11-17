@@ -7,7 +7,7 @@ source multinode-demo/common.sh
 
 rm -rf config/run/init-completed config/ledger config/snapshot-ledger
 
-SAFEANA_RUN_SH_VALIDATOR_ARGS="--snapshot-interval-slots 200" timeout 120 ./scripts/run.sh &
+SAFECOIN_RUN_SH_VALIDATOR_ARGS="--snapshot-interval-slots 200" timeout 120 ./scripts/run.sh &
 pid=$!
 
 attempts=20

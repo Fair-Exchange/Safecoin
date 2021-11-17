@@ -2,7 +2,7 @@
 set -e
 
 here=$(dirname "$0")
-SAFEANA_ROOT="$(cd "$here"/..; pwd)"
+SAFECOIN_ROOT="$(cd "$here"/..; pwd)"
 
 # shellcheck source=net/common.sh
 source "$here"/common.sh
@@ -178,12 +178,12 @@ build() {
   declare MAYBE_DOCKER=
   if [[ $(uname) != Linux || ! " ${supported[*]} " =~ $(lsb_release -sr) ]]; then
     # shellcheck source=ci/rust-version.sh
-    source "$SAFEANA_ROOT"/ci/rust-version.sh
+    source "$SAFECOIN_ROOT"/ci/rust-version.sh
     MAYBE_DOCKER="ci/docker-run.sh $rust_stable_docker_image"
   fi
   SECONDS=0
   (
-    cd "$SAFEANA_ROOT"
+    cd "$SAFECOIN_ROOT"
     echo "--- Build started at $(date)"
 
     set -x
@@ -213,33 +213,33 @@ build() {
     (
       echo "channel: devbuild $NOTE"
       echo "commit: $COMMIT"
-    ) > "$SAFEANA_ROOT"/farf/version.yml
+    ) > "$SAFECOIN_ROOT"/farf/version.yml
   )
   echo "Build took $SECONDS seconds"
 }
 
-SAFEANA_HOME="\$HOME/solana"
+SAFECOIN_HOME="\$HOME/solana"
 CARGO_BIN="\$HOME/.cargo/bin"
 
 startCommon() {
   declare ipAddress=$1
-  test -d "$SAFEANA_ROOT"
+  test -d "$SAFECOIN_ROOT"
   if $skipSetup; then
     # shellcheck disable=SC2029
     ssh "${sshOptions[@]}" "$ipAddress" "
       set -x;
-      mkdir -p $SAFEANA_HOME/config;
+      mkdir -p $SAFECOIN_HOME/config;
       rm -rf ~/config;
-      mv $SAFEANA_HOME/config ~;
-      rm -rf $SAFEANA_HOME;
-      mkdir -p $SAFEANA_HOME $CARGO_BIN;
-      mv ~/config $SAFEANA_HOME/
+      mv $SAFECOIN_HOME/config ~;
+      rm -rf $SAFECOIN_HOME;
+      mkdir -p $SAFECOIN_HOME $CARGO_BIN;
+      mv ~/config $SAFECOIN_HOME/
     "
   else
     # shellcheck disable=SC2029
     ssh "${sshOptions[@]}" "$ipAddress" "
       set -x;
-      rm -rf $SAFEANA_HOME;
+      rm -rf $SAFECOIN_HOME;
       mkdir -p $CARGO_BIN
     "
   fi
@@ -252,8 +252,8 @@ syncScripts() {
   declare ipAddress=$1
   rsync -vPrc -e "ssh ${sshOptions[*]}" \
     --exclude 'net/log*' \
-    "$SAFEANA_ROOT"/{fetch-perf-libs.sh,fetch-spl.sh,scripts,net,multinode-demo} \
-    "$ipAddress":"$SAFEANA_HOME"/ > /dev/null
+    "$SAFECOIN_ROOT"/{fetch-perf-libs.sh,fetch-spl.sh,scripts,net,multinode-demo} \
+    "$ipAddress":"$SAFECOIN_HOME"/ > /dev/null
 }
 
 # Deploy local binaries to bootstrap validator.  Other validators and clients later fetch the
@@ -264,12 +264,12 @@ deployBootstrapValidator() {
   echo "Deploying software to bootstrap validator ($ipAddress)"
   case $deployMethod in
   tar)
-    rsync -vPrc -e "ssh ${sshOptions[*]}" "$SAFEANA_ROOT"/solana-release/bin/* "$ipAddress:$CARGO_BIN/"
-    rsync -vPrc -e "ssh ${sshOptions[*]}" "$SAFEANA_ROOT"/solana-release/version.yml "$ipAddress:~/"
+    rsync -vPrc -e "ssh ${sshOptions[*]}" "$SAFECOIN_ROOT"/solana-release/bin/* "$ipAddress:$CARGO_BIN/"
+    rsync -vPrc -e "ssh ${sshOptions[*]}" "$SAFECOIN_ROOT"/solana-release/version.yml "$ipAddress:~/"
     ;;
   local)
-    rsync -vPrc -e "ssh ${sshOptions[*]}" "$SAFEANA_ROOT"/farf/bin/* "$ipAddress:$CARGO_BIN/"
-    rsync -vPrc -e "ssh ${sshOptions[*]}" "$SAFEANA_ROOT"/farf/version.yml "$ipAddress:~/"
+    rsync -vPrc -e "ssh ${sshOptions[*]}" "$SAFECOIN_ROOT"/farf/bin/* "$ipAddress:$CARGO_BIN/"
+    rsync -vPrc -e "ssh ${sshOptions[*]}" "$SAFECOIN_ROOT"/farf/version.yml "$ipAddress:~/"
     ;;
   skip)
     ;;
@@ -530,21 +530,21 @@ prepareDeploy() {
   tar)
     if [[ -n $releaseChannel ]]; then
       echo "Downloading release from channel: $releaseChannel"
-      rm -f "$SAFEANA_ROOT"/solana-release.tar.bz2
+      rm -f "$SAFECOIN_ROOT"/solana-release.tar.bz2
       declare updateDownloadUrl=https://release.solana.com/"$releaseChannel"/solana-release-x86_64-unknown-linux-gnu.tar.bz2
       (
         set -x
         curl -L -I "$updateDownloadUrl"
         curl -L --retry 5 --retry-delay 2 --retry-connrefused \
-          -o "$SAFEANA_ROOT"/solana-release.tar.bz2 "$updateDownloadUrl"
+          -o "$SAFECOIN_ROOT"/solana-release.tar.bz2 "$updateDownloadUrl"
       )
-      tarballFilename="$SAFEANA_ROOT"/solana-release.tar.bz2
+      tarballFilename="$SAFECOIN_ROOT"/solana-release.tar.bz2
     fi
     (
       set -x
-      rm -rf "$SAFEANA_ROOT"/solana-release
-      cd "$SAFEANA_ROOT"; tar jfxv "$tarballFilename"
-      cat "$SAFEANA_ROOT"/solana-release/version.yml
+      rm -rf "$SAFECOIN_ROOT"/solana-release
+      cd "$SAFECOIN_ROOT"; tar jfxv "$tarballFilename"
+      cat "$SAFECOIN_ROOT"/solana-release/version.yml
     )
     ;;
   local)
@@ -573,7 +573,7 @@ prepareDeploy() {
       rsync -vPrc -e "ssh ${sshOptions[*]}" "${validatorIpList[0]}":~/version.yml current-version.yml
     )
     cat current-version.yml
-    if ! diff -q current-version.yml "$SAFEANA_ROOT"/solana-release/version.yml; then
+    if ! diff -q current-version.yml "$SAFECOIN_ROOT"/solana-release/version.yml; then
       echo "Cluster software version is old.  Update required"
     else
       echo "Cluster software version is current.  No update required"
@@ -664,7 +664,7 @@ deploy() {
     networkVersion="$(
       (
         set -o pipefail
-        grep "^commit: " "$SAFEANA_ROOT"/solana-release/version.yml | head -n1 | cut -d\  -f2
+        grep "^commit: " "$SAFECOIN_ROOT"/solana-release/version.yml | head -n1 | cut -d\  -f2
       ) || echo "tar-unknown"
     )"
     ;;
@@ -1150,7 +1150,7 @@ netem)
     remoteNetemConfigFile="$(basename "$netemConfigFile")"
     if [[ $netemCommand = "add" ]]; then
       for ipAddress in "${validatorIpList[@]}"; do
-        "$here"/scp.sh "$netemConfigFile" solana@"$ipAddress":"$SAFEANA_HOME"
+        "$here"/scp.sh "$netemConfigFile" solana@"$ipAddress":"$SAFECOIN_HOME"
       done
     fi
     for i in "${!validatorIpList[@]}"; do

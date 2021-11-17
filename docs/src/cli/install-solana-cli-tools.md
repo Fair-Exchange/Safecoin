@@ -16,25 +16,25 @@ depending on your preferred workflow:
 - Open your favorite Terminal application
 
 - Install the Safecoin release
-  [LATEST_SAFEANA_RELEASE_VERSION](https://github.com/fair-exchange/safecoin/releases/tag/LATEST_SAFEANA_RELEASE_VERSION) on your
+  [LATEST_SAFECOIN_RELEASE_VERSION](https://github.com/fair-exchange/safecoin/releases/tag/LATEST_SAFECOIN_RELEASE_VERSION) on your
   machine by running:
 
 ```bash
-sh -c "$(curl -sSfL https://release.solana.com/LATEST_SAFEANA_RELEASE_VERSION/install)"
+sh -c "$(curl -sSfL https://release.solana.com/LATEST_SAFECOIN_RELEASE_VERSION/install)"
 ```
 
-- You can replace `LATEST_SAFEANA_RELEASE_VERSION` with the release tag matching
+- You can replace `LATEST_SAFECOIN_RELEASE_VERSION` with the release tag matching
   the software version of your desired release, or use one of the three symbolic
   channel names: `stable`, `beta`, or `edge`.
 
 - The following output indicates a successful update:
 
 ```text
-downloading LATEST_SAFEANA_RELEASE_VERSION installer
+downloading LATEST_SAFECOIN_RELEASE_VERSION installer
 Configuration: /home/solana/.config/safecoin/install/config.yml
 Active release directory: /home/solana/.local/share/solana/install/active_release
-* Release version: LATEST_SAFEANA_RELEASE_VERSION
-* Release URL: https://github.com/fair-exchange/safecoin/releases/download/LATEST_SAFEANA_RELEASE_VERSION/solana-release-x86_64-unknown-linux-gnu.tar.bz2
+* Release version: LATEST_SAFECOIN_RELEASE_VERSION
+* Release URL: https://github.com/fair-exchange/safecoin/releases/download/LATEST_SAFECOIN_RELEASE_VERSION/solana-release-x86_64-unknown-linux-gnu.tar.bz2
 Update successful
 ```
 
@@ -71,7 +71,7 @@ safecoin --version
   installer into a temporary directory:
 
 ```bash
-curl https://release.solana.com/LATEST_SAFEANA_RELEASE_VERSION/safecoin-install-init-x86_64-pc-windows-msvc.exe --output C:\safecoin-install-tmp\safecoin-install-init.exe --create-dirs
+curl https://release.solana.com/LATEST_SAFECOIN_RELEASE_VERSION/safecoin-install-init-x86_64-pc-windows-msvc.exe --output C:\safecoin-install-tmp\safecoin-install-init.exe --create-dirs
 ```
 
 - Copy and paste the following command, then press Enter to install the latest
@@ -79,7 +79,7 @@ curl https://release.solana.com/LATEST_SAFEANA_RELEASE_VERSION/safecoin-install-
   to allow the program to run.
 
 ```bash
-C:\safecoin-install-tmp\safecoin-install-init.exe LATEST_SAFEANA_RELEASE_VERSION
+C:\safecoin-install-tmp\safecoin-install-init.exe LATEST_SAFECOIN_RELEASE_VERSION
 ```
 
 - When the installer is finished, press Enter.
