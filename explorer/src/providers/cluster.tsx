@@ -52,8 +52,8 @@ export function clusterName(cluster: Cluster): string {
 }
 
 export const MAINNET_BETA_URL = "https://api.mainnet-beta.safecoin.org";
-export const TESTNET_URL = clusterApiUrl("testnet");
-export const DEVNET_URL = clusterApiUrl("devnet");
+export const TESTNET_URL = "https://api.testnet.safecoin.org";
+export const DEVNET_URL = "https://api.devnet.safecoin.org";
 
 export function clusterUrl(cluster: Cluster, customUrl: string): string {
   switch (cluster) {
