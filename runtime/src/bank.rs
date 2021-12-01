@@ -6010,19 +6010,21 @@ impl BankVoteThreshold for Bank {
     }
 }
 
+
 impl VoteModerator for Bank {
     /// determine if a voter is in the group for a given slot
     fn vote_allowed (&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
-        if self.epoch_authorized_voter(&voter) == None{
-            return self.is_rando_voter(hash,voter);
+        if self.in_group(slot,hash,voter){
+            return true;
         }
-        else {
-            return self.in_group(slot,hash,voter);
+    else {
+            return self.is_rando_voter(hash,voter);
         }
     }
 
 
 }
+
 
 
 
