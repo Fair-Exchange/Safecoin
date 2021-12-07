@@ -6,6 +6,7 @@ use {
     sha2::{Digest, Sha256},
     std::{convert::TryFrom, fmt, mem, str::FromStr},
     thiserror::Error,
+    std::convert::TryInto;
 };
 
 pub const HASH_BYTES: usize = 32;
@@ -28,7 +29,7 @@ const MAX_BASE58_LEN: usize = 44;
     AbiExample,
 )]
 #[repr(transparent)]
-pub struct Hash(pub [u8; HASH_BYTES]);
+pub struct Hash(pub [u8; 32]);
 
 #[derive(Clone, Default)]
 pub struct Hasher {
@@ -97,6 +98,10 @@ impl FromStr for Hash {
     }
 }
 
+fn pop128(hunk: &[u8]) -> &[u8; 16] {
+    hunk.try_into().expect("slice with incorrect length")
+}
+
 impl Hash {
     pub fn new(hash_slice: &[u8]) -> Self {
         Hash(<[u8; HASH_BYTES]>::try_from(hash_slice).unwrap())
@@ -119,6 +124,14 @@ impl Hash {
 
     pub fn to_bytes(self) -> [u8; HASH_BYTES] {
         self.0
+    }
+
+    pub fn to_u128(self) -> u128 {
+        let one_slice = pop128(&self.0[0..15]);
+        let one = u128::from_le_bytes(*one_slice);
+        let two_slice = pop128(&self.0[16..31]);
+        let two = u128::from_le_bytes(*two_slice);
+        one ^ two
     }
 }
 

@@ -7,15 +7,18 @@
 use safecoin_sdk::{
     pubkey::Pubkey,
     hash::Hash,
+    hash::extend_and_hash,
 };
+
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str::FromStr;
 
 pub static SAFECOIN_ALWAYS_VOTER: &str = "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
 
-//#[derive(Clone, Debug, Serialize, Deserialize, AbiExample, PartialEq)]
-//pub struct ArcPubkey(std::sync::Arc<Pubkey>);
+pub fn rand_voter_hash( hash: Hash, test_key: Pubkey) -> Hash{
+    extend_and_hash(&hash,  &test_key.to_bytes())
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, AbiExample, PartialEq)]
 pub struct VoteGroupGenerator {
