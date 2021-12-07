@@ -45,7 +45,7 @@ use crate::{
     builtins::{self, ActivationType},
     commitment::{VOTE_GROUP_COUNT, VOTE_THRESHOLD_SIZE, VOTE_THRESHOLD_SIZE_ORIG},
     epoch_stakes::{EpochStakes, NodeVoteAccounts},
-    vote_group_gen::{VoteGroupGenerator,SAFECOIN_ALWAYS_VOTER},
+    vote_group_gen::{VoteGroupGenerator,SAFECOIN_ALWAYS_VOTER,rand_voter_hash},
     hashed_transaction::{HashedTransaction, HashedTransactionSlice},
     inline_safe_token_v2_0,
     instruction_recorder::InstructionRecorder,
@@ -5934,31 +5934,20 @@ impl Bank {
     // supports VoteModerator trait 
     // has a 10% chance of allowing a vote 
     fn is_rando_voter(&self, hash: Hash, voter: Pubkey) -> bool {
-        log::trace!("vote_hash.bank.rs: {}", hash);
+ 
+        let random_vote_hash = rand_voter_hash(hash, voter);
+        let random_voter_val = random_vote_hash.to_u128();
+        let random_will_vote = (random_voter_val % 10) == 0;
         log::trace!(
-            "H_vote.bank.rs: {}",
+            "H_vote: {}",
             ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
         );
-        log::trace!(
-            "P_vote.bank.rs: {}",
-            ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
-                * (voter.to_string().chars().last().unwrap() as usize
-                    + hash.to_string().chars().last().unwrap() as usize)
-                / 10) as usize
-                + voter.to_string().chars().last().unwrap() as usize
-                + hash.to_string().chars().last().unwrap() as usize)
-                % 10 as usize
-        );
-        let dont_vote = (((hash.to_string().chars().nth(0).unwrap() as usize) % 10) as usize
-            != ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
-                * (voter.to_string().chars().last().unwrap() as usize
-                    + hash.to_string().chars().last().unwrap() as usize)
-                / 10) as usize
-                + voter.to_string().chars().last().unwrap() as usize
-                + hash.to_string().chars().last().unwrap() as usize)
-                % 10 as usize)
-            && voter.to_string() != SAFECOIN_ALWAYS_VOTER;
-        return dont_vote == false;
+        let always_voter = voter.to_string() == SAFECOIN_ALWAYS_VOTER;
+        
+        let will_vote = random_will_vote || always_voter;
+        log::trace!("rando hash: {} voter {} will vote: {}", hash,voter, will_vote);
+
+        return will_vote
     }
 
     // supports VoteModerator trait 
@@ -6014,11 +6003,9 @@ impl VoteModerator for Bank {
     /// determine if a voter is in the group for a given slot
     fn vote_allowed (&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
         if self.epoch_authorized_voter(&voter) == None{
-	    log::warn!("VoteModerator: is_rando_voter for slot {}, hash {}, voter {}", slot, hash, voter);
             return self.is_rando_voter(hash,voter);
         }
         else {
-	    log::warn!("VoteModerator: in_group_voter for slot {}, hash {}, voter {}", slot, hash, voter);
             return self.in_group(slot,hash,voter);
         }
     }
