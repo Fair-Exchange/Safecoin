@@ -60,6 +60,7 @@ impl VoteGroupGenerator {
                 initial.push(*val);
             }
         }
+        log::trace!("possible voters: {:#?}",temp);
         Self {
             always_voter : always,
             possible_voters: temp,
