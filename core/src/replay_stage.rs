@@ -1479,15 +1479,13 @@ impl ReplayStage {
         check_allowed.stop();
         if vote_ok  {
             warn!(
-                "({} ms) I ({}) will vote if I can!!! ",check_allowed.as_ms(), authorized_voter_pubkey.to_string()
+                "I ({}) will vote if I can!!!",authorized_voter_pubkey.to_string()
             );
         } else {
             warn!(
-                "({} ms) Vote account {} not selected voter for slot {}.  Better luck next time",
-                check_allowed.as_ms(),
-                  authorized_voter_pubkey.to_string(),
+                "Vote account {} not selected voter for slot {}.  Better luck next time",
+		  authorized_voter_pubkey.to_string(),
                     vote.slots[0]
-      
             );
             return None;
         }
