@@ -5938,15 +5938,11 @@ impl Bank {
         let random_vote_hash = rand_voter_hash(hash, voter);
         let random_voter_val = random_vote_hash.to_u128();
         let random_will_vote = (random_voter_val % 10) == 0;
-        log::trace!(
-            "H_vote: {}",
-            ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
-        );
         let always_voter = voter.to_string() == SAFECOIN_ALWAYS_VOTER;
         
         let will_vote = random_will_vote || always_voter;
         rand_elapsed.stop();
-        log::trace!("rando hash: {} voter {} will vote: {} s {}", hash,voter, will_vote,rand_elapsed.as_us());
+        log::trace!("rando hash: {} voter {} will vote: {} ms {}", hash,voter, will_vote,rand_elapsed.as_ms());
         return will_vote
     }
 

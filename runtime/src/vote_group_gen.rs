@@ -130,7 +130,7 @@ impl VoteGroupGenerator {
             }
         }
         
-        log::trace!("in_group = {} us = {}", result, ingrp_elapsed.as_us());
+        log::trace!("in_group = {} ms = {}", result, ingrp_elapsed.as_ms());
         result
     }
 }
