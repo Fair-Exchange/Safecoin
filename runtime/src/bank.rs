@@ -1841,6 +1841,7 @@ impl Bank {
                 );
             }
             let vgr : VoteGroupGenerator = new_epoch_stakes.make_group_generator();
+            log::trace!("new generator\n: {:?}",vgr);
             self.epoch_stakes
                 .insert(leader_schedule_epoch, new_epoch_stakes);
             self.group_generators
