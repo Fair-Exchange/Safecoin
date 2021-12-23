@@ -5814,6 +5814,13 @@ impl Bank {
             .is_active(&feature_set::rent_for_sysvars::id())
     }
 
+    
+    fn use_new_hash(&self) -> bool {
+        self.feature_set
+            .is_active(&feature_set::use_new_hash::id())
+    }
+    
+
     ///  This simply returns _me_ but in the limited capacity of
     ///  providing the vote threshold:
     ///  sort of a hack to get around the fact that the banks are shared
@@ -5825,20 +5832,43 @@ impl Bank {
     // supports VoteModerator trait 
     // has a 10% chance of allowing a vote 
     fn is_rando_voter(&self, hash: Hash, voter: Pubkey) -> bool {
- 
-        let random_vote_hash = rand_voter_hash(hash, voter);
-        let random_voter_val = random_vote_hash.to_u128();
-        let random_will_vote = (random_voter_val % 10) == 0;
-        log::trace!(
-            "H_vote: {}",
-            ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
-        );
-        let always_voter = voter.to_string() == SAFECOIN_ALWAYS_VOTER;
-        
-        let will_vote = random_will_vote || always_voter;
-        log::trace!("rando hash: {} voter {} will vote: {}", hash,voter, will_vote);
+        if self.use_new_hash() {
+            let mut rand_elapsed = Measure::start("rando time");
+            let random_vote_hash = rand_voter_hash(hash, voter);
+            let random_voter_val = random_vote_hash.to_u128();
+            let random_will_vote = (random_voter_val % 10) == 0;
+            log::trace!(
+                "H_vote: {}",
+                ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
+            );
+            let always_voter = voter.to_string() == SAFECOIN_ALWAYS_VOTER;
 
-        return will_vote
+            let will_vote = random_will_vote || always_voter;
+            rand_elapsed.stop();
+            log::trace!("rando hash: {} voter {} will vote: {} s {}", hash,voter, will_vote,rand_elapsed.as_us());
+            return will_vote;
+        } else {
+            log::trace!(
+                "P_vote.bank.rs: {}",
+                ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
+                    * (voter.to_string().chars().last().unwrap() as usize
+                        + hash.to_string().chars().last().unwrap() as usize)
+                    / 10) as usize
+                    + voter.to_string().chars().last().unwrap() as usize
+                    + hash.to_string().chars().last().unwrap() as usize)
+                    % 10 as usize
+            );
+            let dont_vote = (((hash.to_string().chars().nth(0).unwrap() as usize) % 10) as usize
+                != ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
+                    * (voter.to_string().chars().last().unwrap() as usize
+                        + hash.to_string().chars().last().unwrap() as usize)
+                    / 10) as usize
+                    + voter.to_string().chars().last().unwrap() as usize
+                    + hash.to_string().chars().last().unwrap() as usize)
+                    % 10 as usize)
+                && voter.to_string() != SAFECOIN_ALWAYS_VOTER;
+            return dont_vote == false;
+        }
     }
 
     fn use_voter_groups_for_real(&self) -> bool {
