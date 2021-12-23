@@ -234,6 +234,9 @@ pub mod spl_token_v2_set_authority_fix {
 pub mod voter_groups_consensus {
     safecoin_sdk::declare_id!("5jvJyof7JXy7JEwGag4qdEuCA2DuEhkQSKMaEsELJxQU");
 }
+pub mod use_new_hash {
+    safecoin_sdk::declare_id!("UNHufqFsvHBU7ouiUKvJifLChnrZ2LyKPUefYjvAN22");
+}
 
 lazy_static! {
     /// Map of feature identifiers to user-visible description
