@@ -28,7 +28,7 @@ safecoin-streamer = { path = "../streamer", version = "=1.9.29" }
 safecoin-test-validator = { path = "../test-validator", version = "=1.9.29" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.9.29" }
 safecoin-version = { path = "../version", version = "=1.9.29" }
-safe-token = { path = "../../safecoin-program-library/token/program", version = "=3.2.0", features = ["no-entrypoint"] }
+safe-token = { path = "../../safecoin-program-library/token/program", version = "=3.2.3", features = ["no-entrypoint"] }
 
 [dev-dependencies]
 solana-local-cluster = { path = "../local-cluster", version = "=1.9.29" }
