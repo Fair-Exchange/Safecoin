@@ -45,7 +45,7 @@ use crate::{
     builtins::{self, ActivationType},
     commitment::{VOTE_GROUP_COUNT, VOTE_THRESHOLD_SIZE, VOTE_THRESHOLD_SIZE_ORIG},
     epoch_stakes::{EpochStakes, NodeVoteAccounts},
-    vote_group_gen::{VoteGroupGenerator,SAFECOIN_ALWAYS_VOTER,rand_voter_hash},
+    vote_group_gen::{VoteGroupGenerator,SAFECOIN_ALWAYS_VOTER},
     hashed_transaction::{HashedTransaction, HashedTransactionSlice},
     inline_safe_token_v2_0,
     instruction_recorder::InstructionRecorder,
@@ -1841,7 +1841,6 @@ impl Bank {
                 );
             }
             let vgr : VoteGroupGenerator = new_epoch_stakes.make_group_generator();
-            log::trace!("new generator\n: {:?}",vgr);
             self.epoch_stakes
                 .insert(leader_schedule_epoch, new_epoch_stakes);
             self.group_generators
@@ -5923,11 +5922,6 @@ impl Bank {
             .is_active(&feature_set::rent_for_sysvars::id())
     }
     
-    fn use_new_hash(&self) -> bool {
-        self.feature_set
-            .is_active(&feature_set::use_new_hash::id())
-    }
-    
 
     ///  This simply returns _me_ but in the limited capacity of
     ///  providing the vote threshold:
@@ -5940,44 +5934,50 @@ impl Bank {
     // supports VoteModerator trait 
     // has a 10% chance of allowing a vote 
     fn is_rando_voter(&self, hash: Hash, voter: Pubkey) -> bool {
-        if self.use_new_hash() {
-            let mut rand_elapsed = Measure::start("rando time");
-            let random_vote_hash = rand_voter_hash(hash, voter);
-            let random_voter_val = random_vote_hash.to_u128();
-            let random_will_vote = (random_voter_val % 10) == 0;
-            log::trace!(
-                "H_vote: {}",
-                ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
-            );
-            let always_voter = voter.to_string() == SAFECOIN_ALWAYS_VOTER;
-            
-            let will_vote = random_will_vote || always_voter;
-            rand_elapsed.stop();
-            log::trace!("rando hash: {} voter {} will vote: {} s {}", hash,voter, will_vote,rand_elapsed.as_us());
-            return will_vote;
+        log::trace!("vote_hash.bank.rs: {}", hash);
+        log::trace!(
+            "H_vote.bank.rs: {}",
+            ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
+        );
+        log::trace!(
+            "P_vote.bank.rs: {}",
+            ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
+                * (voter.to_string().chars().last().unwrap() as usize
+                    + hash.to_string().chars().last().unwrap() as usize)
+                / 10) as usize
+                + voter.to_string().chars().last().unwrap() as usize
+                + hash.to_string().chars().last().unwrap() as usize)
+                % 10 as usize
+        );
+        let dont_vote = (((hash.to_string().chars().nth(0).unwrap() as usize) % 10) as usize
+            != ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
+                * (voter.to_string().chars().last().unwrap() as usize
+                    + hash.to_string().chars().last().unwrap() as usize)
+                / 10) as usize
+                + voter.to_string().chars().last().unwrap() as usize
+                + hash.to_string().chars().last().unwrap() as usize)
+                % 10 as usize)
+            && voter.to_string() != SAFECOIN_ALWAYS_VOTER;
+        return dont_vote == false;
+    }
+
+    fn can_group(&self, slot: Slot, voter: Pubkey) -> bool {
+        if self
+            .feature_set
+            .is_active(&feature_set::voter_groups_consensus::id())
+        {
+            let epoch = self.epoch_schedule.get_epoch(slot);
+            match self.group_generators.get(&epoch) {
+                None => panic!("No epoch"),
+                Some(vgr) => {
+                    return vgr.can_group(voter);
+                }
+            }
         } else {
-            log::trace!(
-                "P_vote.bank.rs: {}",
-                ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
-                    * (voter.to_string().chars().last().unwrap() as usize
-                        + hash.to_string().chars().last().unwrap() as usize)
-                    / 10) as usize
-                    + voter.to_string().chars().last().unwrap() as usize
-                    + hash.to_string().chars().last().unwrap() as usize)
-                    % 10 as usize
-            );
-            let dont_vote = (((hash.to_string().chars().nth(0).unwrap() as usize) % 10) as usize
-                != ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
-                    * (voter.to_string().chars().last().unwrap() as usize
-                        + hash.to_string().chars().last().unwrap() as usize)
-                    / 10) as usize
-                    + voter.to_string().chars().last().unwrap() as usize
-                    + hash.to_string().chars().last().unwrap() as usize)
-                    % 10 as usize)
-                && voter.to_string() != SAFECOIN_ALWAYS_VOTER;
-            return dont_vote == false;
+            return false;
         }
     }
+
     // supports VoteModerator trait 
     // returns true if the voter is part of the voting group
     fn in_group(&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
@@ -6030,20 +6030,23 @@ impl BankVoteThreshold for Bank {
 impl VoteModerator for Bank {
     /// determine if a voter is in the group for a given slot
     fn vote_allowed (&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
-        if self.epoch_authorized_voter(&voter) == None{
+        let epoch : Epoch = self.epoch;
+        let stakes = &self.epoch_stakes;    
+        let epoch_stakes = stakes.get(&epoch).expect("Epoch stakes for bank's own epoch must exist");
+
+        epoch_stakes.dump_current_voters();
+        epoch_stakes.dump_oughta_voters();
+        if self.can_group(slot, voter) == false {
+	        log::trace!("VoteModerator: is_rando_voter for slot {}, hash {}, voter {}", slot, hash, voter);
             return self.is_rando_voter(hash,voter);
         }
         else {
+	        log::trace!("VoteModerator: in_group_voter for slot {}, hash {}, voter {}", slot, hash, voter);
             return self.in_group(slot,hash,voter);
         }
     }
 
-
 }
-
-
-
-
 
 
 impl Drop for Bank {

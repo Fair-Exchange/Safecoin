@@ -42,6 +42,42 @@ impl EpochStakes {
         VoteGroupGenerator::new(&self.epoch_authorized_voters,group_size) 
     }
 
+     fn keys (map: &HashMap<Pubkey, Pubkey>) -> Vec<Pubkey> {
+        let collected: Vec<_> = map.into_iter().collect();
+        let mut temp_vec = Vec::new();
+        for x in collected {
+            let key = x.0;
+            let cloned: Pubkey = Pubkey::new_from_array(key.to_bytes());
+            temp_vec.push(cloned);
+        }
+        temp_vec
+    }
+     fn vals (map: &HashMap<Pubkey, Pubkey>) -> Vec<Pubkey> {
+        let collected: Vec<_> = map.into_iter().collect();
+        let mut temp_vec = Vec::new();
+        for x in collected {
+            let key = x.1;
+            let cloned: Pubkey = Pubkey::new_from_array(key.to_bytes());
+            temp_vec.push(cloned);
+        }
+        temp_vec
+    }
+    
+    pub fn dump_current_voters(&self) {
+         let eav = &self.epoch_authorized_voters;
+    
+        let coll = EpochStakes::keys(eav);
+       
+        log::trace!("current voters {:?}", coll);
+    }
+
+    pub fn dump_oughta_voters(&self) {
+        let eav = &self.epoch_authorized_voters;
+   
+       let coll = EpochStakes::vals(eav);
+      
+       log::trace!("oughta voters {:?}", coll);
+   }
 
     pub fn stakes(&self) -> &Stakes {
         &self.stakes

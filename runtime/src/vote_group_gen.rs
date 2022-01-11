@@ -7,23 +7,19 @@
 use safecoin_sdk::{
     pubkey::Pubkey,
     hash::Hash,
-    hash::extend_and_hash,
 };
-
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str::FromStr;
-use safecoin_measure::measure::Measure;
 
 pub static SAFECOIN_ALWAYS_VOTER: &str = "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu";
 
-pub fn rand_voter_hash( hash: Hash, test_key: Pubkey) -> Hash{
-    extend_and_hash(&hash,  &test_key.to_bytes())
-}
+//#[derive(Clone, Debug, Serialize, Deserialize, AbiExample, PartialEq)]
+//pub struct ArcPubkey(std::sync::Arc<Pubkey>);
 
 #[derive(Clone, Debug, Serialize, Deserialize, AbiExample, PartialEq)]
 pub struct VoteGroupGenerator {
-    always_voter: Pubkey, 
+    lookup : HashMap<Pubkey, Pubkey>,
     possible_voters: Vec<Pubkey>,
     all_distance: Vec<u32>, // a list of primes that are not factors of the possible voters group size
     pub has_ringer: bool,
@@ -31,15 +27,21 @@ pub struct VoteGroupGenerator {
 }
 
 impl VoteGroupGenerator {
+    pub fn always_voter() -> Pubkey {
+         safecoin_sdk::pubkey::Pubkey::from_str(SAFECOIN_ALWAYS_VOTER).unwrap()
+    }
 
     pub fn new(map: &HashMap<Pubkey, Pubkey>, size: usize) -> VoteGroupGenerator {
-        let always: Pubkey = Pubkey::from_str(SAFECOIN_ALWAYS_VOTER).unwrap();
         let mut grp_size = size;
         let collected: Vec<_> = map.into_iter().collect();
         let mut temp = Vec::new();
+        let mut rmap = HashMap::<Pubkey, Pubkey>::new();
         for x in collected {
-            let key = x.0;
-            if *key != always {
+            let cloned_key : Pubkey = Pubkey::new_from_array(x.0.to_bytes());
+            let cloned_val: Pubkey = Pubkey::new_from_array(x.1.to_bytes());
+            rmap.insert(cloned_val,cloned_key);
+            let key = x.1;
+            if key.to_string() != SAFECOIN_ALWAYS_VOTER {
                 let cloned: Pubkey = Pubkey::new_from_array(key.to_bytes());
                 temp.push(cloned);
             }
@@ -60,8 +62,9 @@ impl VoteGroupGenerator {
                 initial.push(*val);
             }
         }
+	  log::trace!("possible voters: {:#?}",temp);
         Self {
-            always_voter : always,
+            lookup : rmap,
             possible_voters: temp,
             all_distance: initial.to_owned(),
             group_size: grp_size,
@@ -106,16 +109,14 @@ impl VoteGroupGenerator {
     }
 
     pub fn in_group_using_seeds(&self, voter_seed: u64,  step_seed: u64,test_key: Pubkey) -> bool {
-        let mut ingrp_elapsed = Measure::start("rando time");
-        let mut result = false;
-        if test_key == self.always_voter {
-           result = true;
+        if test_key.to_string() == SAFECOIN_ALWAYS_VOTER {
+           return true;
         }
         let voters_len = self.possible_voters.len();
         let mut loc = (voter_seed % voters_len as u64) as usize;
         let first_key = Pubkey::new(&self.possible_voters[loc].to_bytes());
         if test_key == first_key {
-            result = true;
+            return true;
         }
         if self.group_size > 1 {
             let choose_dist = step_seed % self.all_distance.len() as u64;
@@ -125,13 +126,19 @@ impl VoteGroupGenerator {
                 let loc_key = Pubkey::new(&self.possible_voters[loc].to_bytes());
                 if test_key == loc_key {
                     log::trace!("found {:?}", test_key);
-                    result = true;
+                    return true;
                 }
             }
         }
-        
-        log::trace!("in_group = {} us = {}", result, ingrp_elapsed.as_us());
-        result
+        log::trace!("group check returns false");
+        false
+    }
+
+    pub fn can_group(&self, voter : Pubkey) -> bool {
+        match self.lookup.get(&voter) {
+            Some(_) => true,
+            None => false,
+        }
     }
 }
 
