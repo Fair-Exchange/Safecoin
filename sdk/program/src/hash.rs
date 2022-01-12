@@ -6,7 +6,7 @@ use {
     sha2::{Digest, Sha256},
     std::{convert::TryFrom, fmt, mem, str::FromStr},
     thiserror::Error,
-    std::convert::TryInto;
+    std::convert::TryInto,
 };
 
 pub const HASH_BYTES: usize = 32;
