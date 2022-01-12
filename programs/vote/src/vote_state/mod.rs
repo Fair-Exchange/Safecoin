@@ -11,7 +11,7 @@ use {
         clock::{Epoch, Slot, UnixTimestamp},
         epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
         hash::Hash,
-        instruction::InstructionError,
+        instruction::{InstructionError,VoteModerator},
         keyed_account::KeyedAccount,
         pubkey::Pubkey,
         rent::Rent,
@@ -744,6 +744,7 @@ pub fn process_vote<S: std::hash::BuildHasher>(
     clock: &Clock,
     vote: &Vote,
     signers: &HashSet<Pubkey, S>,
+    group: &dyn VoteModerator,
 ) -> Result<(), InstructionError> {
     let versioned = State::<VoteStateVersions>::state(vote_account)?;
 
@@ -755,6 +756,10 @@ pub fn process_vote<S: std::hash::BuildHasher>(
     let authorized_voter = vote_state.get_and_update_authorized_voter(clock.epoch)?;
     verify_authorized_signer(&authorized_voter, signers)?;
 
+    let hash = slot_hashes[0].1;
+    if !group.vote_allowed(vote.slots[0],hash,authorized_voter) {
+        return Err(InstructionError::UninitializedAccount);
+    }
     vote_state.process_vote(vote, slot_hashes, clock.epoch)?;
     if let Some(timestamp) = vote.timestamp {
         vote.slots
@@ -949,6 +954,8 @@ mod tests {
     ) -> Result<VoteState, InstructionError> {
         let keyed_accounts = &[KeyedAccount::new(vote_pubkey, true, vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
+        let mvg = MockVoteMod::new();
+
         process_vote(
             &keyed_accounts[0],
             slot_hashes,
@@ -958,6 +965,7 @@ mod tests {
             },
             &vote.clone(),
             &signers,
+            &mvg,
         )?;
         StateMut::<VoteStateVersions>::state(&*vote_account.borrow())
             .map(|versioned| versioned.convert_to_current())
@@ -1147,6 +1155,21 @@ mod tests {
             .convert_to_current();
         assert_eq!(vote_state.commission, u8::MAX);
     }
+    struct MockVoteMod {
+        in_group: bool,
+    }
+    impl MockVoteMod {
+        pub fn new() -> Self {
+            Self {
+                in_group: true,
+            }
+        }
+    }
+    impl VoteModerator for MockVoteMod {
+        fn vote_allowed(&self, _: Slot, _: safecoin_sdk::hash::Hash, _: Pubkey) -> bool {
+            self.in_group
+        }
+    }
 
     #[test]
     fn test_vote_signature() {
@@ -1156,6 +1179,7 @@ mod tests {
         // unsigned
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, false, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
+        let mvg = MockVoteMod::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1166,12 +1190,14 @@ mod tests {
             },
             &vote,
             &signers,
+            &mvg,
         );
         assert_eq!(res, Err(InstructionError::MissingRequiredSignature));
 
         // signed
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
+        let mvg = MockVoteMod::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1182,6 +1208,7 @@ mod tests {
             },
             &vote,
             &signers,
+            &mvg,
         );
         assert_eq!(res, Ok(()));
 
@@ -1296,6 +1323,7 @@ mod tests {
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let vote = Vote::new(vec![2], Hash::default());
+        let mvg = MockVoteMod::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1306,6 +1334,7 @@ mod tests {
             },
             &vote,
             &signers,
+            &mvg,
         );
         assert_eq!(res, Err(InstructionError::MissingRequiredSignature));
 
@@ -1317,6 +1346,7 @@ mod tests {
         ];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let vote = Vote::new(vec![2], Hash::default());
+        let mvg = MockVoteMod::new();
         let res = process_vote(
             &keyed_accounts[0],
             &[(*vote.slots.last().unwrap(), vote.hash)],
@@ -1327,6 +1357,7 @@ mod tests {
             },
             &vote,
             &signers,
+            &mvg,
         );
         assert_eq!(res, Ok(()));
     }

@@ -47,6 +47,8 @@ use {
         builtins::{self, ActivationType},
         cost_tracker::CostTracker,
         epoch_stakes::{EpochStakes, NodeVoteAccounts},
+        vote_group_gen::{VoteGroupGenerator,SAFECOIN_ALWAYS_VOTER},
+        commitment::{VOTE_GROUP_COUNT, VOTE_THRESHOLD_SIZE, VOTE_THRESHOLD_SIZE_ORIG},
         hashed_transaction::{HashedTransaction, HashedTransactionSlice},
         inline_safe_token,
         instruction_recorder::InstructionRecorder,
@@ -98,7 +100,7 @@ use {
         hash::{extend_and_hash, hashv, Hash},
         incinerator,
         inflation::Inflation,
-        instruction::{CompiledInstruction, InstructionError},
+        instruction::{CompiledInstruction, InstructionError,VoteModerator},
         lamports::LamportsError,
         message::Message,
         native_loader,
@@ -878,6 +880,7 @@ pub(crate) struct BankFieldsToDeserialize {
     pub(crate) stakes: Stakes,
     pub(crate) epoch_stakes: HashMap<Epoch, EpochStakes>,
     pub(crate) is_delta: bool,
+    pub(crate) group_generators : HashMap<Epoch, VoteGroupGenerator>,
 }
 
 // Bank's common fields shared by all supported snapshot versions for serialization.
@@ -1172,6 +1175,8 @@ pub struct Bank {
     vote_only_bank: bool,
 
     pub cost_tracker: RwLock<CostTracker>,
+
+    pub group_generators: HashMap<Epoch, VoteGroupGenerator>,
 }
 
 impl Default for BlockhashQueue {
@@ -1295,8 +1300,12 @@ impl Bank {
         {
             let stakes = bank.stakes_cache.stakes();
             for epoch in 0..=bank.get_leader_schedule_epoch(bank.slot) {
+                let ep_stakes = EpochStakes::new(&stakes, epoch);
+                let vgr = ep_stakes.make_group_generator();
                 bank.epoch_stakes
-                    .insert(epoch, EpochStakes::new(&stakes, epoch));
+                    .insert(epoch, ep_stakes);
+                bank.group_generators 
+                    .insert(epoch, vgr); // tied to epoch & stakes
             }
             bank.update_stake_history(None);
         }
@@ -1375,6 +1384,16 @@ impl Bank {
         let fee_rate_governor =
             FeeRateGovernor::new_derived(&parent.fee_rate_governor, parent.signature_count());
 
+        let xlate_map = |map: &HashMap<Epoch,EpochStakes>| -> HashMap<Epoch,VoteGroupGenerator> {
+                let mut ret : HashMap<Epoch, VoteGroupGenerator> = HashMap::new();
+                for (key, es ) in map.iter() {
+                    let vgr: VoteGroupGenerator = es.make_group_generator();
+                    ret.insert(*key, vgr);
+                }
+                ret
+            };
+        let generators = xlate_map(&parent.epoch_stakes);
+
         let bank_id = rc.bank_id_generator.fetch_add(1, Relaxed) + 1;
         let mut new = Bank {
             rc,
@@ -1444,6 +1463,7 @@ impl Bank {
             )),
             freeze_started: AtomicBool::new(false),
             cost_tracker: RwLock::new(CostTracker::default()),
+            group_generators: generators,
         };
 
         let mut ancestors = Vec::with_capacity(1 + new.parents().len());
@@ -1561,6 +1581,15 @@ impl Bank {
         fn new<T: Default>() -> T {
             T::default()
         }
+        let xlate_map = |map: &HashMap<Epoch,EpochStakes>| -> HashMap<Epoch,VoteGroupGenerator> {
+            let mut ret : HashMap<Epoch, VoteGroupGenerator> = HashMap::new();
+            for (key, es ) in map.iter() {
+                let vgr: VoteGroupGenerator = es.make_group_generator();
+                ret.insert(*key, vgr);
+            }
+            ret
+        };
+        let new_map = xlate_map(&fields.epoch_stakes);
         let mut bank = Self {
             rc: bank_rc,
             src: new(),
@@ -1619,6 +1648,7 @@ impl Bank {
             freeze_started: AtomicBool::new(fields.hash != Hash::default()),
             vote_only_bank: false,
             cost_tracker: RwLock::new(CostTracker::default()),
+            group_generators: new_map,
         };
         bank.finish_init(
             genesis_config,
@@ -3588,6 +3618,7 @@ impl Bank {
                             &mut timings.details,
                             self.rc.accounts.clone(),
                             &self.ancestors,
+                            self,
                         );
 
                         transaction_log_messages.push(Self::collect_log_messages(log_collector));
@@ -5297,6 +5328,10 @@ impl Bank {
         self.epoch_stakes.get(&epoch)
     }
 
+    pub fn vote_group_generator(&self, epoch: Epoch) -> Option<&VoteGroupGenerator> {
+        self.group_generators.get(&epoch)
+    }
+
     pub fn epoch_stakes_map(&self) -> &HashMap<Epoch, EpochStakes> {
         &self.epoch_stakes
     }
@@ -5778,6 +5813,130 @@ impl Bank {
         self.feature_set
             .is_active(&feature_set::rent_for_sysvars::id())
     }
+
+    ///  This simply returns _me_ but in the limited capacity of
+    ///  providing the vote threshold:
+    ///  sort of a hack to get around the fact that the banks are shared
+    ///  with everything and *between threads* but I don't want to test everything.
+    pub fn threshold_delegate(&self) -> &dyn BankVoteThreshold {
+        self
+    }
+
+    // supports VoteModerator trait 
+    // has a 10% chance of allowing a vote 
+    fn is_rando_voter(&self, hash: Hash, voter: Pubkey) -> bool {
+        log::trace!("vote_hash.bank.rs: {}", hash);
+        log::trace!(
+            "H_vote.bank.rs: {}",
+            ((hash.to_string().chars().nth(0).unwrap() as usize) % 10)
+        );
+        log::trace!(
+            "P_vote.bank.rs: {}",
+            ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
+                * (voter.to_string().chars().last().unwrap() as usize
+                    + hash.to_string().chars().last().unwrap() as usize)
+                / 10) as usize
+                + voter.to_string().chars().last().unwrap() as usize
+                + hash.to_string().chars().last().unwrap() as usize)
+                % 10 as usize
+        );
+        let dont_vote = (((hash.to_string().chars().nth(0).unwrap() as usize) % 10) as usize
+            != ((((hash.to_string().chars().nth(0).unwrap() as usize) % 9 + 1) as usize
+                * (voter.to_string().chars().last().unwrap() as usize
+                    + hash.to_string().chars().last().unwrap() as usize)
+                / 10) as usize
+                + voter.to_string().chars().last().unwrap() as usize
+                + hash.to_string().chars().last().unwrap() as usize)
+                % 10 as usize)
+            && voter.to_string() != SAFECOIN_ALWAYS_VOTER;
+        return dont_vote == false;
+    }
+
+    fn can_group(&self, slot: Slot, voter: Pubkey) -> bool {
+        if self
+            .feature_set
+            .is_active(&feature_set::voter_groups_consensus::id())
+        {
+            let epoch = self.epoch_schedule.get_epoch(slot);
+            match self.group_generators.get(&epoch) {
+                None => panic!("No epoch"),
+                Some(vgr) => {
+                    return vgr.can_group(voter);
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+
+    // supports VoteModerator trait 
+    // returns true if the voter is part of the voting group
+    fn in_group(&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
+        if self
+            .feature_set
+            .is_active(&feature_set::voter_groups_consensus::id())
+        {
+            let epoch = self.epoch_schedule.get_epoch(slot);
+            match self.group_generators.get(&epoch) {
+                None => panic!("No epoch"),
+                Some(vgr) => {
+                    return vgr.in_group_for_hash(hash, voter);
+                }
+            }
+        } else {
+            return self.is_rando_voter(hash, voter);
+        }
+    }
+}
+
+pub trait BankVoteThreshold {
+    fn epoch_vote_threshold(&self) -> Option<f64>;
+}
+
+impl BankVoteThreshold for Bank {
+    /// The stake weight necessary to root a block in a given epoch
+    /// and to be pedantic it is defined as:
+    /// the average stake for each authorized voter
+    /// multiplied by the expected number of voters (a subset of all authorized voters)
+    /// multiplied by the majority ratio (aka VOTE_THRESHOLD_SIZE)
+
+    fn epoch_vote_threshold(&self) -> Option<f64> {
+        if let Some(epoch_stakes) = self.epoch_stakes(self.epoch()) {
+            if self
+                .feature_set
+                .is_active(&feature_set::voter_groups_consensus::id())
+            {
+                let avg_stake: f64 = epoch_stakes.total_stake() as f64
+                    / epoch_stakes.epoch_authorized_voters().len() as f64;
+                let res = avg_stake * VOTE_GROUP_COUNT as f64 * VOTE_THRESHOLD_SIZE as f64;
+                return Some(res);
+            } else {
+                return Some(epoch_stakes.total_stake() as f64 * VOTE_THRESHOLD_SIZE_ORIG);
+            }
+        }
+        None
+    }
+}
+
+impl VoteModerator for Bank {
+    /// determine if a voter is in the group for a given slot
+    fn vote_allowed (&self, slot: Slot, hash: Hash, voter: Pubkey) -> bool {
+        let epoch : Epoch = self.epoch;
+        let stakes = &self.epoch_stakes;    
+        let epoch_stakes = stakes.get(&epoch).expect("Epoch stakes for bank's own epoch must exist");
+
+        epoch_stakes.dump_current_voters();
+        epoch_stakes.dump_oughta_voters();
+        if self.can_group(slot, voter) == false {
+	        log::trace!("VoteModerator: is_rando_voter for slot {}, hash {}, voter {}", slot, hash, voter);
+            return self.is_rando_voter(hash,voter);
+        }
+        else {
+	        log::trace!("VoteModerator: in_group_voter for slot {}, hash {}, voter {}", slot, hash, voter);
+            return self.in_group(slot,hash,voter);
+        }
+    }
+
 }
 
 impl Drop for Bank {

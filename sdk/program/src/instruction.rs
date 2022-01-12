@@ -2,13 +2,39 @@
 //! Defines a composable Instruction type and a memory-efficient CompiledInstruction.
 
 use {
-    crate::{pubkey::Pubkey, sanitize::Sanitize, short_vec},
+    crate::{clock::Slot,hash::Hash,pubkey::Pubkey, sanitize::Sanitize, short_vec},
     bincode::serialize,
     borsh::BorshSerialize,
     serde::Serialize,
     thiserror::Error,
 };
 
+pub trait VoteModerator {
+    fn vote_allowed(&self,slot: Slot,hash : Hash, test_key: Pubkey) -> bool ;
+}
+#[derive(Debug, Clone)]
+pub struct MockVoteMod {
+    pub a : u8,
+}
+
+impl VoteModerator for MockVoteMod {
+    fn vote_allowed(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
+        true
+    }
+
+}
+impl Default for MockVoteMod {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl MockVoteMod {
+    pub fn new() -> Self {
+        MockVoteMod {
+            a: 1,
+        }
+    }
+}
 /// Reasons the runtime might have rejected an instruction.
 ///
 /// Instructions errors are included in the bank hashes and therefore are

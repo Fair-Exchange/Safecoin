@@ -6,6 +6,9 @@ use {
         keyed_account::{create_keyed_accounts_unified, KeyedAccount},
         pubkey::Pubkey,
         sysvar::Sysvar,
+        instruction::VoteModerator,
+        hash::Hash,
+        clock::Slot,
     },
     std::{cell::RefCell, collections::HashSet, fmt::Debug, rc::Rc, sync::Arc},
 };
@@ -109,6 +112,9 @@ pub trait InvokeContext {
     fn set_return_data(&mut self, return_data: Option<(Pubkey, Vec<u8>)>);
     /// Get the return data
     fn get_return_data(&self) -> &Option<(Pubkey, Vec<u8>)>;
+
+    fn voter_group(&self) -> & dyn VoteModerator;
+
 }
 
 /// Convenience macro to log a message with an `Rc<RefCell<dyn Logger>>`
@@ -530,4 +536,16 @@ impl<'a> InvokeContext for MockInvokeContext<'a> {
     fn get_return_data(&self) -> &Option<(Pubkey, Vec<u8>)> {
         &self.return_data
     }
+    fn voter_group(&self) -> &dyn VoteModerator{
+        return self;
+    }
 }
+
+
+impl<'a> VoteModerator for MockInvokeContext<'a> {
+
+    fn vote_allowed(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
+        true
+    }
+}
+
