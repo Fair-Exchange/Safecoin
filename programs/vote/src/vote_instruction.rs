@@ -362,6 +362,7 @@ pub fn process_instruction(
                 &from_keyed_account::<Clock>(keyed_account_at_index(keyed_accounts, 2)?)?,
                 &vote,
                 &signers,
+                invoke_context.voter_group(),
             )
         }
         VoteInstruction::Withdraw(lamports) => {

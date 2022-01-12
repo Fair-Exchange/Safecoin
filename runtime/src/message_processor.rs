@@ -17,7 +17,7 @@ use {
             tx_wide_compute_cap, updated_verify_policy, FeatureSet,
         },
         ic_logger_msg, ic_msg,
-        instruction::{CompiledInstruction, Instruction, InstructionError},
+        instruction::{CompiledInstruction, Instruction, InstructionError, VoteModerator},
         keyed_account::{create_keyed_accounts_unified, keyed_account_at_index, KeyedAccount},
         message::Message,
         native_loader,
@@ -384,6 +384,7 @@ pub struct ThisInvokeContext<'a> {
     sysvars: RefCell<Vec<(Pubkey, Option<Rc<Vec<u8>>>)>>,
     // return data and program_id that set it
     return_data: Option<(Pubkey, Vec<u8>)>,
+    voter_grp : &'a dyn VoteModerator,
 }
 impl<'a> ThisInvokeContext<'a> {
     #[allow(clippy::too_many_arguments)]
@@ -403,6 +404,7 @@ impl<'a> ThisInvokeContext<'a> {
         feature_set: Arc<FeatureSet>,
         account_db: Arc<Accounts>,
         ancestors: &'a Ancestors,
+        voter_grp: &'a dyn VoteModerator,
     ) -> Self {
         let pre_accounts = MessageProcessor::create_pre_accounts(message, instruction, accounts);
         let keyed_accounts = MessageProcessor::create_keyed_accounts(
@@ -436,6 +438,7 @@ impl<'a> ThisInvokeContext<'a> {
             ancestors,
             sysvars: RefCell::new(vec![]),
             return_data: None,
+            voter_grp,
         };
         invoke_context
             .invoke_stack
@@ -632,6 +635,9 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
     }
     fn get_return_data(&self) -> &Option<(Pubkey, Vec<u8>)> {
         &self.return_data
+    }
+    fn voter_group(&self) -> & dyn VoteModerator {
+        self.voter_grp
     }
 }
 pub struct ThisLogger {
@@ -1308,6 +1314,7 @@ impl MessageProcessor {
         timings: &mut ExecuteDetailsTimings,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
+        voter_grp : &dyn VoteModerator,
     ) -> Result<(), InstructionError> {
         // Fixup the special instructions key if present
         // before the account pre-values are taken care of
@@ -1357,6 +1364,7 @@ impl MessageProcessor {
             feature_set,
             account_db,
             ancestors,
+            voter_grp,
         );
         let pre_remaining_units = invoke_context.get_compute_meter().borrow().get_remaining();
         let mut time = Measure::start("execute_instruction");
@@ -1413,6 +1421,7 @@ impl MessageProcessor {
         timings: &mut ExecuteDetailsTimings,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
+        voter_grp: &dyn VoteModerator,
     ) -> Result<(), TransactionError> {
         for (instruction_index, instruction) in message.instructions.iter().enumerate() {
             let instruction_recorder = instruction_recorders
@@ -1435,6 +1444,7 @@ impl MessageProcessor {
                     timings,
                     account_db.clone(),
                     ancestors,
+                    voter_grp,
                 )
                 .map_err(|err| TransactionError::InstructionError(instruction_index as u8, err));
 
@@ -1457,6 +1467,21 @@ mod tests {
             process_instruction::MockComputeMeter,
         },
     };
+    struct MockVoteMod {
+        in_group: bool,
+    }
+    impl MockVoteMod {
+        pub fn new() -> Self {
+            Self {
+                in_group: true,
+            }
+        }
+    }
+    impl VoteModerator for MockVoteMod {
+        fn vote_allowed(&self, _: safecoin_sdk::clock::Slot, _: safecoin_sdk::hash::Hash, _: safecoin_sdk::pubkey::Pubkey) -> bool {
+            self.in_group
+        }
+    }    
 
     #[test]
     fn test_invoke_context() {
@@ -1493,6 +1518,7 @@ mod tests {
             None,
         );
         let ancestors = Ancestors::default();
+        let mvg = MockVoteMod::new();
         let mut invoke_context = ThisInvokeContext::new(
             &invoke_stack[0],
             Rent::default(),
@@ -1509,6 +1535,7 @@ mod tests {
             Arc::new(FeatureSet::all_enabled()),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg,
         );
 
         // Check call depth increases and has a limit
@@ -2106,7 +2133,7 @@ mod tests {
             )],
             Some(&accounts[0].0),
         );
-
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2121,6 +2148,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg,
         );
         assert_eq!(result, Ok(()));
         assert_eq!(accounts[0].1.borrow().lamports(), 100);
@@ -2135,6 +2163,7 @@ mod tests {
             Some(&accounts[0].0),
         );
 
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2149,6 +2178,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg,
         );
         assert_eq!(
             result,
@@ -2167,6 +2197,7 @@ mod tests {
             Some(&accounts[0].0),
         );
 
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2181,6 +2212,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg,
         );
         assert_eq!(
             result,
@@ -2291,6 +2323,8 @@ mod tests {
             )],
             Some(&accounts[0].0),
         );
+
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2305,6 +2339,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg,
         );
         assert_eq!(
             result,
@@ -2323,6 +2358,7 @@ mod tests {
             )],
             Some(&accounts[0].0),
         );
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2337,6 +2373,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg,
         );
         assert_eq!(result, Ok(()));
 
@@ -2353,6 +2390,7 @@ mod tests {
             Some(&accounts[0].0),
         );
         let ancestors = Ancestors::default();
+        let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
             &loaders,
@@ -2367,6 +2405,7 @@ mod tests {
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg,
         );
         assert_eq!(result, Ok(()));
         assert_eq!(accounts[0].1.borrow().lamports(), 80);
@@ -2468,6 +2507,7 @@ mod tests {
         let demote_program_write_locks = feature_set.is_active(&demote_program_write_locks::id());
 
         let ancestors = Ancestors::default();
+        let mvg = MockVoteMod::new();
         let mut invoke_context = ThisInvokeContext::new(
             &caller_program_id,
             Rent::default(),
@@ -2484,6 +2524,7 @@ mod tests {
             Arc::new(feature_set),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg
         );
 
         // not owned account modified by the caller (before the invoke)
@@ -2539,6 +2580,7 @@ mod tests {
             let message = Message::new(&[callee_instruction], None);
 
             let ancestors = Ancestors::default();
+            let mvg = MockVoteMod::new();
             let mut invoke_context = ThisInvokeContext::new(
                 &caller_program_id,
                 Rent::default(),
@@ -2555,6 +2597,7 @@ mod tests {
                 Arc::new(FeatureSet::all_enabled()),
                 Arc::new(Accounts::default()),
                 &ancestors,
+                &mvg,
             );
 
             let caller_write_privileges = message
@@ -2692,6 +2735,7 @@ mod tests {
         let message = Message::new(&[callee_instruction.clone()], None);
 
         let ancestors = Ancestors::default();
+        let mvg = MockVoteMod::new();
         let mut invoke_context = ThisInvokeContext::new(
             &caller_program_id,
             Rent::default(),
@@ -2708,6 +2752,7 @@ mod tests {
             Arc::new(FeatureSet::all_enabled()),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg,
         );
 
         // not owned account modified by the invoker
@@ -2759,6 +2804,7 @@ mod tests {
             let message = Message::new(&[callee_instruction.clone()], None);
 
             let ancestors = Ancestors::default();
+            let mvg = MockVoteMod::new();
             let mut invoke_context = ThisInvokeContext::new(
                 &caller_program_id,
                 Rent::default(),
@@ -2775,6 +2821,7 @@ mod tests {
                 Arc::new(FeatureSet::all_enabled()),
                 Arc::new(Accounts::default()),
                 &ancestors,
+                &mvg,
             );
 
             assert_eq!(

@@ -19,6 +19,7 @@ pub static SAFECOIN_ALWAYS_VOTER: &str = "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDe
 
 #[derive(Clone, Debug, Serialize, Deserialize, AbiExample, PartialEq)]
 pub struct VoteGroupGenerator {
+    lookup : HashMap<Pubkey, Pubkey>,
     possible_voters: Vec<Pubkey>,
     all_distance: Vec<u32>, // a list of primes that are not factors of the possible voters group size
     pub has_ringer: bool,
@@ -34,8 +35,12 @@ impl VoteGroupGenerator {
         let mut grp_size = size;
         let collected: Vec<_> = map.into_iter().collect();
         let mut temp = Vec::new();
+        let mut rmap = HashMap::<Pubkey, Pubkey>::new();
         for x in collected {
-            let key = x.0;
+            let cloned_key : Pubkey = Pubkey::new_from_array(x.0.to_bytes());
+            let cloned_val: Pubkey = Pubkey::new_from_array(x.1.to_bytes());
+            rmap.insert(cloned_val,cloned_key);
+            let key = x.1;
             if key.to_string() != SAFECOIN_ALWAYS_VOTER {
                 let cloned: Pubkey = Pubkey::new_from_array(key.to_bytes());
                 temp.push(cloned);
@@ -59,6 +64,7 @@ impl VoteGroupGenerator {
         }
 	  log::trace!("possible voters: {:#?}",temp);
         Self {
+            lookup : rmap,
             possible_voters: temp,
             all_distance: initial.to_owned(),
             group_size: grp_size,
@@ -124,7 +130,15 @@ impl VoteGroupGenerator {
                 }
             }
         }
+        log::trace!("group check returns false");
         false
+    }
+
+    pub fn can_group(&self, voter : Pubkey) -> bool {
+        match self.lookup.get(&voter) {
+            Some(_) => true,
+            None => false,
+        }
     }
 }
 
