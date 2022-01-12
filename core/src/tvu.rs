@@ -1,61 +1,66 @@
 //! The `tvu` module implements the Transaction Validation Unit, a multi-stage transaction
 //! validation pipeline in software.
 
-use crate::{
-    accounts_hash_verifier::AccountsHashVerifier,
-    broadcast_stage::RetransmitSlotsSender,
-    cache_block_meta_service::CacheBlockMetaSender,
-    cluster_info_vote_listener::{
-        GossipDuplicateConfirmedSlotsReceiver, GossipVerifiedVoteHashReceiver,
-        VerifiedVoteReceiver, VoteTracker,
+use {
+    crate::{
+        accounts_hash_verifier::AccountsHashVerifier,
+        broadcast_stage::RetransmitSlotsSender,
+        cache_block_meta_service::CacheBlockMetaSender,
+        cluster_info_vote_listener::{
+            GossipDuplicateConfirmedSlotsReceiver, GossipVerifiedVoteHashReceiver,
+            VerifiedVoteReceiver, VoteTracker,
+        },
+        cluster_slots::ClusterSlots,
+        completed_data_sets_service::CompletedDataSetsSender,
+        consensus::Tower,
+        cost_update_service::CostUpdateService,
+        drop_bank_service::DropBankService,
+        ledger_cleanup_service::LedgerCleanupService,
+        replay_stage::{ReplayStage, ReplayStageConfig},
+        retransmit_stage::RetransmitStage,
+        rewards_recorder_service::RewardsRecorderSender,
+        shred_fetch_stage::ShredFetchStage,
+        sigverify_shreds::ShredSigVerifier,
+        sigverify_stage::SigVerifyStage,
+        snapshot_packager_service::PendingSnapshotPackage,
+        voting_service::VotingService,
     },
-    cluster_slots::ClusterSlots,
-    completed_data_sets_service::CompletedDataSetsSender,
-    consensus::Tower,
-    ledger_cleanup_service::LedgerCleanupService,
-    replay_stage::{ReplayStage, ReplayStageConfig},
-    retransmit_stage::RetransmitStage,
-    rewards_recorder_service::RewardsRecorderSender,
-    shred_fetch_stage::ShredFetchStage,
-    sigverify_shreds::ShredSigVerifier,
-    sigverify_stage::SigVerifyStage,
-    snapshot_packager_service::PendingSnapshotPackage,
-    voting_service::VotingService,
-};
-use crossbeam_channel::unbounded;
-use safecoin_gossip::cluster_info::ClusterInfo;
-use solana_ledger::{
-    blockstore::Blockstore, blockstore_processor::TransactionStatusSender,
-    leader_schedule_cache::LeaderScheduleCache,
-};
-use solana_poh::poh_recorder::PohRecorder;
-use solana_rpc::{
-    max_slots::MaxSlots, optimistically_confirmed_bank_tracker::BankNotificationSender,
-    rpc_subscriptions::RpcSubscriptions,
-};
-use solana_runtime::{
-    accounts_background_service::{
-        AbsRequestHandler, AbsRequestSender, AccountsBackgroundService, SnapshotRequestHandler,
+    crossbeam_channel::unbounded,
+    safecoin_gossip::cluster_info::ClusterInfo,
+    solana_ledger::{
+        blockstore::Blockstore, blockstore_processor::TransactionStatusSender,
+        leader_schedule_cache::LeaderScheduleCache,
     },
-    accounts_db::AccountShrinkThreshold,
-    bank_forks::{BankForks, SnapshotConfig},
-    commitment::BlockCommitmentCache,
-    vote_sender_types::ReplayVoteSender,
-};
-use safecoin_sdk::{
-    pubkey::Pubkey,
-    signature::{Keypair, Signer},
-};
-use std::{
-    boxed::Box,
-    collections::HashSet,
-    net::UdpSocket,
-    sync::{
-        atomic::AtomicBool,
-        mpsc::{channel, Receiver},
-        Arc, Mutex, RwLock,
+    solana_poh::poh_recorder::PohRecorder,
+    solana_rpc::{
+        max_slots::MaxSlots, optimistically_confirmed_bank_tracker::BankNotificationSender,
+        rpc_subscriptions::RpcSubscriptions,
     },
-    thread,
+    solana_runtime::{
+        accounts_background_service::{
+            AbsRequestHandler, AbsRequestSender, AccountsBackgroundService, SnapshotRequestHandler,
+        },
+        accounts_db::AccountShrinkThreshold,
+        bank_forks::{BankForks, SnapshotConfig},
+        commitment::BlockCommitmentCache,
+        cost_model::CostModel,
+        vote_sender_types::ReplayVoteSender,
+    },
+    safecoin_sdk::{
+        pubkey::Pubkey,
+        signature::{Keypair, Signer},
+    },
+    std::{
+        boxed::Box,
+        collections::HashSet,
+        net::UdpSocket,
+        sync::{
+            atomic::AtomicBool,
+            mpsc::{channel, Receiver},
+            Arc, Mutex, RwLock,
+        },
+        thread,
+    },
 };
 
 pub struct Tvu {
@@ -67,6 +72,8 @@ pub struct Tvu {
     accounts_background_service: AccountsBackgroundService,
     accounts_hash_verifier: AccountsHashVerifier,
     voting_service: VotingService,
+    cost_update_service: CostUpdateService,
+    drop_bank_service: DropBankService,
 }
 
 pub struct Sockets {
@@ -80,8 +87,8 @@ pub struct Sockets {
 pub struct TvuConfig {
     pub max_ledger_shreds: Option<u64>,
     pub shred_version: u16,
-    pub halt_on_trusted_validators_accounts_hash_mismatch: bool,
-    pub trusted_validators: Option<HashSet<Pubkey>>,
+    pub halt_on_known_validators_accounts_hash_mismatch: bool,
+    pub known_validators: Option<HashSet<Pubkey>>,
     pub repair_validators: Option<HashSet<Pubkey>>,
     pub accounts_hash_fault_injection_slots: u64,
     pub accounts_db_caching_enabled: bool,
@@ -91,7 +98,6 @@ pub struct TvuConfig {
     pub rocksdb_max_compaction_jitter: Option<u64>,
     pub wait_for_vote_to_start_leader: bool,
     pub accounts_shrink_ratio: AccountShrinkThreshold,
-    pub disable_epoch_boundary_optimization: bool,
 }
 
 impl Tvu {
@@ -131,6 +137,7 @@ impl Tvu {
         gossip_confirmed_slots_receiver: GossipDuplicateConfirmedSlotsReceiver,
         tvu_config: TvuConfig,
         max_slots: &Arc<MaxSlots>,
+        cost_model: &Arc<RwLock<CostModel>>,
     ) -> Self {
         let keypair: Arc<Keypair> = cluster_info.keypair.clone();
 
@@ -213,8 +220,8 @@ impl Tvu {
             pending_snapshot_package,
             exit,
             cluster_info,
-            tvu_config.trusted_validators.clone(),
-            tvu_config.halt_on_trusted_validators_accounts_hash_mismatch,
+            tvu_config.known_validators.clone(),
+            tvu_config.halt_on_known_validators_accounts_hash_mismatch,
             tvu_config.accounts_hash_fault_injection_slots,
             snapshot_interval_slots,
         );
@@ -274,7 +281,6 @@ impl Tvu {
             cache_block_meta_sender,
             bank_notification_sender,
             wait_for_vote_to_start_leader: tvu_config.wait_for_vote_to_start_leader,
-            disable_epoch_boundary_optimization: tvu_config.disable_epoch_boundary_optimization,
         };
 
         let (voting_sender, voting_receiver) = channel();
@@ -284,6 +290,17 @@ impl Tvu {
             poh_recorder.clone(),
             bank_forks.clone(),
         );
+
+        let (cost_update_sender, cost_update_receiver) = channel();
+        let cost_update_service = CostUpdateService::new(
+            exit.clone(),
+            blockstore.clone(),
+            cost_model.clone(),
+            cost_update_receiver,
+        );
+
+        let (drop_bank_sender, drop_bank_receiver) = channel();
+        let drop_bank_service = DropBankService::new(drop_bank_receiver);
 
         let replay_stage = ReplayStage::new(
             replay_stage_config,
@@ -303,6 +320,8 @@ impl Tvu {
             gossip_verified_vote_hash_receiver,
             cluster_slots_update_sender,
             voting_sender,
+            cost_update_sender,
+            drop_bank_sender,
         );
 
         let ledger_cleanup_service = tvu_config.max_ledger_shreds.map(|max_ledger_shreds| {
@@ -334,6 +353,8 @@ impl Tvu {
             accounts_background_service,
             accounts_hash_verifier,
             voting_service,
+            cost_update_service,
+            drop_bank_service,
         }
     }
 
@@ -348,26 +369,30 @@ impl Tvu {
         self.replay_stage.join()?;
         self.accounts_hash_verifier.join()?;
         self.voting_service.join()?;
+        self.cost_update_service.join()?;
+        self.drop_bank_service.join()?;
         Ok(())
     }
 }
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-    use serial_test::serial;
-    use safecoin_gossip::cluster_info::{ClusterInfo, Node};
-    use solana_ledger::{
-        blockstore::BlockstoreSignals,
-        create_new_tmp_ledger,
-        genesis_utils::{create_genesis_config, GenesisConfigInfo},
+    use {
+        super::*,
+        serial_test::serial,
+        safecoin_gossip::cluster_info::{ClusterInfo, Node},
+        solana_ledger::{
+            blockstore::BlockstoreSignals,
+            create_new_tmp_ledger,
+            genesis_utils::{create_genesis_config, GenesisConfigInfo},
+        },
+        solana_poh::poh_recorder::create_test_recorder,
+        solana_rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
+        solana_runtime::bank::Bank,
+        safecoin_sdk::signature::{Keypair, Signer},
+        solana_streamer::socket::SocketAddrSpace,
+        std::sync::atomic::Ordering,
     };
-    use solana_poh::poh_recorder::create_test_recorder;
-    use solana_rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank;
-    use solana_runtime::bank::Bank;
-    use safecoin_sdk::signature::{Keypair, Signer};
-    use solana_streamer::socket::SocketAddrSpace;
-    use std::sync::atomic::Ordering;
 
     #[ignore]
     #[test]
@@ -455,6 +480,7 @@ pub mod tests {
             gossip_confirmed_slots_receiver,
             TvuConfig::default(),
             &Arc::new(MaxSlots::default()),
+            &Arc::new(RwLock::new(CostModel::default())),
         );
         exit.store(true, Ordering::Relaxed);
         tvu.join().unwrap();

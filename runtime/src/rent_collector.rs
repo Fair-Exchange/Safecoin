@@ -126,8 +126,7 @@ impl RentCollector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use safecoin_sdk::account::Account;
+    use {super::*, safecoin_sdk::account::Account};
 
     #[test]
     fn test_collect_from_account_created_and_existing() {

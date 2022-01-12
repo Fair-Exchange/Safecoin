@@ -1,10 +1,13 @@
 //! Exchange program
 
-use crate::exchange_state::*;
-use crate::id;
-use serde_derive::{Deserialize, Serialize};
-use safecoin_sdk::instruction::{AccountMeta, Instruction};
-use safecoin_sdk::pubkey::Pubkey;
+use {
+    crate::{exchange_state::*, id},
+    serde_derive::{Deserialize, Serialize},
+    safecoin_sdk::{
+        instruction::{AccountMeta, Instruction},
+        pubkey::Pubkey,
+    },
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct OrderRequestInfo {

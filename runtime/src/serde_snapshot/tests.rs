@@ -75,6 +75,7 @@ where
         false,
         None,
         AccountShrinkThreshold::default(),
+        None,
     )
 }
 
@@ -131,6 +132,7 @@ fn test_accounts_serialize_style(serde_style: SerdeStyle) {
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
+        None,
     );
 
     let mut pubkeys: Vec<Pubkey> = vec![];
@@ -231,6 +233,7 @@ fn test_bank_serialize_style(serde_style: SerdeStyle) {
         false,
         None,
         AccountShrinkThreshold::default(),
+        None,
     )
     .unwrap();
     dbank.src = ref_sc;
@@ -293,7 +296,7 @@ mod test_bank_serialize {
 
     // This some what long test harness is required to freeze the ABI of
     // Bank's serialization due to versioned nature
-    #[frozen_abi(digest = "6msodEzE7YzFtorBhiP6ax4PKBaPZTkmYdGAdpoxLCvV")]
+    #[frozen_abi(digest = "9jiGyuG8pK3nBNbCEtLZBghXRNg3PHhkf1jS1GgTTdGz")]
     #[derive(Serialize, AbiExample)]
     pub struct BankAbiTestWrapperFuture {
         #[serde(serialize_with = "wrapper_future")]

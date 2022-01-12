@@ -1,5 +1,4 @@
-use crate::blockstore::*;
-use safecoin_sdk::clock::Slot;
+use {crate::blockstore::*, safecoin_sdk::clock::Slot};
 
 pub struct AncestorIterator<'a> {
     current: Option<Slot>,
@@ -52,9 +51,10 @@ impl<'a> Iterator for AncestorIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::blockstore_processor::fill_blockstore_slot_with_ticks;
-    use safecoin_sdk::hash::Hash;
+    use {
+        super::*, crate::blockstore_processor::fill_blockstore_slot_with_ticks,
+        safecoin_sdk::hash::Hash,
+    };
 
     #[test]
     fn test_ancestor_iterator() {

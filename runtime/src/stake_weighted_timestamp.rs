@@ -23,7 +23,7 @@ pub(crate) struct MaxAllowableDrift {
 
 pub(crate) fn calculate_stake_weighted_timestamp<I, K, V, T>(
     unique_timestamps: I,
-    stakes: &HashMap<Pubkey, (u64, T /*Account|ArcVoteAccount*/)>,
+    stakes: &HashMap<Pubkey, (u64, T /*Account|VoteAccount*/)>,
     slot: Slot,
     slot_duration: Duration,
     epoch_start_timestamp: Option<(Slot, UnixTimestamp)>,
@@ -100,8 +100,10 @@ where
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-    use safecoin_sdk::{account::Account, native_token::sol_to_lamports};
+    use {
+        super::*,
+        safecoin_sdk::{account::Account, native_token::sol_to_lamports},
+    };
 
     #[test]
     fn test_calculate_stake_weighted_timestamp_uses_median() {

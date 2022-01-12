@@ -1,6 +1,8 @@
-use safecoin_client::rpc_client::RpcClient;
-use safecoin_sdk::{clock::DEFAULT_MS_PER_SLOT, commitment_config::CommitmentConfig, pubkey::Pubkey};
-use std::{thread::sleep, time::Duration};
+use {
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_sdk::{clock::DEFAULT_MS_PER_SLOT, commitment_config::CommitmentConfig, pubkey::Pubkey},
+    std::{thread::sleep, time::Duration},
+};
 
 pub fn check_recent_balance(expected_balance: u64, client: &RpcClient, pubkey: &Pubkey) {
     (0..5).for_each(|tries| {

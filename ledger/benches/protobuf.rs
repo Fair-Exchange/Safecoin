@@ -2,17 +2,19 @@
 #![feature(test)]
 extern crate test;
 
-use bincode::{deserialize, serialize};
-use solana_ledger::{
-    blockstore::Blockstore,
-    blockstore_db::{columns as cf, LedgerColumn},
-    get_tmp_ledger_path,
+use {
+    bincode::{deserialize, serialize},
+    solana_ledger::{
+        blockstore::Blockstore,
+        blockstore_db::{columns as cf, LedgerColumn},
+        get_tmp_ledger_path,
+    },
+    solana_runtime::bank::RewardType,
+    safecoin_sdk::{clock::Slot, pubkey},
+    safecoin_transaction_status::{Reward, Rewards},
+    std::path::Path,
+    test::Bencher,
 };
-use solana_runtime::bank::RewardType;
-use safecoin_sdk::{clock::Slot, pubkey};
-use safecoin_transaction_status::{Reward, Rewards};
-use std::path::Path;
-use test::Bencher;
 
 fn create_rewards() -> Rewards {
     (0..100)

@@ -1,9 +1,12 @@
-use super::common::UnusedAccounts;
 #[cfg(all(test, RUSTC_WITH_SPECIALIZATION))]
 use safecoin_frozen_abi::abi_example::IgnoreAsHelper;
-use {super::*, safecoin_measure::measure::Measure, std::cell::RefCell};
-use crate::ancestors::AncestorsForSerialization;
-use crate::vote_group_gen::VoteGroupGenerator;
+use {
+    super::{common::UnusedAccounts, *},
+    crate::{ancestors::AncestorsForSerialization, stakes::StakesCache},
+    safecoin_measure::measure::Measure,
+    std::{cell::RefCell, sync::RwLock},
+};
+
 type AccountsDbFields = super::AccountsDbFields<SerializableAccountStorageEntry>;
 
 // Serializable version of AccountStorageEntry for snapshot format
@@ -39,7 +42,6 @@ impl From<&AccountStorageEntry> for SerializableAccountStorageEntry {
     }
 }
 
-use std::sync::RwLock;
 // Deserializable version of Bank which need not be serializable,
 // because it's handled by SerializableVersionedBank.
 // So, sync fields with it!
@@ -81,17 +83,7 @@ pub(crate) struct DeserializableVersionedBank {
 }
 
 impl From<DeserializableVersionedBank> for BankFieldsToDeserialize {
-
     fn from(dvb: DeserializableVersionedBank) -> Self {
-        let xlate_map = |map: &HashMap<Epoch,EpochStakes>| -> HashMap<Epoch,VoteGroupGenerator> {
-            let mut ret : HashMap<Epoch, VoteGroupGenerator> = HashMap::new();
-            for (key, es ) in map.iter() {
-                let vgr: VoteGroupGenerator = es.make_group_generator();
-                ret.insert(*key, vgr);
-            }
-            ret
-        };
-        let new_map = xlate_map(&dvb.epoch_stakes);
         BankFieldsToDeserialize {
             blockhash_queue: dvb.blockhash_queue,
             ancestors: dvb.ancestors,
@@ -124,11 +116,9 @@ impl From<DeserializableVersionedBank> for BankFieldsToDeserialize {
             stakes: dvb.stakes,
             epoch_stakes: dvb.epoch_stakes,
             is_delta: dvb.is_delta,
-            group_generators: new_map,
         }
     }
 }
-
 
 // Serializable version of Bank, not Deserializable to avoid cloning by using refs.
 // Sync fields with DeserializableVersionedBank!
@@ -162,7 +152,7 @@ pub(crate) struct SerializableVersionedBank<'a> {
     pub(crate) rent_collector: RentCollector,
     pub(crate) epoch_schedule: EpochSchedule,
     pub(crate) inflation: Inflation,
-    pub(crate) stakes: &'a RwLock<Stakes>,
+    pub(crate) stakes: &'a StakesCache,
     pub(crate) unused_accounts: UnusedAccounts,
     pub(crate) epoch_stakes: &'a HashMap<Epoch, EpochStakes>,
     pub(crate) is_delta: bool,

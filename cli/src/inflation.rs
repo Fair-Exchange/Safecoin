@@ -1,17 +1,19 @@
-use crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, ProcessResult};
-use clap::{App, Arg, ArgMatches, SubCommand};
-use safecoin_clap_utils::{
-    input_parsers::{pubkeys_of, value_of},
-    input_validators::is_valid_pubkey,
-    keypair::*,
+use {
+    crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, ProcessResult},
+    clap::{App, Arg, ArgMatches, SubCommand},
+    safecoin_clap_utils::{
+        input_parsers::{pubkeys_of, value_of},
+        input_validators::is_valid_pubkey,
+        keypair::*,
+    },
+    safecoin_cli_output::{
+        CliEpochRewardshMetadata, CliInflation, CliKeyedEpochReward, CliKeyedEpochRewards,
+    },
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
+    safecoin_sdk::{clock::Epoch, pubkey::Pubkey},
+    std::sync::Arc,
 };
-use safecoin_cli_output::{
-    CliEpochRewardshMetadata, CliInflation, CliKeyedEpochReward, CliKeyedEpochRewards,
-};
-use safecoin_client::rpc_client::RpcClient;
-use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
-use safecoin_sdk::{clock::Epoch, pubkey::Pubkey};
-use std::sync::Arc;
 
 #[derive(Debug, PartialEq)]
 pub enum InflationCliCommand {

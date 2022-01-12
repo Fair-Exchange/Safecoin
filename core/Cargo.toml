@@ -1,7 +1,7 @@
 [package]
 name = "safecoin-core"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.7.17"
+version = "1.8.12"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/safecoin-core"
 readme = "../README.md"
@@ -9,10 +9,6 @@ repository = "https://github.com/fair-exchange/safecoin"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 license = "Apache-2.0"
 edition = "2018"
-
-
-[lib]
-name = "solana_core"
 
 [badges]
 codecov = { repository = "fair-exchange/safecoin", branch = "master", service = "github" }
@@ -31,13 +27,14 @@ ed25519-dalek = "=1.0.1"
 fs_extra = "1.2.0"
 flate2 = "1.0"
 indexmap = { version = "1.5", features = ["rayon"] }
-itertools = "0.9.0"
 libc = "0.2.81"
-log = "0.4.11"
-lru = "0.6.1"
 miow = "0.2.2"
 net2 = "0.2.37"
 num-traits = "0.2"
+histogram = "0.6.9"
+itertools = "0.10.1"
+log = "0.4.14"
+lru = "0.7.1"
 rand = "0.7.0"
 rand_chacha = "0.2.2"
 rand_core = "0.6.2"
@@ -47,33 +44,35 @@ retain_mut = "0.1.2"
 serde = "1.0.122"
 serde_bytes = "0.11"
 serde_derive = "1.0.103"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.7.17" }
-safecoin-banks-server = { path = "../banks-server", version = "=1.7.17" }
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.7.17" }
-safecoin-client = { path = "../client", version = "=1.7.17" }
-safecoin-gossip = { path = "../gossip", version = "=1.7.17" }
-safecoin-ledger = { path = "../ledger", version = "=1.7.17" }
-safecoin-logger = { path = "../logger", version = "=1.7.17" }
-safecoin-merkle-tree = { path = "../merkle-tree", version = "=1.7.17" }
-safecoin-metrics = { path = "../metrics", version = "=1.7.17" }
-safecoin-measure = { path = "../measure", version = "=1.7.17" }
-safecoin-net-utils = { path = "../net-utils", version = "=1.7.17" }
-safecoin-perf = { path = "../perf", version = "=1.7.17" }
-solana-poh = { path = "../poh", version = "=1.7.17" }
-safecoin-program-test = { path = "../program-test", version = "=1.7.17" }
-solana-rpc = { path = "../rpc", version = "=1.7.17" }
-safecoin-runtime = { path = "../runtime", version = "=1.7.17" }
-safecoin-sdk = { path = "../sdk", version = "=1.7.17" }
-safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.7.17" }
-safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.7.17" }
-safecoin-streamer = { path = "../streamer", version = "=1.7.17" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.7.17" }
-safecoin-version = { path = "../version", version = "=1.7.17" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.7.17" }
-safe-token-v2-0 = {  package = "safe-token", version = "=3.2.1", features = ["no-entrypoint"] }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.8.12" }
+solana-accountsdb-plugin-manager = { path = "../accountsdb-plugin-manager", version = "=1.8.12" }
+safecoin-banks-server = { path = "../banks-server", version = "=1.8.12" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.8.12" }
+safecoin-client = { path = "../client", version = "=1.8.12" }
+safecoin-gossip = { path = "../gossip", version = "=1.8.12" }
+safecoin-ledger = { path = "../ledger", version = "=1.8.12" }
+safecoin-logger = { path = "../logger", version = "=1.8.12" }
+safecoin-merkle-tree = { path = "../merkle-tree", version = "=1.8.12" }
+safecoin-metrics = { path = "../metrics", version = "=1.8.12" }
+safecoin-measure = { path = "../measure", version = "=1.8.12" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.8.12" }
+safecoin-perf = { path = "../perf", version = "=1.8.12" }
+solana-poh = { path = "../poh", version = "=1.8.12" }
+safecoin-program-test = { path = "../program-test", version = "=1.8.12" }
+solana-rpc = { path = "../rpc", version = "=1.8.12" }
+safecoin-runtime = { path = "../runtime", version = "=1.8.12" }
+safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
+safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.8.12" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.8.12" }
+safecoin-streamer = { path = "../streamer", version = "=1.8.12" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.8.12" }
+safecoin-version = { path = "../version", version = "=1.8.12" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.8.12" }
+safe-token-v2-0 = { package = "safe-token", version = "=3.2.0", features = ["no-entrypoint"] }
 tempfile = "3.1.0"
 thiserror = "1.0"
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.7.17" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.8.12" }
+sys-info = "0.9.1"
 trees = "0.2.1"
 
 [dev-dependencies]
@@ -86,8 +85,8 @@ num_cpus = "1.13.0"
 reqwest = { version = "0.11.2", default-features = false, features = ["blocking", "rustls-tls", "json"] }
 serde_json = "1.0.56"
 serial_test = "0.4.0"
-safecoin-stake-program = { path = "../programs/stake", version = "=1.7.17" }
-safecoin-version = { path = "../version", version = "=1.7.17" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.8.12" }
+safecoin-version = { path = "../version", version = "=1.8.12" }
 symlink = "0.1.0"
 systemstat = "0.1.5"
 tokio = { version = "1", features = ["full"] }

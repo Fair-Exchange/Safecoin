@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-perf"
-version = "1.7.17"
+version = "1.8.12"
 description = "Safecoin Performance APIs"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -19,11 +19,16 @@ log = "0.4.11"
 rand = "0.7.0"
 rayon = "1.5.0"
 serde = "1.0.126"
-safecoin-logger = { path = "../logger", version = "=1.7.17" }
-safecoin-metrics = { path = "../metrics", version = "=1.7.17" }
-safecoin-sdk = { path = "../sdk", version = "=1.7.17" }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.7.17" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.7.17" }
+safecoin-logger = { path = "../logger", version = "=1.8.12" }
+safecoin-metrics = { path = "../metrics", version = "=1.8.12" }
+safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.8.12" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.8.12" }
+
+[target."cfg(target_os = \"linux\")".dependencies]
+caps = "0.5.3"
+libc = "0.2.81"
+nix = "0.20.0"
 
 [lib]
 name = "solana_perf"

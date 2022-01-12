@@ -1,7 +1,9 @@
-use crate::{stakes::Stakes, vote_account::ArcVoteAccount,commitment::VOTE_GROUP_COUNT,vote_group_gen::VoteGroupGenerator};
-use serde::{Deserialize, Serialize};
-use safecoin_sdk::{clock::Epoch, pubkey::Pubkey};
-use std::{collections::HashMap, sync::Arc};
+use {
+    crate::{stakes::Stakes, vote_account::VoteAccount},
+    serde::{Deserialize, Serialize},
+    safecoin_sdk::{clock::Epoch, pubkey::Pubkey},
+    std::{collections::HashMap, sync::Arc},
+};
 
 pub type NodeIdToVoteAccounts = HashMap<Pubkey, NodeVoteAccounts>;
 pub type EpochAuthorizedVoters = HashMap<Pubkey, Pubkey>;
@@ -22,26 +24,16 @@ pub struct EpochStakes {
 
 impl EpochStakes {
     pub fn new(stakes: &Stakes, leader_schedule_epoch: Epoch) -> Self {
-        let epoch_vote_accounts = Stakes::vote_accounts(stakes);
+        let epoch_vote_accounts = stakes.vote_accounts();
         let (total_stake, node_id_to_vote_accounts, epoch_authorized_voters) =
-            Self::parse_epoch_vote_accounts(&epoch_vote_accounts, leader_schedule_epoch);  
-            Self {
+            Self::parse_epoch_vote_accounts(epoch_vote_accounts.as_ref(), leader_schedule_epoch);
+        Self {
             stakes: Arc::new(stakes.clone()),
             total_stake,
             node_id_to_vote_accounts: Arc::new(node_id_to_vote_accounts),
             epoch_authorized_voters: Arc::new(epoch_authorized_voters),
-       }
+        }
     }
-
-    pub fn make_group_generator (&self) -> VoteGroupGenerator {
-        let group_size = 
-        if self.epoch_authorized_voters.len() < VOTE_GROUP_COUNT 
-            { self.epoch_authorized_voters.len()} 
-        else 
-            { VOTE_GROUP_COUNT }; 
-        VoteGroupGenerator::new(&self.epoch_authorized_voters,group_size) 
-    }
-
 
     pub fn stakes(&self) -> &Stakes {
         &self.stakes
@@ -60,14 +52,15 @@ impl EpochStakes {
     }
 
     pub fn vote_account_stake(&self, vote_account: &Pubkey) -> u64 {
-        Stakes::vote_accounts(&self.stakes)
+        self.stakes
+            .vote_accounts()
             .get(vote_account)
             .map(|(stake, _)| *stake)
             .unwrap_or(0)
     }
 
     fn parse_epoch_vote_accounts(
-        epoch_vote_accounts: &HashMap<Pubkey, (u64, ArcVoteAccount)>,
+        epoch_vote_accounts: &HashMap<Pubkey, (u64, VoteAccount)>,
         leader_schedule_epoch: Epoch,
     ) -> (u64, NodeIdToVoteAccounts, EpochAuthorizedVoters) {
         let mut node_id_to_vote_accounts: NodeIdToVoteAccounts = HashMap::new();
@@ -125,10 +118,10 @@ impl EpochStakes {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::*;
-    use safecoin_sdk::account::AccountSharedData;
-    use solana_vote_program::vote_state::create_account_with_authorized;
-    use std::iter;
+    use {
+        super::*, safecoin_sdk::account::AccountSharedData,
+        solana_vote_program::vote_state::create_account_with_authorized, std::iter,
+    };
 
     struct VoteAccountInfo {
         vote_account: Pubkey,
@@ -198,7 +191,7 @@ pub(crate) mod tests {
                 vote_accounts.iter().map(|v| {
                     (
                         v.vote_account,
-                        (stake_per_account, ArcVoteAccount::from(v.account.clone())),
+                        (stake_per_account, VoteAccount::from(v.account.clone())),
                     )
                 })
             })

@@ -1,6 +1,7 @@
-use safecoin_sdk::instruction::Instruction;
-use safecoin_sdk::pubkey::Pubkey;
-use safe_memo::id;
+use {
+    safecoin_sdk::{instruction::Instruction, pubkey::Pubkey},
+    safe_memo::id,
+};
 
 pub trait WithMemo {
     fn with_memo<T: AsRef<str>>(self, memo: Option<T>) -> Self;

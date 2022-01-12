@@ -1,30 +1,32 @@
-use solana_cli::{
-    cli::{process_command, request_and_confirm_airdrop, CliCommand, CliConfig},
-    spend_utils::SpendAmount,
-    stake::StakeAuthorizationIndexed,
-    test_utils::{check_ready, check_recent_balance},
-};
-use safecoin_cli_output::{parse_sign_only_reply_string, OutputFormat};
-use safecoin_client::{
-    blockhash_query::{self, BlockhashQuery},
-    nonce_utils,
-    rpc_client::RpcClient,
-};
-use solana_core::test_validator::TestValidator;
-use safecoin_faucet::faucet::run_local_faucet;
-use safecoin_sdk::{
-    account_utils::StateMut,
-    commitment_config::CommitmentConfig,
-    nonce::State as NonceState,
-    pubkey::Pubkey,
-    signature::{keypair_from_seed, Keypair, Signer},
-    stake::{
-        self,
-        instruction::LockupArgs,
-        state::{Lockup, StakeAuthorize, StakeState},
+use {
+    solana_cli::{
+        cli::{process_command, request_and_confirm_airdrop, CliCommand, CliConfig},
+        spend_utils::SpendAmount,
+        stake::StakeAuthorizationIndexed,
+        test_utils::{check_ready, check_recent_balance},
     },
+    safecoin_cli_output::{parse_sign_only_reply_string, OutputFormat},
+    safecoin_client::{
+        blockhash_query::{self, BlockhashQuery},
+        nonce_utils,
+        rpc_client::RpcClient,
+    },
+    solana_core::test_validator::TestValidator,
+    safecoin_faucet::faucet::run_local_faucet,
+    safecoin_sdk::{
+        account_utils::StateMut,
+        commitment_config::CommitmentConfig,
+        nonce::State as NonceState,
+        pubkey::Pubkey,
+        signature::{keypair_from_seed, Keypair, Signer},
+        stake::{
+            self,
+            instruction::LockupArgs,
+            state::{Lockup, StakeAuthorize, StakeState},
+        },
+    },
+    solana_streamer::socket::SocketAddrSpace,
 };
-use solana_streamer::socket::SocketAddrSpace;
 
 #[test]
 fn test_stake_delegation_force() {
@@ -56,7 +58,13 @@ fn test_stake_delegation_force() {
         authorized_voter: None,
         authorized_withdrawer,
         commission: 0,
+        sign_only: false,
+        dump_transaction_message: false,
+        blockhash_query: BlockhashQuery::All(blockhash_query::Source::Cluster),
+        nonce_account: None,
+        nonce_authority: 0,
         memo: None,
+        fee_payer: 0,
     };
     process_command(&config).unwrap();
 

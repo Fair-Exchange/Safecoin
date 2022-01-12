@@ -1,4 +1,4 @@
-//! @brief Example Rust-based BPF program tests dependent crates
+//! Example Rust-based BPF program tests dependent crates
 
 extern crate safecoin_program;
 use byteorder::{ByteOrder, LittleEndian};

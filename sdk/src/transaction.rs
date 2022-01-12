@@ -2,23 +2,27 @@
 
 #![cfg(feature = "full")]
 
-use crate::sanitize::{Sanitize, SanitizeError};
-use crate::secp256k1_instruction::verify_eth_addresses;
-use crate::{
-    hash::Hash,
-    instruction::{CompiledInstruction, Instruction, InstructionError},
-    message::Message,
-    nonce::NONCED_TX_MARKER_IX_INDEX,
-    program_utils::limited_deserialize,
-    pubkey::Pubkey,
-    short_vec,
-    signature::{Signature, SignerError},
-    signers::Signers,
-    system_instruction::SystemInstruction,
-    system_program,
+use {
+    crate::{
+        ed25519_instruction::verify_signatures,
+        feature_set,
+        hash::Hash,
+        instruction::{CompiledInstruction, Instruction, InstructionError},
+        message::Message,
+        nonce::NONCED_TX_MARKER_IX_INDEX,
+        program_utils::limited_deserialize,
+        pubkey::Pubkey,
+        sanitize::{Sanitize, SanitizeError},
+        secp256k1_instruction::verify_eth_addresses,
+        short_vec,
+        signature::{Signature, SignerError},
+        signers::Signers,
+        system_instruction::SystemInstruction,
+        system_program,
+    },
+    std::{result, sync::Arc},
+    thiserror::Error,
 };
-use std::result;
-use thiserror::Error;
 
 /// Reasons a transaction might be rejected.
 #[derive(
@@ -409,7 +413,7 @@ impl Transaction {
             .collect()
     }
 
-    pub fn verify_precompiles(&self, libsecp256k1_0_5_upgrade_enabled: bool) -> Result<()> {
+    pub fn verify_precompiles(&self, feature_set: &Arc<feature_set::FeatureSet>) -> Result<()> {
         for instruction in &self.message().instructions {
             // The Transaction may not be sanitized at this point
             if instruction.program_id_index as usize >= self.message().account_keys.len() {
@@ -427,8 +431,20 @@ impl Transaction {
                 let e = verify_eth_addresses(
                     data,
                     &instruction_datas,
-                    libsecp256k1_0_5_upgrade_enabled,
+                    feature_set.is_active(&feature_set::libsecp256k1_0_5_upgrade_enabled::id()),
                 );
+                e.map_err(|_| TransactionError::InvalidAccountIndex)?;
+            } else if crate::ed25519_program::check_id(program_id)
+                && feature_set.is_active(&feature_set::ed25519_program_enabled::id())
+            {
+                let instruction_datas: Vec<_> = self
+                    .message()
+                    .instructions
+                    .iter()
+                    .map(|instruction| instruction.data.as_ref())
+                    .collect();
+                let data = &instruction.data;
+                let e = verify_signatures(data, &instruction_datas);
                 e.map_err(|_| TransactionError::InvalidAccountIndex)?;
             }
         }
@@ -504,15 +520,17 @@ pub fn get_nonce_pubkey_from_instruction<'a>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        hash::hash,
-        instruction::AccountMeta,
-        signature::{Keypair, Presigner, Signer},
-        system_instruction,
+    use {
+        super::*,
+        crate::{
+            hash::hash,
+            instruction::AccountMeta,
+            signature::{Keypair, Presigner, Signer},
+            system_instruction,
+        },
+        bincode::{deserialize, serialize, serialized_size},
+        std::mem::size_of,
     };
-    use bincode::{deserialize, serialize, serialized_size};
-    use std::mem::size_of;
 
     fn get_program_id(tx: &Transaction, instruction_index: usize) -> &Pubkey {
         let message = tx.message();

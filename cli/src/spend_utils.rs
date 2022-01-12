@@ -1,19 +1,22 @@
-use crate::{
-    checks::{calculate_fee, check_account_for_balance_with_commitment},
-    cli::CliError,
-};
-use clap::ArgMatches;
-use safecoin_clap_utils::{input_parsers::lamports_of_sol, offline::SIGN_ONLY_ARG};
-use safecoin_client::rpc_client::RpcClient;
-use safecoin_sdk::{
-    commitment_config::CommitmentConfig, fee_calculator::FeeCalculator, message::Message,
-    native_token::lamports_to_sol, pubkey::Pubkey,
+use {
+    crate::{
+        checks::{calculate_fee, check_account_for_balance_with_commitment},
+        cli::CliError,
+    },
+    clap::ArgMatches,
+    safecoin_clap_utils::{input_parsers::lamports_of_sol, offline::SIGN_ONLY_ARG},
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_sdk::{
+        commitment_config::CommitmentConfig, fee_calculator::FeeCalculator, message::Message,
+        native_token::lamports_to_sol, pubkey::Pubkey,
+    },
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum SpendAmount {
     All,
     Some(u64),
+    RentExempt,
 }
 
 impl Default for SpendAmount {
@@ -87,6 +90,7 @@ where
             0,
             from_pubkey,
             fee_pubkey,
+            0,
             build_message,
         );
         Ok((message, spend))
@@ -94,12 +98,19 @@ where
         let from_balance = rpc_client
             .get_balance_with_commitment(from_pubkey, commitment)?
             .value;
+        let from_rent_exempt_minimum = if amount == SpendAmount::RentExempt {
+            let data = rpc_client.get_account_data(from_pubkey)?;
+            rpc_client.get_minimum_balance_for_rent_exemption(data.len())?
+        } else {
+            0
+        };
         let (message, SpendAndFee { spend, fee }) = resolve_spend_message(
             amount,
             fee_calculator,
             from_balance,
             from_pubkey,
             fee_pubkey,
+            from_rent_exempt_minimum,
             build_message,
         );
         if from_pubkey == fee_pubkey {
@@ -135,6 +146,7 @@ fn resolve_spend_message<F>(
     from_balance: u64,
     from_pubkey: &Pubkey,
     fee_pubkey: &Pubkey,
+    from_rent_exempt_minimum: u64,
     build_message: F,
 ) -> (Message, SpendAndFee)
 where
@@ -160,6 +172,23 @@ where
             } else {
                 from_balance
             };
+            (
+                build_message(lamports),
+                SpendAndFee {
+                    spend: lamports,
+                    fee,
+                },
+            )
+        }
+        SpendAmount::RentExempt => {
+            let dummy_message = build_message(0);
+            let fee = calculate_fee(fee_calculator, &[&dummy_message]);
+            let mut lamports = if from_pubkey == fee_pubkey {
+                from_balance.saturating_sub(fee)
+            } else {
+                from_balance
+            };
+            lamports = lamports.saturating_sub(from_rent_exempt_minimum);
             (
                 build_message(lamports),
                 SpendAndFee {

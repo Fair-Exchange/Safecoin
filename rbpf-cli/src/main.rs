@@ -7,9 +7,10 @@ use solana_bpf_loader_program::{
 };
 use solana_rbpf::{
     assembler::assemble,
+    elf::Executable,
     static_analysis::Analysis,
     verifier::check,
-    vm::{Config, DynamicAnalysis, Executable},
+    vm::{Config, DynamicAnalysis},
 };
 use safecoin_sdk::{
     account::AccountSharedData,
@@ -146,6 +147,7 @@ native machine code before execting it in the virtual machine.",
 
     let config = Config {
         enable_instruction_tracing: matches.is_present("trace") || matches.is_present("profile"),
+        enable_symbol_and_section_labels: true,
         ..Config::default()
     };
     let mut accounts = Vec::new();
@@ -185,25 +187,31 @@ native machine code before execting it in the virtual machine.",
     file.seek(SeekFrom::Start(0)).unwrap();
     let mut contents = Vec::new();
     file.read_to_end(&mut contents).unwrap();
+    let syscall_registry = register_syscalls(&mut invoke_context).unwrap();
     let mut executable = if magic == [0x7f, 0x45, 0x4c, 0x46] {
-        <dyn Executable<BpfError, ThisInstructionMeter>>::from_elf(&contents, None, config)
-            .map_err(|err| format!("Executable constructor failed: {:?}", err))
+        Executable::<BpfError, ThisInstructionMeter>::from_elf(
+            &contents,
+            None,
+            config,
+            syscall_registry,
+        )
+        .map_err(|err| format!("Executable constructor failed: {:?}", err))
     } else {
         assemble::<BpfError, ThisInstructionMeter>(
             std::str::from_utf8(contents.as_slice()).unwrap(),
             None,
             config,
+            syscall_registry,
         )
     }
     .unwrap();
 
     if matches.is_present("verify") {
-        let (_, elf_bytes) = executable.get_text_bytes().unwrap();
-        check(elf_bytes).unwrap();
+        let text_bytes = executable.get_text_bytes().1;
+        check(text_bytes, &config).unwrap();
     }
-    executable.set_syscall_registry(register_syscalls(&mut invoke_context).unwrap());
-    executable.jit_compile().unwrap();
-    let analysis = Analysis::from_executable(executable.as_ref());
+    Executable::<BpfError, ThisInstructionMeter>::jit_compile(&mut executable).unwrap();
+    let analysis = Analysis::from_executable(&executable);
 
     match matches.value_of("use") {
         Some("cfg") => {
@@ -220,7 +228,7 @@ native machine code before execting it in the virtual machine.",
     }
 
     let id = bpf_loader::id();
-    let mut vm = create_vm(&id, executable.as_ref(), &mut mem, &mut invoke_context).unwrap();
+    let mut vm = create_vm(&id, &executable, &mut mem, &mut invoke_context).unwrap();
     let result = if matches.value_of("use").unwrap() == "interpreter" {
         vm.execute_program_interpreted(&mut instruction_meter)
     } else {
@@ -238,7 +246,7 @@ native machine code before execting it in the virtual machine.",
     if matches.is_present("trace") {
         println!("Trace is saved in trace.out");
         let mut file = File::create("trace.out").unwrap();
-        let analysis = Analysis::from_executable(executable.as_ref());
+        let analysis = Analysis::from_executable(&executable);
         vm.get_tracer().write(&mut file, &analysis).unwrap();
     }
     if matches.is_present("profile") {

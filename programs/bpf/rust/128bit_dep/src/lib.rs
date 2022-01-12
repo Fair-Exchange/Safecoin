@@ -1,4 +1,4 @@
-//! @brief Safecoin Rust-based BPF program utility functions and types
+//! Safecoin Rust-based BPF program utility functions and types
 
 extern crate safecoin_program;
 

@@ -3,19 +3,22 @@
 
 extern crate test;
 
-use rand::seq::SliceRandom;
-use raptorq::{Decoder, Encoder};
-use solana_ledger::entry::{create_ticks, Entry};
-use solana_ledger::shred::{
-    max_entries_per_n_shred, max_ticks_per_n_shreds, ProcessShredsStats, Shred, Shredder,
-    MAX_DATA_SHREDS_PER_FEC_BLOCK, SHRED_PAYLOAD_SIZE, SIZE_OF_CODING_SHRED_HEADERS,
-    SIZE_OF_DATA_SHRED_PAYLOAD,
+use {
+    rand::seq::SliceRandom,
+    raptorq::{Decoder, Encoder},
+    solana_ledger::{
+        entry::{create_ticks, Entry},
+        shred::{
+            max_entries_per_n_shred, max_ticks_per_n_shreds, ProcessShredsStats, Shred, Shredder,
+            MAX_DATA_SHREDS_PER_FEC_BLOCK, SHRED_PAYLOAD_SIZE, SIZE_OF_CODING_SHRED_HEADERS,
+            SIZE_OF_DATA_SHRED_PAYLOAD,
+        },
+    },
+    solana_perf::test_tx,
+    safecoin_sdk::{hash::Hash, signature::Keypair},
+    std::sync::Arc,
+    test::Bencher,
 };
-use solana_perf::test_tx;
-use safecoin_sdk::hash::Hash;
-use safecoin_sdk::signature::Keypair;
-use std::sync::Arc;
-use test::Bencher;
 
 fn make_test_entry(txs_per_entry: u64) -> Entry {
     Entry {
@@ -148,14 +151,7 @@ fn bench_shredder_decoding(bencher: &mut Bencher) {
         true, // is_last_in_slot
     );
     bencher.iter(|| {
-        Shredder::try_recovery(
-            coding_shreds[..].to_vec(),
-            symbol_count,
-            symbol_count,
-            0, // first index
-            1, // slot
-        )
-        .unwrap();
+        Shredder::try_recovery(coding_shreds[..].to_vec()).unwrap();
     })
 }
 

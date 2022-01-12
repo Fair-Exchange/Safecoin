@@ -3,38 +3,41 @@
 /// All tests must start from an entry point and a funding keypair and
 /// discover the rest of the network.
 use log::*;
-use rand::{thread_rng, Rng};
-use rayon::prelude::*;
-use safecoin_client::thin_client::create_client;
-use solana_core::consensus::VOTE_THRESHOLD_DEPTH;
-use safecoin_gossip::{
-    cluster_info::VALIDATOR_PORT_RANGE, contact_info::ContactInfo, gossip_service::discover_cluster,
-};
-use solana_ledger::{
-    blockstore::Blockstore,
-    entry::{Entry, EntrySlice},
-};
-use safecoin_sdk::{
-    client::SyncClient,
-    clock::{self, Slot, NUM_CONSECUTIVE_LEADER_SLOTS},
-    commitment_config::CommitmentConfig,
-    epoch_schedule::MINIMUM_SLOTS_PER_EPOCH,
-    exit::Exit,
-    hash::Hash,
-    poh_config::PohConfig,
-    pubkey::Pubkey,
-    signature::{Keypair, Signature, Signer},
-    system_transaction,
-    timing::duration_as_ms,
-    transport::TransportError,
-};
-use solana_streamer::socket::SocketAddrSpace;
-use std::{
-    collections::{HashMap, HashSet},
-    path::Path,
-    sync::{Arc, RwLock},
-    thread::sleep,
-    time::{Duration, Instant},
+use {
+    rand::{thread_rng, Rng},
+    rayon::prelude::*,
+    safecoin_client::thin_client::create_client,
+    solana_core::consensus::VOTE_THRESHOLD_DEPTH,
+    safecoin_gossip::{
+        cluster_info::VALIDATOR_PORT_RANGE, contact_info::ContactInfo,
+        gossip_service::discover_cluster,
+    },
+    solana_ledger::{
+        blockstore::Blockstore,
+        entry::{Entry, EntrySlice},
+    },
+    safecoin_sdk::{
+        client::SyncClient,
+        clock::{self, Slot, NUM_CONSECUTIVE_LEADER_SLOTS},
+        commitment_config::CommitmentConfig,
+        epoch_schedule::MINIMUM_SLOTS_PER_EPOCH,
+        exit::Exit,
+        hash::Hash,
+        poh_config::PohConfig,
+        pubkey::Pubkey,
+        signature::{Keypair, Signature, Signer},
+        system_transaction,
+        timing::duration_as_ms,
+        transport::TransportError,
+    },
+    solana_streamer::socket::SocketAddrSpace,
+    std::{
+        collections::{HashMap, HashSet},
+        path::Path,
+        sync::{Arc, RwLock},
+        thread::sleep,
+        time::{Duration, Instant},
+    },
 };
 
 /// Spend and verify from every node in the network
@@ -284,7 +287,7 @@ pub fn check_for_new_roots(num_new_roots: usize, contact_infos: &[ContactInfo], 
     let mut done = false;
     let mut last_print = Instant::now();
     let loop_start = Instant::now();
-    let loop_timeout = Duration::from_secs(60);
+    let loop_timeout = Duration::from_secs(180);
     let mut num_roots_map = HashMap::new();
     while !done {
         assert!(loop_start.elapsed() < loop_timeout);

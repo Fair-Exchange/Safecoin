@@ -1,14 +1,20 @@
 #![allow(clippy::integer_arithmetic)]
-use log::*;
-use safecoin_bench_tps::bench::{do_bench_tps, generate_and_fund_keypairs, generate_keypairs};
-use safecoin_bench_tps::cli;
-use safecoin_genesis::Base64Account;
-use safecoin_gossip::gossip_service::{discover_cluster, get_client, get_multi_client};
-use safecoin_sdk::fee_calculator::FeeRateGovernor;
-use safecoin_sdk::signature::{Keypair, Signer};
-use safecoin_sdk::system_program;
-use solana_streamer::socket::SocketAddrSpace;
-use std::{collections::HashMap, fs::File, io::prelude::*, path::Path, process::exit, sync::Arc};
+use {
+    log::*,
+    safecoin_bench_tps::{
+        bench::{do_bench_tps, generate_and_fund_keypairs, generate_keypairs},
+        cli,
+    },
+    safecoin_genesis::Base64Account,
+    safecoin_gossip::gossip_service::{discover_cluster, get_client, get_multi_client},
+    safecoin_sdk::{
+        fee_calculator::FeeRateGovernor,
+        signature::{Keypair, Signer},
+        system_program,
+    },
+    solana_streamer::socket::SocketAddrSpace,
+    std::{collections::HashMap, fs::File, io::prelude::*, path::Path, process::exit, sync::Arc},
+};
 
 /// Number of signatures for all transactions in ~1 week at ~100K TPS
 pub const NUM_SIGNATURES_FOR_TXS: u64 = 100_000 * 60 * 60 * 24 * 7;

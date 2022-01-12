@@ -1,22 +1,24 @@
-use log::*;
-use safecoin_bench_exchange::bench::{airdrop_lamports, do_bench_exchange, Config};
-use solana_core::validator::ValidatorConfig;
-use solana_exchange_program::{
-    exchange_processor::process_instruction, id, solana_exchange_program,
+use {
+    log::*,
+    safecoin_bench_exchange::bench::{airdrop_lamports, do_bench_exchange, Config},
+    solana_core::validator::ValidatorConfig,
+    solana_exchange_program::{
+        exchange_processor::process_instruction, id, solana_exchange_program,
+    },
+    safecoin_faucet::faucet::run_local_faucet_with_port,
+    safecoin_gossip::gossip_service::{discover_cluster, get_multi_client},
+    solana_local_cluster::{
+        local_cluster::{ClusterConfig, LocalCluster},
+        validator_configs::make_identical_validator_configs,
+    },
+    solana_runtime::{bank::Bank, bank_client::BankClient},
+    safecoin_sdk::{
+        genesis_config::create_genesis_config,
+        signature::{Keypair, Signer},
+    },
+    solana_streamer::socket::SocketAddrSpace,
+    std::{process::exit, sync::mpsc::channel, time::Duration},
 };
-use safecoin_faucet::faucet::run_local_faucet_with_port;
-use safecoin_gossip::gossip_service::{discover_cluster, get_multi_client};
-use solana_local_cluster::{
-    local_cluster::{ClusterConfig, LocalCluster},
-    validator_configs::make_identical_validator_configs,
-};
-use solana_runtime::{bank::Bank, bank_client::BankClient};
-use safecoin_sdk::{
-    genesis_config::create_genesis_config,
-    signature::{Keypair, Signer},
-};
-use solana_streamer::socket::SocketAddrSpace;
-use std::{process::exit, sync::mpsc::channel, time::Duration};
 
 #[test]
 #[ignore]

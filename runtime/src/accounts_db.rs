@@ -18,60 +18,64 @@
 //! tracks the number of commits to the entire data store. So the latest
 //! commit for each slot entry would be indexed.
 
-use crate::{
-    accounts_background_service::{DroppedSlotsSender, SendDroppedBankCallback},
-    accounts_cache::{AccountsCache, CachedAccount, SlotCache},
-    accounts_hash::{AccountsHash, CalculateHashIntermediate, HashStats, PreviousPass},
-    accounts_index::{
-        AccountIndexGetResult, AccountSecondaryIndexes, AccountsIndex, AccountsIndexRootsStats,
-        IndexKey, IsCached, ScanResult, SlotList, SlotSlice, ZeroLamport,
-    },
-    ancestors::Ancestors,
-    append_vec::{AppendVec, StoredAccountMeta, StoredMeta, StoredMetaWriteVersion},
-    contains::Contains,
-    pubkey_bins::PubkeyBinCalculator16,
-    read_only_accounts_cache::ReadOnlyAccountsCache,
-    sorted_storages::SortedStorages,
-};
-use blake3::traits::digest::Digest;
-use crossbeam_channel::{unbounded, Receiver, Sender};
-use dashmap::{
-    mapref::entry::Entry::{Occupied, Vacant},
-    DashMap, DashSet,
-};
-use lazy_static::lazy_static;
-use log::*;
-use rand::{prelude::SliceRandom, thread_rng, Rng};
-use rayon::{prelude::*, ThreadPool};
-use serde::{Deserialize, Serialize};
-use safecoin_measure::measure::Measure;
-use safecoin_rayon_threadlimit::get_thread_count;
-use safecoin_sdk::{
-    account::{AccountSharedData, ReadableAccount},
-    clock::{BankId, Epoch, Slot},
-    genesis_config::ClusterType,
-    hash::{Hash, Hasher},
-    pubkey::Pubkey,
-    timing::AtomicInterval,
-};
-use solana_vote_program::vote_state::MAX_LOCKOUT_HISTORY;
-use std::{
-    borrow::{Borrow, Cow},
-    boxed::Box,
-    collections::{hash_map::Entry, BTreeSet, HashMap, HashSet},
-    convert::TryFrom,
-    io::{Error as IoError, Result as IoResult},
-    ops::{Range, RangeBounds},
-    path::{Path, PathBuf},
-    sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
-    sync::{Arc, Condvar, Mutex, MutexGuard, RwLock},
-    thread::Builder,
-    time::Instant,
-};
-use tempfile::TempDir;
-
 #[cfg(test)]
 use std::{thread::sleep, time::Duration};
+use {
+    crate::{
+        accounts_background_service::{DroppedSlotsSender, SendDroppedBankCallback},
+        accounts_cache::{AccountsCache, CachedAccount, SlotCache},
+        accounts_hash::{AccountsHash, CalculateHashIntermediate, HashStats, PreviousPass},
+        accounts_index::{
+            AccountIndexGetResult, AccountSecondaryIndexes, AccountsIndex, AccountsIndexRootsStats,
+            IndexKey, IsCached, ScanResult, SlotList, SlotSlice, ZeroLamport,
+        },
+        accounts_update_notifier_interface::AccountsUpdateNotifier,
+        ancestors::Ancestors,
+        append_vec::{AppendVec, StoredAccountMeta, StoredMeta, StoredMetaWriteVersion},
+        contains::Contains,
+        pubkey_bins::PubkeyBinCalculator16,
+        read_only_accounts_cache::ReadOnlyAccountsCache,
+        sorted_storages::SortedStorages,
+    },
+    blake3::traits::digest::Digest,
+    crossbeam_channel::{unbounded, Receiver, Sender},
+    dashmap::{
+        mapref::entry::Entry::{Occupied, Vacant},
+        DashMap, DashSet,
+    },
+    lazy_static::lazy_static,
+    log::*,
+    rand::{prelude::SliceRandom, thread_rng, Rng},
+    rayon::{prelude::*, ThreadPool},
+    serde::{Deserialize, Serialize},
+    safecoin_measure::measure::Measure,
+    safecoin_rayon_threadlimit::get_thread_count,
+    safecoin_sdk::{
+        account::{AccountSharedData, ReadableAccount},
+        clock::{BankId, Epoch, Slot},
+        genesis_config::ClusterType,
+        hash::{Hash, Hasher},
+        pubkey::Pubkey,
+        timing::AtomicInterval,
+    },
+    solana_vote_program::vote_state::MAX_LOCKOUT_HISTORY,
+    std::{
+        borrow::{Borrow, Cow},
+        boxed::Box,
+        collections::{hash_map::Entry, BTreeSet, HashMap, HashSet},
+        convert::TryFrom,
+        io::{Error as IoError, Result as IoResult},
+        ops::{Range, RangeBounds},
+        path::{Path, PathBuf},
+        sync::{
+            atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
+            Arc, Condvar, Mutex, MutexGuard, RwLock,
+        },
+        thread::Builder,
+        time::Instant,
+    },
+    tempfile::TempDir,
+};
 
 const PAGE_SIZE: u64 = 4 * 1024;
 const MAX_RECYCLE_STORES: usize = 1000;
@@ -102,6 +106,12 @@ const CACHE_VIRTUAL_WRITE_VERSION: StoredMetaWriteVersion = 0;
 // that it doesn't actually map to an entry in an AppendVec.
 const CACHE_VIRTUAL_OFFSET: usize = 0;
 const CACHE_VIRTUAL_STORED_SIZE: usize = 0;
+
+pub struct AccountsAddRootTiming {
+    pub index_us: u64,
+    pub cache_us: u64,
+    pub store_us: u64,
+}
 
 #[cfg(not(test))]
 const ABSURD_CONSECUTIVE_FAILED_ITERATIONS: usize = 100;
@@ -320,6 +330,8 @@ pub enum LoadedAccountAccessor<'a> {
     // None value in Cached variant means the cache was flushed
     Cached(Option<(Pubkey, Cow<'a, CachedAccount>)>),
 }
+
+mod accountsdb_plugin_utils;
 
 impl<'a> LoadedAccountAccessor<'a> {
     fn check_and_get_loaded_account(&mut self) -> LoadedAccount {
@@ -954,6 +966,7 @@ pub struct AccountsDb {
     /// such that potentially a 0-lamport account update could be present which
     /// means we can remove the account from the index entirely.
     dirty_stores: DashMap<(Slot, AppendVecId), Arc<AccountStorageEntry>>,
+    accounts_update_notifier: Option<AccountsUpdateNotifier>,
 }
 
 #[derive(Debug, Default)]
@@ -1375,6 +1388,7 @@ impl Default for AccountsDb {
             remove_unrooted_slots_synchronization: RemoveUnrootedSlotsSynchronization::default(),
             shrink_ratio: AccountShrinkThreshold::default(),
             dirty_stores: DashMap::default(),
+            accounts_update_notifier: None,
         }
     }
 }
@@ -1390,6 +1404,18 @@ impl AccountsDb {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
+        )
+    }
+
+    pub fn new_for_tests_with_caching(paths: Vec<PathBuf>, cluster_type: &ClusterType) -> Self {
+        AccountsDb::new_with_config(
+            paths,
+            cluster_type,
+            AccountSecondaryIndexes::default(),
+            true,
+            AccountShrinkThreshold::default(),
+            None,
         )
     }
 
@@ -1399,6 +1425,7 @@ impl AccountsDb {
         account_indexes: AccountSecondaryIndexes,
         caching_enabled: bool,
         shrink_ratio: AccountShrinkThreshold,
+        accounts_update_notifier: Option<AccountsUpdateNotifier>,
     ) -> Self {
         let mut new = if !paths.is_empty() {
             Self {
@@ -1408,6 +1435,7 @@ impl AccountsDb {
                 account_indexes,
                 caching_enabled,
                 shrink_ratio,
+                accounts_update_notifier,
                 ..Self::default()
             }
         } else {
@@ -1451,6 +1479,13 @@ impl AccountsDb {
         AccountsDb {
             min_num_stores: 0,
             ..AccountsDb::new(Vec::new(), &ClusterType::Development)
+        }
+    }
+
+    pub fn new_single_for_tests_with_caching() -> Self {
+        AccountsDb {
+            min_num_stores: 0,
+            ..AccountsDb::new_for_tests_with_caching(Vec::new(), &ClusterType::Development)
         }
     }
 
@@ -4267,6 +4302,8 @@ impl AccountsDb {
                     lamports: account.lamports(),
                 };
 
+                self.notify_account_at_accounts_update(slot, meta, &account);
+
                 let cached_account = self.accounts_cache.store(slot, &meta.pubkey, account, hash);
                 // hash this account in the bg
                 match &self.sender_bg_hasher {
@@ -4363,6 +4400,8 @@ impl AccountsDb {
         let mut max_slot = 0;
         let mut newest_slot = 0;
         let mut oldest_slot = std::u64::MAX;
+        let mut total_bytes = 0;
+        let mut total_alive_bytes = 0;
         for iter_item in self.storage.0.iter() {
             let slot = iter_item.key();
             let slot_stores = iter_item.value().read().unwrap();
@@ -4383,9 +4422,20 @@ impl AccountsDb {
             if *slot < oldest_slot {
                 oldest_slot = *slot;
             }
+
+            for store in slot_stores.values() {
+                total_alive_bytes += Self::page_align(store.alive_bytes() as u64);
+                total_bytes += store.total_bytes();
+            }
         }
         info!("total_stores: {}, newest_slot: {}, oldest_slot: {}, max_slot: {} (num={}), min_slot: {} (num={})",
               total_count, newest_slot, oldest_slot, max_slot, max, min_slot, min);
+
+        let total_alive_ratio = if total_bytes > 0 {
+            total_alive_bytes as f64 / total_bytes as f64
+        } else {
+            0.
+        };
         datapoint_info!(
             "accounts_db-stores",
             ("total_count", total_count, i64),
@@ -4394,6 +4444,9 @@ impl AccountsDb {
                 self.recycle_stores.read().unwrap().entry_count() as u64,
                 i64
             ),
+            ("total_bytes", total_bytes, i64),
+            ("total_alive_bytes", total_alive_bytes, i64),
+            ("total_alive_ratio", total_alive_ratio, f64),
         );
         datapoint_info!(
             "accounts_db-perf-stats",
@@ -5749,15 +5802,27 @@ impl AccountsDb {
         }
     }
 
-    pub fn add_root(&self, slot: Slot) {
+    pub fn add_root(&self, slot: Slot) -> AccountsAddRootTiming {
+        let mut index_time = Measure::start("index_add_root");
         self.accounts_index.add_root(slot, self.caching_enabled);
+        index_time.stop();
+        let mut cache_time = Measure::start("cache_add_root");
         if self.caching_enabled {
             self.accounts_cache.add_root(slot);
         }
+        cache_time.stop();
+        let mut store_time = Measure::start("store_add_root");
         if let Some(slot_stores) = self.storage.get_slot_stores(slot) {
             for (store_id, store) in slot_stores.read().unwrap().iter() {
                 self.dirty_stores.insert((slot, *store_id), store.clone());
             }
+        }
+        store_time.stop();
+
+        AccountsAddRootTiming {
+            index_us: index_time.as_us(),
+            cache_us: cache_time.as_us(),
+            store_us: store_time.as_us(),
         }
     }
 
@@ -6266,26 +6331,29 @@ impl AccountsDb {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-    use crate::{
-        accounts_hash::MERKLE_FANOUT,
-        accounts_index::RefCount,
-        accounts_index::{tests::*, AccountSecondaryIndexesIncludeExclude},
-        append_vec::{test_utils::TempFile, AccountMeta},
-        inline_safe_token_v2_0,
-    };
-    use assert_matches::assert_matches;
-    use rand::{thread_rng, Rng};
-    use safecoin_sdk::{
-        account::{accounts_equal, Account, AccountSharedData, ReadableAccount, WritableAccount},
-        hash::HASH_BYTES,
-        pubkey::PUBKEY_BYTES,
-    };
-    use std::{
-        iter::FromIterator,
-        str::FromStr,
-        thread::{self, sleep, Builder, JoinHandle},
-        time::Duration,
+    use {
+        super::*,
+        crate::{
+            accounts_hash::MERKLE_FANOUT,
+            accounts_index::{tests::*, AccountSecondaryIndexesIncludeExclude, RefCount},
+            append_vec::{test_utils::TempFile, AccountMeta},
+            inline_safe_token,
+        },
+        assert_matches::assert_matches,
+        rand::{thread_rng, Rng},
+        safecoin_sdk::{
+            account::{
+                accounts_equal, Account, AccountSharedData, ReadableAccount, WritableAccount,
+            },
+            hash::HASH_BYTES,
+            pubkey::PUBKEY_BYTES,
+        },
+        std::{
+            iter::FromIterator,
+            str::FromStr,
+            thread::{self, sleep, Builder, JoinHandle},
+            time::Duration,
+        },
     };
 
     fn linear_ancestors(end_slot: u64) -> Ancestors {
@@ -7753,6 +7821,7 @@ pub mod tests {
             safe_token_mint_index_enabled(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         let pubkey1 = safecoin_sdk::pubkey::new_rand();
         let pubkey2 = safecoin_sdk::pubkey::new_rand();
@@ -7760,14 +7829,14 @@ pub mod tests {
         // Set up account to be added to secondary index
         let mint_key = Pubkey::new_unique();
         let mut account_data_with_mint =
-            vec![0; inline_safe_token_v2_0::state::Account::get_packed_len()];
+            vec![0; inline_safe_token::state::Account::get_packed_len()];
         account_data_with_mint[..PUBKEY_BYTES].clone_from_slice(&(mint_key.to_bytes()));
 
         let mut normal_account = AccountSharedData::new(1, 0, AccountSharedData::default().owner());
-        normal_account.set_owner(inline_safe_token_v2_0::id());
+        normal_account.set_owner(inline_safe_token::id());
         normal_account.set_data(account_data_with_mint.clone());
         let mut zero_account = AccountSharedData::new(0, 0, AccountSharedData::default().owner());
-        zero_account.set_owner(inline_safe_token_v2_0::id());
+        zero_account.set_owner(inline_safe_token::id());
         zero_account.set_data(account_data_with_mint);
 
         //store an account
@@ -9901,6 +9970,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             true,
             AccountShrinkThreshold::default(),
+            None,
         );
 
         let account = AccountSharedData::new(1, 16 * 4096, &Pubkey::default());
@@ -10212,6 +10282,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         ));
 
         let account_key = Pubkey::new_unique();
@@ -10260,6 +10331,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         ));
 
         let account_key = Pubkey::new_unique();
@@ -10309,6 +10381,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         ));
 
         let zero_lamport_account_key = Pubkey::new_unique();
@@ -10444,6 +10517,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         ));
         let account_key = Pubkey::new_unique();
         let account_key2 = Pubkey::new_unique();
@@ -10551,6 +10625,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         );
         let slot: Slot = 0;
         let num_keys = 10;
@@ -10606,6 +10681,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         ));
         let slots: Vec<_> = (0..num_slots as Slot).into_iter().collect();
         let stall_slot = num_slots as Slot;
@@ -11011,6 +11087,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         );
         let account_key1 = Pubkey::new_unique();
         let account_key2 = Pubkey::new_unique();
@@ -11268,6 +11345,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         );
         db.load_delay = RACY_SLEEP_MS;
         let db = Arc::new(db);
@@ -11340,6 +11418,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         );
         db.load_delay = RACY_SLEEP_MS;
         let db = Arc::new(db);
@@ -11416,6 +11495,7 @@ pub mod tests {
             AccountSecondaryIndexes::default(),
             caching_enabled,
             AccountShrinkThreshold::default(),
+            None,
         );
         let db = Arc::new(db);
         let num_cached_slots = 100;

@@ -1,8 +1,7 @@
-use crate::accounts_db::SnapshotStorage;
-use log::*;
-use safecoin_measure::measure::Measure;
-use safecoin_sdk::clock::Slot;
-use std::ops::Range;
+use {
+    crate::accounts_db::SnapshotStorage, log::*, safecoin_measure::measure::Measure,
+    safecoin_sdk::clock::Slot, std::ops::Range,
+};
 
 pub struct SortedStorages<'a> {
     range: Range<Slot>,

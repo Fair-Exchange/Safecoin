@@ -1,22 +1,24 @@
 #![allow(clippy::integer_arithmetic)]
-use serial_test::serial;
-use safecoin_bench_tps::{
-    bench::{do_bench_tps, generate_and_fund_keypairs},
-    cli::Config,
-};
-use safecoin_client::thin_client::create_client;
-use solana_core::validator::ValidatorConfig;
-use safecoin_faucet::faucet::run_local_faucet_with_port;
-use safecoin_gossip::cluster_info::VALIDATOR_PORT_RANGE;
-use solana_local_cluster::{
-    local_cluster::{ClusterConfig, LocalCluster},
-    validator_configs::make_identical_validator_configs,
-};
-use safecoin_sdk::signature::{Keypair, Signer};
-use solana_streamer::socket::SocketAddrSpace;
-use std::{
-    sync::{mpsc::channel, Arc},
-    time::Duration,
+use {
+    serial_test::serial,
+    safecoin_bench_tps::{
+        bench::{do_bench_tps, generate_and_fund_keypairs},
+        cli::Config,
+    },
+    safecoin_client::thin_client::create_client,
+    solana_core::validator::ValidatorConfig,
+    safecoin_faucet::faucet::run_local_faucet_with_port,
+    safecoin_gossip::cluster_info::VALIDATOR_PORT_RANGE,
+    solana_local_cluster::{
+        local_cluster::{ClusterConfig, LocalCluster},
+        validator_configs::make_identical_validator_configs,
+    },
+    safecoin_sdk::signature::{Keypair, Signer},
+    solana_streamer::socket::SocketAddrSpace,
+    std::{
+        sync::{mpsc::channel, Arc},
+        time::Duration,
+    },
 };
 
 fn test_bench_tps_local_cluster(config: Config) {

@@ -33,7 +33,7 @@ use {
         net::{IpAddr, Ipv4Addr, SocketAddr},
         path::{Path, PathBuf},
         process::exit,
-        sync::mpsc::channel,
+        sync::{mpsc::channel, Arc, RwLock},
         time::{Duration, SystemTime, UNIX_EPOCH},
     },
 };
@@ -155,13 +155,14 @@ fn main() {
         .arg(
             Arg::with_name("bpf_program")
                 .long("bpf-program")
-                .value_name("ADDRESS BPF_PROGRAM.SO")
+                .value_name("ADDRESS_OR_PATH BPF_PROGRAM.SO")
                 .takes_value(true)
                 .number_of_values(2)
                 .multiple(true)
                 .help(
                     "Add a BPF program to the genesis configuration. \
-                       If the ledger already exists then this parameter is silently ignored",
+                       If the ledger already exists then this parameter is silently ignored. \
+                       First argument can be a public key or path to file that can be parsed as a keypair",
                 ),
         )
         .arg(
@@ -391,11 +392,6 @@ fn main() {
         IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
         faucet_port,
     ));
-    // JIT not supported on the BPF VM in Windows currently: https://github.com/solana-labs/rbpf/issues/217
-    #[cfg(target_family = "windows")]
-    let bpf_jit = false;
-    #[cfg(not(target_family = "windows"))]
-    let bpf_jit = !matches.is_present("no_bpf_jit");
 
     let mut programs = vec![];
     if let Some(values) = matches.values_of("bpf_program") {
@@ -403,10 +399,13 @@ fn main() {
         for address_program in values.chunks(2) {
             match address_program {
                 [address, program] => {
-                    let address = address.parse::<Pubkey>().unwrap_or_else(|err| {
-                        println!("Error: invalid address {}: {}", address, err);
-                        exit(1);
-                    });
+                    let address = address
+                        .parse::<Pubkey>()
+                        .or_else(|_| read_keypair_file(address).map(|keypair| keypair.pubkey()))
+                        .unwrap_or_else(|err| {
+                            println!("Error: invalid address {}: {}", address, err);
+                            exit(1);
+                        });
 
                     let program_path = PathBuf::from(program);
                     if !program_path.exists() {
@@ -507,7 +506,9 @@ fn main() {
 
     let mut genesis = TestValidatorGenesis::default();
     genesis.max_ledger_shreds = value_of(&matches, "limit_ledger_size");
+    genesis.max_genesis_archive_unpacked_size = Some(u64::MAX);
 
+    let admin_service_cluster_info = Arc::new(RwLock::new(None));
     admin_rpc_service::run(
         &ledger_path,
         admin_rpc_service::AdminRpcRequestMetadata {
@@ -519,6 +520,7 @@ fn main() {
             start_time: std::time::SystemTime::now(),
             validator_exit: genesis.validator_exit.clone(),
             authorized_voter_keypairs: genesis.authorized_voter_keypairs.clone(),
+            cluster_info: admin_service_cluster_info.clone(),
         },
     );
     let dashboard = if output == Output::Dashboard {
@@ -546,7 +548,7 @@ fn main() {
             faucet_addr,
             ..JsonRpcConfig::default()
         })
-        .bpf_jit(bpf_jit)
+        .bpf_jit(!matches.is_present("no_bpf_jit"))
         .rpc_port(rpc_port)
         .add_programs_with_path(&programs);
 
@@ -591,6 +593,7 @@ fn main() {
 
     match genesis.start_with_mint_address(mint_address, socket_addr_space) {
         Ok(test_validator) => {
+            *admin_service_cluster_info.write().unwrap() = Some(test_validator.cluster_info());
             if let Some(dashboard) = dashboard {
                 dashboard.run(Duration::from_millis(250));
             }

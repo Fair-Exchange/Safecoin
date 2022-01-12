@@ -31,7 +31,7 @@ pub struct Response<T> {
 #[serde(rename_all = "camelCase")]
 pub struct RpcBlockCommitment<T> {
     pub commitment: Option<T>,
-    pub threshold: f64,
+    pub total_stake: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -277,6 +277,14 @@ impl fmt::Display for RpcVersionInfo {
 pub struct RpcIdentity {
     /// The current node identity pubkey
     pub identity: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct RpcVote {
+    pub slots: Vec<Slot>,
+    pub hash: String,
+    pub timestamp: Option<UnixTimestamp>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

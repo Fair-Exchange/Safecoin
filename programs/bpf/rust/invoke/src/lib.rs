@@ -1,4 +1,4 @@
-//! @brief Example Rust-based BPF program that issues a cross-program-invocation
+//! Example Rust-based BPF program that issues a cross-program-invocation
 
 #![allow(unreachable_code)]
 
@@ -10,7 +10,7 @@ use safecoin_program::{
     entrypoint,
     entrypoint::{ProgramResult, MAX_PERMITTED_DATA_INCREASE},
     msg,
-    program::{invoke, invoke_signed},
+    program::{get_return_data, invoke, invoke_signed, set_return_data},
     program_error::ProgramError,
     pubkey::{Pubkey, PubkeyError},
     system_instruction,
@@ -33,6 +33,7 @@ const TEST_WRITABLE_DEESCALATION_WRITABLE: u8 = 14;
 const TEST_NESTED_INVOKE_TOO_DEEP: u8 = 15;
 const TEST_EXECUTABLE_LAMPORTS: u8 = 16;
 const ADD_LAMPORTS: u8 = 17;
+const TEST_RETURN_DATA_TOO_LARGE: u8 = 19;
 
 // const MINT_INDEX: usize = 0; // unused placeholder
 const ARGUMENT_INDEX: usize = 1;
@@ -394,6 +395,27 @@ fn process_instruction(
                     assert_eq!(data[i], i as u8);
                 }
             }
+
+            msg!("Test return data via invoked");
+            {
+                // this should be cleared on entry, the invoked tests for this
+                set_return_data(b"x");
+
+                let instruction = create_instruction(
+                    *accounts[INVOKED_PROGRAM_INDEX].key,
+                    &[(accounts[ARGUMENT_INDEX].key, false, true)],
+                    vec![SET_RETURN_DATA],
+                );
+                let _ = invoke(&instruction, accounts);
+
+                assert_eq!(
+                    get_return_data(),
+                    Some((
+                        *accounts[INVOKED_PROGRAM_INDEX].key,
+                        b"Set by invoked".to_vec()
+                    ))
+                );
+            }
         }
         TEST_PRIVILEGE_ESCALATION_SIGNER => {
             msg!("Test privilege escalation signer");
@@ -645,6 +667,9 @@ fn process_instruction(
         ADD_LAMPORTS => {
             // make sure the total balance is fine
             **accounts[0].lamports.borrow_mut() += 1;
+        }
+        TEST_RETURN_DATA_TOO_LARGE => {
+            set_return_data(&[1u8; 1028]);
         }
         _ => panic!(),
     }

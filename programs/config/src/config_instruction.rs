@@ -1,9 +1,10 @@
-use crate::id;
-use crate::{ConfigKeys, ConfigState};
-use safecoin_sdk::{
-    instruction::{AccountMeta, Instruction},
-    pubkey::Pubkey,
-    system_instruction,
+use {
+    crate::{id, ConfigKeys, ConfigState},
+    safecoin_sdk::{
+        instruction::{AccountMeta, Instruction},
+        pubkey::Pubkey,
+        system_instruction,
+    },
 };
 
 fn initialize_account<T: ConfigState>(config_pubkey: &Pubkey) -> Instruction {

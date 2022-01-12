@@ -1,4 +1,4 @@
-//! @brief Safecoin builtin helper macros
+//! Safecoin builtin helper macros
 
 #[rustversion::since(1.46.0)]
 #[macro_export]

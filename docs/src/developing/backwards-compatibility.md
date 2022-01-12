@@ -76,6 +76,7 @@ Major releases:
 - [`safecoin-program`](https://docs.rs/safecoin-program/) - Rust SDK for writing programs
 - [`safecoin-client`](https://docs.rs/safecoin-client/) - Rust client for connecting to RPC API
 - [`safecoin-cli-config`](https://docs.rs/safecoin-cli-config/) - Rust client for managing Safecoin CLI config files
+- [`solana-accountsdb-plugin-interface`](https://docs.rs/solana-accountsdb-plugin-interface/) - Rust interface for developing Safecoin AccountsDb plugins.
 
 Patch releases:
 

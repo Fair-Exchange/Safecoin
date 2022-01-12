@@ -1,6 +1,4 @@
-use crate::accounts_index::RollingBitField;
-use safecoin_sdk::clock::Slot;
-use std::collections::HashMap;
+use {crate::accounts_index::RollingBitField, safecoin_sdk::clock::Slot, std::collections::HashMap};
 
 pub type AncestorsForSerialization = HashMap<Slot, usize>;
 
@@ -82,11 +80,10 @@ impl Ancestors {
 }
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-    use crate::contains::Contains;
-    use log::*;
-    use safecoin_measure::measure::Measure;
-    use std::collections::HashSet;
+    use {
+        super::*, crate::contains::Contains, log::*, safecoin_measure::measure::Measure,
+        std::collections::HashSet,
+    };
 
     impl std::iter::FromIterator<(Slot, usize)> for Ancestors {
         fn from_iter<I>(iter: I) -> Self

@@ -1,13 +1,16 @@
-use safecoin_gossip::cluster_info::{ClusterInfo, MAX_SNAPSHOT_HASHES};
-use solana_runtime::{snapshot_package::AccountsPackage, snapshot_utils};
-use safecoin_sdk::{clock::Slot, hash::Hash};
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+use {
+    safecoin_gossip::cluster_info::{ClusterInfo, MAX_SNAPSHOT_HASHES},
+    solana_perf::thread::renice_this_thread,
+    solana_runtime::{snapshot_package::AccountsPackage, snapshot_utils},
+    safecoin_sdk::{clock::Slot, hash::Hash},
+    std::{
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, Mutex,
+        },
+        thread::{self, Builder, JoinHandle},
+        time::Duration,
     },
-    thread::{self, Builder, JoinHandle},
-    time::Duration,
 };
 
 pub type PendingSnapshotPackage = Arc<Mutex<Option<AccountsPackage>>>;
@@ -23,6 +26,7 @@ impl SnapshotPackagerService {
         exit: &Arc<AtomicBool>,
         cluster_info: &Arc<ClusterInfo>,
         maximum_snapshots_to_retain: usize,
+        niceness_adj: i8,
     ) -> Self {
         let exit = exit.clone();
         let cluster_info = cluster_info.clone();
@@ -30,6 +34,7 @@ impl SnapshotPackagerService {
         let t_snapshot_packager = Builder::new()
             .name("snapshot-packager".to_string())
             .spawn(move || {
+                renice_this_thread(niceness_adj).unwrap();
                 let mut hashes = vec![];
                 if let Some(starting_snapshot_hash) = starting_snapshot_hash {
                     hashes.push(starting_snapshot_hash);
@@ -73,22 +78,24 @@ impl SnapshotPackagerService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use bincode::serialize_into;
-    use solana_runtime::{
-        accounts_db::AccountStorageEntry,
-        bank::BankSlotDelta,
-        bank_forks::ArchiveFormat,
-        snapshot_package::AccountsPackage,
-        snapshot_utils::{self, SnapshotVersion, SNAPSHOT_STATUS_CACHE_FILE_NAME},
+    use {
+        super::*,
+        bincode::serialize_into,
+        solana_runtime::{
+            accounts_db::AccountStorageEntry,
+            bank::BankSlotDelta,
+            bank_forks::ArchiveFormat,
+            snapshot_package::AccountsPackage,
+            snapshot_utils::{self, SnapshotVersion, SNAPSHOT_STATUS_CACHE_FILE_NAME},
+        },
+        safecoin_sdk::hash::Hash,
+        std::{
+            fs::{self, remove_dir_all, OpenOptions},
+            io::Write,
+            path::{Path, PathBuf},
+        },
+        tempfile::TempDir,
     };
-    use safecoin_sdk::hash::Hash;
-    use std::{
-        fs::{self, remove_dir_all, OpenOptions},
-        io::Write,
-        path::{Path, PathBuf},
-    };
-    use tempfile::TempDir;
 
     // Create temporary placeholder directory for all test files
     fn make_tmp_dir_path() -> PathBuf {

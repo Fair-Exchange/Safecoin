@@ -1,4 +1,4 @@
-//! @brief Example Rust-based BPF upgraded program
+//! Example Rust-based BPF upgraded program
 
 extern crate safecoin_program;
 use safecoin_program::{

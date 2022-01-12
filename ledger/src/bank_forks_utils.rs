@@ -1,19 +1,22 @@
-use crate::{
-    blockstore::Blockstore,
-    blockstore_processor::{
-        self, BlockstoreProcessorError, BlockstoreProcessorResult, CacheBlockMetaSender,
-        ProcessOptions, TransactionStatusSender,
+use {
+    crate::{
+        blockstore::Blockstore,
+        blockstore_processor::{
+            self, BlockstoreProcessorError, BlockstoreProcessorResult, CacheBlockMetaSender,
+            ProcessOptions, TransactionStatusSender,
+        },
+        entry::VerifyRecyclers,
+        leader_schedule_cache::LeaderScheduleCache,
     },
-    entry::VerifyRecyclers,
-    leader_schedule_cache::LeaderScheduleCache,
+    log::*,
+    solana_runtime::{
+        accounts_update_notifier_interface::AccountsUpdateNotifier,
+        bank_forks::{ArchiveFormat, BankForks, SnapshotConfig},
+        snapshot_utils,
+    },
+    safecoin_sdk::{clock::Slot, genesis_config::GenesisConfig, hash::Hash},
+    std::{fs, path::PathBuf, process, result},
 };
-use log::*;
-use solana_runtime::{
-    bank_forks::{ArchiveFormat, BankForks, SnapshotConfig},
-    snapshot_utils,
-};
-use safecoin_sdk::{clock::Slot, genesis_config::GenesisConfig, hash::Hash};
-use std::{fs, path::PathBuf, process, result};
 
 pub type LoadResult = result::Result<
     (BankForks, LeaderScheduleCache, Option<(Slot, Hash)>),
@@ -33,6 +36,7 @@ fn to_loadresult(
 ///
 /// If a snapshot config is given, and a snapshot is found, it will be loaded.  Otherwise, load
 /// from genesis.
+#[allow(clippy::too_many_arguments)]
 pub fn load(
     genesis_config: &GenesisConfig,
     blockstore: &Blockstore,
@@ -42,6 +46,7 @@ pub fn load(
     process_options: ProcessOptions,
     transaction_status_sender: Option<&TransactionStatusSender>,
     cache_block_meta_sender: Option<&CacheBlockMetaSender>,
+    accounts_update_notifier: Option<AccountsUpdateNotifier>,
 ) -> LoadResult {
     if let Some(snapshot_config) = snapshot_config.as_ref() {
         info!(
@@ -70,6 +75,7 @@ pub fn load(
                 archive_slot,
                 archive_hash,
                 archive_format,
+                accounts_update_notifier,
             );
         } else {
             info!("No snapshot package available; will load from genesis");
@@ -84,6 +90,7 @@ pub fn load(
         account_paths,
         process_options,
         cache_block_meta_sender,
+        accounts_update_notifier,
     )
 }
 
@@ -93,6 +100,7 @@ fn load_from_genesis(
     account_paths: Vec<PathBuf>,
     process_options: ProcessOptions,
     cache_block_meta_sender: Option<&CacheBlockMetaSender>,
+    accounts_update_notifier: Option<AccountsUpdateNotifier>,
 ) -> LoadResult {
     info!("Processing ledger from genesis");
     to_loadresult(
@@ -102,6 +110,7 @@ fn load_from_genesis(
             account_paths,
             process_options,
             cache_block_meta_sender,
+            accounts_update_notifier,
         ),
         None,
     )
@@ -121,6 +130,7 @@ fn load_from_snapshot(
     archive_slot: Slot,
     archive_hash: Hash,
     archive_format: ArchiveFormat,
+    accounts_update_notifier: Option<AccountsUpdateNotifier>,
 ) -> LoadResult {
     info!("Loading snapshot package: {:?}", archive_filename);
 
@@ -145,6 +155,7 @@ fn load_from_snapshot(
         process_options.shrink_ratio,
         process_options.accounts_db_test_hash_calculation,
         process_options.accounts_db_skip_shrink,
+        accounts_update_notifier,
     )
     .expect("Load from snapshot failed");
     if let Some(shrink_paths) = shrink_paths {

@@ -1,40 +1,40 @@
-use bincode::serialize;
-use jsonrpc_core::futures::StreamExt;
-use jsonrpc_core_client::transports::ws;
-
-use log::*;
-use reqwest::{self, header::CONTENT_TYPE};
-use serde_json::{json, Value};
-use safecoin_account_decoder::UiAccount;
-use safecoin_client::{
-    client_error::{ClientErrorKind, Result as ClientResult},
-    rpc_client::RpcClient,
-    rpc_config::{RpcAccountInfoConfig, RpcSignatureSubscribeConfig},
-    rpc_request::RpcError,
-    rpc_response::{Response as RpcResponse, RpcSignatureResult, SlotUpdate},
-    tpu_client::{TpuClient, TpuClientConfig},
+use {
+    bincode::serialize,
+    jsonrpc_core::futures::StreamExt,
+    jsonrpc_core_client::transports::ws,
+    log::*,
+    reqwest::{self, header::CONTENT_TYPE},
+    serde_json::{json, Value},
+    safecoin_account_decoder::UiAccount,
+    safecoin_client::{
+        client_error::{ClientErrorKind, Result as ClientResult},
+        rpc_client::RpcClient,
+        rpc_config::{RpcAccountInfoConfig, RpcSignatureSubscribeConfig},
+        rpc_request::RpcError,
+        rpc_response::{Response as RpcResponse, RpcSignatureResult, SlotUpdate},
+        tpu_client::{TpuClient, TpuClientConfig},
+    },
+    solana_core::test_validator::TestValidator,
+    solana_rpc::rpc_pubsub::gen_client::Client as PubsubClient,
+    safecoin_sdk::{
+        commitment_config::CommitmentConfig,
+        hash::Hash,
+        pubkey::Pubkey,
+        signature::{Keypair, Signer},
+        system_transaction,
+        transaction::Transaction,
+    },
+    solana_streamer::socket::SocketAddrSpace,
+    safecoin_transaction_status::TransactionStatus,
+    std::{
+        collections::HashSet,
+        net::UdpSocket,
+        sync::{mpsc::channel, Arc},
+        thread::sleep,
+        time::{Duration, Instant},
+    },
+    tokio::runtime::Runtime,
 };
-use solana_core::test_validator::TestValidator;
-use solana_rpc::rpc_pubsub::gen_client::Client as PubsubClient;
-
-use safecoin_sdk::{
-    commitment_config::CommitmentConfig,
-    hash::Hash,
-    pubkey::Pubkey,
-    signature::{Keypair, Signer},
-    system_transaction,
-    transaction::Transaction,
-};
-use solana_streamer::socket::SocketAddrSpace;
-use safecoin_transaction_status::TransactionStatus;
-use std::{
-    collections::HashSet,
-    net::UdpSocket,
-    sync::{mpsc::channel, Arc},
-    thread::sleep,
-    time::{Duration, Instant},
-};
-use tokio::runtime::Runtime;
 
 macro_rules! json_req {
     ($method: expr, $params: expr) => {{
@@ -108,8 +108,9 @@ fn test_rpc_send_tx() {
 
     assert!(confirmed_tx);
 
-    use safecoin_account_decoder::UiAccountEncoding;
-    use safecoin_client::rpc_config::RpcAccountInfoConfig;
+    use {
+        safecoin_account_decoder::UiAccountEncoding, safecoin_client::rpc_config::RpcAccountInfoConfig,
+    };
     let config = RpcAccountInfoConfig {
         encoding: Some(UiAccountEncoding::Base64),
         commitment: None,
@@ -339,16 +340,19 @@ fn test_rpc_subscriptions() {
     // Track mint balance to know when transactions have completed
     let now = Instant::now();
     let expected_mint_balance = mint_balance - transactions.len() as u64;
-    while mint_balance != expected_mint_balance && now.elapsed() < Duration::from_secs(5) {
+    while mint_balance != expected_mint_balance && now.elapsed() < Duration::from_secs(15) {
         mint_balance = rpc_client
             .get_balance_with_commitment(&alice.pubkey(), CommitmentConfig::processed())
             .unwrap()
             .value;
         sleep(Duration::from_millis(100));
     }
+    if mint_balance != expected_mint_balance {
+        error!("mint-check timeout. mint_balance {:?}", mint_balance);
+    }
 
     // Wait for all signature subscriptions
-    let deadline = Instant::now() + Duration::from_secs(7);
+    let deadline = Instant::now() + Duration::from_secs(15);
     while !signature_set.is_empty() {
         let timeout = deadline.saturating_duration_since(Instant::now());
         match status_receiver.recv_timeout(timeout) {

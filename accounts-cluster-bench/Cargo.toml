@@ -2,7 +2,7 @@
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "solana-accounts-cluster-bench"
-version = "1.7.17"
+version = "1.8.12"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -13,24 +13,24 @@ clap = "2.33.1"
 log = "0.4.11"
 rand = "0.7.0"
 rayon = "1.4.1"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.7.17" }
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.7.17" }
-safecoin-client = { path = "../client", version = "=1.7.17" }
-safecoin-core = { path = "../core", version = "=1.7.17" }
-safecoin-faucet = { path = "../faucet", version = "=1.7.17" }
-safecoin-gossip = { path = "../gossip", version = "=1.7.17" }
-safecoin-logger = { path = "../logger", version = "=1.7.17" }
-safecoin-measure = { path = "../measure", version = "=1.7.17" }
-safecoin-net-utils = { path = "../net-utils", version = "=1.7.17" }
-safecoin-runtime = { path = "../runtime", version = "=1.7.17" }
-safecoin-sdk = { path = "../sdk", version = "=1.7.17" }
-safecoin-streamer = { path = "../streamer", version = "=1.7.17" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.7.17" }
-safecoin-version = { path = "../version", version = "=1.7.17" }
-safe-token-v2-0 = {  package = "safe-token", version = "=3.2.1", features = ["no-entrypoint"] }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.8.12" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.8.12" }
+safecoin-client = { path = "../client", version = "=1.8.12" }
+safecoin-core = { path = "../core", version = "=1.8.12" }
+safecoin-faucet = { path = "../faucet", version = "=1.8.12" }
+safecoin-gossip = { path = "../gossip", version = "=1.8.12" }
+safecoin-logger = { path = "../logger", version = "=1.8.12" }
+safecoin-measure = { path = "../measure", version = "=1.8.12" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.8.12" }
+safecoin-runtime = { path = "../runtime", version = "=1.8.12" }
+safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
+safecoin-streamer = { path = "../streamer", version = "=1.8.12" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.8.12" }
+safecoin-version = { path = "../version", version = "=1.8.12" }
+safe-token = { version = "=3.2.0", features = ["no-entrypoint"] }
 
 [dev-dependencies]
-solana-local-cluster = { path = "../local-cluster", version = "=1.7.17" }
+solana-local-cluster = { path = "../local-cluster", version = "=1.8.12" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

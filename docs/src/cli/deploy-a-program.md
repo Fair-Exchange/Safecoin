@@ -132,8 +132,7 @@ Recover the intermediate account's ephemeral keypair file with
 valley flat great hockey share token excess clever benefit traffic avocado athlete
 ==================================================================================
 To resume a deploy, pass the recovered keypair as
-the [PROGRAM_ADDRESS_SIGNER] argument to `safecoin deploy` or
-as the [BUFFER_SIGNER] to `safecoin program deploy` or `safecoin write-buffer'.
+the [BUFFER_SIGNER] to `safecoin program deploy` or `safecoin write-buffer'.
 Or to recover the account's lamports, pass it as the
 [BUFFER_ACCOUNT_ADDRESS] argument to `safecoin program drain`.
 ==================================================================================
@@ -242,16 +241,6 @@ Or anytime after:
 ```bash
 safecoin program set-upgrade-authority <PROGRAM_ADDRESS> --final
 ```
-
-`safecoin program deploy ...` utilizes Safecoin's upgradeable loader, but there is
-another way to deploy immutable programs using the original on-chain loader:
-
-```bash
-safecoin deploy <PROGRAM_FILEPATH>
-```
-
-Programs deployed with `safecoin deploy ...` are not redeployable and are not
-compatible with the `safecoin program ...` commands.
 
 ### Dumping a program to a file
 

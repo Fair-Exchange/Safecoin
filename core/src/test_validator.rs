@@ -1,7 +1,11 @@
 use {
     crate::validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     safecoin_client::rpc_client::RpcClient,
-    safecoin_gossip::{cluster_info::Node, gossip_service::discover_cluster, socketaddr},
+    safecoin_gossip::{
+        cluster_info::{ClusterInfo, Node},
+        gossip_service::discover_cluster,
+        socketaddr,
+    },
     solana_ledger::{blockstore::create_new_ledger, create_new_tmp_ledger},
     solana_net_utils::PortRange,
     solana_rpc::rpc::JsonRpcConfig,
@@ -83,6 +87,7 @@ pub struct TestValidatorGenesis {
     pub start_progress: Arc<RwLock<ValidatorStartProgress>>,
     pub authorized_voter_keypairs: Arc<RwLock<Vec<Arc<Keypair>>>>,
     pub max_ledger_shreds: Option<u64>,
+    pub max_genesis_archive_unpacked_size: Option<u64>,
 }
 
 impl TestValidatorGenesis {
@@ -364,9 +369,9 @@ impl TestValidator {
         let validator_identity = Keypair::new();
         let validator_vote_account = Keypair::new();
         let validator_stake_account = Keypair::new();
-        let validator_identity_lamports = sol_to_lamports(33_406_471.);
-        let validator_stake_lamports = sol_to_lamports(10_000.);
-        let mint_lamports = sol_to_lamports(500.);
+        let validator_identity_lamports = sol_to_lamports(500.);
+        let validator_stake_lamports = sol_to_lamports(1_000_000.);
+        let mint_lamports = sol_to_lamports(33_370_166.);
 
         let mut accounts = config.accounts.clone();
         for (address, account) in safecoin_program_test::programs::spl_programs(&config.rent) {
@@ -413,7 +418,9 @@ impl TestValidator {
                 let _ = create_new_ledger(
                     ledger_path,
                     &genesis_config,
-                    MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
+                    config
+                        .max_genesis_archive_unpacked_size
+                        .unwrap_or(MAX_GENESIS_ARCHIVE_UNPACKED_SIZE),
                     solana_ledger::blockstore_db::AccessType::PrimaryOnly,
                 )
                 .map_err(|err| {
@@ -513,6 +520,7 @@ impl TestValidator {
                 archive_format: ArchiveFormat::Tar,
                 snapshot_version: SnapshotVersion::default(),
                 maximum_snapshots_to_retain: DEFAULT_MAX_SNAPSHOTS_TO_RETAIN,
+                packager_thread_niceness_adj: 0,
             }),
             enforce_ulimit_nofile: false,
             warp_slot: config.warp_slot,
@@ -623,6 +631,10 @@ impl TestValidator {
         if let Some(validator) = self.validator.take() {
             validator.join();
         }
+    }
+
+    pub fn cluster_info(&self) -> Arc<ClusterInfo> {
+        self.validator.as_ref().unwrap().cluster_info.clone()
     }
 }
 

@@ -1,21 +1,20 @@
-use crate::{
-    args::{DistributeTokensArgs, SafeTokenArgs},
-    commands::{Allocation, Error, FundingSource},
-};
-use console::style;
-use safecoin_account_decoder::parse_token::{
-    pubkey_from_safe_token_v2_0, real_number_string, real_number_string_trimmed,
-    safe_token_v2_0_pubkey,
-};
-use safecoin_client::rpc_client::RpcClient;
-use safecoin_sdk::{instruction::Instruction, native_token::lamports_to_sol};
-use safecoin_transaction_status::parse_token::safe_token_v2_0_instruction;
-use safe_associated_token_account_v1_0::{
-    create_associated_token_account, get_associated_token_address,
-};
-use safe_token_v2_0::{
-    safecoin_program::program_pack::Pack,
-    state::{Account as SafeTokenAccount, Mint},
+use {
+    crate::{
+        args::{DistributeTokensArgs, SafeTokenArgs},
+        commands::{Allocation, Error, FundingSource},
+    },
+    console::style,
+    safecoin_account_decoder::parse_token::{
+        pubkey_from_safe_token, real_number_string, real_number_string_trimmed, safe_token_pubkey,
+    },
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_sdk::{instruction::Instruction, native_token::lamports_to_sol},
+    safecoin_transaction_status::parse_token::safe_token_instruction,
+    safe_associated_token_account::{create_associated_token_account, get_associated_token_address},
+    safe_token::{
+        safecoin_program::program_pack::Pack,
+        state::{Account as SafeTokenAccount, Mint},
+    },
 };
 
 pub fn update_token_args(client: &RpcClient, args: &mut Option<SafeTokenArgs>) -> Result<(), Error> {
@@ -24,7 +23,7 @@ pub fn update_token_args(client: &RpcClient, args: &mut Option<SafeTokenArgs>) -
             .get_account(&safe_token_args.token_account_address)
             .unwrap_or_default();
         let mint_address =
-            pubkey_from_safe_token_v2_0(&SafeTokenAccount::unpack(&sender_account.data)?.mint);
+            pubkey_from_safe_token(&SafeTokenAccount::unpack(&sender_account.data)?.mint);
         safe_token_args.mint = mint_address;
         update_decimals(client, args)?;
     }
@@ -54,33 +53,31 @@ pub fn build_safe_token_instructions(
         .as_ref()
         .expect("safe_token_args must be some");
     let wallet_address = allocation.recipient.parse().unwrap();
-    let associated_token_address = get_associated_token_address(
-        &wallet_address,
-        &safe_token_v2_0_pubkey(&safe_token_args.mint),
-    );
+    let associated_token_address =
+        get_associated_token_address(&wallet_address, &safe_token_pubkey(&safe_token_args.mint));
     let mut instructions = vec![];
     if do_create_associated_token_account {
         let create_associated_token_account_instruction = create_associated_token_account(
-            &safe_token_v2_0_pubkey(&args.fee_payer.pubkey()),
+            &safe_token_pubkey(&args.fee_payer.pubkey()),
             &wallet_address,
-            &safe_token_v2_0_pubkey(&safe_token_args.mint),
+            &safe_token_pubkey(&safe_token_args.mint),
         );
-        instructions.push(safe_token_v2_0_instruction(
+        instructions.push(safe_token_instruction(
             create_associated_token_account_instruction,
         ));
     }
-    let spl_instruction = safe_token_v2_0::instruction::transfer_checked(
-        &safe_token_v2_0::id(),
-        &safe_token_v2_0_pubkey(&safe_token_args.token_account_address),
-        &safe_token_v2_0_pubkey(&safe_token_args.mint),
+    let spl_instruction = safe_token::instruction::transfer_checked(
+        &safe_token::id(),
+        &safe_token_pubkey(&safe_token_args.token_account_address),
+        &safe_token_pubkey(&safe_token_args.mint),
         &associated_token_address,
-        &safe_token_v2_0_pubkey(&args.sender_keypair.pubkey()),
+        &safe_token_pubkey(&args.sender_keypair.pubkey()),
         &[],
         allocation.amount,
         safe_token_args.decimals,
     )
     .unwrap();
-    instructions.push(safe_token_v2_0_instruction(spl_instruction));
+    instructions.push(safe_token_instruction(spl_instruction));
     instructions
 }
 
@@ -134,11 +131,11 @@ pub fn print_token_balances(
     let address = allocation.recipient.parse().unwrap();
     let expected = allocation.amount;
     let associated_token_address = get_associated_token_address(
-        &safe_token_v2_0_pubkey(&address),
-        &safe_token_v2_0_pubkey(&safe_token_args.mint),
+        &safe_token_pubkey(&address),
+        &safe_token_pubkey(&safe_token_args.mint),
     );
     let recipient_account = client
-        .get_account(&pubkey_from_safe_token_v2_0(&associated_token_address))
+        .get_account(&pubkey_from_safe_token(&associated_token_address))
         .unwrap_or_default();
     let (actual, difference) = if let Ok(recipient_token) =
         SafeTokenAccount::unpack(&recipient_account.data)

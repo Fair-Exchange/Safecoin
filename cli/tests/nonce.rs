@@ -1,24 +1,26 @@
-use solana_cli::{
-    cli::{process_command, request_and_confirm_airdrop, CliCommand, CliConfig},
-    spend_utils::SpendAmount,
-    test_utils::{check_ready, check_recent_balance},
+use {
+    solana_cli::{
+        cli::{process_command, request_and_confirm_airdrop, CliCommand, CliConfig},
+        spend_utils::SpendAmount,
+        test_utils::{check_ready, check_recent_balance},
+    },
+    safecoin_cli_output::{parse_sign_only_reply_string, OutputFormat},
+    safecoin_client::{
+        blockhash_query::{self, BlockhashQuery},
+        nonce_utils,
+        rpc_client::RpcClient,
+    },
+    solana_core::test_validator::TestValidator,
+    safecoin_faucet::faucet::run_local_faucet,
+    safecoin_sdk::{
+        commitment_config::CommitmentConfig,
+        hash::Hash,
+        pubkey::Pubkey,
+        signature::{keypair_from_seed, Keypair, Signer},
+        system_program,
+    },
+    solana_streamer::socket::SocketAddrSpace,
 };
-use safecoin_cli_output::{parse_sign_only_reply_string, OutputFormat};
-use safecoin_client::{
-    blockhash_query::{self, BlockhashQuery},
-    nonce_utils,
-    rpc_client::RpcClient,
-};
-use solana_core::test_validator::TestValidator;
-use safecoin_faucet::faucet::run_local_faucet;
-use safecoin_sdk::{
-    commitment_config::CommitmentConfig,
-    hash::Hash,
-    pubkey::Pubkey,
-    signature::{keypair_from_seed, Keypair, Signer},
-    system_program,
-};
-use solana_streamer::socket::SocketAddrSpace;
 
 #[test]
 fn test_nonce() {

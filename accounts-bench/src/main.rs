@@ -1,17 +1,19 @@
 #![allow(clippy::integer_arithmetic)]
 #[macro_use]
 extern crate log;
-use clap::{crate_description, crate_name, value_t, App, Arg};
-use rayon::prelude::*;
-use safecoin_measure::measure::Measure;
-use solana_runtime::{
-    accounts::{create_test_accounts, update_accounts_bench, Accounts},
-    accounts_db::AccountShrinkThreshold,
-    accounts_index::AccountSecondaryIndexes,
-    ancestors::Ancestors,
+use {
+    clap::{crate_description, crate_name, value_t, App, Arg},
+    rayon::prelude::*,
+    safecoin_measure::measure::Measure,
+    solana_runtime::{
+        accounts::{create_test_accounts, update_accounts_bench, Accounts},
+        accounts_db::AccountShrinkThreshold,
+        accounts_index::AccountSecondaryIndexes,
+        ancestors::Ancestors,
+    },
+    safecoin_sdk::{genesis_config::ClusterType, pubkey::Pubkey},
+    std::{env, fs, path::PathBuf},
 };
-use safecoin_sdk::{genesis_config::ClusterType, pubkey::Pubkey};
-use std::{env, fs, path::PathBuf};
 
 fn main() {
     solana_logger::setup();
@@ -66,6 +68,7 @@ fn main() {
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
+        None,
     );
     println!("Creating {} accounts", num_accounts);
     let mut create_time = Measure::start("create accounts");

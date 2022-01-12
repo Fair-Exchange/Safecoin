@@ -1,8 +1,8 @@
-use super::*;
-use solana_ledger::entry::Entry;
-use solana_ledger::shred::Shredder;
-use safecoin_sdk::hash::Hash;
-use safecoin_sdk::signature::Keypair;
+use {
+    super::*,
+    solana_ledger::{entry::Entry, shred::Shredder},
+    safecoin_sdk::{hash::Hash, signature::Keypair},
+};
 
 #[derive(Clone)]
 pub(super) struct BroadcastFakeShredsRun {
@@ -89,6 +89,7 @@ impl BroadcastRun for BroadcastFakeShredsRun {
             slot,
             num_expected_batches: None,
             slot_start_ts: Instant::now(),
+            was_interrupted: false,
         };
         // 3) Start broadcast step
         //some indicates fake shreds
@@ -138,10 +139,12 @@ impl BroadcastRun for BroadcastFakeShredsRun {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use safecoin_gossip::contact_info::ContactInfo;
-    use solana_streamer::socket::SocketAddrSpace;
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    use {
+        super::*,
+        safecoin_gossip::contact_info::ContactInfo,
+        solana_streamer::socket::SocketAddrSpace,
+        std::net::{IpAddr, Ipv4Addr, SocketAddr},
+    };
 
     #[test]
     fn test_tvu_peers_ordering() {

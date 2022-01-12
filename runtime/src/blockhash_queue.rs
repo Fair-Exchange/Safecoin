@@ -1,8 +1,10 @@
-use serde::{Deserialize, Serialize};
-use safecoin_sdk::{
-    fee_calculator::FeeCalculator, hash::Hash, sysvar::recent_blockhashes, timing::timestamp,
+use {
+    serde::{Deserialize, Serialize},
+    safecoin_sdk::{
+        fee_calculator::FeeCalculator, hash::Hash, sysvar::recent_blockhashes, timing::timestamp,
+    },
+    std::collections::HashMap,
 };
-use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, AbiExample)]
 struct HashAge {
@@ -133,10 +135,12 @@ impl BlockhashQueue {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use bincode::serialize;
-    use safecoin_sdk::{
-        clock::MAX_RECENT_BLOCKHASHES, hash::hash, sysvar::recent_blockhashes::IterItem,
+    use {
+        super::*,
+        bincode::serialize,
+        safecoin_sdk::{
+            clock::MAX_RECENT_BLOCKHASHES, hash::hash, sysvar::recent_blockhashes::IterItem,
+        },
     };
 
     #[test]

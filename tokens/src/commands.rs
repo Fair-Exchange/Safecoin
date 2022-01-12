@@ -1,52 +1,56 @@
-use crate::{
-    args::{BalancesArgs, DistributeTokensArgs, SenderStakeArgs, StakeArgs, TransactionLogArgs},
-    db::{self, TransactionInfo},
-    safe_token::*,
-    token_display::Token,
-};
-use chrono::prelude::*;
-use console::style;
-use csv::{ReaderBuilder, Trim};
-use indexmap::IndexMap;
-use indicatif::{ProgressBar, ProgressStyle};
-use pickledb::PickleDb;
-use serde::{Deserialize, Serialize};
-use safecoin_account_decoder::parse_token::{
-    pubkey_from_safe_token_v2_0, real_number_string, safe_token_v2_0_pubkey,
-};
-use safecoin_client::{
-    client_error::{ClientError, Result as ClientResult},
-    rpc_client::RpcClient,
-    rpc_config::RpcSendTransactionConfig,
-    rpc_request::MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS,
-    rpc_response::Fees,
-};
-use safecoin_sdk::{
-    clock::Slot,
-    commitment_config::CommitmentConfig,
-    instruction::Instruction,
-    message::Message,
-    native_token::{lamports_to_sol, sol_to_lamports},
-    signature::{unique_signers, Signature, Signer},
-    stake::{
-        instruction::{self as stake_instruction, LockupArgs},
-        state::{Authorized, Lockup, StakeAuthorize},
+use {
+    crate::{
+        args::{
+            BalancesArgs, DistributeTokensArgs, SenderStakeArgs, StakeArgs, TransactionLogArgs,
+        },
+        db::{self, TransactionInfo},
+        safe_token::*,
+        token_display::Token,
     },
-    system_instruction,
-    transaction::Transaction,
-};
-use safecoin_transaction_status::TransactionStatus;
-use safe_associated_token_account_v1_0::get_associated_token_address;
-use safe_token_v2_0::safecoin_program::program_error::ProgramError;
-use std::{
-    cmp::{self},
-    io,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
+    chrono::prelude::*,
+    console::style,
+    csv::{ReaderBuilder, Trim},
+    indexmap::IndexMap,
+    indicatif::{ProgressBar, ProgressStyle},
+    pickledb::PickleDb,
+    serde::{Deserialize, Serialize},
+    safecoin_account_decoder::parse_token::{
+        pubkey_from_safe_token, real_number_string, safe_token_pubkey,
     },
-    thread::sleep,
-    time::Duration,
+    safecoin_client::{
+        client_error::{ClientError, Result as ClientResult},
+        rpc_client::RpcClient,
+        rpc_config::RpcSendTransactionConfig,
+        rpc_request::MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS,
+        rpc_response::Fees,
+    },
+    safecoin_sdk::{
+        clock::Slot,
+        commitment_config::CommitmentConfig,
+        instruction::Instruction,
+        message::Message,
+        native_token::{lamports_to_sol, sol_to_lamports},
+        signature::{unique_signers, Signature, Signer},
+        stake::{
+            instruction::{self as stake_instruction, LockupArgs},
+            state::{Authorized, Lockup, StakeAuthorize},
+        },
+        system_instruction,
+        transaction::Transaction,
+    },
+    safecoin_transaction_status::TransactionStatus,
+    safe_associated_token_account::get_associated_token_address,
+    safe_token::safecoin_program::program_error::ProgramError,
+    std::{
+        cmp::{self},
+        io,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+        thread::sleep,
+        time::Duration,
+    },
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -310,12 +314,11 @@ fn build_messages(
             let wallet_address = allocation.recipient.parse().unwrap();
             let associated_token_address = get_associated_token_address(
                 &wallet_address,
-                &safe_token_v2_0_pubkey(&safe_token_args.mint),
+                &safe_token_pubkey(&safe_token_args.mint),
             );
             let do_create_associated_token_account = client
-                .get_multiple_accounts(&[pubkey_from_safe_token_v2_0(&associated_token_address)])?
-                [0]
-            .is_none();
+                .get_multiple_accounts(&[pubkey_from_safe_token(&associated_token_address)])?[0]
+                .is_none();
             if do_create_associated_token_account {
                 *created_accounts += 1;
             }
@@ -865,9 +868,11 @@ pub fn process_transaction_log(args: &TransactionLogArgs) -> Result<(), Error> {
     Ok(())
 }
 
-use crate::db::check_output_file;
-use safecoin_sdk::{pubkey::Pubkey, signature::Keypair};
-use tempfile::{tempdir, NamedTempFile};
+use {
+    crate::db::check_output_file,
+    safecoin_sdk::{pubkey::Pubkey, signature::Keypair},
+    tempfile::{tempdir, NamedTempFile},
+};
 pub fn test_process_distribute_tokens_with_client(
     client: &RpcClient,
     sender_keypair: Keypair,
@@ -1207,14 +1212,16 @@ pub fn test_process_distribute_stake_with_client(client: &RpcClient, sender_keyp
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use solana_core::test_validator::TestValidator;
-    use safecoin_sdk::{
-        signature::{read_keypair_file, write_keypair_file, Signer},
-        stake::instruction::StakeInstruction,
+    use {
+        super::*,
+        solana_core::test_validator::TestValidator,
+        safecoin_sdk::{
+            signature::{read_keypair_file, write_keypair_file, Signer},
+            stake::instruction::StakeInstruction,
+        },
+        solana_streamer::socket::SocketAddrSpace,
+        safecoin_transaction_status::TransactionConfirmationStatus,
     };
-    use solana_streamer::socket::SocketAddrSpace;
-    use safecoin_transaction_status::TransactionConfirmationStatus;
 
     #[test]
     fn test_process_token_allocations() {

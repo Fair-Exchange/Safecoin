@@ -1,4 +1,4 @@
-//! @brief Example Rust-based BPF program that tests duplicate accounts passed via accounts
+//! Example Rust-based BPF program that tests duplicate accounts passed via accounts
 
 extern crate safecoin_program;
 use safecoin_program::{

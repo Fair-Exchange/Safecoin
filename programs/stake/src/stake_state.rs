@@ -3,6 +3,11 @@
 //! * keep track of rewards
 //! * own mining pools
 
+#[deprecated(
+    since = "1.7.2",
+    note = "Please use `safecoin_sdk::stake::state` or `safecoin_program::stake::state` instead"
+)]
+pub use safecoin_sdk::stake::state::*;
 use {
     safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount, WritableAccount},
@@ -25,12 +30,6 @@ use {
     solana_vote_program::vote_state::{VoteState, VoteStateVersions},
     std::{collections::HashSet, convert::TryFrom},
 };
-
-#[deprecated(
-    since = "1.7.2",
-    note = "Please use `safecoin_sdk::stake::state` or `safecoin_program::stake::state` instead"
-)]
-pub use safecoin_sdk::stake::state::*;
 
 #[derive(Debug)]
 pub enum SkippedReason {
@@ -1099,81 +1098,6 @@ fn stake_weighted_credits_observed(
 // utility function, used by runtime
 // returns a tuple of (stakers_reward,voters_reward)
 #[doc(hidden)]
-#[deprecated(note = "remove after optimize_epoch_boundary_updates feature is active")]
-pub fn redeem_rewards_slow(
-    rewarded_epoch: Epoch,
-    stake_account: &mut AccountSharedData,
-    vote_account: &mut AccountSharedData,
-    vote_state: &VoteState,
-    point_value: &PointValue,
-    stake_history: Option<&StakeHistory>,
-    inflation_point_calc_tracer: Option<impl Fn(&InflationPointCalculationEvent)>,
-    fix_activating_credits_observed: bool,
-) -> Result<(u64, u64), InstructionError> {
-    if let StakeState::Stake(meta, mut stake) = stake_account.state()? {
-        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer.as_ref() {
-            inflation_point_calc_tracer(
-                &InflationPointCalculationEvent::EffectiveStakeAtRewardedEpoch(
-                    stake.stake(rewarded_epoch, stake_history),
-                ),
-            );
-            inflation_point_calc_tracer(&InflationPointCalculationEvent::RentExemptReserve(
-                meta.rent_exempt_reserve,
-            ));
-            inflation_point_calc_tracer(&InflationPointCalculationEvent::Commission(
-                vote_state.commission,
-            ));
-        }
-
-        if let Some((stakers_reward, voters_reward)) = redeem_stake_rewards(
-            rewarded_epoch,
-            &mut stake,
-            point_value,
-            vote_state,
-            stake_history,
-            inflation_point_calc_tracer,
-            fix_activating_credits_observed,
-        ) {
-            stake_account.checked_add_lamports(stakers_reward)?;
-            vote_account.checked_add_lamports(voters_reward)?;
-
-            stake_account.set_state(&StakeState::Stake(meta, stake))?;
-
-            Ok((stakers_reward, voters_reward))
-        } else {
-            Err(StakeError::NoCreditsToRedeem.into())
-        }
-    } else {
-        Err(InstructionError::InvalidAccountData)
-    }
-}
-
-// utility function, used by runtime
-#[doc(hidden)]
-#[deprecated(note = "remove after optimize_epoch_boundary_updates feature is active")]
-pub fn calculate_points_slow(
-    stake_account: &AccountSharedData,
-    vote_account: &AccountSharedData,
-    stake_history: Option<&StakeHistory>,
-) -> Result<u128, InstructionError> {
-    if let StakeState::Stake(_meta, stake) = stake_account.state()? {
-        let vote_state: VoteState =
-            StateMut::<VoteStateVersions>::state(vote_account)?.convert_to_current();
-
-        Ok(calculate_stake_points(
-            &stake,
-            &vote_state,
-            stake_history,
-            null_tracer(),
-        ))
-    } else {
-        Err(InstructionError::InvalidAccountData)
-    }
-}
-
-// utility function, used by runtime
-// returns a tuple of (stakers_reward,voters_reward)
-#[doc(hidden)]
 pub fn redeem_rewards(
     rewarded_epoch: Epoch,
     stake_state: StakeState,
@@ -1371,18 +1295,20 @@ fn do_create_account(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use proptest::prelude::*;
-    use safecoin_sdk::{
-        account::{AccountSharedData, WritableAccount},
-        clock::UnixTimestamp,
-        native_token,
-        process_instruction::MockInvokeContext,
-        pubkey::Pubkey,
-        system_program,
+    use {
+        super::*,
+        proptest::prelude::*,
+        safecoin_sdk::{
+            account::{AccountSharedData, WritableAccount},
+            clock::UnixTimestamp,
+            native_token,
+            process_instruction::MockInvokeContext,
+            pubkey::Pubkey,
+            system_program,
+        },
+        solana_vote_program::vote_state,
+        std::{cell::RefCell, iter::FromIterator},
     };
-    use solana_vote_program::vote_state;
-    use std::{cell::RefCell, iter::FromIterator};
 
     #[test]
     fn test_authorized_authorize() {

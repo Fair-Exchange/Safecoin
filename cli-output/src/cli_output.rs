@@ -576,7 +576,7 @@ impl fmt::Display for CliValidators {
         for (version, info) in self.stake_by_version.iter() {
             writeln!(
                 f,
-                "{:<8} - {:3} current validators ({:>5.2}%){}",
+                "{:<8} - {:4} current validators ({:>5.2}%){}",
                 version,
                 info.current_validators,
                 100. * info.current_active_stake as f64 / self.total_active_stake as f64,
@@ -2525,14 +2525,16 @@ impl VerboseDisplay for CliGossipNodes {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use clap::{App, Arg};
-    use safecoin_sdk::{
-        message::Message,
-        pubkey::Pubkey,
-        signature::{keypair_from_seed, NullSigner, Signature, Signer, SignerError},
-        system_instruction,
-        transaction::Transaction,
+    use {
+        super::*,
+        clap::{App, Arg},
+        safecoin_sdk::{
+            message::Message,
+            pubkey::Pubkey,
+            signature::{keypair_from_seed, NullSigner, Signature, Signer, SignerError},
+            system_instruction,
+            transaction::Transaction,
+        },
     };
 
     #[test]

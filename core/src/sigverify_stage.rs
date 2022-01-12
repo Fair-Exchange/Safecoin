@@ -5,24 +5,28 @@
 //! transaction. All processing is done on the CPU by default and on a GPU
 //! if perf-libs are available
 
-use crate::sigverify;
-use crossbeam_channel::{SendError, Sender as CrossbeamSender};
-use safecoin_measure::measure::Measure;
-use solana_metrics::datapoint_debug;
-use solana_perf::packet::Packets;
-use safecoin_sdk::timing;
-use solana_streamer::streamer::{self, PacketReceiver, StreamerError};
-use std::collections::HashMap;
-use std::sync::mpsc::{Receiver, RecvTimeoutError};
-use std::thread::{self, Builder, JoinHandle};
-use thiserror::Error;
+use {
+    crate::sigverify,
+    crossbeam_channel::{SendError, Sender as CrossbeamSender},
+    safecoin_measure::measure::Measure,
+    solana_perf::packet::PacketBatch,
+    safecoin_sdk::timing,
+    solana_streamer::streamer::{self, PacketBatchReceiver, StreamerError},
+    std::{
+        collections::HashMap,
+        sync::mpsc::{Receiver, RecvTimeoutError},
+        thread::{self, Builder, JoinHandle},
+        time::Instant,
+    },
+    thiserror::Error,
+};
 
 const MAX_SIGVERIFY_BATCH: usize = 10_000;
 
 #[derive(Error, Debug)]
 pub enum SigVerifyServiceError {
     #[error("send packets batch error")]
-    Send(#[from] SendError<Vec<Packets>>),
+    Send(#[from] SendError<Vec<PacketBatch>>),
 
     #[error("streamer error")]
     Streamer(#[from] StreamerError),
@@ -35,31 +39,107 @@ pub struct SigVerifyStage {
 }
 
 pub trait SigVerifier {
-    fn verify_batch(&self, batch: Vec<Packets>) -> Vec<Packets>;
+    fn verify_batches(&self, batches: Vec<PacketBatch>) -> Vec<PacketBatch>;
 }
 
 #[derive(Default, Clone)]
 pub struct DisabledSigVerifier {}
 
+#[derive(Default)]
+struct SigVerifierStats {
+    recv_batches_us_hist: histogram::Histogram, // time to call recv_batch
+    verify_batches_pp_us_hist: histogram::Histogram, // per-packet time to call verify_batch
+    batches_hist: histogram::Histogram,         // number of packet batches per verify call
+    packets_hist: histogram::Histogram,         // number of packets per verify call
+    total_batches: usize,
+    total_packets: usize,
+}
+
+impl SigVerifierStats {
+    fn report(&self) {
+        datapoint_info!(
+            "sigverify_stage-total_verify_time",
+            (
+                "recv_batches_us_90pct",
+                self.recv_batches_us_hist.percentile(90.0).unwrap_or(0),
+                i64
+            ),
+            (
+                "recv_batches_us_min",
+                self.recv_batches_us_hist.minimum().unwrap_or(0),
+                i64
+            ),
+            (
+                "recv_batches_us_max",
+                self.recv_batches_us_hist.maximum().unwrap_or(0),
+                i64
+            ),
+            (
+                "recv_batches_us_mean",
+                self.recv_batches_us_hist.mean().unwrap_or(0),
+                i64
+            ),
+            (
+                "verify_batches_pp_us_90pct",
+                self.verify_batches_pp_us_hist.percentile(90.0).unwrap_or(0),
+                i64
+            ),
+            (
+                "verify_batches_pp_us_min",
+                self.verify_batches_pp_us_hist.minimum().unwrap_or(0),
+                i64
+            ),
+            (
+                "verify_batches_pp_us_max",
+                self.verify_batches_pp_us_hist.maximum().unwrap_or(0),
+                i64
+            ),
+            (
+                "verify_batches_pp_us_mean",
+                self.verify_batches_pp_us_hist.mean().unwrap_or(0),
+                i64
+            ),
+            (
+                "batches_90pct",
+                self.batches_hist.percentile(90.0).unwrap_or(0),
+                i64
+            ),
+            ("batches_min", self.batches_hist.minimum().unwrap_or(0), i64),
+            ("batches_max", self.batches_hist.maximum().unwrap_or(0), i64),
+            ("batches_mean", self.batches_hist.mean().unwrap_or(0), i64),
+            (
+                "packets_90pct",
+                self.packets_hist.percentile(90.0).unwrap_or(0),
+                i64
+            ),
+            ("packets_min", self.packets_hist.minimum().unwrap_or(0), i64),
+            ("packets_max", self.packets_hist.maximum().unwrap_or(0), i64),
+            ("packets_mean", self.packets_hist.mean().unwrap_or(0), i64),
+            ("total_batches", self.total_batches, i64),
+            ("total_packets", self.total_packets, i64),
+        );
+    }
+}
+
 impl SigVerifier for DisabledSigVerifier {
-    fn verify_batch(&self, mut batch: Vec<Packets>) -> Vec<Packets> {
-        sigverify::ed25519_verify_disabled(&mut batch);
-        batch
+    fn verify_batches(&self, mut batches: Vec<PacketBatch>) -> Vec<PacketBatch> {
+        sigverify::ed25519_verify_disabled(&mut batches);
+        batches
     }
 }
 
 impl SigVerifyStage {
     #[allow(clippy::new_ret_no_self)]
     pub fn new<T: SigVerifier + 'static + Send + Clone>(
-        packet_receiver: Receiver<Packets>,
-        verified_sender: CrossbeamSender<Vec<Packets>>,
+        packet_receiver: Receiver<PacketBatch>,
+        verified_sender: CrossbeamSender<Vec<PacketBatch>>,
         verifier: T,
     ) -> Self {
         let thread_hdl = Self::verifier_services(packet_receiver, verified_sender, verifier);
         Self { thread_hdl }
     }
 
-    pub fn discard_excess_packets(batches: &mut Vec<Packets>, max_packets: usize) {
+    pub fn discard_excess_packets(batches: &mut Vec<PacketBatch>, max_packets: usize) {
         let mut received_ips = HashMap::new();
         for (batch_index, batch) in batches.iter().enumerate() {
             for (packet_index, packets) in batch.packets.iter().enumerate() {
@@ -89,9 +169,10 @@ impl SigVerifyStage {
     }
 
     fn verifier<T: SigVerifier>(
-        recvr: &PacketReceiver,
-        sendr: &CrossbeamSender<Vec<Packets>>,
+        recvr: &PacketBatchReceiver,
+        sendr: &CrossbeamSender<Vec<PacketBatch>>,
         verifier: &T,
+        stats: &mut SigVerifierStats,
     ) -> Result<()> {
         let (mut batches, len, recv_time) = streamer::recv_batch(recvr)?;
 
@@ -101,7 +182,7 @@ impl SigVerifyStage {
         if len > MAX_SIGVERIFY_BATCH {
             Self::discard_excess_packets(&mut batches, MAX_SIGVERIFY_BATCH);
         }
-        sendr.send(verifier.verify_batch(batches))?;
+        sendr.send(verifier.verify_batches(batches))?;
         verify_batch_time.stop();
 
         debug!(
@@ -121,19 +202,36 @@ impl SigVerifyStage {
             ("recv_time", recv_time, i64),
         );
 
+        stats
+            .recv_batches_us_hist
+            .increment(recv_time as u64)
+            .unwrap();
+        stats
+            .verify_batches_pp_us_hist
+            .increment(verify_batch_time.as_us() / (len as u64))
+            .unwrap();
+        stats.batches_hist.increment(batches_len as u64).unwrap();
+        stats.packets_hist.increment(len as u64).unwrap();
+        stats.total_batches += batches_len;
+        stats.total_packets += len;
+
         Ok(())
     }
 
     fn verifier_service<T: SigVerifier + 'static + Send + Clone>(
-        packet_receiver: PacketReceiver,
-        verified_sender: CrossbeamSender<Vec<Packets>>,
+        packet_receiver: PacketBatchReceiver,
+        verified_sender: CrossbeamSender<Vec<PacketBatch>>,
         verifier: &T,
     ) -> JoinHandle<()> {
         let verifier = verifier.clone();
+        let mut stats = SigVerifierStats::default();
+        let mut last_print = Instant::now();
         Builder::new()
             .name("solana-verifier".to_string())
             .spawn(move || loop {
-                if let Err(e) = Self::verifier(&packet_receiver, &verified_sender, &verifier) {
+                if let Err(e) =
+                    Self::verifier(&packet_receiver, &verified_sender, &verifier, &mut stats)
+                {
                     match e {
                         SigVerifyServiceError::Streamer(StreamerError::RecvTimeout(
                             RecvTimeoutError::Disconnected,
@@ -147,13 +245,18 @@ impl SigVerifyStage {
                         _ => error!("{:?}", e),
                     }
                 }
+                if last_print.elapsed().as_secs() > 2 {
+                    stats.report();
+                    stats = SigVerifierStats::default();
+                    last_print = Instant::now();
+                }
             })
             .unwrap()
     }
 
     fn verifier_services<T: SigVerifier + 'static + Send + Clone>(
-        packet_receiver: PacketReceiver,
-        verified_sender: CrossbeamSender<Vec<Packets>>,
+        packet_receiver: PacketBatchReceiver,
+        verified_sender: CrossbeamSender<Vec<PacketBatch>>,
         verifier: T,
     ) -> JoinHandle<()> {
         Self::verifier_service(packet_receiver, verified_sender, &verifier)
@@ -166,14 +269,14 @@ impl SigVerifyStage {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use solana_perf::packet::Packet;
+    use {super::*, solana_perf::packet::Packet};
 
-    fn count_non_discard(packets: &[Packets]) -> usize {
-        packets
+    fn count_non_discard(packet_batches: &[PacketBatch]) -> usize {
+        packet_batches
             .iter()
-            .map(|pp| {
-                pp.packets
+            .map(|batch| {
+                batch
+                    .packets
                     .iter()
                     .map(|p| if p.meta.discard { 0 } else { 1 })
                     .sum::<usize>()
@@ -184,14 +287,14 @@ mod tests {
     #[test]
     fn test_packet_discard() {
         solana_logger::setup();
-        let mut p = Packets::default();
-        p.packets.resize(10, Packet::default());
-        p.packets[3].meta.addr = [1u16; 8];
-        let mut packets = vec![p];
+        let mut batch = PacketBatch::default();
+        batch.packets.resize(10, Packet::default());
+        batch.packets[3].meta.addr = [1u16; 8];
+        let mut batches = vec![batch];
         let max = 3;
-        SigVerifyStage::discard_excess_packets(&mut packets, max);
-        assert_eq!(count_non_discard(&packets), max);
-        assert!(!packets[0].packets[0].meta.discard);
-        assert!(!packets[0].packets[3].meta.discard);
+        SigVerifyStage::discard_excess_packets(&mut batches, max);
+        assert_eq!(count_non_discard(&batches), max);
+        assert!(!batches[0].packets[0].meta.discard);
+        assert!(!batches[0].packets[3].meta.discard);
     }
 }

@@ -15,8 +15,10 @@ pub mod arithmetic;
 pub mod builtins;
 pub mod client;
 pub mod commitment_config;
+pub mod compute_budget;
 pub mod derivation_path;
 pub mod deserialize_utils;
+pub mod ed25519_instruction;
 pub mod entrypoint;
 pub mod entrypoint_deprecated;
 pub mod entrypoint_native;
@@ -71,6 +73,22 @@ pub mod transport;
 /// assert_eq!(id(), my_id);
 /// ```
 pub use safecoin_sdk_macro::declare_id;
+/// Convenience macro to define a static public key
+///
+/// Input: a single literal base58 string representation of a Pubkey
+///
+/// # Example
+///
+/// ```
+/// use std::str::FromStr;
+/// use safecoin_program::{pubkey, pubkey::Pubkey};
+///
+/// static ID: Pubkey = pubkey!("My11111111111111111111111111111111111111111");
+///
+/// let my_id = Pubkey::from_str("My11111111111111111111111111111111111111111").unwrap();
+/// assert_eq!(ID, my_id);
+/// ```
+pub use safecoin_sdk_macro::pubkey;
 pub use safecoin_sdk_macro::pubkeys;
 #[rustversion::since(1.46.0)]
 pub use safecoin_sdk_macro::respan;
@@ -85,6 +103,15 @@ macro_rules! program_stubs {
     () => {};
 }
 
+/// Convenience macro for `AddAssign` with saturating arithmetic.
+/// Replace by `std::num::Saturating` once stable
+#[macro_export]
+macro_rules! saturating_add_assign {
+    ($i:expr, $v:expr) => {{
+        $i = $i.saturating_add($v)
+    }};
+}
+
 #[macro_use]
 extern crate serde_derive;
 pub extern crate bs58;
@@ -92,3 +119,18 @@ extern crate log as logger;
 
 #[macro_use]
 extern crate safecoin_frozen_abi_macro;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_saturating_add_assign() {
+        let mut i = 0u64;
+        let v = 1;
+        saturating_add_assign!(i, v);
+        assert_eq!(i, 1);
+
+        i = u64::MAX;
+        saturating_add_assign!(i, v);
+        assert_eq!(i, u64::MAX);
+    }
+}

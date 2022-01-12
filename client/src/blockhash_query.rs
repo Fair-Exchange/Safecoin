@@ -118,17 +118,19 @@ impl Default for BlockhashQuery {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        blockhash_query,
-        rpc_request::RpcRequest,
-        rpc_response::{Response, RpcFeeCalculator, RpcFees, RpcResponseContext},
+    use {
+        super::*,
+        crate::{
+            blockhash_query,
+            rpc_request::RpcRequest,
+            rpc_response::{Response, RpcFeeCalculator, RpcFees, RpcResponseContext},
+        },
+        clap::App,
+        serde_json::{self, json},
+        safecoin_account_decoder::{UiAccount, UiAccountEncoding},
+        safecoin_sdk::{account::Account, hash::hash, nonce, system_program},
+        std::collections::HashMap,
     };
-    use clap::App;
-    use serde_json::{self, json};
-    use safecoin_account_decoder::{UiAccount, UiAccountEncoding};
-    use safecoin_sdk::{account::Account, hash::hash, nonce, system_program};
-    use std::collections::HashMap;
 
     #[test]
     fn test_blockhash_query_new_ok() {

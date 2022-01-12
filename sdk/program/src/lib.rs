@@ -12,6 +12,7 @@ pub mod bpf_loader_deprecated;
 pub mod bpf_loader_upgradeable;
 pub mod clock;
 pub mod decode_error;
+pub mod ed25519_program;
 pub mod entrypoint;
 pub mod entrypoint_deprecated;
 pub mod epoch_schedule;
@@ -46,7 +47,6 @@ pub mod slot_history;
 pub mod stake;
 pub mod stake_history;
 pub mod system_instruction;
-
 pub mod system_program;
 pub mod sysvar;
 
@@ -84,6 +84,22 @@ pub mod vote {
 /// assert_eq!(id(), my_id);
 /// ```
 pub use safecoin_sdk_macro::program_declare_id as declare_id;
+/// Convenience macro to define a static public key
+///
+/// Input: a single literal base58 string representation of a Pubkey
+///
+/// # Example
+///
+/// ```
+/// use std::str::FromStr;
+/// use safecoin_program::{pubkey, pubkey::Pubkey};
+///
+/// static ID: Pubkey = pubkey!("My11111111111111111111111111111111111111111");
+///
+/// let my_id = Pubkey::from_str("My11111111111111111111111111111111111111111").unwrap();
+/// assert_eq!(ID, my_id);
+/// ```
+pub use safecoin_sdk_macro::program_pubkey as pubkey;
 
 #[macro_use]
 extern crate serde_derive;

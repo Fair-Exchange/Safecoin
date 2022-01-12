@@ -4,17 +4,19 @@
 
 extern crate proc_macro;
 
-use proc_macro::TokenStream;
-use proc_macro2::{Delimiter, Span, TokenTree};
-use quote::{quote, ToTokens};
-use std::convert::TryFrom;
-use syn::{
-    bracketed,
-    parse::{Parse, ParseStream, Result},
-    parse_macro_input,
-    punctuated::Punctuated,
-    token::Bracket,
-    Expr, Ident, LitByte, LitStr, Path, Token,
+use {
+    proc_macro::TokenStream,
+    proc_macro2::{Delimiter, Span, TokenTree},
+    quote::{quote, ToTokens},
+    std::convert::TryFrom,
+    syn::{
+        bracketed,
+        parse::{Parse, ParseStream, Result},
+        parse_macro_input,
+        punctuated::Punctuated,
+        token::Bracket,
+        Expr, Ident, LitByte, LitStr, Path, Token,
+    },
 };
 
 fn parse_id(
@@ -61,6 +63,36 @@ fn id_to_tokens(
             assert!(check_id(&id()));
         }
     });
+}
+
+struct SdkPubkey(proc_macro2::TokenStream);
+
+impl Parse for SdkPubkey {
+    fn parse(input: ParseStream) -> Result<Self> {
+        parse_id(input, quote! { ::safecoin_sdk::pubkey::Pubkey }).map(Self)
+    }
+}
+
+impl ToTokens for SdkPubkey {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let id = &self.0;
+        tokens.extend(quote! {#id})
+    }
+}
+
+struct ProgramSdkPubkey(proc_macro2::TokenStream);
+
+impl Parse for ProgramSdkPubkey {
+    fn parse(input: ParseStream) -> Result<Self> {
+        parse_id(input, quote! { ::safecoin_program::pubkey::Pubkey }).map(Self)
+    }
+}
+
+impl ToTokens for ProgramSdkPubkey {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let id = &self.0;
+        tokens.extend(quote! {#id})
+    }
 }
 
 struct Id(proc_macro2::TokenStream);
@@ -155,6 +187,18 @@ pub fn respan(input: TokenStream) -> TokenStream {
         })
         .collect();
     TokenStream::from(to_respan)
+}
+
+#[proc_macro]
+pub fn pubkey(input: TokenStream) -> TokenStream {
+    let id = parse_macro_input!(input as SdkPubkey);
+    TokenStream::from(quote! {#id})
+}
+
+#[proc_macro]
+pub fn program_pubkey(input: TokenStream) -> TokenStream {
+    let id = parse_macro_input!(input as ProgramSdkPubkey);
+    TokenStream::from(quote! {#id})
 }
 
 #[proc_macro]

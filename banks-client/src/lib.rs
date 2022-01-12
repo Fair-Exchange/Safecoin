@@ -5,37 +5,38 @@
 //! but they are undocumented, may change over time, and are generally more
 //! cumbersome to use.
 
-use borsh::BorshDeserialize;
-use futures::{future::join_all, Future, FutureExt};
 pub use solana_banks_interface::{BanksClient as TarpcClient, TransactionStatus};
-use solana_banks_interface::{BanksRequest, BanksResponse};
-use safecoin_program::{
-    clock::Clock,
-    clock::Slot,
-    fee_calculator::FeeCalculator,
-    hash::Hash,
-    program_pack::Pack,
-    pubkey::Pubkey,
-    rent::Rent,
-    sysvar::{self, Sysvar},
+use {
+    borsh::BorshDeserialize,
+    futures::{future::join_all, Future, FutureExt},
+    solana_banks_interface::{BanksRequest, BanksResponse},
+    safecoin_program::{
+        clock::{Clock, Slot},
+        fee_calculator::FeeCalculator,
+        hash::Hash,
+        program_pack::Pack,
+        pubkey::Pubkey,
+        rent::Rent,
+        sysvar::{self, Sysvar},
+    },
+    safecoin_sdk::{
+        account::{from_account, Account},
+        commitment_config::CommitmentLevel,
+        signature::Signature,
+        transaction::{self, Transaction},
+        transport,
+    },
+    std::io::{self, Error, ErrorKind},
+    tarpc::{
+        client::{self, channel::RequestDispatch, NewClient},
+        context::{self, Context},
+        rpc::{ClientMessage, Response},
+        serde_transport::tcp,
+        Transport,
+    },
+    tokio::{net::ToSocketAddrs, time::Duration},
+    tokio_serde::formats::Bincode,
 };
-use safecoin_sdk::{
-    account::{from_account, Account},
-    commitment_config::CommitmentLevel,
-    signature::Signature,
-    transaction::{self, Transaction},
-    transport,
-};
-use std::io::{self, Error, ErrorKind};
-use tarpc::{
-    client::{self, channel::RequestDispatch, NewClient},
-    context::{self, Context},
-    rpc::{ClientMessage, Response},
-    serde_transport::tcp,
-    Transport,
-};
-use tokio::{net::ToSocketAddrs, time::Duration};
-use tokio_serde::formats::Bincode;
 
 // This exists only for backward compatibility
 pub trait BanksClientExt {}
@@ -348,16 +349,18 @@ pub async fn start_tcp_client<T: ToSocketAddrs>(addr: T) -> io::Result<BanksClie
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use safecoin_banks_server::banks_server::start_local_server;
-    use solana_runtime::{
-        bank::Bank, bank_forks::BankForks, commitment::BlockCommitmentCache,
-        genesis_utils::create_genesis_config,
+    use {
+        super::*,
+        safecoin_banks_server::banks_server::start_local_server,
+        solana_runtime::{
+            bank::Bank, bank_forks::BankForks, commitment::BlockCommitmentCache,
+            genesis_utils::create_genesis_config,
+        },
+        safecoin_sdk::{message::Message, signature::Signer, system_instruction},
+        std::sync::{Arc, RwLock},
+        tarpc::transport,
+        tokio::{runtime::Runtime, time::sleep},
     };
-    use safecoin_sdk::{message::Message, signature::Signer, system_instruction};
-    use std::sync::{Arc, RwLock};
-    use tarpc::transport;
-    use tokio::{runtime::Runtime, time::sleep};
 
     #[test]
     fn test_banks_client_new() {
@@ -385,7 +388,9 @@ mod tests {
         let message = Message::new(&[instruction], Some(&mint_pubkey));
 
         Runtime::new()?.block_on(async {
-            let client_transport = start_local_server(bank_forks, block_commitment_cache).await;
+            let client_transport =
+                start_local_server(bank_forks, block_commitment_cache, Duration::from_millis(1))
+                    .await;
             let mut banks_client = start_client(client_transport).await?;
 
             let recent_blockhash = banks_client.get_recent_blockhash().await?;
@@ -416,7 +421,9 @@ mod tests {
         let message = Message::new(&[instruction], Some(mint_pubkey));
 
         Runtime::new()?.block_on(async {
-            let client_transport = start_local_server(bank_forks, block_commitment_cache).await;
+            let client_transport =
+                start_local_server(bank_forks, block_commitment_cache, Duration::from_millis(1))
+                    .await;
             let mut banks_client = start_client(client_transport).await?;
             let (_, recent_blockhash, last_valid_block_height) = banks_client.get_fees().await?;
             let transaction = Transaction::new(&[&genesis.mint_keypair], message, recent_blockhash);

@@ -1,15 +1,17 @@
-use crate::blockstore::Blockstore;
-use log::*;
-use safecoin_measure::measure::Measure;
-use safecoin_sdk::clock::Slot;
-use std::{
-    collections::HashSet,
-    result::Result,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
+use {
+    crate::blockstore::Blockstore,
+    log::*,
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::clock::Slot,
+    std::{
+        collections::HashSet,
+        result::Result,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+        time::Duration,
     },
-    time::Duration,
 };
 
 // Attempt to upload this many blocks in parallel

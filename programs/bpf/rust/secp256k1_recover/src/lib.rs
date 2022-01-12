@@ -1,4 +1,4 @@
-//! @brief Secp256k1Recover Syscall test
+//! Secp256k1Recover Syscall test
 
 extern crate safecoin_program;
 use safecoin_program::{custom_panic_default, msg};

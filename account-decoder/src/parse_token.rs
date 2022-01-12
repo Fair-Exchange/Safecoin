@@ -1,35 +1,37 @@
-use crate::{
-    parse_account_data::{ParsableAccount, ParseAccountError},
-    StringAmount, StringDecimals,
-};
-use safecoin_sdk::pubkey::Pubkey;
-use safe_token_v2_0::{
-    safecoin_program::{
-        program_option::COption, program_pack::Pack, pubkey::Pubkey as SafeTokenPubkey,
+use {
+    crate::{
+        parse_account_data::{ParsableAccount, ParseAccountError},
+        StringAmount, StringDecimals,
     },
-    state::{Account, AccountState, Mint, Multisig},
+    safecoin_sdk::pubkey::Pubkey,
+    safe_token::{
+        safecoin_program::{
+            program_option::COption, program_pack::Pack, pubkey::Pubkey as SafeTokenPubkey,
+        },
+        state::{Account, AccountState, Mint, Multisig},
+    },
+    std::str::FromStr,
 };
-use std::str::FromStr;
 
-// A helper function to convert safe_token_v2_0::id() as spl_sdk::pubkey::Pubkey to
+// A helper function to convert safe_token::id() as spl_sdk::pubkey::Pubkey to
 // safecoin_sdk::pubkey::Pubkey
-pub fn safe_token_id_v2_0() -> Pubkey {
-    Pubkey::new_from_array(safe_token_v2_0::id().to_bytes())
+pub fn safe_token_id() -> Pubkey {
+    Pubkey::new_from_array(safe_token::id().to_bytes())
 }
 
-// A helper function to convert safe_token_v2_0::native_mint::id() as spl_sdk::pubkey::Pubkey to
+// A helper function to convert safe_token::native_mint::id() as spl_sdk::pubkey::Pubkey to
 // safecoin_sdk::pubkey::Pubkey
-pub fn safe_token_v2_0_native_mint() -> Pubkey {
-    Pubkey::new_from_array(safe_token_v2_0::native_mint::id().to_bytes())
+pub fn safe_token_native_mint() -> Pubkey {
+    Pubkey::new_from_array(safe_token::native_mint::id().to_bytes())
 }
 
 // A helper function to convert a safecoin_sdk::pubkey::Pubkey to spl_sdk::pubkey::Pubkey
-pub fn safe_token_v2_0_pubkey(pubkey: &Pubkey) -> SafeTokenPubkey {
+pub fn safe_token_pubkey(pubkey: &Pubkey) -> SafeTokenPubkey {
     SafeTokenPubkey::new_from_array(pubkey.to_bytes())
 }
 
 // A helper function to convert a spl_sdk::pubkey::Pubkey to safecoin_sdk::pubkey::Pubkey
-pub fn pubkey_from_safe_token_v2_0(pubkey: &SafeTokenPubkey) -> Pubkey {
+pub fn pubkey_from_safe_token(pubkey: &SafeTokenPubkey) -> Pubkey {
     Pubkey::new_from_array(pubkey.to_bytes())
 }
 

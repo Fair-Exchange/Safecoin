@@ -1,12 +1,11 @@
-use safecoin_client::thin_client::ThinClient;
-use solana_core::validator::Validator;
-use solana_core::validator::ValidatorConfig;
-use safecoin_gossip::{cluster_info::Node, contact_info::ContactInfo};
-use safecoin_sdk::pubkey::Pubkey;
-use safecoin_sdk::signature::Keypair;
-use solana_streamer::socket::SocketAddrSpace;
-use std::path::PathBuf;
-use std::sync::Arc;
+use {
+    safecoin_client::thin_client::ThinClient,
+    solana_core::validator::{Validator, ValidatorConfig},
+    safecoin_gossip::{cluster_info::Node, contact_info::ContactInfo},
+    safecoin_sdk::{pubkey::Pubkey, signature::Keypair},
+    solana_streamer::socket::SocketAddrSpace,
+    std::{path::PathBuf, sync::Arc},
+};
 
 pub struct ValidatorInfo {
     pub keypair: Arc<Keypair>,

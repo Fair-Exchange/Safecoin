@@ -1,10 +1,10 @@
-use clap::{crate_description, crate_name, value_t, App, Arg, ArgMatches};
-use solana_core::gen_keys::GenKeys;
-use safecoin_faucet::faucet::FAUCET_PORT;
-use safecoin_sdk::signature::{read_keypair_file, Keypair};
-use std::net::SocketAddr;
-use std::process::exit;
-use std::time::Duration;
+use {
+    clap::{crate_description, crate_name, value_t, App, Arg, ArgMatches},
+    solana_core::gen_keys::GenKeys,
+    safecoin_faucet::faucet::FAUCET_PORT,
+    safecoin_sdk::signature::{read_keypair_file, Keypair},
+    std::{net::SocketAddr, process::exit, time::Duration},
+};
 
 pub struct Config {
     pub entrypoint_addr: SocketAddr,

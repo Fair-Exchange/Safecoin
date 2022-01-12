@@ -1,36 +1,38 @@
 #![allow(clippy::integer_arithmetic)]
-use clap::{crate_description, crate_name, value_t, values_t_or_exit, App, Arg};
-use log::*;
-use rand::{thread_rng, Rng};
-use rayon::prelude::*;
-use safecoin_account_decoder::parse_token::safe_token_v2_0_pubkey;
-use safecoin_clap_utils::input_parsers::pubkey_of;
-use safecoin_client::rpc_client::RpcClient;
-use safecoin_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT};
-use safecoin_gossip::gossip_service::discover;
-use safecoin_measure::measure::Measure;
-use solana_runtime::inline_safe_token_v2_0;
-use safecoin_sdk::{
-    commitment_config::CommitmentConfig,
-    message::Message,
-    pubkey::Pubkey,
-    rpc_port::DEFAULT_RPC_PORT,
-    signature::{read_keypair_file, Keypair, Signature, Signer},
-    system_instruction, system_program,
-    timing::timestamp,
-    transaction::Transaction,
-};
-use solana_streamer::socket::SocketAddrSpace;
-use safecoin_transaction_status::parse_token::safe_token_v2_0_instruction;
-use std::{
-    net::SocketAddr,
-    process::exit,
-    sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
-        Arc, RwLock,
+use {
+    clap::{crate_description, crate_name, value_t, values_t_or_exit, App, Arg},
+    log::*,
+    rand::{thread_rng, Rng},
+    rayon::prelude::*,
+    safecoin_account_decoder::parse_token::safe_token_pubkey,
+    safecoin_clap_utils::input_parsers::pubkey_of,
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT},
+    safecoin_gossip::gossip_service::discover,
+    safecoin_measure::measure::Measure,
+    solana_runtime::inline_safe_token,
+    safecoin_sdk::{
+        commitment_config::CommitmentConfig,
+        message::Message,
+        pubkey::Pubkey,
+        rpc_port::DEFAULT_RPC_PORT,
+        signature::{read_keypair_file, Keypair, Signature, Signer},
+        system_instruction, system_program,
+        timing::timestamp,
+        transaction::Transaction,
     },
-    thread::{sleep, Builder, JoinHandle},
-    time::{Duration, Instant},
+    solana_streamer::socket::SocketAddrSpace,
+    safecoin_transaction_status::parse_token::safe_token_instruction,
+    std::{
+        net::SocketAddr,
+        process::exit,
+        sync::{
+            atomic::{AtomicBool, AtomicU64, Ordering},
+            Arc, RwLock,
+        },
+        thread::{sleep, Builder, JoinHandle},
+        time::{Duration, Instant},
+    },
 };
 
 // Create and close messages both require 2 signatures; if transaction construction changes, update
@@ -274,7 +276,7 @@ fn make_create_message(
         .into_iter()
         .map(|_| {
             let program_id = if mint.is_some() {
-                inline_safe_token_v2_0::id()
+                inline_safe_token::id()
             } else {
                 system_program::id()
             };
@@ -291,12 +293,12 @@ fn make_create_message(
                 &program_id,
             )];
             if let Some(mint_address) = mint {
-                instructions.push(safe_token_v2_0_instruction(
-                    safe_token_v2_0::instruction::initialize_account(
-                        &safe_token_v2_0::id(),
-                        &safe_token_v2_0_pubkey(&to_pubkey),
-                        &safe_token_v2_0_pubkey(&mint_address),
-                        &safe_token_v2_0_pubkey(&base_keypair.pubkey()),
+                instructions.push(safe_token_instruction(
+                    safe_token::instruction::initialize_account(
+                        &safe_token::id(),
+                        &safe_token_pubkey(&to_pubkey),
+                        &safe_token_pubkey(&mint_address),
+                        &safe_token_pubkey(&base_keypair.pubkey()),
                     )
                     .unwrap(),
                 ));
@@ -322,7 +324,7 @@ fn make_close_message(
         .into_iter()
         .map(|_| {
             let program_id = if safe_token {
-                inline_safe_token_v2_0::id()
+                inline_safe_token::id()
             } else {
                 system_program::id()
             };
@@ -330,12 +332,12 @@ fn make_close_message(
             let address =
                 Pubkey::create_with_seed(&base_keypair.pubkey(), &seed, &program_id).unwrap();
             if safe_token {
-                safe_token_v2_0_instruction(
-                    safe_token_v2_0::instruction::close_account(
-                        &safe_token_v2_0::id(),
-                        &safe_token_v2_0_pubkey(&address),
-                        &safe_token_v2_0_pubkey(&keypair.pubkey()),
-                        &safe_token_v2_0_pubkey(&base_keypair.pubkey()),
+                safe_token_instruction(
+                    safe_token::instruction::close_account(
+                        &safe_token::id(),
+                        &safe_token_pubkey(&address),
+                        &safe_token_pubkey(&keypair.pubkey()),
+                        &safe_token_pubkey(&base_keypair.pubkey()),
                         &[],
                     )
                     .unwrap(),
@@ -701,13 +703,15 @@ fn main() {
 
 #[cfg(test)]
 pub mod test {
-    use super::*;
-    use solana_core::validator::ValidatorConfig;
-    use solana_local_cluster::{
-        local_cluster::{ClusterConfig, LocalCluster},
-        validator_configs::make_identical_validator_configs,
+    use {
+        super::*,
+        solana_core::validator::ValidatorConfig,
+        solana_local_cluster::{
+            local_cluster::{ClusterConfig, LocalCluster},
+            validator_configs::make_identical_validator_configs,
+        },
+        safecoin_sdk::poh_config::PohConfig,
     };
-    use safecoin_sdk::poh_config::PohConfig;
 
     #[test]
     fn test_accounts_cluster_bench() {

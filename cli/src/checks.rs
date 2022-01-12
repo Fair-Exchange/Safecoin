@@ -1,11 +1,13 @@
-use crate::cli::CliError;
-use safecoin_client::{
-    client_error::{ClientError, Result as ClientResult},
-    rpc_client::RpcClient,
-};
-use safecoin_sdk::{
-    commitment_config::CommitmentConfig, fee_calculator::FeeCalculator, message::Message,
-    native_token::lamports_to_sol, pubkey::Pubkey,
+use {
+    crate::cli::CliError,
+    safecoin_client::{
+        client_error::{ClientError, Result as ClientResult},
+        rpc_client::RpcClient,
+    },
+    safecoin_sdk::{
+        commitment_config::CommitmentConfig, fee_calculator::FeeCalculator, message::Message,
+        native_token::lamports_to_sol, pubkey::Pubkey,
+    },
 };
 
 pub fn check_account_for_fee(
@@ -149,14 +151,16 @@ pub fn check_unique_pubkeys(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use serde_json::json;
-    use safecoin_client::{
-        rpc_request::RpcRequest,
-        rpc_response::{Response, RpcResponseContext},
+    use {
+        super::*,
+        serde_json::json,
+        safecoin_client::{
+            rpc_request::RpcRequest,
+            rpc_response::{Response, RpcResponseContext},
+        },
+        safecoin_sdk::system_instruction,
+        std::collections::HashMap,
     };
-    use safecoin_sdk::system_instruction;
-    use std::collections::HashMap;
 
     #[test]
     fn test_check_account_for_fees() {

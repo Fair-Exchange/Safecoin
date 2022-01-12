@@ -1,19 +1,21 @@
-use crate::args::{
-    Args, BalancesArgs, Command, DistributeTokensArgs, SenderStakeArgs, SafeTokenArgs, StakeArgs,
-    TransactionLogArgs,
+use {
+    crate::args::{
+        Args, BalancesArgs, Command, DistributeTokensArgs, SenderStakeArgs, SafeTokenArgs,
+        StakeArgs, TransactionLogArgs,
+    },
+    clap::{
+        crate_description, crate_name, value_t, value_t_or_exit, App, Arg, ArgMatches, SubCommand,
+    },
+    safecoin_clap_utils::{
+        input_parsers::{pubkey_of_signer, value_of},
+        input_validators::{is_amount, is_valid_pubkey, is_valid_signer},
+        keypair::{pubkey_from_path, signer_from_path},
+    },
+    safecoin_cli_config::CONFIG_FILE,
+    safecoin_remote_wallet::remote_wallet::maybe_wallet_manager,
+    safecoin_sdk::native_token::sol_to_lamports,
+    std::{error::Error, ffi::OsString, process::exit},
 };
-use clap::{
-    crate_description, crate_name, value_t, value_t_or_exit, App, Arg, ArgMatches, SubCommand,
-};
-use safecoin_clap_utils::{
-    input_parsers::{pubkey_of_signer, value_of},
-    input_validators::{is_amount, is_valid_pubkey, is_valid_signer},
-    keypair::{pubkey_from_path, signer_from_path},
-};
-use safecoin_cli_config::CONFIG_FILE;
-use safecoin_remote_wallet::remote_wallet::maybe_wallet_manager;
-use safecoin_sdk::native_token::sol_to_lamports;
-use std::{error::Error, ffi::OsString, process::exit};
 
 fn get_matches<'a, I, T>(args: I) -> ArgMatches<'a>
 where

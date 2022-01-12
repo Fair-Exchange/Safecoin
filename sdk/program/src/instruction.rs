@@ -1,39 +1,13 @@
 #![allow(clippy::integer_arithmetic)]
 //! Defines a composable Instruction type and a memory-efficient CompiledInstruction.
 
-use crate::sanitize::Sanitize;
-use crate::{pubkey::Pubkey, short_vec,clock::Slot,hash::Hash};
-use bincode::serialize;
-use borsh::BorshSerialize;
-use serde::Serialize;
-use thiserror::Error;
-
-pub trait VoteModerator {
-    fn vote_allowed(&self,slot: Slot,hash : Hash, test_key: Pubkey) -> bool ;
-}
-#[derive(Debug, Clone)]
-pub struct MockVoteMod {
-    pub a : u8,
-}
-
-impl VoteModerator for MockVoteMod {
-    fn vote_allowed(&self,_: Slot,_ : Hash, _: Pubkey) -> bool {
-        true
-    }
-
-}
-impl Default for MockVoteMod {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl MockVoteMod {
-    pub fn new() -> Self {
-        MockVoteMod {
-            a: 1,
-        }
-    }
-}
+use {
+    crate::{pubkey::Pubkey, sanitize::Sanitize, short_vec},
+    bincode::serialize,
+    borsh::BorshSerialize,
+    serde::Serialize,
+    thiserror::Error,
+};
 
 /// Reasons the runtime might have rejected an instruction.
 ///

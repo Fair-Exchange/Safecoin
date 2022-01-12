@@ -1,8 +1,10 @@
-use safecoin_client::rpc_client::RpcClient;
-use solana_core::test_validator::TestValidator;
-use safecoin_sdk::signature::{Keypair, Signer};
-use solana_streamer::socket::SocketAddrSpace;
-use safecoin_tokens::commands::test_process_distribute_tokens_with_client;
+use {
+    safecoin_client::rpc_client::RpcClient,
+    solana_core::test_validator::TestValidator,
+    safecoin_sdk::signature::{Keypair, Signer},
+    solana_streamer::socket::SocketAddrSpace,
+    safecoin_tokens::commands::test_process_distribute_tokens_with_client,
+};
 
 #[test]
 fn test_process_distribute_with_rpc_client() {
