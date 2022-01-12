@@ -293,6 +293,10 @@ pub mod use_new_hash {
     safecoin_sdk::declare_id!("UNHufqFsvHBU7ouiUKvJifLChnrZ2LyKPUefYjvAN22");
 }
 
+pub mod really_use_voter_groups {
+    safecoin_sdk::declare_id!("RuvGybt7c8A4dr72B3PW9PTtMov4bKhHo2KN3FgrTdb");
+}
+
 lazy_static! {
     /// Map of feature identifiers to user-visible description
     pub static ref FEATURE_NAMES: HashMap<Pubkey, &'static str> = [
@@ -366,6 +370,7 @@ lazy_static! {
         (evict_invalid_stakes_cache_entries::id(), "evict invalid stakes cache entries on epoch boundaries"),
         (voter_groups_consensus::id(), "use a random subset of voters for block consensus"),
         (use_new_hash::id(), "use better hash for rando voters"),
+        (really_use_voter_groups::id(), "fix voter_groups"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()
