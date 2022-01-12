@@ -11,7 +11,7 @@ use {
         nonce_utils,
         rpc_client::RpcClient,
     },
-    solana_core::test_validator::TestValidator,
+    safecoin_core::test_validator::TestValidator,
     safecoin_faucet::faucet::run_local_faucet,
     safecoin_sdk::{
         account_utils::StateMut,

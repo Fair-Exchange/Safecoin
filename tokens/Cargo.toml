@@ -29,8 +29,8 @@ safecoin-runtime = { path = "../runtime", version = "=1.8.12" }
 safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.8.12" }
 safecoin-version = { path = "../version", version = "=1.8.12" }
-safe-associated-token-account = { package = "safe-associated-token-account", version = "=1.0.7" }
-safe-token = { version = "=3.2.0", features = ["no-entrypoint"] }
+safe-associated-token-account = { package = "safe-associated-token-account", version = "=1.0.9" }
+safe-token = { version = "=3.2.1", features = ["no-entrypoint"] }
 tempfile = "3.1.0"
 thiserror = "1.0"
 

@@ -2,8 +2,8 @@
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 use serial_test::serial;
-use solana_core::cluster_info::{compute_retransmit_peers, ClusterInfo};
-use solana_core::contact_info::ContactInfo;
+use safecoin_core::cluster_info::{compute_retransmit_peers, ClusterInfo};
+use safecoin_core::contact_info::ContactInfo;
 use safecoin_sdk::pubkey::Pubkey;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::channel;

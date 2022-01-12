@@ -2364,7 +2364,7 @@ pub mod rpc_minimal {
             debug!("get_version rpc request received");
             let version = solana_version::Version::default();
             Ok(RpcVersionInfo {
-                solana_core: version.to_string(),
+                safecoin_core: version.to_string(),
                 feature_set: Some(version.feature_set),
             })
         }

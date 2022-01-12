@@ -5,7 +5,7 @@
 mod tests {
     use {
         log::*,
-        solana_core::ledger_cleanup_service::LedgerCleanupService,
+        safecoin_core::ledger_cleanup_service::LedgerCleanupService,
         solana_ledger::{
             blockstore::{make_many_slot_entries, Blockstore},
             get_tmp_ledger_path,

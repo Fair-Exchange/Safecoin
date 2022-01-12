@@ -66,7 +66,7 @@ safecoin delegate-stake ~/validator-stake-keypair.json ~/some-other-vote-account
 - 查看您的质押账户、委托偏好以及您的质押细节：`safecoin stock-account ~/validator-stake-keypair.json`
 - `Safecoin validators` 显示当前所有验证程序的活跃质押，包括您的
 - `safecoin stake-history` 展示了最近epochs中预热和冷却的历史
-- 在您的验证节点查找日志消息，指明您的下一位领导者插槽：`[2019-09-27T20：16：00.319721164Z INFO solana_core:::replay_stage] <VALIDATOR_IDENTITY_PUBKEY> 投票并在出块高度重置PoH####。 我的下一个领导者插槽是 ####`
+- 在您的验证节点查找日志消息，指明您的下一位领导者插槽：`[2019-09-27T20：16：00.319721164Z INFO safecoin_core:::replay_stage] <VALIDATOR_IDENTITY_PUBKEY> 投票并在出块高度重置PoH####。 我的下一个领导者插槽是 ####`
 - 质押预热完毕后，您可以通过运行 `safecoin validators` 来看到验证程序中列出的一个质押余额。
 
 ## 监视您质押的验证节点

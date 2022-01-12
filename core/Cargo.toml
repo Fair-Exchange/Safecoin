@@ -68,7 +68,7 @@ safecoin-streamer = { path = "../streamer", version = "=1.8.12" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.8.12" }
 safecoin-version = { path = "../version", version = "=1.8.12" }
 safecoin-vote-program = { path = "../programs/vote", version = "=1.8.12" }
-safe-token-v2-0 = { package = "safe-token", version = "=3.2.0", features = ["no-entrypoint"] }
+safe-token-v2-0 = { package = "safe-token", version = "=3.2.1", features = ["no-entrypoint"] }
 tempfile = "3.1.0"
 thiserror = "1.0"
 safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.8.12" }

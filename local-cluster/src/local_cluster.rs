@@ -7,7 +7,7 @@ use {
     itertools::izip,
     log::*,
     safecoin_client::thin_client::{create_client, ThinClient},
-    solana_core::validator::{Validator, ValidatorConfig, ValidatorStartProgress},
+    safecoin_core::validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     safecoin_gossip::{
         cluster_info::{Node, VALIDATOR_PORT_RANGE},
         contact_info::ContactInfo,

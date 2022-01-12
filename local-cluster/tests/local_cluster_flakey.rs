@@ -8,7 +8,7 @@ use {
     },
     log::*,
     serial_test::serial,
-    solana_core::validator::ValidatorConfig,
+    safecoin_core::validator::ValidatorConfig,
     solana_ledger::{
         ancestor_iterator::AncestorIterator, blockstore::Blockstore, blockstore_db::AccessType,
     },

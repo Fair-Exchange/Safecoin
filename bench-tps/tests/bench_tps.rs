@@ -6,7 +6,7 @@ use {
         cli::Config,
     },
     safecoin_client::thin_client::create_client,
-    solana_core::validator::ValidatorConfig,
+    safecoin_core::validator::ValidatorConfig,
     safecoin_faucet::faucet::run_local_faucet_with_port,
     safecoin_gossip::cluster_info::VALIDATOR_PORT_RANGE,
     solana_local_cluster::{

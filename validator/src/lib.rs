@@ -12,7 +12,7 @@ use {
     },
 };
 pub use {
-    solana_core::test_validator, safecoin_gossip::cluster_info::MINIMUM_VALIDATOR_PORT_RANGE_WIDTH,
+    safecoin_core::test_validator, safecoin_gossip::cluster_info::MINIMUM_VALIDATOR_PORT_RANGE_WIDTH,
 };
 
 pub mod admin_rpc_service;

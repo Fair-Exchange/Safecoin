@@ -4,7 +4,7 @@ use {
     safecoin_client::{
         client_error, rpc_client::RpcClient, rpc_request, rpc_response::RpcContactInfo,
     },
-    solana_core::validator::ValidatorStartProgress,
+    safecoin_core::validator::ValidatorStartProgress,
     safecoin_sdk::{
         clock::Slot, commitment_config::CommitmentConfig, exit::Exit, native_token::Safe,
         pubkey::Pubkey,

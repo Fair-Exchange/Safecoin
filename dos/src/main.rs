@@ -4,7 +4,7 @@ use {
     log::*,
     rand::{thread_rng, Rng},
     safecoin_client::rpc_client::RpcClient,
-    solana_core::serve_repair::RepairProtocol,
+    safecoin_core::serve_repair::RepairProtocol,
     safecoin_gossip::{contact_info::ContactInfo, gossip_service::discover},
     safecoin_sdk::pubkey::Pubkey,
     solana_streamer::socket::SocketAddrSpace,
