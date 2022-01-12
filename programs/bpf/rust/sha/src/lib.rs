@@ -1,4 +1,4 @@
-//! @brief SHA Syscall test
+//! SHA Syscall test
 
 extern crate safecoin_program;
 use safecoin_program::{custom_panic_default, msg};

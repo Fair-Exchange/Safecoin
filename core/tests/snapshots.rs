@@ -35,44 +35,45 @@ macro_rules! DEFINE_SNAPSHOT_VERSION_PARAMETERIZED_TEST_FUNCTIONS {
 
 #[cfg(test)]
 mod tests {
-    use bincode::serialize_into;
-    use crossbeam_channel::unbounded;
-    use fs_extra::dir::CopyOptions;
-    use itertools::Itertools;
-    use solana_core::snapshot_packager_service::{PendingSnapshotPackage, SnapshotPackagerService};
-    use safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo};
-    use solana_runtime::{
-        accounts_background_service::{AbsRequestSender, SnapshotRequestHandler},
-        accounts_db,
-        accounts_index::AccountSecondaryIndexes,
-        bank::{Bank, BankSlotDelta},
-        bank_forks::{ArchiveFormat, BankForks, SnapshotConfig},
-        genesis_utils::{create_genesis_config, GenesisConfigInfo},
-        snapshot_utils,
-        snapshot_utils::{SnapshotVersion, DEFAULT_MAX_SNAPSHOTS_TO_RETAIN},
-        status_cache::MAX_CACHE_ENTRIES,
-    };
-    use safecoin_sdk::{
-        clock::Slot,
-        genesis_config::{ClusterType, GenesisConfig},
-        hash::hashv,
-        pubkey::Pubkey,
-        signature::{Keypair, Signer},
-        system_transaction,
-    };
-    use solana_streamer::socket::SocketAddrSpace;
-    use std::{
-        collections::HashSet,
-        fs,
-        path::PathBuf,
-        sync::{
-            atomic::{AtomicBool, Ordering},
-            mpsc::channel,
-            Arc,
+    use {
+        bincode::serialize_into,
+        crossbeam_channel::unbounded,
+        fs_extra::dir::CopyOptions,
+        itertools::Itertools,
+        safecoin_core::snapshot_packager_service::{PendingSnapshotPackage, SnapshotPackagerService},
+        safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
+        solana_runtime::{
+            accounts_background_service::{AbsRequestSender, SnapshotRequestHandler},
+            accounts_db,
+            accounts_index::AccountSecondaryIndexes,
+            bank::{Bank, BankSlotDelta},
+            bank_forks::{ArchiveFormat, BankForks, SnapshotConfig},
+            genesis_utils::{create_genesis_config, GenesisConfigInfo},
+            snapshot_utils::{self, SnapshotVersion, DEFAULT_MAX_SNAPSHOTS_TO_RETAIN},
+            status_cache::MAX_CACHE_ENTRIES,
         },
-        time::Duration,
+        safecoin_sdk::{
+            clock::Slot,
+            genesis_config::{ClusterType, GenesisConfig},
+            hash::hashv,
+            pubkey::Pubkey,
+            signature::{Keypair, Signer},
+            system_transaction,
+        },
+        solana_streamer::socket::SocketAddrSpace,
+        std::{
+            collections::HashSet,
+            fs,
+            path::PathBuf,
+            sync::{
+                atomic::{AtomicBool, Ordering},
+                mpsc::channel,
+                Arc,
+            },
+            time::Duration,
+        },
+        tempfile::TempDir,
     };
-    use tempfile::TempDir;
 
     DEFINE_SNAPSHOT_VERSION_PARAMETERIZED_TEST_FUNCTIONS!(V1_2_0, Development, V1_2_0_Development);
     DEFINE_SNAPSHOT_VERSION_PARAMETERIZED_TEST_FUNCTIONS!(V1_2_0, Devnet, V1_2_0_Devnet);
@@ -109,6 +110,7 @@ mod tests {
                 false,
                 accounts_db::AccountShrinkThreshold::default(),
                 false,
+                None,
             );
             bank0.freeze();
             let mut bank_forks = BankForks::new(bank0);
@@ -121,6 +123,7 @@ mod tests {
                 archive_format: ArchiveFormat::TarBzip2,
                 snapshot_version,
                 maximum_snapshots_to_retain: DEFAULT_MAX_SNAPSHOTS_TO_RETAIN,
+                packager_thread_niceness_adj: 0,
             };
             bank_forks.set_snapshot_config(Some(snapshot_config.clone()));
             SnapshotTestConfig {
@@ -172,6 +175,7 @@ mod tests {
             accounts_db::AccountShrinkThreshold::default(),
             check_hash_calculation,
             false,
+            None,
         )
         .unwrap();
 
@@ -457,6 +461,7 @@ mod tests {
             &exit,
             &cluster_info,
             DEFAULT_MAX_SNAPSHOTS_TO_RETAIN,
+            0,
         );
 
         let thread_pool = accounts_db::make_min_priority_thread_pool();

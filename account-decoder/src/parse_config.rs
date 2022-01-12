@@ -1,12 +1,16 @@
-use crate::{
-    parse_account_data::{ParsableAccount, ParseAccountError},
-    validator_info,
+use {
+    crate::{
+        parse_account_data::{ParsableAccount, ParseAccountError},
+        validator_info,
+    },
+    bincode::deserialize,
+    serde_json::Value,
+    solana_config_program::{get_config_data, ConfigKeys},
+    safecoin_sdk::{
+        pubkey::Pubkey,
+        stake::config::{self as stake_config, Config as StakeConfig},
+    },
 };
-use bincode::deserialize;
-use serde_json::Value;
-use solana_config_program::{get_config_data, ConfigKeys};
-use safecoin_sdk::pubkey::Pubkey;
-use safecoin_sdk::stake::config::{self as stake_config, Config as StakeConfig};
 
 pub fn parse_config(data: &[u8], pubkey: &Pubkey) -> Result<ConfigAccountType, ParseAccountError> {
     let parsed_account = if pubkey == &stake_config::id() {
@@ -87,11 +91,10 @@ pub struct UiConfig<T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::validator_info::ValidatorInfo;
-    use serde_json::json;
-    use solana_config_program::create_config_account;
-    use safecoin_sdk::account::ReadableAccount;
+    use {
+        super::*, crate::validator_info::ValidatorInfo, serde_json::json,
+        solana_config_program::create_config_account, safecoin_sdk::account::ReadableAccount,
+    };
 
     #[test]
     fn test_parse_config() {

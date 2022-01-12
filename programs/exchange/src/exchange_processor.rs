@@ -1,23 +1,23 @@
 //! Config processor
 
-use crate::exchange_instruction::*;
-use crate::exchange_state::*;
-use crate::faucet;
-use log::*;
-use num_derive::{FromPrimitive, ToPrimitive};
-use serde_derive::Serialize;
-use solana_metrics::inc_new_counter_info;
-use safecoin_sdk::{
-    account::{ReadableAccount, WritableAccount},
-    decode_error::DecodeError,
-    instruction::InstructionError,
-    keyed_account::KeyedAccount,
-    process_instruction::InvokeContext,
-    program_utils::limited_deserialize,
-    pubkey::Pubkey,
+use {
+    crate::{exchange_instruction::*, exchange_state::*, faucet},
+    log::*,
+    num_derive::{FromPrimitive, ToPrimitive},
+    serde_derive::Serialize,
+    solana_metrics::inc_new_counter_info,
+    safecoin_sdk::{
+        account::{ReadableAccount, WritableAccount},
+        decode_error::DecodeError,
+        instruction::InstructionError,
+        keyed_account::KeyedAccount,
+        process_instruction::InvokeContext,
+        program_utils::limited_deserialize,
+        pubkey::Pubkey,
+    },
+    std::cmp,
+    thiserror::Error,
 };
-use std::cmp;
-use thiserror::Error;
 
 #[derive(Error, Debug, Serialize, Clone, PartialEq, FromPrimitive, ToPrimitive)]
 pub enum ExchangeError {
@@ -510,16 +510,19 @@ pub fn process_instruction(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::{exchange_instruction, id};
-    use solana_runtime::bank::Bank;
-    use solana_runtime::bank_client::BankClient;
-    use safecoin_sdk::client::SyncClient;
-    use safecoin_sdk::genesis_config::create_genesis_config;
-    use safecoin_sdk::message::Message;
-    use safecoin_sdk::signature::{Keypair, Signer};
-    use safecoin_sdk::system_instruction;
-    use std::mem;
+    use {
+        super::*,
+        crate::{exchange_instruction, id},
+        solana_runtime::{bank::Bank, bank_client::BankClient},
+        safecoin_sdk::{
+            client::SyncClient,
+            genesis_config::create_genesis_config,
+            message::Message,
+            signature::{Keypair, Signer},
+            system_instruction,
+        },
+        std::mem,
+    };
 
     #[allow(clippy::too_many_arguments)]
     fn try_calc(

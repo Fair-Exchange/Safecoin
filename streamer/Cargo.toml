@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-streamer"
-version = "1.7.17"
+version = "1.8.12"
 description = "Safecoin Streamer"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -12,14 +12,14 @@ edition = "2018"
 [dependencies]
 itertools = "0.10.1"
 log = "0.4.11"
-safecoin-metrics = { path = "../metrics", version = "=1.7.17" }
-safecoin-sdk = { path = "../sdk", version = "=1.7.17" }
+safecoin-metrics = { path = "../metrics", version = "=1.8.12" }
+safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
 thiserror = "1.0"
-safecoin-measure = { path = "../measure", version = "=1.7.17" }
-safecoin-logger = { path = "../logger", version = "=1.7.17" }
+safecoin-measure = { path = "../measure", version = "=1.8.12" }
+safecoin-logger = { path = "../logger", version = "=1.8.12" }
 libc = "0.2.81"
 nix = "0.20.0"
-safecoin-perf = { path = "../perf", version = "=1.7.17" }
+safecoin-perf = { path = "../perf", version = "=1.8.12" }
 
 [dev-dependencies]
 

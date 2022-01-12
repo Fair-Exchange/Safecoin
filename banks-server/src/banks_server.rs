@@ -1,48 +1,52 @@
-use crate::send_transaction_service::{SendTransactionService, TransactionInfo};
-use bincode::{deserialize, serialize};
-use futures::{
-    future,
-    prelude::stream::{self, StreamExt},
-};
-use solana_banks_interface::{
-    Banks, BanksRequest, BanksResponse, TransactionConfirmationStatus, TransactionStatus,
-};
-use solana_runtime::{bank::Bank, bank_forks::BankForks, commitment::BlockCommitmentCache};
-use safecoin_sdk::{
-    account::Account,
-    clock::Slot,
-    commitment_config::CommitmentLevel,
-    fee_calculator::FeeCalculator,
-    hash::Hash,
-    pubkey::Pubkey,
-    signature::Signature,
-    transaction::{self, Transaction},
-};
-use std::{
-    io,
-    net::{Ipv4Addr, SocketAddr},
-    sync::{
-        mpsc::{channel, Receiver, Sender},
-        Arc, RwLock,
+use {
+    crate::send_transaction_service::{SendTransactionService, TransactionInfo},
+    bincode::{deserialize, serialize},
+    futures::{
+        future,
+        prelude::stream::{self, StreamExt},
     },
-    thread::Builder,
-    time::Duration,
+    solana_banks_interface::{
+        Banks, BanksRequest, BanksResponse, TransactionConfirmationStatus, TransactionStatus,
+    },
+    solana_runtime::{bank::Bank, bank_forks::BankForks, commitment::BlockCommitmentCache},
+    safecoin_sdk::{
+        account::Account,
+        clock::Slot,
+        commitment_config::CommitmentLevel,
+        feature_set::FeatureSet,
+        fee_calculator::FeeCalculator,
+        hash::Hash,
+        pubkey::Pubkey,
+        signature::Signature,
+        transaction::{self, Transaction},
+    },
+    std::{
+        io,
+        net::{Ipv4Addr, SocketAddr},
+        sync::{
+            mpsc::{channel, Receiver, Sender},
+            Arc, RwLock,
+        },
+        thread::Builder,
+        time::Duration,
+    },
+    tarpc::{
+        context::Context,
+        rpc::{transport::channel::UnboundedChannel, ClientMessage, Response},
+        serde_transport::tcp,
+        server::{self, Channel, Handler},
+        transport,
+    },
+    tokio::time::sleep,
+    tokio_serde::formats::Bincode,
 };
-use tarpc::{
-    context::Context,
-    rpc::{transport::channel::UnboundedChannel, ClientMessage, Response},
-    serde_transport::tcp,
-    server::{self, Channel, Handler},
-    transport,
-};
-use tokio::time::sleep;
-use tokio_serde::formats::Bincode;
 
 #[derive(Clone)]
 struct BanksServer {
     bank_forks: Arc<RwLock<BankForks>>,
     block_commitment_cache: Arc<RwLock<BlockCommitmentCache>>,
     transaction_sender: Sender<TransactionInfo>,
+    poll_signature_status_sleep_duration: Duration,
 }
 
 impl BanksServer {
@@ -54,11 +58,13 @@ impl BanksServer {
         bank_forks: Arc<RwLock<BankForks>>,
         block_commitment_cache: Arc<RwLock<BlockCommitmentCache>>,
         transaction_sender: Sender<TransactionInfo>,
+        poll_signature_status_sleep_duration: Duration,
     ) -> Self {
         Self {
             bank_forks,
             block_commitment_cache,
             transaction_sender,
+            poll_signature_status_sleep_duration,
         }
     }
 
@@ -81,6 +87,7 @@ impl BanksServer {
     fn new_loopback(
         bank_forks: Arc<RwLock<BankForks>>,
         block_commitment_cache: Arc<RwLock<BlockCommitmentCache>>,
+        poll_signature_status_sleep_duration: Duration,
     ) -> Self {
         let (transaction_sender, transaction_receiver) = channel();
         let bank = bank_forks.read().unwrap().working_bank();
@@ -95,7 +102,12 @@ impl BanksServer {
             .name("solana-bank-forks-client".to_string())
             .spawn(move || Self::run(server_bank_forks, transaction_receiver))
             .unwrap();
-        Self::new(bank_forks, block_commitment_cache, transaction_sender)
+        Self::new(
+            bank_forks,
+            block_commitment_cache,
+            transaction_sender,
+            poll_signature_status_sleep_duration,
+        )
     }
 
     fn slot(&self, commitment: CommitmentLevel) -> Slot {
@@ -120,7 +132,7 @@ impl BanksServer {
             .bank(commitment)
             .get_signature_status_with_blockhash(signature, blockhash);
         while status.is_none() {
-            sleep(Duration::from_millis(200)).await;
+            sleep(self.poll_signature_status_sleep_duration).await;
             let bank = self.bank(commitment);
             if bank.block_height() > last_valid_block_height {
                 break;
@@ -133,11 +145,11 @@ impl BanksServer {
 
 fn verify_transaction(
     transaction: &Transaction,
-    libsecp256k1_0_5_upgrade_enabled: bool,
+    feature_set: &Arc<FeatureSet>,
 ) -> transaction::Result<()> {
     if let Err(err) = transaction.verify() {
         Err(err)
-    } else if let Err(err) = transaction.verify_precompiles(libsecp256k1_0_5_upgrade_enabled) {
+    } else if let Err(err) = transaction.verify_precompiles(feature_set) {
         Err(err)
     } else {
         Ok(())
@@ -227,19 +239,13 @@ impl Banks for BanksServer {
         transaction: Transaction,
         commitment: CommitmentLevel,
     ) -> Option<transaction::Result<()>> {
-        if let Err(err) = verify_transaction(
-            &transaction,
-            self.bank(commitment).libsecp256k1_0_5_upgrade_enabled(),
-        ) {
+        if let Err(err) = verify_transaction(&transaction, &self.bank(commitment).feature_set) {
             return Some(Err(err));
         }
 
         let blockhash = &transaction.message.recent_blockhash;
         let last_valid_block_height = self
-            .bank_forks
-            .read()
-            .unwrap()
-            .root_bank()
+            .bank(commitment)
             .get_blockhash_last_valid_block_height(blockhash)
             .unwrap();
         let signature = transaction.signatures.get(0).cloned().unwrap_or_default();
@@ -267,8 +273,13 @@ impl Banks for BanksServer {
 pub async fn start_local_server(
     bank_forks: Arc<RwLock<BankForks>>,
     block_commitment_cache: Arc<RwLock<BlockCommitmentCache>>,
+    poll_signature_status_sleep_duration: Duration,
 ) -> UnboundedChannel<Response<BanksResponse>, ClientMessage<BanksRequest>> {
-    let banks_server = BanksServer::new_loopback(bank_forks, block_commitment_cache);
+    let banks_server = BanksServer::new_loopback(
+        bank_forks,
+        block_commitment_cache,
+        poll_signature_status_sleep_duration,
+    );
     let (client_transport, server_transport) = transport::channel::unbounded();
     let server = server::new(server::Config::default())
         .incoming(stream::once(future::ready(server_transport)))
@@ -303,8 +314,12 @@ pub async fn start_tcp_server(
 
             SendTransactionService::new(tpu_addr, &bank_forks, receiver);
 
-            let server =
-                BanksServer::new(bank_forks.clone(), block_commitment_cache.clone(), sender);
+            let server = BanksServer::new(
+                bank_forks.clone(),
+                block_commitment_cache.clone(),
+                sender,
+                Duration::from_millis(200),
+            );
             chan.respond_with(server.serve()).execute()
         })
         // Max 10 channels.

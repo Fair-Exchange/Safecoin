@@ -1,12 +1,15 @@
-//! @brief Syscall stubs when building for programs for non-BPF targets
+//! Syscall stubs when building for programs for non-BPF targets
 
 #![cfg(not(target_arch = "bpf"))]
 
-use crate::{
-    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
-    program_error::UNSUPPORTED_SYSVAR,
+use {
+    crate::{
+        account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
+        program_error::UNSUPPORTED_SYSVAR, pubkey::Pubkey,
+    },
+    itertools::Itertools,
+    std::sync::{Arc, RwLock},
 };
-use std::sync::{Arc, RwLock};
 
 lazy_static::lazy_static! {
     static ref SYSCALL_STUBS: Arc<RwLock<Box<dyn SyscallStubs>>> = Arc::new(RwLock::new(Box::new(DefaultSyscallStubs {})));
@@ -51,7 +54,7 @@ pub trait SyscallStubs: Sync + Send {
     unsafe fn sol_memcpy(&self, dst: *mut u8, src: *const u8, n: usize) {
         // cannot be overlapping
         if dst as usize + n > src as usize && src as usize > dst as usize {
-            panic!("memcpy does not support oveerlapping regions");
+            panic!("memcpy does not support overlapping regions");
         }
         std::ptr::copy_nonoverlapping(src, dst, n as usize);
     }
@@ -79,6 +82,13 @@ pub trait SyscallStubs: Sync + Send {
         for val in s.iter_mut().take(n) {
             *val = c;
         }
+    }
+    fn sol_get_return_data(&self) -> Option<(Pubkey, Vec<u8>)> {
+        None
+    }
+    fn sol_set_return_data(&mut self, _data: &[u8]) {}
+    fn sol_log_data(&self, fields: &[&[u8]]) {
+        println!("data: {}", fields.iter().map(base64::encode).join(" "));
     }
 }
 
@@ -152,4 +162,16 @@ pub(crate) fn sol_memset(s: *mut u8, c: u8, n: usize) {
     unsafe {
         SYSCALL_STUBS.read().unwrap().sol_memset(s, c, n);
     }
+}
+
+pub(crate) fn sol_get_return_data() -> Option<(Pubkey, Vec<u8>)> {
+    SYSCALL_STUBS.read().unwrap().sol_get_return_data()
+}
+
+pub(crate) fn sol_set_return_data(data: &[u8]) {
+    SYSCALL_STUBS.write().unwrap().sol_set_return_data(data)
+}
+
+pub(crate) fn sol_log_data(data: &[&[u8]]) {
+    SYSCALL_STUBS.read().unwrap().sol_log_data(data)
 }

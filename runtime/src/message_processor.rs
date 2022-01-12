@@ -1,62 +1,134 @@
-use crate::{
-    accounts::Accounts, ancestors::Ancestors, instruction_recorder::InstructionRecorder,
-    log_collector::LogCollector, native_loader::NativeLoader, rent_collector::RentCollector,
-};
-use log::*;
-use serde::{Deserialize, Serialize};
-use safecoin_sdk::{
-    account::{AccountSharedData, ReadableAccount, WritableAccount},
-    account_utils::StateMut,
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-    feature_set::{
-        demote_program_write_locks, fix_write_privs, instructions_sysvar_enabled,
-        neon_evm_compute_budget, remove_native_loader, updated_verify_policy, FeatureSet,
+use {
+    crate::{
+        accounts::Accounts, ancestors::Ancestors, bank::TransactionAccountRefCell,
+        instruction_recorder::InstructionRecorder, log_collector::LogCollector,
+        native_loader::NativeLoader, rent_collector::RentCollector,
     },
-    ic_logger_msg, ic_msg,
-    keyed_account::{create_keyed_accounts_unified, keyed_account_at_index, KeyedAccount},
-    instruction::{CompiledInstruction, Instruction, InstructionError, VoteModerator},
-    message::Message,
-    native_loader,
-    process_instruction::{
-        BpfComputeBudget, ComputeMeter, Executor, InvokeContext, InvokeContextStackFrame, Logger,
-        ProcessInstructionWithContext,
+    log::*,
+    serde::{Deserialize, Serialize},
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::{
+        account::{AccountSharedData, ReadableAccount, WritableAccount},
+        account_utils::StateMut,
+        bpf_loader_upgradeable::{self, UpgradeableLoaderState},
+        feature_set::{
+            demote_program_write_locks, fix_write_privs, instructions_sysvar_enabled,
+            neon_evm_compute_budget, remove_native_loader, requestable_heap_size,
+            tx_wide_compute_cap, updated_verify_policy, FeatureSet,
+        },
+        ic_logger_msg, ic_msg,
+        instruction::{CompiledInstruction, Instruction, InstructionError, VoteModerator},
+        keyed_account::{create_keyed_accounts_unified, keyed_account_at_index, KeyedAccount},
+        message::Message,
+        native_loader,
+        process_instruction::{
+            BpfComputeBudget, ComputeMeter, Executor, InvokeContext, InvokeContextStackFrame,
+            Logger, ProcessInstructionWithContext,
+        },
+        pubkey::Pubkey,
+        rent::Rent,
+        system_program,
+        sysvar::instructions,
+        transaction::TransactionError,
     },
-    pubkey::Pubkey,
-    rent::Rent,
-    system_program,
-    sysvar::instructions,
-    transaction::TransactionError,
-};
-use std::{
-    cell::{Ref, RefCell},
-    collections::HashMap,
-    rc::Rc,
-    sync::Arc,
+    std::{
+        cell::{Ref, RefCell},
+        collections::HashMap,
+        rc::Rc,
+        sync::Arc,
+    },
 };
 
-pub struct Executors {
-    pub executors: HashMap<Pubkey, Arc<dyn Executor>>,
-    pub is_dirty: bool,
+pub type Executors = HashMap<Pubkey, TransactionExecutor>;
+
+/// Tracks whether a given executor is "dirty" and needs to updated in the
+/// executors cache
+pub struct TransactionExecutor {
+    executor: Arc<dyn Executor>,
+    is_miss: bool,
+    is_updated: bool,
 }
-impl Default for Executors {
-    fn default() -> Self {
+
+impl TransactionExecutor {
+    /// Wraps an executor and tracks that it doesn't need to be updated in the
+    /// executors cache.
+    pub fn new_cached(executor: Arc<dyn Executor>) -> Self {
         Self {
-            executors: HashMap::default(),
-            is_dirty: false,
+            executor,
+            is_miss: false,
+            is_updated: false,
         }
     }
-}
-impl Executors {
-    pub fn insert(&mut self, key: Pubkey, executor: Arc<dyn Executor>) {
-        let _ = self.executors.insert(key, executor);
-        self.is_dirty = true;
+
+    /// Wraps an executor and tracks that it needs to be updated in the
+    /// executors cache.
+    pub fn new_miss(executor: Arc<dyn Executor>) -> Self {
+        Self {
+            executor,
+            is_miss: true,
+            is_updated: false,
+        }
     }
-    pub fn get(&self, key: &Pubkey) -> Option<Arc<dyn Executor>> {
-        self.executors.get(key).cloned()
+
+    /// Wraps an executor and tracks that it needs to be updated in the
+    /// executors cache only if the transaction succeeded.
+    pub fn new_updated(executor: Arc<dyn Executor>) -> Self {
+        Self {
+            executor,
+            is_miss: false,
+            is_updated: true,
+        }
+    }
+
+    pub fn is_dirty(&self, include_updates: bool) -> bool {
+        self.is_miss || (include_updates && self.is_updated)
+    }
+
+    pub fn get(&self) -> Arc<dyn Executor> {
+        self.executor.clone()
+    }
+
+    pub fn clear_miss_for_test(&mut self) {
+        self.is_miss = false;
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
+pub struct ProgramTiming {
+    pub accumulated_us: u64,
+    pub accumulated_units: u64,
+    pub count: u32,
+    pub errored_txs_compute_consumed: Vec<u64>,
+    // Sum of all units in `errored_txs_compute_consumed`
+    pub total_errored_units: u64,
+}
+
+impl ProgramTiming {
+    pub fn coalesce_error_timings(&mut self, current_estimated_program_cost: u64) {
+        for tx_error_compute_consumed in self.errored_txs_compute_consumed.drain(..) {
+            let compute_units_update =
+                std::cmp::max(current_estimated_program_cost, tx_error_compute_consumed);
+            self.accumulated_units = self.accumulated_units.saturating_add(compute_units_update);
+            self.count = self.count.saturating_add(1);
+        }
+    }
+
+    pub fn accumulate_program_timings(&mut self, other: &ProgramTiming) {
+        self.accumulated_us = self.accumulated_us.saturating_add(other.accumulated_us);
+        self.accumulated_units = self
+            .accumulated_units
+            .saturating_add(other.accumulated_units);
+        self.count = self.count.saturating_add(other.count);
+        // Clones the entire vector, maybe not great...
+        self.errored_txs_compute_consumed
+            .extend(other.errored_txs_compute_consumed.clone());
+        self.total_errored_units = self
+            .total_errored_units
+            .saturating_add(other.total_errored_units);
+    }
+}
+
+#[derive(Default, Debug, PartialEq)]
 pub struct ExecuteDetailsTimings {
     pub serialize_us: u64,
     pub create_vm_us: u64,
@@ -66,18 +138,52 @@ pub struct ExecuteDetailsTimings {
     pub total_account_count: u64,
     pub total_data_size: usize,
     pub data_size_changed: usize,
+    pub per_program_timings: HashMap<Pubkey, ProgramTiming>,
 }
-
 impl ExecuteDetailsTimings {
     pub fn accumulate(&mut self, other: &ExecuteDetailsTimings) {
-        self.serialize_us += other.serialize_us;
-        self.create_vm_us += other.create_vm_us;
-        self.execute_us += other.execute_us;
-        self.deserialize_us += other.deserialize_us;
-        self.changed_account_count += other.changed_account_count;
-        self.total_account_count += other.total_account_count;
-        self.total_data_size += other.total_data_size;
-        self.data_size_changed += other.data_size_changed;
+        self.serialize_us = self.serialize_us.saturating_add(other.serialize_us);
+        self.create_vm_us = self.create_vm_us.saturating_add(other.create_vm_us);
+        self.execute_us = self.execute_us.saturating_add(other.execute_us);
+        self.deserialize_us = self.deserialize_us.saturating_add(other.deserialize_us);
+        self.changed_account_count = self
+            .changed_account_count
+            .saturating_add(other.changed_account_count);
+        self.total_account_count = self
+            .total_account_count
+            .saturating_add(other.total_account_count);
+        self.total_data_size = self.total_data_size.saturating_add(other.total_data_size);
+        self.data_size_changed = self
+            .data_size_changed
+            .saturating_add(other.data_size_changed);
+        for (id, other) in &other.per_program_timings {
+            let program_timing = self.per_program_timings.entry(*id).or_default();
+            program_timing.accumulate_program_timings(other);
+        }
+    }
+
+    pub fn accumulate_program(
+        &mut self,
+        program_id: &Pubkey,
+        us: u64,
+        compute_units_consumed: u64,
+        is_error: bool,
+    ) {
+        let program_timing = self.per_program_timings.entry(*program_id).or_default();
+        program_timing.accumulated_us = program_timing.accumulated_us.saturating_add(us);
+        if is_error {
+            program_timing
+                .errored_txs_compute_consumed
+                .push(compute_units_consumed);
+            program_timing.total_errored_units = program_timing
+                .total_errored_units
+                .saturating_add(compute_units_consumed);
+        } else {
+            program_timing.accumulated_units = program_timing
+                .accumulated_units
+                .saturating_add(compute_units_consumed);
+            program_timing.count = program_timing.count.saturating_add(1);
+        };
     }
 }
 
@@ -263,7 +369,7 @@ pub struct ThisInvokeContext<'a> {
     invoke_stack: Vec<InvokeContextStackFrame<'a>>,
     rent: Rent,
     pre_accounts: Vec<PreAccount>,
-    accounts: &'a [(Pubkey, Rc<RefCell<AccountSharedData>>)],
+    accounts: &'a [TransactionAccountRefCell],
     programs: &'a [(Pubkey, ProcessInstructionWithContext)],
     logger: Rc<RefCell<dyn Logger>>,
     bpf_compute_budget: BpfComputeBudget,
@@ -276,7 +382,9 @@ pub struct ThisInvokeContext<'a> {
     ancestors: &'a Ancestors,
     #[allow(clippy::type_complexity)]
     sysvars: RefCell<Vec<(Pubkey, Option<Rc<Vec<u8>>>)>>,
-    voter_grp : &'a dyn VoteModerator
+    // return data and program_id that set it
+    return_data: Option<(Pubkey, Vec<u8>)>,
+    voter_grp : &'a dyn VoteModerator,
 }
 impl<'a> ThisInvokeContext<'a> {
     #[allow(clippy::too_many_arguments)]
@@ -285,11 +393,12 @@ impl<'a> ThisInvokeContext<'a> {
         rent: Rent,
         message: &'a Message,
         instruction: &'a CompiledInstruction,
-        executable_accounts: &'a [(Pubkey, Rc<RefCell<AccountSharedData>>)],
-        accounts: &'a [(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        executable_accounts: &'a [TransactionAccountRefCell],
+        accounts: &'a [TransactionAccountRefCell],
         programs: &'a [(Pubkey, ProcessInstructionWithContext)],
         log_collector: Option<Rc<LogCollector>>,
         bpf_compute_budget: BpfComputeBudget,
+        compute_meter: Rc<RefCell<dyn ComputeMeter>>,
         executors: Rc<RefCell<Executors>>,
         instruction_recorder: Option<InstructionRecorder>,
         feature_set: Arc<FeatureSet>,
@@ -305,6 +414,13 @@ impl<'a> ThisInvokeContext<'a> {
             accounts,
             feature_set.is_active(&demote_program_write_locks::id()),
         );
+        let compute_meter = if feature_set.is_active(&tx_wide_compute_cap::id()) {
+            compute_meter
+        } else {
+            Rc::new(RefCell::new(ThisComputeMeter {
+                remaining: bpf_compute_budget.max_units,
+            }))
+        };
         let mut invoke_context = Self {
             invoke_stack: Vec::with_capacity(bpf_compute_budget.max_invoke_depth),
             rent,
@@ -313,9 +429,7 @@ impl<'a> ThisInvokeContext<'a> {
             programs,
             logger: Rc::new(RefCell::new(ThisLogger { log_collector })),
             bpf_compute_budget,
-            compute_meter: Rc::new(RefCell::new(ThisComputeMeter {
-                remaining: bpf_compute_budget.max_units,
-            })),
+            compute_meter,
             executors,
             instruction_recorder,
             feature_set,
@@ -323,7 +437,8 @@ impl<'a> ThisInvokeContext<'a> {
             account_db,
             ancestors,
             sysvars: RefCell::new(vec![]),
-	    voter_grp,
+            return_data: None,
+            voter_grp,
         };
         invoke_context
             .invoke_stack
@@ -397,7 +512,7 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
     fn verify_and_update(
         &mut self,
         instruction: &CompiledInstruction,
-        accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        accounts: &[TransactionAccountRefCell],
         write_privileges: &[bool],
     ) -> Result<(), InstructionError> {
         let stack_frame = self
@@ -451,10 +566,20 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
         self.compute_meter.clone()
     }
     fn add_executor(&self, pubkey: &Pubkey, executor: Arc<dyn Executor>) {
-        self.executors.borrow_mut().insert(*pubkey, executor);
+        self.executors
+            .borrow_mut()
+            .insert(*pubkey, TransactionExecutor::new_miss(executor));
+    }
+    fn update_executor(&self, pubkey: &Pubkey, executor: Arc<dyn Executor>) {
+        self.executors
+            .borrow_mut()
+            .insert(*pubkey, TransactionExecutor::new_updated(executor));
     }
     fn get_executor(&self, pubkey: &Pubkey) -> Option<Arc<dyn Executor>> {
-        self.executors.borrow().get(pubkey)
+        self.executors
+            .borrow()
+            .get(pubkey)
+            .map(|tx_executor| tx_executor.executor.clone())
     }
     fn record_instruction(&self, instruction: &Instruction) {
         if let Some(recorder) = &self.instruction_recorder {
@@ -505,7 +630,12 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
             None
         }
     }
-    
+    fn set_return_data(&mut self, return_data: Option<(Pubkey, Vec<u8>)>) {
+        self.return_data = return_data;
+    }
+    fn get_return_data(&self) -> &Option<(Pubkey, Vec<u8>)> {
+        &self.return_data
+    }
     fn voter_group(&self) -> & dyn VoteModerator {
         self.voter_grp
     }
@@ -618,8 +748,8 @@ impl MessageProcessor {
     fn create_keyed_accounts<'a>(
         message: &'a Message,
         instruction: &'a CompiledInstruction,
-        executable_accounts: &'a [(Pubkey, Rc<RefCell<AccountSharedData>>)],
-        accounts: &'a [(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        executable_accounts: &'a [TransactionAccountRefCell],
+        accounts: &'a [TransactionAccountRefCell],
         demote_program_write_locks: bool,
     ) -> Vec<(bool, bool, &'a Pubkey, &'a RefCell<AccountSharedData>)> {
         executable_accounts
@@ -946,8 +1076,8 @@ impl MessageProcessor {
     /// This method calls the instruction's program entrypoint function
     pub fn process_cross_program_instruction(
         message: &Message,
-        executable_accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
-        accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        executable_accounts: &[TransactionAccountRefCell],
+        accounts: &[TransactionAccountRefCell],
         caller_write_privileges: &[bool],
         invoke_context: &mut dyn InvokeContext,
     ) -> Result<(), InstructionError> {
@@ -956,6 +1086,9 @@ impl MessageProcessor {
 
             // Verify the calling program hasn't misbehaved
             invoke_context.verify_and_update(instruction, accounts, caller_write_privileges)?;
+
+            // clear the return data
+            invoke_context.set_return_data(None);
 
             // Construct keyed accounts
             let demote_program_write_locks =
@@ -1003,7 +1136,7 @@ impl MessageProcessor {
     pub fn create_pre_accounts(
         message: &Message,
         instruction: &CompiledInstruction,
-        accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        accounts: &[TransactionAccountRefCell],
     ) -> Vec<PreAccount> {
         let mut pre_accounts = Vec::with_capacity(instruction.accounts.len());
         {
@@ -1022,7 +1155,7 @@ impl MessageProcessor {
 
     /// Verify there are no outstanding borrows
     pub fn verify_account_references(
-        accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        accounts: &[TransactionAccountRefCell],
     ) -> Result<(), InstructionError> {
         for (_, account) in accounts.iter() {
             account
@@ -1038,8 +1171,8 @@ impl MessageProcessor {
         message: &Message,
         instruction: &CompiledInstruction,
         pre_accounts: &[PreAccount],
-        executable_accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
-        accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        executable_accounts: &[TransactionAccountRefCell],
+        accounts: &[TransactionAccountRefCell],
         rent: &Rent,
         timings: &mut ExecuteDetailsTimings,
         logger: Rc<RefCell<dyn Logger>>,
@@ -1100,7 +1233,7 @@ impl MessageProcessor {
     fn verify_and_update(
         instruction: &CompiledInstruction,
         pre_accounts: &mut [PreAccount],
-        accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        accounts: &[TransactionAccountRefCell],
         program_id: &Pubkey,
         rent: &Rent,
         write_privileges: &[bool],
@@ -1168,8 +1301,8 @@ impl MessageProcessor {
         &self,
         message: &Message,
         instruction: &CompiledInstruction,
-        executable_accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
-        accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        executable_accounts: &[TransactionAccountRefCell],
+        accounts: &[TransactionAccountRefCell],
         rent_collector: &RentCollector,
         log_collector: Option<Rc<LogCollector>>,
         executors: Rc<RefCell<Executors>>,
@@ -1177,6 +1310,7 @@ impl MessageProcessor {
         instruction_index: usize,
         feature_set: Arc<FeatureSet>,
         bpf_compute_budget: BpfComputeBudget,
+        compute_meter: Rc<RefCell<dyn ComputeMeter>>,
         timings: &mut ExecuteDetailsTimings,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
@@ -1185,9 +1319,9 @@ impl MessageProcessor {
         // Fixup the special instructions key if present
         // before the account pre-values are taken care of
         if feature_set.is_active(&instructions_sysvar_enabled::id()) {
-            for (pubkey, accont) in accounts.iter().take(message.account_keys.len()) {
+            for (pubkey, account) in accounts.iter().take(message.account_keys.len()) {
                 if instructions::check_id(pubkey) {
-                    let mut mut_account_ref = accont.borrow_mut();
+                    let mut mut_account_ref = account.borrow_mut();
                     instructions::store_current_index(
                         mut_account_ref.data_as_mut_slice(),
                         instruction_index as u16,
@@ -1200,11 +1334,17 @@ impl MessageProcessor {
         let program_id = instruction.program_id(&message.account_keys);
 
         let mut bpf_compute_budget = bpf_compute_budget;
-        if feature_set.is_active(&neon_evm_compute_budget::id())
+        if !feature_set.is_active(&tx_wide_compute_cap::id())
+            && feature_set.is_active(&neon_evm_compute_budget::id())
             && *program_id == crate::neon_evm_program::id()
         {
             // Bump the compute budget for neon_evm
-            bpf_compute_budget.max_units = 500_000;
+            bpf_compute_budget.max_units = bpf_compute_budget.max_units.max(500_000);
+        }
+        if !feature_set.is_active(&requestable_heap_size::id())
+            && feature_set.is_active(&neon_evm_compute_budget::id())
+            && *program_id == crate::neon_evm_program::id()
+        {
             bpf_compute_budget.heap_size = Some(256 * 1024);
         }
 
@@ -1218,6 +1358,7 @@ impl MessageProcessor {
             &self.programs,
             log_collector,
             bpf_compute_budget,
+            compute_meter,
             executors,
             instruction_recorder,
             feature_set,
@@ -1225,23 +1366,39 @@ impl MessageProcessor {
             ancestors,
             voter_grp,
         );
-        self.process_instruction(program_id, &instruction.data, &mut invoke_context)?;
-        Self::verify(
-            message,
-            instruction,
-            &invoke_context.pre_accounts,
-            executable_accounts,
-            accounts,
-            &rent_collector.rent,
-            timings,
-            invoke_context.get_logger(),
-            invoke_context.is_feature_active(&updated_verify_policy::id()),
-            invoke_context.is_feature_active(&demote_program_write_locks::id()),
-        )?;
+        let pre_remaining_units = invoke_context.get_compute_meter().borrow().get_remaining();
+        let mut time = Measure::start("execute_instruction");
+
+        let execute_result =
+            self.process_instruction(program_id, &instruction.data, &mut invoke_context);
+        let execute_or_verify_result = execute_result.and_then(|_| {
+            Self::verify(
+                message,
+                instruction,
+                &invoke_context.pre_accounts,
+                executable_accounts,
+                accounts,
+                &rent_collector.rent,
+                timings,
+                invoke_context.get_logger(),
+                invoke_context.is_feature_active(&updated_verify_policy::id()),
+                invoke_context.is_feature_active(&demote_program_write_locks::id()),
+            )
+        });
+
+        time.stop();
+        let post_remaining_units = invoke_context.get_compute_meter().borrow().get_remaining();
+        let compute_units_consumed = pre_remaining_units.saturating_sub(post_remaining_units);
+        timings.accumulate_program(
+            program_id,
+            time.as_us(),
+            compute_units_consumed,
+            execute_or_verify_result.is_err(),
+        );
 
         timings.accumulate(&invoke_context.timings);
 
-        Ok(())
+        execute_or_verify_result
     }
 
     /// Process a message.
@@ -1252,14 +1409,15 @@ impl MessageProcessor {
     pub fn process_message(
         &self,
         message: &Message,
-        loaders: &[Vec<(Pubkey, Rc<RefCell<AccountSharedData>>)>],
-        accounts: &[(Pubkey, Rc<RefCell<AccountSharedData>>)],
+        loaders: &[Vec<TransactionAccountRefCell>],
+        accounts: &[TransactionAccountRefCell],
         rent_collector: &RentCollector,
         log_collector: Option<Rc<LogCollector>>,
         executors: Rc<RefCell<Executors>>,
         instruction_recorders: Option<&[InstructionRecorder]>,
         feature_set: Arc<FeatureSet>,
         bpf_compute_budget: BpfComputeBudget,
+        compute_meter: Rc<RefCell<dyn ComputeMeter>>,
         timings: &mut ExecuteDetailsTimings,
         account_db: Arc<Accounts>,
         ancestors: &Ancestors,
@@ -1269,24 +1427,28 @@ impl MessageProcessor {
             let instruction_recorder = instruction_recorders
                 .as_ref()
                 .map(|recorders| recorders[instruction_index].clone());
-            self.execute_instruction(
-                message,
-                instruction,
-                &loaders[instruction_index],
-                accounts,
-                rent_collector,
-                log_collector.clone(),
-                executors.clone(),
-                instruction_recorder,
-                instruction_index,
-                feature_set.clone(),
-                bpf_compute_budget,
-                timings,
-                account_db.clone(),
-                ancestors,
-                voter_grp,
-            )
-            .map_err(|err| TransactionError::InstructionError(instruction_index as u8, err))?;
+            let err = self
+                .execute_instruction(
+                    message,
+                    instruction,
+                    &loaders[instruction_index],
+                    accounts,
+                    rent_collector,
+                    log_collector.clone(),
+                    executors.clone(),
+                    instruction_recorder,
+                    instruction_index,
+                    feature_set.clone(),
+                    bpf_compute_budget,
+                    compute_meter.clone(),
+                    timings,
+                    account_db.clone(),
+                    ancestors,
+                    voter_grp,
+                )
+                .map_err(|err| TransactionError::InstructionError(instruction_index as u8, err));
+
+            err?;
         }
         Ok(())
     }
@@ -1294,14 +1456,17 @@ impl MessageProcessor {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use safecoin_sdk::{
-        account::Account,
-        instruction::{AccountMeta, Instruction, InstructionError},
-        message::Message,
-        native_loader::create_loadable_account_for_test,
+    use {
+        super::*,
+        safecoin_sdk::{
+            account::Account,
+            account::{AccountSharedData, ReadableAccount},
+            instruction::{AccountMeta, Instruction, InstructionError},
+            message::Message,
+            native_loader::create_loadable_account_for_test,
+            process_instruction::MockComputeMeter,
+        },
     };
-
     struct MockVoteMod {
         in_group: bool,
     }
@@ -1313,10 +1478,11 @@ mod tests {
         }
     }
     impl VoteModerator for MockVoteMod {
-        fn vote_allowed(&self, _: solana_sdk::clock::Slot, _: solana_sdk::hash::Hash, _: solana_sdk::pubkey::Pubkey) -> bool {
+        fn vote_allowed(&self, _: safecoin_sdk::clock::Slot, _: safecoin_sdk::hash::Hash, _: safecoin_sdk::pubkey::Pubkey) -> bool {
             self.in_group
         }
     }    
+
     #[test]
     fn test_invoke_context() {
         const MAX_DEPTH: usize = 10;
@@ -1363,6 +1529,7 @@ mod tests {
             &[],
             None,
             BpfComputeBudget::default(),
+            Rc::new(RefCell::new(MockComputeMeter::default())),
             Rc::new(RefCell::new(Executors::default())),
             None,
             Arc::new(FeatureSet::all_enabled()),
@@ -1966,7 +2133,6 @@ mod tests {
             )],
             Some(&accounts[0].0),
         );
-
         let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
@@ -1978,6 +2144,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(),
+            Rc::new(RefCell::new(MockComputeMeter::default())),
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
@@ -2007,6 +2174,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(),
+            Rc::new(RefCell::new(MockComputeMeter::default())),
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
@@ -2040,6 +2208,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(),
+            Rc::new(RefCell::new(MockComputeMeter::default())),
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
@@ -2154,6 +2323,7 @@ mod tests {
             )],
             Some(&accounts[0].0),
         );
+
         let mvg = MockVoteMod::new();
         let result = message_processor.process_message(
             &message,
@@ -2165,6 +2335,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(),
+            Rc::new(RefCell::new(MockComputeMeter::default())),
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
@@ -2198,6 +2369,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(),
+            Rc::new(RefCell::new(MockComputeMeter::default())),
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
@@ -2229,6 +2401,7 @@ mod tests {
             None,
             Arc::new(FeatureSet::all_enabled()),
             BpfComputeBudget::new(),
+            Rc::new(RefCell::new(MockComputeMeter::default())),
             &mut ExecuteDetailsTimings::default(),
             Arc::new(Accounts::default()),
             &ancestors,
@@ -2345,12 +2518,13 @@ mod tests {
             programs.as_slice(),
             None,
             BpfComputeBudget::default(),
+            Rc::new(RefCell::new(MockComputeMeter::default())),
             Rc::new(RefCell::new(Executors::default())),
             None,
             Arc::new(feature_set),
             Arc::new(Accounts::default()),
             &ancestors,
-            &mvg,
+            &mvg
         );
 
         // not owned account modified by the caller (before the invoke)
@@ -2406,6 +2580,7 @@ mod tests {
             let message = Message::new(&[callee_instruction], None);
 
             let ancestors = Ancestors::default();
+            let mvg = MockVoteMod::new();
             let mut invoke_context = ThisInvokeContext::new(
                 &caller_program_id,
                 Rent::default(),
@@ -2416,11 +2591,13 @@ mod tests {
                 programs.as_slice(),
                 None,
                 BpfComputeBudget::default(),
+                Rc::new(RefCell::new(MockComputeMeter::default())),
                 Rc::new(RefCell::new(Executors::default())),
                 None,
                 Arc::new(FeatureSet::all_enabled()),
                 Arc::new(Accounts::default()),
                 &ancestors,
+                &mvg,
             );
 
             let caller_write_privileges = message
@@ -2558,6 +2735,7 @@ mod tests {
         let message = Message::new(&[callee_instruction.clone()], None);
 
         let ancestors = Ancestors::default();
+        let mvg = MockVoteMod::new();
         let mut invoke_context = ThisInvokeContext::new(
             &caller_program_id,
             Rent::default(),
@@ -2568,11 +2746,13 @@ mod tests {
             programs.as_slice(),
             None,
             BpfComputeBudget::default(),
+            Rc::new(RefCell::new(MockComputeMeter::default())),
             Rc::new(RefCell::new(Executors::default())),
             None,
             Arc::new(FeatureSet::all_enabled()),
             Arc::new(Accounts::default()),
             &ancestors,
+            &mvg,
         );
 
         // not owned account modified by the invoker
@@ -2624,6 +2804,7 @@ mod tests {
             let message = Message::new(&[callee_instruction.clone()], None);
 
             let ancestors = Ancestors::default();
+            let mvg = MockVoteMod::new();
             let mut invoke_context = ThisInvokeContext::new(
                 &caller_program_id,
                 Rent::default(),
@@ -2634,11 +2815,13 @@ mod tests {
                 programs.as_slice(),
                 None,
                 BpfComputeBudget::default(),
+                Rc::new(RefCell::new(MockComputeMeter::default())),
                 Rc::new(RefCell::new(Executors::default())),
                 None,
                 Arc::new(FeatureSet::all_enabled()),
                 Arc::new(Accounts::default()),
                 &ancestors,
+                &mvg,
             );
 
             assert_eq!(
@@ -2651,5 +2834,86 @@ mod tests {
                 case.1
             );
         }
+    }
+
+    fn construct_execute_timings_with_program(
+        program_id: &Pubkey,
+        us: u64,
+        compute_units_consumed: u64,
+    ) -> ExecuteDetailsTimings {
+        let mut execute_details_timings = ExecuteDetailsTimings::default();
+
+        // Accumulate an erroring transaction
+        let is_error = true;
+        execute_details_timings.accumulate_program(
+            program_id,
+            us,
+            compute_units_consumed,
+            is_error,
+        );
+
+        // Accumulate a non-erroring transaction
+        let is_error = false;
+        execute_details_timings.accumulate_program(
+            program_id,
+            us,
+            compute_units_consumed,
+            is_error,
+        );
+
+        let program_timings = execute_details_timings
+            .per_program_timings
+            .get(program_id)
+            .unwrap();
+
+        // Both error and success transactions count towards `accumulated_us`
+        assert_eq!(program_timings.accumulated_us, us.saturating_mul(2));
+        assert_eq!(program_timings.accumulated_units, compute_units_consumed);
+        assert_eq!(program_timings.count, 1,);
+        assert_eq!(
+            program_timings.errored_txs_compute_consumed,
+            vec![compute_units_consumed]
+        );
+        assert_eq!(program_timings.total_errored_units, compute_units_consumed,);
+
+        execute_details_timings
+    }
+
+    #[test]
+    fn test_execute_details_timing_acumulate_program() {
+        // Acumulate an erroring transaction
+        let program_id = Pubkey::new_unique();
+        let us = 100;
+        let compute_units_consumed = 1;
+        construct_execute_timings_with_program(&program_id, us, compute_units_consumed);
+    }
+
+    #[test]
+    fn test_execute_details_timing_acumulate() {
+        // Acumulate an erroring transaction
+        let program_id = Pubkey::new_unique();
+        let us = 100;
+        let compute_units_consumed = 1;
+        let mut execute_details_timings = ExecuteDetailsTimings::default();
+
+        // Construct another separate instance of ExecuteDetailsTimings with non default fields
+        let mut other_execute_details_timings =
+            construct_execute_timings_with_program(&program_id, us, compute_units_consumed);
+        let account_count = 1;
+        let data_size_changed = 1;
+        other_execute_details_timings.serialize_us = us;
+        other_execute_details_timings.create_vm_us = us;
+        other_execute_details_timings.execute_us = us;
+        other_execute_details_timings.deserialize_us = us;
+        other_execute_details_timings.changed_account_count = account_count;
+        other_execute_details_timings.total_account_count = account_count;
+        other_execute_details_timings.total_data_size = data_size_changed;
+        other_execute_details_timings.data_size_changed = data_size_changed;
+
+        // Accumulate the other instance into the current instance
+        execute_details_timings.accumulate(&other_execute_details_timings);
+
+        // Check that the two instances are equal
+        assert_eq!(execute_details_timings, other_execute_details_timings);
     }
 }

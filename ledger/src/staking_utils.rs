@@ -1,9 +1,7 @@
-use solana_runtime::bank::Bank;
-use safecoin_sdk::{
-    clock::{Epoch, Slot},
-    pubkey::Pubkey,
+use {
+    solana_runtime::bank::Bank,
+    safecoin_sdk::clock::{Epoch, Slot},
 };
-use std::collections::HashMap;
 
 /// Looks through vote accounts, and finds the latest slot that has achieved
 /// supermajority lockout
@@ -15,13 +13,6 @@ pub fn get_supermajority_slot(bank: &Bank, epoch: Epoch) -> Option<u64> {
 
     // Filter out the states that don't have a max lockout
     find_supermajority_slot(supermajority_stake, stakes_and_lockouts.iter())
-}
-
-pub fn vote_account_stakes(bank: &Bank) -> HashMap<Pubkey, u64> {
-    bank.vote_accounts()
-        .into_iter()
-        .map(|(id, (stake, _))| (id, stake))
-        .collect()
 }
 
 fn epoch_stakes_and_lockouts(bank: &Bank, epoch: Epoch) -> Vec<(u64, Option<u64>)> {
@@ -61,31 +52,33 @@ where
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::*;
-    use crate::genesis_utils::{
-        bootstrap_validator_stake_lamports, create_genesis_config, GenesisConfigInfo,
-    };
-    use rand::Rng;
-    use solana_runtime::vote_account::{ArcVoteAccount, VoteAccounts};
-    use safecoin_sdk::{
-        account::{from_account, AccountSharedData},
-        clock::Clock,
-        instruction::Instruction,
-        pubkey::Pubkey,
-        signature::{Keypair, Signer},
-        signers::Signers,
-        stake::{
-            instruction as stake_instruction,
-            state::{Authorized, Delegation, Lockup, Stake},
+    use {
+        super::*,
+        crate::genesis_utils::{
+            bootstrap_validator_stake_lamports, create_genesis_config, GenesisConfigInfo,
         },
-        sysvar::stake_history::{self, StakeHistory},
-        transaction::Transaction,
+        rand::Rng,
+        solana_runtime::vote_account::{VoteAccount, VoteAccounts},
+        safecoin_sdk::{
+            account::{from_account, AccountSharedData},
+            clock::Clock,
+            instruction::Instruction,
+            pubkey::Pubkey,
+            signature::{Keypair, Signer},
+            signers::Signers,
+            stake::{
+                instruction as stake_instruction,
+                state::{Authorized, Delegation, Lockup, Stake},
+            },
+            sysvar::stake_history::{self, StakeHistory},
+            transaction::Transaction,
+        },
+        solana_vote_program::{
+            vote_instruction,
+            vote_state::{VoteInit, VoteState, VoteStateVersions},
+        },
+        std::sync::Arc,
     };
-    use solana_vote_program::{
-        vote_instruction,
-        vote_state::{VoteInit, VoteState, VoteStateVersions},
-    };
-    use std::sync::Arc;
 
     fn new_from_parent(parent: &Arc<Bank>, slot: Slot) -> Bank {
         Bank::new_from_parent(parent, &Pubkey::default(), slot)
@@ -308,7 +301,7 @@ pub(crate) mod tests {
             )
             .unwrap();
             let vote_pubkey = Pubkey::new_unique();
-            (vote_pubkey, (stake, ArcVoteAccount::from(account)))
+            (vote_pubkey, (stake, VoteAccount::from(account)))
         });
         let result = vote_accounts.collect::<VoteAccounts>().staked_nodes();
         assert_eq!(result.len(), 2);

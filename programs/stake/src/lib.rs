@@ -1,7 +1,6 @@
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(min_specialization))]
 #![allow(clippy::integer_arithmetic)]
 use safecoin_sdk::genesis_config::GenesisConfig;
-
 #[deprecated(
     since = "1.7.2",
     note = "Please use `safecoin_sdk::stake::program::id` or `safecoin_program::stake::program::id` instead"

@@ -1,33 +1,35 @@
-use crate::{
-    ancestors::Ancestors,
-    contains::Contains,
-    inline_safe_token_v2_0::{self, SAFE_TOKEN_ACCOUNT_MINT_OFFSET, SAFE_TOKEN_ACCOUNT_OWNER_OFFSET},
-    secondary_index::*,
-};
-use bv::BitVec;
-use log::*;
-use ouroboros::self_referencing;
-use safecoin_measure::measure::Measure;
-use safecoin_sdk::{
-    clock::{BankId, Slot},
-    pubkey::{Pubkey, PUBKEY_BYTES},
-};
-use std::{
-    collections::{
-        btree_map::{self, BTreeMap, Entry},
-        HashSet,
+use {
+    crate::{
+        ancestors::Ancestors,
+        contains::Contains,
+        inline_safe_token::{self, SAFE_TOKEN_ACCOUNT_MINT_OFFSET, SAFE_TOKEN_ACCOUNT_OWNER_OFFSET},
+        secondary_index::*,
     },
-    ops::{
-        Bound,
-        Bound::{Excluded, Included, Unbounded},
-        Range, RangeBounds,
+    bv::BitVec,
+    log::*,
+    ouroboros::self_referencing,
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::{
+        clock::{BankId, Slot},
+        pubkey::{Pubkey, PUBKEY_BYTES},
     },
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard,
+    std::{
+        collections::{
+            btree_map::{self, BTreeMap, Entry},
+            HashSet,
+        },
+        ops::{
+            Bound,
+            Bound::{Excluded, Included, Unbounded},
+            Range, RangeBounds,
+        },
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard,
+        },
     },
+    thiserror::Error,
 };
-use thiserror::Error;
 
 pub const ITER_BATCH_SIZE: usize = 1000;
 const BINS: usize = 16;
@@ -1334,8 +1336,8 @@ impl<T: 'static + Clone + IsCached + ZeroLamport + std::marker::Sync + std::mark
         // 2) When the fetch from storage occurs, it will return AccountSharedData::Default
         // (as persisted tombstone for snapshots). This will then ultimately be
         // filtered out by post-scan filters, like in `get_filtered_safe_token_accounts_by_owner()`.
-        if *account_owner == inline_safe_token_v2_0::id()
-            && account_data.len() == inline_safe_token_v2_0::state::Account::get_packed_len()
+        if *account_owner == inline_safe_token::id()
+            && account_data.len() == inline_safe_token::state::Account::get_packed_len()
         {
             if account_indexes.contains(&AccountIndex::SafeTokenOwner) {
                 let owner_key = Pubkey::new(
@@ -1733,8 +1735,10 @@ impl<T: 'static + Clone + IsCached + ZeroLamport + std::marker::Sync + std::mark
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-    use safecoin_sdk::signature::{Keypair, Signer};
+    use {
+        super::*,
+        safecoin_sdk::signature::{Keypair, Signer},
+    };
 
     pub enum SecondaryIndexTypes<'a> {
         RwLock(&'a SecondaryIndex<RwLockSecondaryIndexEntry>),
@@ -3365,7 +3369,7 @@ pub mod tests {
         let index_key = Pubkey::new_unique();
         let account_key = Pubkey::new_unique();
 
-        let mut account_data = vec![0; inline_safe_token_v2_0::state::Account::get_packed_len()];
+        let mut account_data = vec![0; inline_safe_token::state::Account::get_packed_len()];
         account_data[key_start..key_end].clone_from_slice(&(index_key.to_bytes()));
 
         // Insert slots into secondary index
@@ -3374,7 +3378,7 @@ pub mod tests {
                 *slot,
                 &account_key,
                 // Make sure these accounts are added to secondary index
-                &inline_safe_token_v2_0::id(),
+                &inline_safe_token::id(),
                 &account_data,
                 secondary_indexes,
                 true,
@@ -3539,7 +3543,7 @@ pub mod tests {
         let mut secondary_indexes = secondary_indexes.clone();
         let account_key = Pubkey::new_unique();
         let index_key = Pubkey::new_unique();
-        let mut account_data = vec![0; inline_safe_token_v2_0::state::Account::get_packed_len()];
+        let mut account_data = vec![0; inline_safe_token::state::Account::get_packed_len()];
         account_data[key_start..key_end].clone_from_slice(&(index_key.to_bytes()));
 
         // Wrong program id
@@ -3559,7 +3563,7 @@ pub mod tests {
         index.upsert(
             0,
             &account_key,
-            &inline_safe_token_v2_0::id(),
+            &inline_safe_token::id(),
             &account_data[1..],
             &secondary_indexes,
             true,
@@ -3574,7 +3578,7 @@ pub mod tests {
         for _ in 0..2 {
             index.update_secondary_indexes(
                 &account_key,
-                &inline_safe_token_v2_0::id(),
+                &inline_safe_token::id(),
                 &account_data,
                 &secondary_indexes,
             );
@@ -3593,7 +3597,7 @@ pub mod tests {
         secondary_index.reverse_index.clear();
         index.update_secondary_indexes(
             &account_key,
-            &inline_safe_token_v2_0::id(),
+            &inline_safe_token::id(),
             &account_data,
             &secondary_indexes,
         );
@@ -3610,7 +3614,7 @@ pub mod tests {
         secondary_index.reverse_index.clear();
         index.update_secondary_indexes(
             &account_key,
-            &inline_safe_token_v2_0::id(),
+            &inline_safe_token::id(),
             &account_data,
             &secondary_indexes,
         );
@@ -3670,10 +3674,10 @@ pub mod tests {
         let secondary_key1 = Pubkey::new_unique();
         let secondary_key2 = Pubkey::new_unique();
         let slot = 1;
-        let mut account_data1 = vec![0; inline_safe_token_v2_0::state::Account::get_packed_len()];
+        let mut account_data1 = vec![0; inline_safe_token::state::Account::get_packed_len()];
         account_data1[index_key_start..index_key_end]
             .clone_from_slice(&(secondary_key1.to_bytes()));
-        let mut account_data2 = vec![0; inline_safe_token_v2_0::state::Account::get_packed_len()];
+        let mut account_data2 = vec![0; inline_safe_token::state::Account::get_packed_len()];
         account_data2[index_key_start..index_key_end]
             .clone_from_slice(&(secondary_key2.to_bytes()));
 
@@ -3681,7 +3685,7 @@ pub mod tests {
         index.upsert(
             slot,
             &account_key,
-            &inline_safe_token_v2_0::id(),
+            &inline_safe_token::id(),
             &account_data1,
             secondary_indexes,
             true,
@@ -3692,7 +3696,7 @@ pub mod tests {
         index.upsert(
             slot,
             &account_key,
-            &inline_safe_token_v2_0::id(),
+            &inline_safe_token::id(),
             &account_data2,
             secondary_indexes,
             true,
@@ -3711,7 +3715,7 @@ pub mod tests {
         index.upsert(
             later_slot,
             &account_key,
-            &inline_safe_token_v2_0::id(),
+            &inline_safe_token::id(),
             &account_data1,
             secondary_indexes,
             true,

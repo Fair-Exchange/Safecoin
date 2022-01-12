@@ -1,48 +1,50 @@
-use crate::consensus::Stake;
-use safecoin_measure::measure::Measure;
-use solana_metrics::datapoint_info;
-use solana_rpc::rpc_subscriptions::RpcSubscriptions;
-use solana_runtime::{
-    bank::{
-    Bank,BankVoteThreshold,
+use {
+    crate::consensus::Stake,
+    safecoin_measure::measure::Measure,
+    solana_metrics::datapoint_info,
+    solana_rpc::rpc_subscriptions::RpcSubscriptions,
+    solana_runtime::{
+        bank::Bank,
+        commitment::{BlockCommitment, BlockCommitmentCache, CommitmentSlots, VOTE_THRESHOLD_SIZE},
     },
-    commitment::{BlockCommitment, BlockCommitmentCache, CommitmentSlots},
-};
-use safecoin_sdk::clock::Slot;
-use solana_vote_program::vote_state::VoteState;
-use std::{
-    cmp::max,
-    collections::HashMap,
-    sync::atomic::{AtomicBool, Ordering},
-    sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender},
-    sync::{Arc, RwLock},
-    thread::{self, Builder, JoinHandle},
-    time::Duration,
+    safecoin_sdk::clock::Slot,
+    solana_vote_program::vote_state::VoteState,
+    std::{
+        cmp::max,
+        collections::HashMap,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            mpsc::{channel, Receiver, RecvTimeoutError, Sender},
+            Arc, RwLock,
+        },
+        thread::{self, Builder, JoinHandle},
+        time::Duration,
+    },
 };
 
 pub struct CommitmentAggregationData {
     bank: Arc<Bank>,
     root: Slot,
+    total_stake: Stake,
 }
 
 impl CommitmentAggregationData {
-    pub fn new(bank: Arc<Bank>, root: Slot) -> Self {
+    pub fn new(bank: Arc<Bank>, root: Slot, total_stake: Stake) -> Self {
         Self {
             bank,
             root,
+            total_stake,
         }
     }
 }
 
-fn get_highest_confirmed_root(mut rooted_stake: Vec<(Slot, u64)>, bank:&dyn BankVoteThreshold) -> Slot {
-    if let Some(threshold) = bank.epoch_vote_threshold() {
-        rooted_stake.sort_by(|a, b| a.0.cmp(&b.0).reverse());
-        let mut stake_sum = 0;
-        for (root, stake) in rooted_stake {
-            stake_sum += stake;
-            if stake_sum as f64 > threshold {
-                return root;
-            }
+fn get_highest_confirmed_root(mut rooted_stake: Vec<(Slot, u64)>, total_stake: u64) -> Slot {
+    rooted_stake.sort_by(|a, b| a.0.cmp(&b.0).reverse());
+    let mut stake_sum = 0;
+    for (root, stake) in rooted_stake {
+        stake_sum += stake;
+        if (stake_sum as f64 / total_stake as f64) > VOTE_THRESHOLD_SIZE {
+            return root;
         }
     }
     0
@@ -143,17 +145,13 @@ impl AggregateCommitmentService {
     ) -> CommitmentSlots {
         let (block_commitment, rooted_stake) =
             Self::aggregate_commitment(&ancestors, &aggregation_data.bank);
-        let bvt: &dyn BankVoteThreshold = aggregation_data.bank.threshold_delegate();
-        let highest_confirmed_root =
-            get_highest_confirmed_root(rooted_stake, bvt);
 
-        let mut threshold = 0.6;
-        if let Some(hasthresh) = bvt.epoch_vote_threshold() {
-            threshold = hasthresh;
-        }
+        let highest_confirmed_root =
+            get_highest_confirmed_root(rooted_stake, aggregation_data.total_stake);
+
         let mut new_block_commitment = BlockCommitmentCache::new(
             block_commitment,
-            threshold,
+            aggregation_data.total_stake,
             CommitmentSlots {
                 slot: aggregation_data.bank.slot(),
                 root: aggregation_data.root,
@@ -189,8 +187,8 @@ impl AggregateCommitmentService {
 
         let mut commitment = HashMap::new();
         let mut rooted_stake: Vec<(Slot, u64)> = Vec::new();
-        for (_, (lamports, account)) in bank.vote_accounts().into_iter() {
-            if lamports == 0 {
+        for (lamports, account) in bank.vote_accounts().values() {
+            if *lamports == 0 {
                 continue;
             }
             if let Ok(vote_state) = account.vote_state().as_ref() {
@@ -199,7 +197,7 @@ impl AggregateCommitmentService {
                     &mut rooted_stake,
                     vote_state,
                     ancestors,
-                    lamports,
+                    *lamports,
                 );
             }
         }
@@ -253,38 +251,29 @@ impl AggregateCommitmentService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
-    use solana_runtime::{
-        accounts_background_service::AbsRequestSender,
-        bank_forks::BankForks,
-        bank::BankVoteThreshold,
-        genesis_utils::{create_genesis_config_with_vote_accounts, ValidatorVoteKeypairs},
+    use {
+        super::*,
+        solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
+        solana_runtime::{
+            accounts_background_service::AbsRequestSender,
+            bank_forks::BankForks,
+            genesis_utils::{create_genesis_config_with_vote_accounts, ValidatorVoteKeypairs},
+        },
+        safecoin_sdk::{account::Account, pubkey::Pubkey, signature::Signer},
+        solana_stake_program::stake_state,
+        solana_vote_program::{
+            vote_state::{self, VoteStateVersions},
+            vote_transaction,
+        },
     };
-    use safecoin_sdk::{account::Account, pubkey::Pubkey, signature::Signer};
-    use solana_stake_program::stake_state;
-    use solana_vote_program::{
-        vote_state::{self, VoteStateVersions},
-        vote_transaction,
-    };
-    pub struct MockBankThreshold {
-        val : f64,
-    }
-
-    impl BankVoteThreshold for MockBankThreshold {
-        fn epoch_vote_threshold(&self) -> Option<f64> {
-            Some(self.val)
-        }
-    }
 
     #[test]
     fn test_get_highest_confirmed_root() {
-        let mbt = MockBankThreshold{val:0.66};
-        assert_eq!(get_highest_confirmed_root(vec![], &mbt), 0);
+        assert_eq!(get_highest_confirmed_root(vec![], 10), 0);
         let rooted_stake = vec![(0, 5), (1, 5)];
-        assert_eq!(get_highest_confirmed_root(rooted_stake,&mbt), 0);
+        assert_eq!(get_highest_confirmed_root(rooted_stake, 10), 0);
         let rooted_stake = vec![(1, 5), (0, 10), (2, 5), (1, 4)];
-        assert_eq!(get_highest_confirmed_root(rooted_stake,&mbt), 1);
+        assert_eq!(get_highest_confirmed_root(rooted_stake, 10), 1);
     }
 
     #[test]
@@ -497,8 +486,7 @@ mod tests {
             }
         }
         assert_eq!(rooted_stake.len(), 2);
-	let mbt = MockBankThreshold{val:0.66};
-        assert_eq!(get_highest_confirmed_root(rooted_stake, &mbt), 1)
+        assert_eq!(get_highest_confirmed_root(rooted_stake, 100), 1)
     }
 
     #[test]
@@ -584,6 +572,7 @@ mod tests {
             CommitmentAggregationData {
                 bank: working_bank,
                 root: 0,
+                total_stake: 100,
             },
             ancestors,
         );
@@ -612,6 +601,7 @@ mod tests {
             CommitmentAggregationData {
                 bank: working_bank,
                 root: 1,
+                total_stake: 100,
             },
             ancestors,
         );
@@ -651,6 +641,7 @@ mod tests {
             CommitmentAggregationData {
                 bank: working_bank,
                 root: 0,
+                total_stake: 100,
             },
             ancestors,
         );

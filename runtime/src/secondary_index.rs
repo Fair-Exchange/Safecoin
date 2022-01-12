@@ -1,11 +1,13 @@
-use dashmap::{mapref::entry::Entry::Occupied, DashMap};
-use safecoin_sdk::{pubkey::Pubkey, timing::AtomicInterval};
-use std::{
-    collections::HashSet,
-    fmt::Debug,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        RwLock,
+use {
+    dashmap::{mapref::entry::Entry::Occupied, DashMap},
+    safecoin_sdk::{pubkey::Pubkey, timing::AtomicInterval},
+    std::{
+        collections::HashSet,
+        fmt::Debug,
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            RwLock,
+        },
     },
 };
 

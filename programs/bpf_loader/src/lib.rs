@@ -1,7 +1,6 @@
 #![allow(clippy::integer_arithmetic)]
 pub mod alloc;
 pub mod allocator_bump;
-pub mod bpf_verifier;
 pub mod deprecated;
 pub mod serialization;
 pub mod syscalls;
@@ -9,47 +8,55 @@ pub mod upgradeable;
 pub mod upgradeable_with_jit;
 pub mod with_jit;
 
-use crate::{
-    bpf_verifier::VerifierError,
-    serialization::{deserialize_parameters, serialize_parameters},
-    syscalls::SyscallError,
-};
-use log::{log_enabled, trace, Level::Trace};
-use safecoin_measure::measure::Measure;
-use solana_rbpf::{
-    aligned_memory::AlignedMemory,
-    ebpf::{HOST_ALIGN, MM_HEAP_START},
-    error::{EbpfError, UserDefinedError},
-    memory_region::MemoryRegion,
-    static_analysis::Analysis,
-    vm::{Config, EbpfVm, Executable, InstructionMeter},
-};
-use solana_runtime::message_processor::MessageProcessor;
-use safecoin_sdk::{
-    account::{ReadableAccount, WritableAccount},
-    account_utils::State,
-    bpf_loader, bpf_loader_deprecated,
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-    clock::Clock,
-    entrypoint::{HEAP_LENGTH, SUCCESS},
-    feature_set::{
-        add_missing_program_error_mappings, close_upgradeable_program_accounts, fix_write_privs,
-        reduce_required_deploy_balance, upgradeable_close_instruction,
+#[macro_use]
+extern crate solana_metrics;
+
+use {
+    crate::{
+        serialization::{deserialize_parameters, serialize_parameters},
+        syscalls::SyscallError,
     },
-    ic_logger_msg, ic_msg,
-    instruction::{AccountMeta, InstructionError},
-    keyed_account::{from_keyed_account, keyed_account_at_index, KeyedAccount},
-    loader_instruction::LoaderInstruction,
-    loader_upgradeable_instruction::UpgradeableLoaderInstruction,
-    process_instruction::{stable_log, ComputeMeter, Executor, InvokeContext, Logger},
-    program_error::{ACCOUNT_NOT_RENT_EXEMPT, BORSH_IO_ERROR},
-    program_utils::limited_deserialize,
-    pubkey::Pubkey,
-    rent::Rent,
-    system_instruction::{self, MAX_PERMITTED_DATA_LENGTH},
+    log::{log_enabled, trace, Level::Trace},
+    safecoin_measure::measure::Measure,
+    solana_rbpf::{
+        aligned_memory::AlignedMemory,
+        ebpf::HOST_ALIGN,
+        elf::Executable,
+        error::{EbpfError, UserDefinedError},
+        static_analysis::Analysis,
+        verifier::{self, VerifierError},
+        vm::{Config, EbpfVm, InstructionMeter},
+    },
+    solana_runtime::message_processor::MessageProcessor,
+    safecoin_sdk::{
+        account::{ReadableAccount, WritableAccount},
+        account_utils::State,
+        bpf_loader, bpf_loader_deprecated,
+        bpf_loader_upgradeable::{self, UpgradeableLoaderState},
+        clock::Clock,
+        entrypoint::{HEAP_LENGTH, SUCCESS},
+        feature_set::{
+            add_missing_program_error_mappings, close_upgradeable_program_accounts,
+            fix_write_privs, reduce_required_deploy_balance, reject_all_elf_rw,
+            reject_deployment_of_unresolved_syscalls,
+            reject_section_virtual_address_file_offset_mismatch, start_verify_shift32_imm,
+            stop_verify_mul64_imm_nonzero, upgradeable_close_instruction,
+        },
+        ic_logger_msg, ic_msg,
+        instruction::{AccountMeta, InstructionError},
+        keyed_account::{from_keyed_account, keyed_account_at_index, KeyedAccount},
+        loader_instruction::LoaderInstruction,
+        loader_upgradeable_instruction::UpgradeableLoaderInstruction,
+        process_instruction::{stable_log, ComputeMeter, Executor, InvokeContext, Logger},
+        program_error::{ACCOUNT_NOT_RENT_EXEMPT, BORSH_IO_ERROR},
+        program_utils::limited_deserialize,
+        pubkey::Pubkey,
+        rent::Rent,
+        system_instruction::{self, MAX_PERMITTED_DATA_LENGTH},
+    },
+    std::{cell::RefCell, fmt::Debug, pin::Pin, rc::Rc, sync::Arc},
+    thiserror::Error,
 };
-use std::{cell::RefCell, fmt::Debug, rc::Rc, sync::Arc};
-use thiserror::Error;
 
 safecoin_sdk::declare_builtin!(
     safecoin_sdk::bpf_loader::ID,
@@ -77,6 +84,7 @@ pub fn create_executor(
     program_data_offset: usize,
     invoke_context: &mut dyn InvokeContext,
     use_jit: bool,
+    reject_deployment_of_broken_elfs: bool,
 ) -> Result<Arc<BpfExecutor>, InstructionError> {
     let syscall_registry = syscalls::register_syscalls(invoke_context).map_err(|e| {
         ic_msg!(invoke_context, "Failed to register syscalls: {}", e);
@@ -86,29 +94,64 @@ pub fn create_executor(
     let config = Config {
         max_call_depth: bpf_compute_budget.max_call_depth,
         stack_frame_size: bpf_compute_budget.stack_frame_size,
-        enable_instruction_meter: true,
         enable_instruction_tracing: log_enabled!(Trace),
+        reject_unresolved_syscalls: reject_deployment_of_broken_elfs
+            && invoke_context.is_feature_active(&reject_deployment_of_unresolved_syscalls::id()),
+        reject_section_virtual_address_file_offset_mismatch: reject_deployment_of_broken_elfs
+            && invoke_context
+                .is_feature_active(&reject_section_virtual_address_file_offset_mismatch::id()),
+        verify_mul64_imm_nonzero: !invoke_context
+            .is_feature_active(&stop_verify_mul64_imm_nonzero::id()),
+        verify_shift32_imm: invoke_context.is_feature_active(&start_verify_shift32_imm::id()),
+        reject_all_writable_sections: invoke_context.is_feature_active(&reject_all_elf_rw::id()),
+        ..Config::default()
     };
+    let program_id;
+    let load_elf_us: u64;
+    let verify_elf_us: u64;
+    let mut jit_compile_us = 0u64;
     let mut executable = {
         let keyed_accounts = invoke_context.get_keyed_accounts()?;
         let program = keyed_account_at_index(keyed_accounts, program_account_index)?;
+        program_id = *program.unsigned_key();
         let account = program.try_account_ref()?;
         let data = &account.data()[program_data_offset..];
-        <dyn Executable<BpfError, ThisInstructionMeter>>::from_elf(data, None, config)
+        let mut load_elf_time = Measure::start("load_elf_time");
+        let executable = Executable::<BpfError, ThisInstructionMeter>::from_elf(
+            data,
+            None,
+            config,
+            syscall_registry,
+        );
+        load_elf_time.stop();
+        load_elf_us = load_elf_time.as_us();
+        executable
     }
     .map_err(|e| map_ebpf_error(invoke_context, e))?;
-    let (_, elf_bytes) = executable
-        .get_text_bytes()
-        .map_err(|e| map_ebpf_error(invoke_context, e))?;
-    bpf_verifier::check(elf_bytes)
-        .map_err(|e| map_ebpf_error(invoke_context, EbpfError::UserError(e)))?;
-    executable.set_syscall_registry(syscall_registry);
+    let text_bytes = executable.get_text_bytes().1;
+    let mut verify_code_time = Measure::start("verify_code_time");
+    verifier::check(text_bytes, &config)
+        .map_err(|e| map_ebpf_error(invoke_context, EbpfError::UserError(e.into())))?;
+    verify_code_time.stop();
+    verify_elf_us = verify_code_time.as_us();
     if use_jit {
-        if let Err(err) = executable.jit_compile() {
+        let mut jit_compile_time = Measure::start("jit_compile_time");
+        let jit_compile_result =
+            Executable::<BpfError, ThisInstructionMeter>::jit_compile(&mut executable);
+        jit_compile_time.stop();
+        jit_compile_us = jit_compile_time.as_us();
+        if let Err(err) = jit_compile_result {
             ic_msg!(invoke_context, "Failed to compile program {:?}", err);
             return Err(InstructionError::ProgramFailedToCompile);
         }
     }
+    datapoint_trace!(
+        "create_executor_trace",
+        ("program_id", program_id.to_string(), String),
+        ("load_elf_us", load_elf_us, i64),
+        ("verify_elf_us", verify_elf_us, i64),
+        ("jit_compile_us", jit_compile_us, i64),
+    );
     Ok(Arc::new(BpfExecutor { executable }))
 }
 
@@ -145,17 +188,16 @@ fn check_loader_id(id: &Pubkey) -> bool {
 /// Create the BPF virtual machine
 pub fn create_vm<'a>(
     loader_id: &'a Pubkey,
-    program: &'a dyn Executable<BpfError, ThisInstructionMeter>,
+    program: &'a Pin<Box<Executable<BpfError, ThisInstructionMeter>>>,
     parameter_bytes: &mut [u8],
     invoke_context: &'a mut dyn InvokeContext,
 ) -> Result<EbpfVm<'a, BpfError, ThisInstructionMeter>, EbpfError<BpfError>> {
     let bpf_compute_budget = invoke_context.get_bpf_compute_budget();
-    let heap = AlignedMemory::new_with_size(
+    let mut heap = AlignedMemory::new_with_size(
         bpf_compute_budget.heap_size.unwrap_or(HEAP_LENGTH),
         HOST_ALIGN,
     );
-    let heap_region = MemoryRegion::new_from_slice(heap.as_slice(), MM_HEAP_START, 0, true);
-    let mut vm = EbpfVm::new(program, parameter_bytes, &[heap_region])?;
+    let mut vm = EbpfVm::new(program, heap.as_slice_mut(), parameter_bytes)?;
     syscalls::bind_syscall_context_objects(loader_id, &mut vm, invoke_context, heap)?;
     Ok(vm)
 }
@@ -234,7 +276,8 @@ fn process_instruction_common(
         let executor = match invoke_context.get_executor(program_id) {
             Some(executor) => executor,
             None => {
-                let executor = create_executor(0, program_data_offset, invoke_context, use_jit)?;
+                let executor =
+                    create_executor(0, program_data_offset, invoke_context, use_jit, false)?;
                 invoke_context.add_executor(program_id, executor.clone());
                 executor
             }
@@ -428,8 +471,8 @@ fn process_loader_upgradeable_instruction(
             )?;
 
             // Load and verify the program bits
-            let executor = create_executor(3, buffer_data_offset, invoke_context, use_jit)?;
-            invoke_context.add_executor(&new_program_id, executor);
+            let executor = create_executor(3, buffer_data_offset, invoke_context, use_jit, true)?;
+            invoke_context.update_executor(&new_program_id, executor);
 
             let keyed_accounts = invoke_context.get_keyed_accounts()?;
             let payer = keyed_account_at_index(keyed_accounts, 0)?;
@@ -560,8 +603,8 @@ fn process_loader_upgradeable_instruction(
             }
 
             // Load and verify the program bits
-            let executor = create_executor(2, buffer_data_offset, invoke_context, use_jit)?;
-            invoke_context.add_executor(&new_program_id, executor);
+            let executor = create_executor(2, buffer_data_offset, invoke_context, use_jit, true)?;
+            invoke_context.update_executor(&new_program_id, executor);
 
             let keyed_accounts = invoke_context.get_keyed_accounts()?;
             let programdata = keyed_account_at_index(keyed_accounts, 0)?;
@@ -829,10 +872,10 @@ fn process_loader_instruction(
                 return Err(InstructionError::MissingRequiredSignature);
             }
 
-            let executor = create_executor(0, 0, invoke_context, use_jit)?;
+            let executor = create_executor(0, 0, invoke_context, use_jit, true)?;
             let keyed_accounts = invoke_context.get_keyed_accounts()?;
             let program = keyed_account_at_index(keyed_accounts, 0)?;
-            invoke_context.add_executor(program.unsigned_key(), executor);
+            invoke_context.update_executor(program.unsigned_key(), executor);
             program.try_account_ref_mut()?.set_executable(true);
             ic_msg!(
                 invoke_context,
@@ -867,7 +910,7 @@ impl InstructionMeter for ThisInstructionMeter {
 
 /// BPF Loader's Executor implementation
 pub struct BpfExecutor {
-    executable: Box<dyn Executable<BpfError, ThisInstructionMeter>>,
+    executable: Pin<Box<Executable<BpfError, ThisInstructionMeter>>>,
 }
 
 // Well, implement Debug for solana_rbpf::vm::Executable in solana-rbpf...
@@ -900,11 +943,11 @@ impl Executor for BpfExecutor {
         serialize_time.stop();
         let mut create_vm_time = Measure::start("create_vm");
         let mut execute_time;
-        {
+        let execution_result = {
             let compute_meter = invoke_context.get_compute_meter();
             let mut vm = match create_vm(
                 loader_id,
-                self.executable.as_ref(),
+                &self.executable,
                 parameter_bytes.as_slice_mut(),
                 invoke_context,
             ) {
@@ -935,25 +978,28 @@ impl Executor for BpfExecutor {
             );
             if log_enabled!(Trace) {
                 let mut trace_buffer = Vec::<u8>::new();
-                let analysis = Analysis::from_executable(self.executable.as_ref());
+                let analysis = Analysis::from_executable(&self.executable);
                 vm.get_tracer().write(&mut trace_buffer, &analysis).unwrap();
                 let trace_string = String::from_utf8(trace_buffer).unwrap();
                 trace!("BPF Program Instruction Trace:\n{}", trace_string);
             }
+            drop(vm);
+            let return_data = invoke_context.get_return_data();
+            if let Some((program_id, return_data)) = return_data {
+                stable_log::program_return(&logger, program_id, return_data);
+            }
             match result {
-                Ok(status) => {
-                    if status != SUCCESS {
-                        let error: InstructionError = if !add_missing_program_error_mappings
-                            && (status == ACCOUNT_NOT_RENT_EXEMPT || status == BORSH_IO_ERROR)
-                        {
-                            // map originally missing error mappings to InvalidError
-                            InstructionError::InvalidError
-                        } else {
-                            status.into()
-                        };
-                        stable_log::program_failure(&logger, program_id, &error);
-                        return Err(error);
-                    }
+                Ok(status) if status != SUCCESS => {
+                    let error: InstructionError = if !add_missing_program_error_mappings
+                        && (status == ACCOUNT_NOT_RENT_EXEMPT || status == BORSH_IO_ERROR)
+                    {
+                        // map originally missing error mappings to InvalidError
+                        InstructionError::InvalidError
+                    } else {
+                        status.into()
+                    };
+                    stable_log::program_failure(&logger, program_id, &error);
+                    Err(error)
                 }
                 Err(error) => {
                     let error = match error {
@@ -966,14 +1012,18 @@ impl Executor for BpfExecutor {
                         }
                     };
                     stable_log::program_failure(&logger, program_id, &error);
-                    return Err(error);
+                    Err(error)
                 }
+                _ => Ok(()),
             }
-            execute_time.stop();
-        }
+        };
+        execute_time.stop();
+
         let mut deserialize_time = Measure::start("deserialize");
-        let keyed_accounts = invoke_context.get_keyed_accounts()?;
-        deserialize_parameters(loader_id, keyed_accounts, parameter_bytes.as_slice())?;
+        let execute_or_deserialize_result = execution_result.and_then(|_| {
+            let keyed_accounts = invoke_context.get_keyed_accounts()?;
+            deserialize_parameters(loader_id, keyed_accounts, parameter_bytes.as_slice())
+        });
         deserialize_time.stop();
         invoke_context.update_timing(
             serialize_time.as_us(),
@@ -981,41 +1031,47 @@ impl Executor for BpfExecutor {
             execute_time.as_us(),
             deserialize_time.as_us(),
         );
-        stable_log::program_success(&logger, program_id);
-        Ok(())
+
+        if execute_or_deserialize_result.is_ok() {
+            stable_log::program_success(&logger, program_id);
+        }
+        execute_or_deserialize_result
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use rand::Rng;
-    use solana_runtime::{bank::Bank, bank_client::BankClient};
-    use safecoin_sdk::{
-        account::{
-            create_account_shared_data_for_test as create_account_for_test, AccountSharedData,
+    use {
+        super::*,
+        rand::Rng,
+        solana_rbpf::vm::SyscallRegistry,
+        solana_runtime::{bank::Bank, bank_client::BankClient},
+        safecoin_sdk::{
+            account::{
+                create_account_shared_data_for_test as create_account_for_test, AccountSharedData,
+            },
+            account_utils::StateMut,
+            client::SyncClient,
+            clock::Clock,
+            feature_set::FeatureSet,
+            genesis_config::create_genesis_config,
+            instruction::Instruction,
+            instruction::{AccountMeta, InstructionError},
+            keyed_account::KeyedAccount,
+            message::Message,
+            native_token::LAMPORTS_PER_SAFE,
+            process_instruction::{
+                BpfComputeBudget, InvokeContextStackFrame, MockComputeMeter, MockInvokeContext,
+                MockLogger,
+            },
+            pubkey::Pubkey,
+            rent::Rent,
+            signature::{Keypair, Signer},
+            system_program, sysvar,
+            transaction::TransactionError,
         },
-        account_utils::StateMut,
-        client::SyncClient,
-        clock::Clock,
-        feature_set::FeatureSet,
-        genesis_config::create_genesis_config,
-        instruction::Instruction,
-        instruction::{AccountMeta, InstructionError},
-        keyed_account::KeyedAccount,
-        message::Message,
-        native_token::LAMPORTS_PER_SAFE,
-        process_instruction::{
-            BpfComputeBudget, InvokeContextStackFrame, MockComputeMeter, MockInvokeContext,
-            MockLogger,
-        },
-        pubkey::Pubkey,
-        rent::Rent,
-        signature::{Keypair, Signer},
-        system_program, sysvar,
-        transaction::TransactionError,
+        std::{cell::RefCell, fs::File, io::Read, ops::Range, rc::Rc, sync::Arc},
     };
-    use std::{cell::RefCell, fs::File, io::Read, ops::Range, rc::Rc, sync::Arc};
 
     struct TestInstructionMeter {
         remaining: u64,
@@ -1040,28 +1096,30 @@ mod tests {
         ];
         let input = &mut [0x00];
         let mut bpf_functions = std::collections::BTreeMap::<u32, (usize, String)>::new();
-        solana_rbpf::elf::register_bpf_function(&mut bpf_functions, 0, "entrypoint").unwrap();
-        let program = <dyn Executable<BpfError, TestInstructionMeter>>::from_text_bytes(
+        solana_rbpf::elf::register_bpf_function(&mut bpf_functions, 0, "entrypoint", false)
+            .unwrap();
+        let program = Executable::<BpfError, TestInstructionMeter>::from_text_bytes(
             program,
-            bpf_functions,
             None,
             Config::default(),
+            SyscallRegistry::default(),
+            bpf_functions,
         )
         .unwrap();
         let mut vm =
-            EbpfVm::<BpfError, TestInstructionMeter>::new(program.as_ref(), input, &[]).unwrap();
+            EbpfVm::<BpfError, TestInstructionMeter>::new(&program, &mut [], input).unwrap();
         let mut instruction_meter = TestInstructionMeter { remaining: 10 };
         vm.execute_program_interpreted(&mut instruction_meter)
             .unwrap();
     }
 
     #[test]
-    #[should_panic(expected = "VerifierError(LDDWCannotBeLast)")]
+    #[should_panic(expected = "LDDWCannotBeLast")]
     fn test_bpf_loader_check_load_dw() {
         let prog = &[
             0x18, 0x00, 0x00, 0x00, 0x88, 0x77, 0x66, 0x55, // first half of lddw
         ];
-        bpf_verifier::check(prog).unwrap();
+        verifier::check(prog, &Config::default()).unwrap();
     }
 
     #[test]
@@ -1271,6 +1329,7 @@ mod tests {
             accounts: vec![],
             sysvars: vec![],
             disabled_features: vec![].into_iter().collect(),
+            return_data: None,
         };
         assert_eq!(
             Err(InstructionError::ProgramFailedToComplete),

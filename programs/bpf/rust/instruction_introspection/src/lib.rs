@@ -1,4 +1,4 @@
-//! @brief Example Rust-based BPF program that exercises instruction introspection
+//! Example Rust-based BPF program that exercises instruction introspection
 
 extern crate safecoin_program;
 use safecoin_program::{
@@ -26,14 +26,12 @@ fn process_instruction(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let instruction = instructions::load_instruction_at(
+    let instruction = instructions::load_instruction_at_checked(
         secp_instruction_index as usize,
-        &instruction_accounts.try_borrow_data()?,
-    )
-    .map_err(|_| ProgramError::InvalidAccountData)?;
+        instruction_accounts,
+    )?;
 
-    let current_instruction =
-        instructions::load_current_index(&instruction_accounts.try_borrow_data()?);
+    let current_instruction = instructions::load_current_index_checked(instruction_accounts)?;
     let my_index = instruction_data[1] as u16;
     assert_eq!(current_instruction, my_index);
 

@@ -165,8 +165,7 @@ pub fn create_and_add_stakes(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use safecoin_sdk::rent::Rent;
+    use {super::*, safecoin_sdk::rent::Rent};
 
     fn create_and_check_stakes(
         genesis_config: &mut GenesisConfig,

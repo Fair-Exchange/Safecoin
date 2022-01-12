@@ -3,7 +3,7 @@
 extern crate test;
 
 use rand::{thread_rng, Rng};
-use solana_core::{
+use safecoin_core::{
     crds::{Crds, VersionedCrdsValue},
     crds_shards::CrdsShards,
     crds_value::CrdsValue,

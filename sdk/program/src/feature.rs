@@ -58,8 +58,7 @@ pub fn activate_with_lamports(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use safecoin_program::clock::Slot;
+    use {super::*, safecoin_program::clock::Slot};
 
     #[test]
     fn feature_sizeof() {

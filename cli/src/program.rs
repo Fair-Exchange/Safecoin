@@ -1,65 +1,56 @@
-use crate::{
-    checks::*,
-    cli::{
-        log_instruction_custom_error, CliCommand, CliCommandInfo, CliConfig, CliError,
-        ProcessResult,
+use {
+    crate::{
+        checks::*,
+        cli::{
+            log_instruction_custom_error, CliCommand, CliCommandInfo, CliConfig, CliError,
+            ProcessResult,
+        },
     },
-};
-use bip39::{Language, Mnemonic, MnemonicType, Seed};
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use log::*;
-use safecoin_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
-use solana_bpf_loader_program::{bpf_verifier, BpfError, ThisInstructionMeter};
-use safecoin_clap_utils::{self, input_parsers::*, input_validators::*, keypair::*};
-use safecoin_cli_output::{
-    display::new_spinner_progress_bar, CliProgram, CliProgramAccountType, CliProgramAuthority,
-    CliProgramBuffer, CliProgramId, CliUpgradeableBuffer, CliUpgradeableBuffers,
-    CliUpgradeableProgram, CliUpgradeableProgramClosed, CliUpgradeablePrograms,
-};
-use safecoin_client::{
-    client_error::ClientErrorKind,
-    rpc_client::RpcClient,
-    rpc_config::RpcSendTransactionConfig,
-    rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
-    rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
-    rpc_request::MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS,
-    rpc_response::Fees,
-    tpu_client::{TpuClient, TpuClientConfig},
-};
-use solana_rbpf::vm::{Config, Executable};
-use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
-use safecoin_sdk::{
-    account::Account,
-    account_utils::StateMut,
-    bpf_loader, bpf_loader_deprecated,
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-    commitment_config::CommitmentConfig,
-    instruction::Instruction,
-    instruction::InstructionError,
-    loader_instruction,
-    message::Message,
-    native_token::Safe,
-    packet::PACKET_DATA_SIZE,
-    pubkey::Pubkey,
-    signature::{keypair_from_seed, read_keypair_file, Keypair, Signature, Signer},
-    signers::Signers,
-    system_instruction::{self, SystemError},
-    system_program,
-    transaction::Transaction,
-    transaction::TransactionError,
-};
-use safecoin_transaction_status::TransactionConfirmationStatus;
-use std::{
-    collections::HashMap,
-    error,
-    fs::File,
-    io::{Read, Write},
-    mem::size_of,
-    path::PathBuf,
-    str::FromStr,
-    sync::Arc,
-    thread::sleep,
-    time::Duration,
+    bip39::{Language, Mnemonic, MnemonicType, Seed},
+    clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
+    log::*,
+    safecoin_account_decoder::{UiAccountEncoding, UiDataSliceConfig},
+    solana_bpf_loader_program::{syscalls::register_syscalls, BpfError, ThisInstructionMeter},
+    safecoin_clap_utils::{self, input_parsers::*, input_validators::*, keypair::*},
+    safecoin_cli_output::{
+        CliProgram, CliProgramAccountType, CliProgramAuthority, CliProgramBuffer, CliProgramId,
+        CliUpgradeableBuffer, CliUpgradeableBuffers, CliUpgradeableProgram,
+        CliUpgradeableProgramClosed, CliUpgradeablePrograms,
+    },
+    safecoin_client::{
+        client_error::ClientErrorKind,
+        rpc_client::RpcClient,
+        rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig},
+        rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
+        tpu_client::{TpuClient, TpuClientConfig},
+    },
+    solana_rbpf::{elf::Executable, verifier, vm::Config},
+    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
+    safecoin_sdk::{
+        account::Account,
+        account_utils::StateMut,
+        bpf_loader, bpf_loader_deprecated,
+        bpf_loader_upgradeable::{self, UpgradeableLoaderState},
+        instruction::{Instruction, InstructionError},
+        loader_instruction,
+        message::Message,
+        native_token::Safe,
+        packet::PACKET_DATA_SIZE,
+        process_instruction::MockInvokeContext,
+        pubkey::Pubkey,
+        signature::{keypair_from_seed, read_keypair_file, Keypair, Signature, Signer},
+        system_instruction::{self, SystemError},
+        system_program,
+        transaction::{Transaction, TransactionError},
+    },
+    std::{
+        fs::File,
+        io::{Read, Write},
+        mem::size_of,
+        path::PathBuf,
+        str::FromStr,
+        sync::Arc,
+    },
 };
 
 #[derive(Debug, PartialEq)]
@@ -385,6 +376,7 @@ impl ProgramSubCommands for App<'_, '_> {
         .subcommand(
             SubCommand::with_name("deploy")
                 .about("Deploy a program")
+                .setting(AppSettings::Hidden)
                 .arg(
                     Arg::with_name("program_location")
                         .index(1)
@@ -1991,12 +1983,20 @@ fn read_and_verify_elf(program_location: &str) -> Result<Vec<u8>, Box<dyn std::e
     let mut program_data = Vec::new();
     file.read_to_end(&mut program_data)
         .map_err(|err| format!("Unable to read program file: {}", err))?;
+    let mut invoke_context = MockInvokeContext::new(vec![]);
 
     // Verify the program
-    <dyn Executable<BpfError, ThisInstructionMeter>>::from_elf(
+    Executable::<BpfError, ThisInstructionMeter>::from_elf(
         &program_data,
-        Some(|x| bpf_verifier::check(x)),
-        Config::default(),
+        Some(verifier::check),
+        Config {
+            reject_unresolved_syscalls: true,
+            verify_mul64_imm_nonzero: false,
+            verify_shift32_imm: true,
+            reject_section_virtual_address_file_offset_mismatch: true,
+            ..Config::default()
+        },
+        register_syscalls(&mut invoke_context).unwrap(),
     )
     .map_err(|err| format!("ELF error: {}", err))?;
 
@@ -2115,29 +2115,29 @@ fn send_deploy_messages(
     if let Some(write_messages) = write_messages {
         if let Some(write_signer) = write_signer {
             trace!("Writing program data");
-            let Fees {
-                blockhash,
-                last_valid_block_height,
-                ..
-            } = rpc_client
-                .get_fees_with_commitment(config.commitment)?
-                .value;
-            let mut write_transactions = vec![];
-            for message in write_messages.iter() {
-                let mut tx = Transaction::new_unsigned(message.clone());
-                tx.try_sign(&[payer_signer, write_signer], blockhash)?;
-                write_transactions.push(tx);
-            }
-
-            send_and_confirm_transactions_with_spinner(
+            let tpu_client = TpuClient::new(
                 rpc_client.clone(),
                 &config.websocket_url,
-                write_transactions,
-                &[payer_signer, write_signer],
-                config.commitment,
-                last_valid_block_height,
-            )
-            .map_err(|err| format!("Data writes to account failed: {}", err))?;
+                TpuClientConfig::default(),
+            )?;
+            let transaction_errors = tpu_client
+                .send_and_confirm_messages_with_spinner(
+                    write_messages,
+                    &[payer_signer, write_signer],
+                )
+                .map_err(|err| format!("Data writes to account failed: {}", err))?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>();
+
+            if !transaction_errors.is_empty() {
+                for transaction_error in &transaction_errors {
+                    error!("{:?}", transaction_error);
+                }
+                return Err(
+                    format!("{} write transactions failed", transaction_errors.len()).into(),
+                );
+            }
         }
     }
 
@@ -2189,9 +2189,8 @@ fn report_ephemeral_mnemonic(words: usize, mnemonic: bip39::Mnemonic) {
         words
     );
     eprintln!("{}\n{}\n{}", divider, phrase, divider);
-    eprintln!("To resume a deploy, pass the recovered keypair as");
-    eprintln!("the [PROGRAM_ADDRESS_SIGNER] argument to `safecoin deploy` or");
-    eprintln!("as the [BUFFER_SIGNER] to `safecoin program deploy` or `safecoin write-buffer'.");
+    eprintln!("To resume a deploy, pass the recovered keypair as the");
+    eprintln!("[BUFFER_SIGNER] to `safecoin program deploy` or `safecoin write-buffer'.");
     eprintln!("Or to recover the account's lamports, pass it as the");
     eprintln!(
         "[BUFFER_ACCOUNT_ADDRESS] argument to `safecoin program close`.\n{}",
@@ -2199,144 +2198,18 @@ fn report_ephemeral_mnemonic(words: usize, mnemonic: bip39::Mnemonic) {
     );
 }
 
-fn send_and_confirm_transactions_with_spinner<T: Signers>(
-    rpc_client: Arc<RpcClient>,
-    websocket_url: &str,
-    mut transactions: Vec<Transaction>,
-    signer_keys: &T,
-    commitment: CommitmentConfig,
-    mut last_valid_block_height: u64,
-) -> Result<(), Box<dyn error::Error>> {
-    let progress_bar = new_spinner_progress_bar();
-    let mut send_retries = 5;
-
-    progress_bar.set_message("Finding leader nodes...");
-    let tpu_client = TpuClient::new(
-        rpc_client.clone(),
-        websocket_url,
-        TpuClientConfig::default(),
-    )?;
-    loop {
-        // Send all transactions
-        let mut pending_transactions = HashMap::new();
-        let num_transactions = transactions.len();
-        for transaction in transactions {
-            if !tpu_client.send_transaction(&transaction) {
-                let _result = rpc_client
-                    .send_transaction_with_config(
-                        &transaction,
-                        RpcSendTransactionConfig {
-                            preflight_commitment: Some(commitment.commitment),
-                            ..RpcSendTransactionConfig::default()
-                        },
-                    )
-                    .ok();
-            }
-            pending_transactions.insert(transaction.signatures[0], transaction);
-            progress_bar.set_message(&format!(
-                "[{}/{}] Transactions sent",
-                pending_transactions.len(),
-                num_transactions
-            ));
-
-            // Throttle transactions to about 100 TPS
-            sleep(Duration::from_millis(10));
-        }
-
-        // Collect statuses for all the transactions, drop those that are confirmed
-        loop {
-            let mut block_height = 0;
-            let pending_signatures = pending_transactions.keys().cloned().collect::<Vec<_>>();
-            for pending_signatures_chunk in
-                pending_signatures.chunks(MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS)
-            {
-                if let Ok(result) = rpc_client.get_signature_statuses(pending_signatures_chunk) {
-                    let statuses = result.value;
-                    for (signature, status) in
-                        pending_signatures_chunk.iter().zip(statuses.into_iter())
-                    {
-                        if let Some(status) = status {
-                            if let Some(confirmation_status) = &status.confirmation_status {
-                                if *confirmation_status != TransactionConfirmationStatus::Processed
-                                {
-                                    let _ = pending_transactions.remove(signature);
-                                }
-                            } else if status.confirmations.is_none()
-                                || status.confirmations.unwrap() > 1
-                            {
-                                let _ = pending_transactions.remove(signature);
-                            }
-                        }
-                    }
-                }
-
-                block_height = rpc_client.get_block_height()?;
-                progress_bar.set_message(&format!(
-                    "[{}/{}] Transactions confirmed. Retrying in {} blocks",
-                    num_transactions - pending_transactions.len(),
-                    num_transactions,
-                    last_valid_block_height.saturating_sub(block_height)
-                ));
-            }
-
-            if pending_transactions.is_empty() {
-                return Ok(());
-            }
-
-            if block_height > last_valid_block_height {
-                break;
-            }
-
-            for transaction in pending_transactions.values() {
-                if !tpu_client.send_transaction(transaction) {
-                    let _result = rpc_client
-                        .send_transaction_with_config(
-                            transaction,
-                            RpcSendTransactionConfig {
-                                preflight_commitment: Some(commitment.commitment),
-                                ..RpcSendTransactionConfig::default()
-                            },
-                        )
-                        .ok();
-                }
-            }
-
-            if cfg!(not(test)) {
-                // Retry twice a second
-                sleep(Duration::from_millis(500));
-            }
-        }
-
-        if send_retries == 0 {
-            return Err("Transactions failed".into());
-        }
-        send_retries -= 1;
-
-        // Re-sign any failed transactions with a new blockhash and retry
-        let Fees {
-            blockhash,
-            last_valid_block_height: new_last_valid_block_height,
-            ..
-        } = rpc_client.get_fees_with_commitment(commitment)?.value;
-        last_valid_block_height = new_last_valid_block_height;
-        transactions = vec![];
-        for (_, mut transaction) in pending_transactions.into_iter() {
-            transaction.try_sign(signer_keys, blockhash)?;
-            transactions.push(transaction);
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        clap_app::get_clap_app,
-        cli::{parse_command, process_command},
+    use {
+        super::*,
+        crate::{
+            clap_app::get_clap_app,
+            cli::{parse_command, process_command},
+        },
+        serde_json::Value,
+        safecoin_cli_output::OutputFormat,
+        safecoin_sdk::signature::write_keypair_file,
     };
-    use serde_json::Value;
-    use safecoin_cli_output::OutputFormat;
-    use safecoin_sdk::signature::write_keypair_file;
 
     fn make_tmp_path(name: &str) -> String {
         let out_dir = std::env::var("FARF_DIR").unwrap_or_else(|_| "farf".to_string());

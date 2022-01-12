@@ -1,4 +1,6 @@
 #![allow(clippy::integer_arithmetic)]
+#[cfg(not(target_env = "msvc"))]
+use jemallocator::Jemalloc;
 use {
     clap::{
         crate_description, crate_name, value_t, value_t_or_exit, values_t, values_t_or_exit, App,
@@ -10,8 +12,8 @@ use {
     safecoin_clap_utils::{
         input_parsers::{keypair_of, keypairs_of, pubkey_of, value_of},
         input_validators::{
-            is_keypair, is_keypair_or_ask_keyword, is_parsable, is_pubkey, is_pubkey_or_keypair,
-            is_slot, is_valid_percentage,
+            is_keypair, is_keypair_or_ask_keyword, is_niceness_adjustment_valid, is_parsable,
+            is_pubkey, is_pubkey_or_keypair, is_slot, is_valid_percentage,
         },
         keypair::SKIP_SEED_PHRASE_VALIDATION_ARG,
     },
@@ -19,7 +21,7 @@ use {
         rpc_client::RpcClient, rpc_config::RpcLeaderScheduleConfig,
         rpc_request::MAX_MULTIPLE_ACCOUNTS,
     },
-    solana_core::{
+    safecoin_core::{
         ledger_cleanup_service::{DEFAULT_MAX_LEDGER_SHREDS, DEFAULT_MIN_MAX_LEDGER_SHREDS},
         tpu::DEFAULT_TPU_COALESCE_MS,
         validator::{
@@ -77,9 +79,6 @@ use {
         time::{Duration, Instant, SystemTime},
     },
 };
-
-#[cfg(not(target_env = "msvc"))]
-use jemallocator::Jemalloc;
 
 #[cfg(not(target_env = "msvc"))]
 #[global_allocator]
@@ -345,9 +344,9 @@ fn hash_validator(hash: String) -> Result<(), String> {
         .map_err(|e| format!("{:?}", e))
 }
 
-fn is_trusted_validator(id: &Pubkey, trusted_validators: &Option<HashSet<Pubkey>>) -> bool {
-    if let Some(trusted_validators) = trusted_validators {
-        trusted_validators.contains(id)
+fn is_known_validator(id: &Pubkey, known_validators: &Option<HashSet<Pubkey>>) -> bool {
+    if let Some(known_validators) = known_validators {
+        known_validators.contains(id)
     } else {
         false
     }
@@ -355,12 +354,12 @@ fn is_trusted_validator(id: &Pubkey, trusted_validators: &Option<HashSet<Pubkey>
 
 fn get_trusted_snapshot_hashes(
     cluster_info: &ClusterInfo,
-    trusted_validators: &Option<HashSet<Pubkey>>,
+    known_validators: &Option<HashSet<Pubkey>>,
 ) -> Option<HashSet<(Slot, Hash)>> {
-    if let Some(trusted_validators) = trusted_validators {
+    if let Some(known_validators) = known_validators {
         let mut trusted_snapshot_hashes = HashSet::new();
-        for trusted_validator in trusted_validators {
-            cluster_info.get_snapshot_hash_for_node(trusted_validator, |snapshot_hashes| {
+        for known_validator in known_validators {
+            cluster_info.get_snapshot_hash_for_node(known_validator, |snapshot_hashes| {
                 for snapshot_hash in snapshot_hashes {
                     trusted_snapshot_hashes.insert(*snapshot_hash);
                 }
@@ -414,7 +413,7 @@ fn get_rpc_node(
     validator_config: &ValidatorConfig,
     blacklisted_rpc_nodes: &mut HashSet<Pubkey>,
     snapshot_not_required: bool,
-    no_untrusted_rpc: bool,
+    only_known_rpc: bool,
     snapshot_output_dir: &Path,
 ) -> Option<(ContactInfo, Option<(Slot, Hash)>)> {
     let mut blacklist_timeout = Instant::now();
@@ -468,9 +467,7 @@ fn get_rpc_node(
         let rpc_peers_blacklisted = rpc_peers_total - rpc_peers.len();
         let rpc_peers_trusted = rpc_peers
             .iter()
-            .filter(|rpc_peer| {
-                is_trusted_validator(&rpc_peer.id, &validator_config.trusted_validators)
-            })
+            .filter(|rpc_peer| is_known_validator(&rpc_peer.id, &validator_config.known_validators))
             .count();
 
         info!(
@@ -500,13 +497,13 @@ fn get_rpc_node(
             rpc_peers
         } else {
             let trusted_snapshot_hashes =
-                get_trusted_snapshot_hashes(cluster_info, &validator_config.trusted_validators);
+                get_trusted_snapshot_hashes(cluster_info, &validator_config.known_validators);
 
             let mut eligible_rpc_peers = vec![];
 
             for rpc_peer in rpc_peers.iter() {
-                if no_untrusted_rpc
-                    && !is_trusted_validator(&rpc_peer.id, &validator_config.trusted_validators)
+                if only_known_rpc
+                    && !is_known_validator(&rpc_peer.id, &validator_config.known_validators)
                 {
                     continue;
                 }
@@ -746,7 +743,7 @@ fn verify_reachable_ports(
 struct RpcBootstrapConfig {
     no_genesis_fetch: bool,
     no_snapshot_fetch: bool,
-    no_untrusted_rpc: bool,
+    only_known_rpc: bool,
     max_genesis_archive_unpacked_size: u64,
     no_check_vote_account: bool,
 }
@@ -756,7 +753,7 @@ impl Default for RpcBootstrapConfig {
         Self {
             no_genesis_fetch: true,
             no_snapshot_fetch: true,
-            no_untrusted_rpc: true,
+            only_known_rpc: true,
             max_genesis_archive_unpacked_size: MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
             no_check_vote_account: true,
         }
@@ -828,7 +825,7 @@ fn rpc_bootstrap(
             validator_config,
             &mut blacklisted_rpc_nodes,
             bootstrap_config.no_snapshot_fetch,
-            bootstrap_config.no_untrusted_rpc,
+            bootstrap_config.only_known_rpc,
             snapshot_output_dir,
         );
         if rpc_node_details.is_none() {
@@ -844,7 +841,7 @@ fn rpc_bootstrap(
 
         let result = match rpc_client.get_version() {
             Ok(rpc_version) => {
-                info!("RPC node version: {}", rpc_version.solana_core);
+                info!("RPC node version: {}", rpc_version.safecoin_core);
                 Ok(())
             }
             Err(err) => Err(format!("Failed to get RPC node version: {}", err)),
@@ -945,10 +942,10 @@ fn rpc_bootstrap(
                                        && download_progress.percentage_done <= 2_f32
                                        && download_progress.estimated_remaining_time > 60_f32
                                        && download_abort_count < maximum_snapshot_download_abort {
-                                        if let Some(ref trusted_validators) = validator_config.trusted_validators {
-                                            if trusted_validators.contains(&rpc_contact_info.id)
-                                               && trusted_validators.len() == 1
-                                               && bootstrap_config.no_untrusted_rpc {
+                                        if let Some(ref known_validators) = validator_config.known_validators {
+                                            if known_validators.contains(&rpc_contact_info.id)
+                                               && known_validators.len() == 1
+                                               && bootstrap_config.only_known_rpc {
                                                 warn!("The snapshot download is too slow, throughput: {} < min speed {} bytes/sec, but will NOT abort \
                                                       and try a different node as it is the only known validator and the --only-known-rpc flag \
                                                       is set. \
@@ -1009,8 +1006,8 @@ fn rpc_bootstrap(
         }
         warn!("{}", result.unwrap_err());
 
-        if let Some(ref trusted_validators) = validator_config.trusted_validators {
-            if trusted_validators.contains(&rpc_contact_info.id) {
+        if let Some(ref known_validators) = validator_config.known_validators {
+            if known_validators.contains(&rpc_contact_info.id) {
                 continue; // Never blacklist a trusted node
             }
         }
@@ -1383,6 +1380,16 @@ pub fn main() {
                 .help("The maximum number of snapshots to hold on to when purging older snapshots.")
         )
         .arg(
+            Arg::with_name("snapshot_packager_niceness_adj")
+                .long("snapshot-packager-niceness-adjustment")
+                .value_name("ADJUSTMENT")
+                .takes_value(true)
+                .validator(is_niceness_adjustment_valid)
+                .default_value("0")
+                .help("Add this value to niceness of snapshot packager thread. Negative value \
+                      increases priority, positive value decreases priority.")
+        )
+        .arg(
             Arg::with_name("minimal_snapshot_download_speed")
                 .long("minimal-snapshot-download-speed")
                 .value_name("MINIMAL_SNAPSHOT_DOWNLOAD_SPEED")
@@ -1421,6 +1428,11 @@ pub fn main() {
                 .takes_value(true)
                 .default_value("100")
                 .help("Number of slots between generating accounts hash."),
+        )
+        .arg(
+            Arg::with_name("no_os_network_stats_reporting")
+                .long("no-os-network-stats-reporting")
+                .help("Disable reporting of OS network statistics.")
         )
         .arg(
             Arg::with_name("snapshot_version")
@@ -1520,7 +1532,7 @@ pub fn main() {
                 .help("Add a hard fork at this slot"),
         )
         .arg(
-            Arg::with_name("trusted_validators")
+            Arg::with_name("known_validators")
                 .alias("trusted-validator")
                 .long("known-validator")
                 .validator(is_pubkey)
@@ -1540,7 +1552,7 @@ pub fn main() {
                 .help("Log when transactions are processed which reference a given key."),
         )
         .arg(
-            Arg::with_name("no_untrusted_rpc")
+            Arg::with_name("only_known_rpc")
                 .alias("no-untrusted-rpc")
                 .long("only-known-rpc")
                 .takes_value(false)
@@ -1622,6 +1634,16 @@ pub fn main() {
                 .help("Number of threads to use for servicing RPC requests"),
         )
         .arg(
+            Arg::with_name("rpc_niceness_adj")
+                .long("rpc-niceness-adjustment")
+                .value_name("ADJUSTMENT")
+                .takes_value(true)
+                .validator(is_niceness_adjustment_valid)
+                .default_value("0")
+                .help("Add this value to niceness of RPC threads. Negative value \
+                      increases priority, positive value decreases priority.")
+        )
+        .arg(
             Arg::with_name("rpc_bigtable_timeout")
                 .long("rpc-bigtable-timeout")
                 .value_name("SECONDS")
@@ -1629,6 +1651,15 @@ pub fn main() {
                 .takes_value(true)
                 .default_value("30")
                 .help("Number of seconds before timing out RPC requests backed by BigTable"),
+        )
+        .arg(
+            Arg::with_name("rpc_pubsub_worker_threads")
+                .long("rpc-pubsub-worker-threads")
+                .takes_value(true)
+                .value_name("NUMBER")
+                .validator(is_parsable::<usize>)
+                .default_value("4")
+                .help("PubSub worker threads"),
         )
         .arg(
             Arg::with_name("rpc_pubsub_enable_vote_subscription")
@@ -1708,6 +1739,15 @@ pub fn main() {
                        across all connections."),
         )
         .arg(
+            Arg::with_name("rpc_pubsub_notification_threads")
+                .long("rpc-pubsub-notification-threads")
+                .takes_value(true)
+                .value_name("NUM_THREADS")
+                .validator(is_parsable::<usize>)
+                .help("The maximum number of threads that RPC PubSub will use \
+                       for generating notifications."),
+        )
+        .arg(
             Arg::with_name("rpc_send_transaction_retry_ms")
                 .long("rpc-send-retry-ms")
                 .value_name("MILLISECS")
@@ -1750,10 +1790,19 @@ pub fn main() {
                 .help("Verifies blockstore roots on boot and fixes any gaps"),
         )
         .arg(
-            Arg::with_name("halt_on_trusted_validators_accounts_hash_mismatch")
+            Arg::with_name("accountsdb_plugin_config")
+                .long("accountsdb-plugin-config")
+                .value_name("FILE")
+                .takes_value(true)
+                .multiple(true)
+                .hidden(true)
+                .help("Specify the configuration file for the AccountsDb plugin."),
+        )
+        .arg(
+            Arg::with_name("halt_on_known_validators_accounts_hash_mismatch")
                 .alias("halt-on-trusted-validators-accounts-hash-mismatch")
                 .long("halt-on-known-validators-accounts-hash-mismatch")
-                .requires("trusted_validators")
+                .requires("known_validators")
                 .takes_value(false)
                 .help("Abort the validator if a bank hash mismatch is detected within known validator set"),
         )
@@ -1942,14 +1991,6 @@ pub fn main() {
                 .help("Allow contacting private ip addresses")
                 .hidden(true),
         )
-        .arg(
-            Arg::with_name("disable_epoch_boundary_optimization")
-                .long("disable-epoch-boundary-optimization")
-                .takes_value(false)
-                .help("Disables epoch boundary optimization and overrides the \
-                optimize_epoch_boundary_updates feature switch if enabled.")
-                .hidden(true),
-        )
         .after_help("The default subcommand is run")
         .subcommand(
             SubCommand::with_name("exit")
@@ -2011,6 +2052,18 @@ pub fn main() {
                 .about("Remove all authorized voters")
                 .after_help("Note: the removal only applies to the \
                              currently running validator instance")
+            )
+        )
+        .subcommand(
+            SubCommand::with_name("contact-info")
+            .about("Display the validator's contact info")
+            .arg(
+                Arg::with_name("output")
+                    .long("output")
+                    .takes_value(true)
+                    .value_name("MODE")
+                    .possible_values(&["json", "json-compact"])
+                    .help("Output display mode")
             )
         )
         .subcommand(
@@ -2126,6 +2179,26 @@ pub fn main() {
                 _ => unreachable!(),
             }
         }
+        ("contact-info", Some(subcommand_matches)) => {
+            let output_mode = subcommand_matches.value_of("output");
+            let admin_client = admin_rpc_service::connect(&ledger_path);
+            let contact_info = admin_rpc_service::runtime()
+                .block_on(async move { admin_client.await?.contact_info().await })
+                .unwrap_or_else(|err| {
+                    eprintln!("Contact info query failed: {}", err);
+                    exit(1);
+                });
+            if let Some(mode) = output_mode {
+                match mode {
+                    "json" => println!("{}", serde_json::to_string_pretty(&contact_info).unwrap()),
+                    "json-compact" => print!("{}", serde_json::to_string(&contact_info).unwrap()),
+                    _ => unreachable!(),
+                }
+            } else {
+                print!("{}", contact_info);
+            }
+            return;
+        }
         ("init", _) => Operation::Initialize,
         ("exit", Some(subcommand_matches)) => {
             let min_idle_time = value_t_or_exit!(subcommand_matches, "min_idle_time", usize);
@@ -2220,7 +2293,7 @@ pub fn main() {
         enable_recycler_warming();
     }
 
-    solana_core::validator::report_target_features();
+    safecoin_core::validator::report_target_features();
 
     let authorized_voter_keypairs = keypairs_of(&matches, "authorized_voter_keypairs")
         .map(|keypairs| keypairs.into_iter().map(Arc::new).collect())
@@ -2233,7 +2306,7 @@ pub fn main() {
         no_genesis_fetch: matches.is_present("no_genesis_fetch"),
         no_snapshot_fetch: matches.is_present("no_snapshot_fetch"),
         no_check_vote_account: matches.is_present("no_check_vote_account"),
-        no_untrusted_rpc: matches.is_present("no_untrusted_rpc"),
+        only_known_rpc: matches.is_present("only_known_rpc"),
         max_genesis_archive_unpacked_size: value_t_or_exit!(
             matches,
             "max_genesis_archive_unpacked_size",
@@ -2270,10 +2343,10 @@ pub fn main() {
         None
     };
 
-    let trusted_validators = validators_set(
+    let known_validators = validators_set(
         &identity_keypair.pubkey(),
         &matches,
-        "trusted_validators",
+        "known_validators",
         "--known-validator",
     );
     let repair_validators = validators_set(
@@ -2341,6 +2414,17 @@ pub fn main() {
         .ok()
         .or_else(|| get_cluster_shred_version(&entrypoint_addrs));
 
+    let accountsdb_plugin_config_files = if matches.is_present("accountsdb_plugin_config") {
+        Some(
+            values_t_or_exit!(matches, "accountsdb_plugin_config", String)
+                .into_iter()
+                .map(PathBuf::from)
+                .collect(),
+        )
+    } else {
+        None
+    };
+
     let mut validator_config = ValidatorConfig {
         require_tower: matches.is_present("require_tower"),
         tower_path: value_t!(matches, "tower", PathBuf).ok(),
@@ -2376,12 +2460,14 @@ pub fn main() {
                 u64
             ),
             rpc_threads: value_t_or_exit!(matches, "rpc_threads", usize),
+            rpc_niceness_adj: value_t_or_exit!(matches, "rpc_niceness_adj", i8),
             rpc_bigtable_timeout: value_t!(matches, "rpc_bigtable_timeout", u64)
                 .ok()
                 .map(Duration::from_secs),
             account_indexes: account_indexes.clone(),
             rpc_scan_and_fix_roots: matches.is_present("rpc_scan_and_fix_roots"),
         },
+        accountsdb_plugin_config_files,
         rpc_addrs: value_t!(matches, "rpc_port", u16).ok().map(|rpc_port| {
             (
                 SocketAddr::new(rpc_bind_address, rpc_port),
@@ -2408,10 +2494,12 @@ pub fn main() {
                 "rpc_pubsub_queue_capacity_bytes",
                 usize
             ),
+            worker_threads: value_t_or_exit!(matches, "rpc_pubsub_worker_threads", usize),
+            notification_threads: value_of(&matches, "rpc_pubsub_notification_threads"),
         },
         voting_disabled: matches.is_present("no_voting") || restricted_repair_only_mode,
         wait_for_supermajority: value_t!(matches, "wait_for_supermajority", Slot).ok(),
-        trusted_validators,
+        known_validators,
         repair_validators,
         gossip_validators,
         frozen_accounts: values_t!(matches, "frozen_accounts", Pubkey).unwrap_or_default(),
@@ -2443,6 +2531,7 @@ pub fn main() {
             ),
         },
         no_poh_speed_test: matches.is_present("no_poh_speed_test"),
+        no_os_network_stats_reporting: matches.is_present("no_os_network_stats_reporting"),
         poh_pinned_cpu_core: value_of(&matches, "poh_pinned_cpu_core")
             .unwrap_or(poh_service::DEFAULT_PINNED_CPU_CORE),
         poh_hashes_per_batch: value_of(&matches, "poh_hashes_per_batch")
@@ -2455,8 +2544,6 @@ pub fn main() {
         tpu_coalesce_ms,
         no_wait_for_vote_to_start_leader: matches.is_present("no_wait_for_vote_to_start_leader"),
         accounts_shrink_ratio,
-        disable_epoch_boundary_optimization: matches
-            .is_present("disable_epoch_boundary_optimization"),
         ..ValidatorConfig::default()
     };
 
@@ -2528,6 +2615,8 @@ pub fn main() {
     let maximum_local_snapshot_age = value_t_or_exit!(matches, "maximum_local_snapshot_age", u64);
     let maximum_snapshots_to_retain =
         value_t_or_exit!(matches, "maximum_snapshots_to_retain", usize);
+    let snapshot_packager_niceness_adj =
+        value_t_or_exit!(matches, "snapshot_packager_niceness_adj", i8);
     let minimal_snapshot_download_speed =
         value_t_or_exit!(matches, "minimal_snapshot_download_speed", f32);
     let maximum_snapshot_download_abort =
@@ -2578,6 +2667,7 @@ pub fn main() {
         archive_format,
         snapshot_version,
         maximum_snapshots_to_retain,
+        packager_thread_niceness_adj: snapshot_packager_niceness_adj,
     });
 
     validator_config.accounts_hash_interval_slots =
@@ -2612,8 +2702,8 @@ pub fn main() {
         validator_config.max_ledger_shreds = Some(limit_ledger_size);
     }
 
-    if matches.is_present("halt_on_trusted_validators_accounts_hash_mismatch") {
-        validator_config.halt_on_trusted_validators_accounts_hash_mismatch = true;
+    if matches.is_present("halt_on_known_validators_accounts_hash_mismatch") {
+        validator_config.halt_on_known_validators_accounts_hash_mismatch = true;
     }
 
     let public_rpc_addr = matches.value_of("public_rpc_addr").map(|addr| {
@@ -2627,6 +2717,7 @@ pub fn main() {
     let _ledger_write_guard = lock_ledger(&ledger_path, &mut ledger_lock);
 
     let start_progress = Arc::new(RwLock::new(ValidatorStartProgress::default()));
+    let admin_service_cluster_info = Arc::new(RwLock::new(None));
     admin_rpc_service::run(
         &ledger_path,
         admin_rpc_service::AdminRpcRequestMetadata {
@@ -2635,6 +2726,7 @@ pub fn main() {
             validator_exit: validator_config.validator_exit.clone(),
             start_progress: start_progress.clone(),
             authorized_voter_keypairs: authorized_voter_keypairs.clone(),
+            cluster_info: admin_service_cluster_info.clone(),
         },
     );
 
@@ -2774,6 +2866,7 @@ pub fn main() {
         start_progress,
         socket_addr_space,
     );
+    *admin_service_cluster_info.write().unwrap() = Some(validator.cluster_info.clone());
 
     if let Some(filename) = init_complete_file {
         File::create(filename).unwrap_or_else(|_| {

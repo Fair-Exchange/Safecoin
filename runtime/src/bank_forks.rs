@@ -1,21 +1,22 @@
 //! The `bank_forks` module implements BankForks a DAG of checkpointed Banks
 
-use crate::{
-    accounts_background_service::{AbsRequestSender, SnapshotRequest},
-    bank::Bank,
-};
-use log::*;
-use solana_metrics::inc_new_counter_info;
-use safecoin_sdk::{clock::Slot, hash::Hash, timing};
-use std::{
-    collections::{hash_map::Entry, HashMap, HashSet},
-    ops::Index,
-    path::PathBuf,
-    sync::Arc,
-    time::Instant,
-};
-
 pub use crate::snapshot_utils::SnapshotVersion;
+use {
+    crate::{
+        accounts_background_service::{AbsRequestSender, SnapshotRequest},
+        bank::Bank,
+    },
+    log::*,
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::{clock::Slot, hash::Hash, timing},
+    std::{
+        collections::{hash_map::Entry, HashMap, HashSet},
+        ops::Index,
+        path::PathBuf,
+        sync::Arc,
+        time::Instant,
+    },
+};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ArchiveFormat {
@@ -43,6 +44,25 @@ pub struct SnapshotConfig {
 
     // Maximum number of snapshots to retain
     pub maximum_snapshots_to_retain: usize,
+
+    // Thread niceness adjustment for snapshot packager service
+    pub packager_thread_niceness_adj: i8,
+}
+
+struct SetRootTimings {
+    total_parent_banks: i64,
+    total_squash_cache_ms: i64,
+    total_squash_accounts_ms: i64,
+    total_squash_accounts_index_ms: i64,
+    total_squash_accounts_cache_ms: i64,
+    total_squash_accounts_store_ms: i64,
+    total_snapshot_ms: i64,
+    tx_count: i64,
+    prune_non_rooted_ms: i64,
+    drop_parent_banks_ms: i64,
+    prune_slots_ms: i64,
+    prune_remove_ms: i64,
+    dropped_banks_len: i64,
 }
 
 pub struct BankForks {
@@ -198,15 +218,14 @@ impl BankForks {
         self[self.highest_slot()].clone()
     }
 
-    pub fn set_root(
+    fn do_set_root_return_metrics(
         &mut self,
         root: Slot,
         accounts_background_request_sender: &AbsRequestSender,
         highest_confirmed_root: Option<Slot>,
-    ) {
+    ) -> (Vec<Arc<Bank>>, SetRootTimings) {
         let old_epoch = self.root_bank().epoch();
         self.root = root;
-        let set_root_start = Instant::now();
         let root_bank = self
             .banks
             .get(&root)
@@ -215,9 +234,9 @@ impl BankForks {
         if old_epoch != new_epoch {
             info!(
                 "Root entering
-                epoch: {},
-                next_epoch_start_slot: {},
-                epoch_stakes: {:#?}",
+                    epoch: {},
+                    next_epoch_start_slot: {},
+                    epoch_stakes: {:#?}",
                 new_epoch,
                 root_bank
                     .epoch_schedule()
@@ -238,15 +257,28 @@ impl BankForks {
         let mut banks = vec![root_bank];
         let parents = root_bank.parents();
         banks.extend(parents.iter());
+        let total_parent_banks = banks.len();
+        let mut total_squash_accounts_ms = 0;
+        let mut total_squash_accounts_index_ms = 0;
+        let mut total_squash_accounts_cache_ms = 0;
+        let mut total_squash_accounts_store_ms = 0;
+        let mut total_squash_cache_ms = 0;
+        let mut total_snapshot_ms = 0;
         for bank in banks.iter() {
             let bank_slot = bank.slot();
             if bank.block_height() % self.accounts_hash_interval_slots == 0
                 && bank_slot > self.last_accounts_hash_slot
             {
                 self.last_accounts_hash_slot = bank_slot;
-                bank.squash();
+                let squash_timing = bank.squash();
+                total_squash_accounts_ms += squash_timing.squash_accounts_ms as i64;
+                total_squash_accounts_index_ms += squash_timing.squash_accounts_index_ms as i64;
+                total_squash_accounts_cache_ms += squash_timing.squash_accounts_cache_ms as i64;
+                total_squash_accounts_store_ms += squash_timing.squash_accounts_store_ms as i64;
+                total_squash_cache_ms += squash_timing.squash_cache_ms as i64;
                 is_root_bank_squashed = bank_slot == root;
 
+                let mut snapshot_time = Measure::start("squash::snapshot_time");
                 if self.snapshot_config.is_some()
                     && accounts_background_request_sender.is_snapshot_creation_enabled()
                 {
@@ -267,23 +299,118 @@ impl BankForks {
                         );
                     }
                 }
+                snapshot_time.stop();
+                total_snapshot_ms += snapshot_time.as_ms() as i64;
                 break;
             }
         }
         if !is_root_bank_squashed {
-            root_bank.squash();
+            let squash_timing = root_bank.squash();
+            total_squash_accounts_ms += squash_timing.squash_accounts_ms as i64;
+            total_squash_accounts_index_ms += squash_timing.squash_accounts_index_ms as i64;
+            total_squash_accounts_cache_ms += squash_timing.squash_accounts_cache_ms as i64;
+            total_squash_accounts_store_ms += squash_timing.squash_accounts_store_ms as i64;
+            total_squash_cache_ms += squash_timing.squash_cache_ms as i64;
         }
         let new_tx_count = root_bank.transaction_count();
-        self.prune_non_rooted(root, highest_confirmed_root);
+        let mut prune_time = Measure::start("set_root::prune");
+        let (removed_banks, prune_slots_ms, prune_remove_ms) =
+            self.prune_non_rooted(root, highest_confirmed_root);
+        prune_time.stop();
+        let dropped_banks_len = removed_banks.len();
 
-        inc_new_counter_info!(
-            "bank-forks_set_root_ms",
-            timing::duration_as_ms(&set_root_start.elapsed()) as usize
+        let mut drop_parent_banks_time = Measure::start("set_root::drop_banks");
+        drop(parents);
+        drop_parent_banks_time.stop();
+
+        (
+            removed_banks,
+            SetRootTimings {
+                total_parent_banks: total_parent_banks as i64,
+                total_squash_cache_ms,
+                total_squash_accounts_ms,
+                total_squash_accounts_index_ms,
+                total_squash_accounts_cache_ms,
+                total_squash_accounts_store_ms,
+                total_snapshot_ms,
+                tx_count: (new_tx_count - root_tx_count) as i64,
+                prune_non_rooted_ms: prune_time.as_ms() as i64,
+                drop_parent_banks_ms: drop_parent_banks_time.as_ms() as i64,
+                prune_slots_ms: prune_slots_ms as i64,
+                prune_remove_ms: prune_remove_ms as i64,
+                dropped_banks_len: dropped_banks_len as i64,
+            },
+        )
+    }
+
+    pub fn set_root(
+        &mut self,
+        root: Slot,
+        accounts_background_request_sender: &AbsRequestSender,
+        highest_confirmed_root: Option<Slot>,
+    ) -> Vec<Arc<Bank>> {
+        let set_root_start = Instant::now();
+        let (removed_banks, set_root_metrics) = self.do_set_root_return_metrics(
+            root,
+            accounts_background_request_sender,
+            highest_confirmed_root,
         );
-        inc_new_counter_info!(
-            "bank-forks_set_root_tx_count",
-            (new_tx_count - root_tx_count) as usize
+        datapoint_info!(
+            "bank-forks_set_root",
+            (
+                "elapsed_ms",
+                timing::duration_as_ms(&set_root_start.elapsed()) as usize,
+                i64
+            ),
+            ("slot", root, i64),
+            (
+                "total_parent_banks",
+                set_root_metrics.total_parent_banks,
+                i64
+            ),
+            ("total_banks", self.banks.len(), i64),
+            (
+                "total_squash_cache_ms",
+                set_root_metrics.total_squash_cache_ms,
+                i64
+            ),
+            (
+                "total_squash_accounts_ms",
+                set_root_metrics.total_squash_accounts_ms,
+                i64
+            ),
+            (
+                "total_squash_accounts_index_ms",
+                set_root_metrics.total_squash_accounts_index_ms,
+                i64
+            ),
+            (
+                "total_squash_accounts_cache_ms",
+                set_root_metrics.total_squash_accounts_cache_ms,
+                i64
+            ),
+            (
+                "total_squash_accounts_store_ms",
+                set_root_metrics.total_squash_accounts_store_ms,
+                i64
+            ),
+            ("total_snapshot_ms", set_root_metrics.total_snapshot_ms, i64),
+            ("tx_count", set_root_metrics.tx_count, i64),
+            (
+                "prune_non_rooted_ms",
+                set_root_metrics.prune_non_rooted_ms,
+                i64
+            ),
+            (
+                "drop_parent_banks_ms",
+                set_root_metrics.drop_parent_banks_ms,
+                i64
+            ),
+            ("prune_slots_ms", set_root_metrics.prune_slots_ms, i64),
+            ("prune_remove_ms", set_root_metrics.prune_remove_ms, i64),
+            ("dropped_banks_len", set_root_metrics.dropped_banks_len, i64),
         );
+        removed_banks
     }
 
     pub fn root(&self) -> Slot {
@@ -340,7 +467,16 @@ impl BankForks {
     /// i.e. the cluster-confirmed root.  This commitment is stronger than the local node's root.
     /// So (A) and (B) are kept to facilitate RPC at different commitment levels.  Everything below
     /// the highest confirmed root can be pruned.
-    fn prune_non_rooted(&mut self, root: Slot, highest_confirmed_root: Option<Slot>) {
+    fn prune_non_rooted(
+        &mut self,
+        root: Slot,
+        highest_confirmed_root: Option<Slot>,
+    ) -> (Vec<Arc<Bank>>, u64, u64) {
+        // Clippy doesn't like separating the two collects below,
+        // but we want to collect timing separately, and the 2nd requires
+        // a unique borrow to self which is already borrowed by self.banks
+        #![allow(clippy::needless_collect)]
+        let mut prune_slots_time = Measure::start("prune_slots");
         let highest_confirmed_root = highest_confirmed_root.unwrap_or(root);
         let prune_slots: Vec<_> = self
             .banks
@@ -355,13 +491,20 @@ impl BankForks {
                 !keep
             })
             .collect();
-        for slot in prune_slots {
-            self.remove(slot);
-        }
-        datapoint_debug!(
-            "bank_forks_purge_non_root",
-            ("num_banks_retained", self.banks.len(), i64),
-        );
+        prune_slots_time.stop();
+
+        let mut prune_remove_time = Measure::start("prune_slots");
+        let removed_banks = prune_slots
+            .into_iter()
+            .filter_map(|slot| self.remove(slot))
+            .collect();
+        prune_remove_time.stop();
+
+        (
+            removed_banks,
+            prune_slots_time.as_ms(),
+            prune_remove_time.as_ms(),
+        )
     }
 
     pub fn set_snapshot_config(&mut self, snapshot_config: Option<SnapshotConfig>) {
@@ -379,21 +522,23 @@ impl BankForks {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        bank::tests::update_vote_account_timestamp,
-        genesis_utils::{
-            create_genesis_config, create_genesis_config_with_leader, GenesisConfigInfo,
+    use {
+        super::*,
+        crate::{
+            bank::tests::update_vote_account_timestamp,
+            genesis_utils::{
+                create_genesis_config, create_genesis_config_with_leader, GenesisConfigInfo,
+            },
         },
+        safecoin_sdk::{
+            clock::UnixTimestamp,
+            hash::Hash,
+            pubkey::Pubkey,
+            signature::{Keypair, Signer},
+            sysvar::epoch_schedule::EpochSchedule,
+        },
+        solana_vote_program::vote_state::BlockTimestamp,
     };
-    use safecoin_sdk::hash::Hash;
-    use safecoin_sdk::{
-        clock::UnixTimestamp,
-        pubkey::Pubkey,
-        signature::{Keypair, Signer},
-        sysvar::epoch_schedule::EpochSchedule,
-    };
-    use solana_vote_program::vote_state::BlockTimestamp;
 
     #[test]
     fn test_bank_forks_new() {

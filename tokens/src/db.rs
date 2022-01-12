@@ -1,9 +1,11 @@
-use chrono::prelude::*;
-use pickledb::{error::Error, PickleDb, PickleDbDumpPolicy};
-use serde::{Deserialize, Serialize};
-use safecoin_sdk::{clock::Slot, pubkey::Pubkey, signature::Signature, transaction::Transaction};
-use safecoin_transaction_status::TransactionStatus;
-use std::{cmp::Ordering, fs, io, path::Path};
+use {
+    chrono::prelude::*,
+    pickledb::{error::Error, PickleDb, PickleDbDumpPolicy},
+    serde::{Deserialize, Serialize},
+    safecoin_sdk::{clock::Slot, pubkey::Pubkey, signature::Signature, transaction::Transaction},
+    safecoin_transaction_status::TransactionStatus,
+    std::{cmp::Ordering, fs, io, path::Path},
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct TransactionInfo {
@@ -208,11 +210,13 @@ pub(crate) fn check_output_file(path: &str, db: &PickleDb) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use csv::{ReaderBuilder, Trim};
-    use safecoin_sdk::transaction::TransactionError;
-    use safecoin_transaction_status::TransactionConfirmationStatus;
-    use tempfile::NamedTempFile;
+    use {
+        super::*,
+        csv::{ReaderBuilder, Trim},
+        safecoin_sdk::transaction::TransactionError,
+        safecoin_transaction_status::TransactionConfirmationStatus,
+        tempfile::NamedTempFile,
+    };
 
     #[test]
     fn test_sort_transaction_infos_finalized_first() {

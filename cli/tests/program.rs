@@ -1,22 +1,24 @@
-use serde_json::Value;
-use solana_cli::{
-    cli::{process_command, CliCommand, CliConfig},
-    program::ProgramCliCommand,
+use {
+    serde_json::Value,
+    solana_cli::{
+        cli::{process_command, CliCommand, CliConfig},
+        program::ProgramCliCommand,
+    },
+    safecoin_cli_output::OutputFormat,
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_core::test_validator::TestValidator,
+    safecoin_faucet::faucet::run_local_faucet,
+    safecoin_sdk::{
+        account_utils::StateMut,
+        bpf_loader,
+        bpf_loader_upgradeable::{self, UpgradeableLoaderState},
+        commitment_config::CommitmentConfig,
+        pubkey::Pubkey,
+        signature::{Keypair, Signer},
+    },
+    solana_streamer::socket::SocketAddrSpace,
+    std::{env, fs::File, io::Read, path::PathBuf, str::FromStr},
 };
-use safecoin_cli_output::OutputFormat;
-use safecoin_client::rpc_client::RpcClient;
-use solana_core::test_validator::TestValidator;
-use safecoin_faucet::faucet::run_local_faucet;
-use safecoin_sdk::{
-    account_utils::StateMut,
-    bpf_loader,
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-    commitment_config::CommitmentConfig,
-    pubkey::Pubkey,
-    signature::{Keypair, Signer},
-};
-use solana_streamer::socket::SocketAddrSpace;
-use std::{env, fs::File, io::Read, path::PathBuf, str::FromStr};
 
 #[test]
 fn test_cli_program_deploy_non_upgradeable() {

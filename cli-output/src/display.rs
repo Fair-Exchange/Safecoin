@@ -8,8 +8,7 @@ use {
         program_utils::limited_deserialize, pubkey::Pubkey, stake, transaction::Transaction,
     },
     safecoin_transaction_status::UiTransactionStatusMeta,
-    safe_memo::id as safe_memo_id,
-    safe_memo::v1::id as safe_memo_v1_id,
+    safe_memo::{id as safe_memo_id, v1::id as safe_memo_v1_id},
     std::{collections::HashMap, fmt, io},
 };
 
@@ -431,8 +430,7 @@ pub fn unix_timestamp_to_string(unix_timestamp: UnixTimestamp) -> String {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use safecoin_sdk::pubkey::Pubkey;
+    use {super::*, safecoin_sdk::pubkey::Pubkey};
 
     #[test]
     fn test_format_labeled_address() {

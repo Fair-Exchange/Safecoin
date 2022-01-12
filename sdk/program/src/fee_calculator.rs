@@ -1,8 +1,8 @@
 #![allow(clippy::integer_arithmetic)]
-use crate::clock::{DEFAULT_MS_PER_SLOT};
-use crate::message::Message;
-use crate::secp256k1_program;
-use log::*;
+use {
+    crate::{clock::DEFAULT_MS_PER_SLOT, ed25519_program, message::Message, secp256k1_program},
+    log::*,
+};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, AbiExample)]
 #[serde(rename_all = "camelCase")]
@@ -29,20 +29,22 @@ impl FeeCalculator {
     }
 
     pub fn calculate_fee(&self, message: &Message) -> u64 {
-        let mut num_secp256k1_signatures: u64 = 0;
+        let mut num_signatures: u64 = 0;
         for instruction in &message.instructions {
             let program_index = instruction.program_id_index as usize;
             // Transaction may not be sanitized here
             if program_index < message.account_keys.len() {
                 let id = message.account_keys[program_index];
-                if secp256k1_program::check_id(&id) && !instruction.data.is_empty() {
-                    num_secp256k1_signatures += instruction.data[0] as u64;
+                if (secp256k1_program::check_id(&id) || ed25519_program::check_id(&id))
+                    && !instruction.data.is_empty()
+                {
+                    num_signatures += instruction.data[0] as u64;
                 }
             }
         }
 
         self.lamports_per_signature
-            * (u64::from(message.header.num_required_signatures) + num_secp256k1_signatures)
+            * (u64::from(message.header.num_required_signatures) + num_signatures)
     }
 }
 
@@ -179,8 +181,10 @@ impl FeeRateGovernor {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{pubkey::Pubkey, system_instruction};
+    use {
+        super::*,
+        crate::{pubkey::Pubkey, system_instruction},
+    };
 
     #[test]
     fn test_fee_rate_governor_burn() {

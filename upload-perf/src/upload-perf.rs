@@ -1,9 +1,13 @@
-use serde_json::Value;
-use std::collections::HashMap;
-use std::env;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::process::Command;
+use {
+    serde_json::Value,
+    std::{
+        collections::HashMap,
+        env,
+        fs::File,
+        io::{BufRead, BufReader},
+        process::Command,
+    },
+};
 
 fn get_last_metrics(metric: &str, db: &str, name: &str, branch: &str) -> Result<String, String> {
     let query = format!(
@@ -64,17 +68,14 @@ fn main() {
                 let deviation: i64 = v["deviation"].to_string().parse().unwrap();
                 if upload_metrics {
                     panic!("TODO...");
-                    /*
-                    solana_metrics::datapoint_info!(
-                        &v["name"].as_str().unwrap().trim_matches('\"'),
-                        ("test", "bench", String),
-                        ("branch", branch.to_string(), String),
-                        ("median", median, i64),
-                        ("deviation", deviation, i64),
-                        ("commit", git_commit_hash.trim().to_string(), String)
-                    );
-                    */
-                    
+                    // solana_metrics::datapoint_info!(
+                    //     &v["name"].as_str().unwrap().trim_matches('\"'),
+                    //     ("test", "bench", String),
+                    //     ("branch", branch.to_string(), String),
+                    //     ("median", median, i64),
+                    //     ("deviation", deviation, i64),
+                    //     ("commit", git_commit_hash.trim().to_string(), String)
+                    // );
                 }
                 let last_median =
                     get_last_metrics(&"median".to_string(), &db, &name, branch).unwrap_or_default();

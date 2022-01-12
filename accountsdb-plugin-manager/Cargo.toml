@@ -1,0 +1,30 @@
+[package]
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+edition = "2018"
+name = "solana-accountsdb-plugin-manager"
+description = "The Safecoin AccountsDb plugin manager."
+version = "1.8.12"
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-validator"
+
+[dependencies]
+bs58 = "0.4.0"
+crossbeam-channel = "0.4"
+libloading = "0.7.0"
+log = "0.4.11"
+serde = "1.0.130"
+serde_derive = "1.0.103"
+serde_json = "1.0.67"
+solana-accountsdb-plugin-interface = { path = "../accountsdb-plugin-interface", version = "=1.8.12" }
+safecoin-logger = { path = "../logger", version = "=1.8.12" }
+safecoin-measure = { path = "../measure", version = "=1.8.12" }
+safecoin-metrics = { path = "../metrics", version = "=1.8.12" }
+solana-rpc = { path = "../rpc", version = "=1.8.12" }
+safecoin-runtime = { path = "../runtime", version = "=1.8.12" }
+safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
+thiserror = "1.0.21"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

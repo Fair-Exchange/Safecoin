@@ -1,12 +1,16 @@
 #![feature(test)]
 
 extern crate test;
-use bincode::{deserialize, serialize};
-use safecoin_sdk::instruction::{AccountMeta, Instruction};
-use safecoin_sdk::message::Message;
-use safecoin_sdk::pubkey;
-use safecoin_sdk::sysvar::instructions;
-use test::Bencher;
+use {
+    bincode::{deserialize, serialize},
+    safecoin_sdk::{
+        instruction::{AccountMeta, Instruction},
+        message::Message,
+        pubkey,
+        sysvar::instructions,
+    },
+    test::Bencher,
+};
 
 fn make_instructions() -> Vec<Instruction> {
     let meta = AccountMeta::new(pubkey::new_rand(), false);
@@ -49,6 +53,7 @@ fn bench_manual_instruction_deserialize(b: &mut Bencher) {
     let serialized = message.serialize_instructions(DEMOTE_PROGRAM_WRITE_LOCKS);
     b.iter(|| {
         for i in 0..instructions.len() {
+            #[allow(deprecated)]
             test::black_box(instructions::load_instruction_at(i, &serialized).unwrap());
         }
     });
@@ -60,6 +65,7 @@ fn bench_manual_instruction_deserialize_single(b: &mut Bencher) {
     let message = Message::new(&instructions, None);
     let serialized = message.serialize_instructions(DEMOTE_PROGRAM_WRITE_LOCKS);
     b.iter(|| {
+        #[allow(deprecated)]
         test::black_box(instructions::load_instruction_at(3, &serialized).unwrap());
     });
 }

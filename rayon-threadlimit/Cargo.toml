@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-rayon-threadlimit"
-version = "1.7.17"
+version = "1.8.12"
 description = "safecoin-rayon-threadlimit"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/safecoin-rayon-threadlimit"

@@ -3,25 +3,27 @@ mod arg_parser;
 mod args;
 mod stake_accounts;
 
-use crate::arg_parser::parse_args;
-use crate::args::{
-    resolve_command, AuthorizeArgs, Command, MoveArgs, NewArgs, RebaseArgs, SetLockupArgs,
+use {
+    crate::{
+        arg_parser::parse_args,
+        args::{
+            resolve_command, AuthorizeArgs, Command, MoveArgs, NewArgs, RebaseArgs, SetLockupArgs,
+        },
+    },
+    safecoin_cli_config::Config,
+    safecoin_client::{client_error::ClientError, rpc_client::RpcClient},
+    safecoin_sdk::{
+        message::Message,
+        native_token::lamports_to_sol,
+        pubkey::Pubkey,
+        signature::{unique_signers, Signature, Signer},
+        signers::Signers,
+        stake::{instruction::LockupArgs, state::Lockup},
+        transaction::Transaction,
+    },
+    solana_stake_program::stake_state,
+    std::{env, error::Error},
 };
-use safecoin_cli_config::Config;
-use safecoin_client::client_error::ClientError;
-use safecoin_client::rpc_client::RpcClient;
-use safecoin_sdk::{
-    message::Message,
-    native_token::lamports_to_sol,
-    pubkey::Pubkey,
-    signature::{unique_signers, Signature, Signer},
-    signers::Signers,
-    stake::{instruction::LockupArgs, state::Lockup},
-    transaction::Transaction,
-};
-use solana_stake_program::stake_state;
-use std::env;
-use std::error::Error;
 
 fn get_balance_at(client: &RpcClient, pubkey: &Pubkey, i: usize) -> Result<u64, ClientError> {
     let address = stake_accounts::derive_stake_account_address(pubkey, i);

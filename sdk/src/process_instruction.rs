@@ -1,14 +1,17 @@
-use safecoin_sdk::{
-    account::AccountSharedData,
-    instruction::{CompiledInstruction, Instruction, InstructionError},
-    keyed_account::{create_keyed_accounts_unified, KeyedAccount},
-    pubkey::Pubkey,
-    sysvar::Sysvar,
-    instruction::VoteModerator,
-    hash::Hash,
-    clock::Slot,
+use {
+    itertools::Itertools,
+    safecoin_sdk::{
+        account::AccountSharedData,
+        instruction::{CompiledInstruction, Instruction, InstructionError},
+        keyed_account::{create_keyed_accounts_unified, KeyedAccount},
+        pubkey::Pubkey,
+        sysvar::Sysvar,
+        instruction::VoteModerator,
+        hash::Hash,
+        clock::Slot,
+    },
+    std::{cell::RefCell, collections::HashSet, fmt::Debug, rc::Rc, sync::Arc},
 };
-use std::{cell::RefCell, collections::HashSet, fmt::Debug, rc::Rc, sync::Arc};
 
 /// Prototype of a native loader entry point
 ///
@@ -85,6 +88,8 @@ pub trait InvokeContext {
     /// Loaders may need to do work in order to execute a program.  Cache
     /// the work that can be re-used across executions
     fn add_executor(&self, pubkey: &Pubkey, executor: Arc<dyn Executor>);
+    /// Cache an executor that has changed
+    fn update_executor(&self, pubkey: &Pubkey, executor: Arc<dyn Executor>);
     /// Get the completed loader work that can be re-used across executions
     fn get_executor(&self, pubkey: &Pubkey) -> Option<Arc<dyn Executor>>;
     /// Record invoked instruction
@@ -103,8 +108,13 @@ pub trait InvokeContext {
     );
     /// Get sysvar data
     fn get_sysvar_data(&self, id: &Pubkey) -> Option<Rc<Vec<u8>>>;
+    /// Set the return data
+    fn set_return_data(&mut self, return_data: Option<(Pubkey, Vec<u8>)>);
+    /// Get the return data
+    fn get_return_data(&self) -> &Option<(Pubkey, Vec<u8>)>;
 
     fn voter_group(&self) -> & dyn VoteModerator;
+
 }
 
 /// Convenience macro to log a message with an `Rc<RefCell<dyn Logger>>`
@@ -152,7 +162,7 @@ pub fn get_sysvar<T: Sysvar>(
     })
 }
 
-#[derive(Clone, Copy, Debug, AbiExample)]
+#[derive(Clone, Copy, Debug, AbiExample, PartialEq)]
 pub struct BpfComputeBudget {
     /// Number of compute units that an instruction is allowed.  Compute units
     /// are consumed by program execution, resources they use, etc...
@@ -186,9 +196,15 @@ pub struct BpfComputeBudget {
     pub sysvar_base_cost: u64,
     /// Number of compute units consumed to call secp256k1_recover
     pub secp256k1_recover_cost: u64,
+    /// Number of compute units consumed to do a syscall without any work
+    pub syscall_base_cost: u64,
     /// Optional program heap region size, if `None` then loader default
     pub heap_size: Option<usize>,
+    /// Number of compute units per additional 32k heap above the default (~.5
+    /// us per 32k at 15 units/us rounded up)
+    pub heap_cost: u64,
 }
+
 impl Default for BpfComputeBudget {
     fn default() -> Self {
         Self::new()
@@ -211,8 +227,10 @@ impl BpfComputeBudget {
             max_cpi_instruction_size: 1280, // IPv6 Min MTU size
             cpi_bytes_per_unit: 250,        // ~50MB at 200,000 units
             sysvar_base_cost: 100,
+            syscall_base_cost: 100,
             secp256k1_recover_cost: 25_000,
             heap_size: None,
+            heap_cost: 8,
         }
     }
 }
@@ -264,6 +282,42 @@ pub mod stable_log {
     /// That is, any program-generated output is guaranteed to be prefixed by "Program log: "
     pub fn program_log(logger: &Rc<RefCell<dyn Logger>>, message: &str) {
         ic_logger_msg!(logger, "Program log: {}", message);
+    }
+
+    /// Emit a program data.
+    ///
+    /// The general form is:
+    ///
+    /// ```notrust
+    /// "Program data: <binary-data-in-base64>*"
+    /// ```
+    ///
+    /// That is, any program-generated output is guaranteed to be prefixed by "Program data: "
+    pub fn program_data(logger: &Rc<RefCell<dyn Logger>>, data: &[&[u8]]) {
+        ic_logger_msg!(
+            logger,
+            "Program data: {}",
+            data.iter().map(base64::encode).join(" ")
+        );
+    }
+
+    /// Log return data as from the program itself. This line will not be present if no return
+    /// data was set, or if the return data was set to zero length.
+    ///
+    /// The general form is:
+    ///
+    /// ```notrust
+    /// "Program return: <program-id> <program-generated-data-in-base64>"
+    /// ```
+    ///
+    /// That is, any program-generated output is guaranteed to be prefixed by "Program return: "
+    pub fn program_return(logger: &Rc<RefCell<dyn Logger>>, program_id: &Pubkey, data: &[u8]) {
+        ic_logger_msg!(
+            logger,
+            "Program return: {} {}",
+            program_id,
+            base64::encode(data)
+        );
     }
 
     /// Log successful program execution.
@@ -340,7 +394,9 @@ pub struct MockInvokeContext<'a> {
     pub accounts: Vec<(Pubkey, Rc<RefCell<AccountSharedData>>)>,
     pub sysvars: Vec<(Pubkey, Option<Rc<Vec<u8>>>)>,
     pub disabled_features: HashSet<Pubkey>,
+    pub return_data: Option<(Pubkey, Vec<u8>)>,
 }
+
 impl<'a> MockInvokeContext<'a> {
     pub fn new(keyed_accounts: Vec<KeyedAccount<'a>>) -> Self {
         let bpf_compute_budget = BpfComputeBudget::default();
@@ -355,6 +411,7 @@ impl<'a> MockInvokeContext<'a> {
             accounts: vec![],
             sysvars: vec![],
             disabled_features: HashSet::default(),
+            return_data: None,
         };
         invoke_context
             .invoke_stack
@@ -444,6 +501,7 @@ impl<'a> InvokeContext for MockInvokeContext<'a> {
         Rc::new(RefCell::new(self.compute_meter.clone()))
     }
     fn add_executor(&self, _pubkey: &Pubkey, _executor: Arc<dyn Executor>) {}
+    fn update_executor(&self, _pubkey: &Pubkey, _executor: Arc<dyn Executor>) {}
     fn get_executor(&self, _pubkey: &Pubkey) -> Option<Arc<dyn Executor>> {
         None
     }
@@ -472,7 +530,12 @@ impl<'a> InvokeContext for MockInvokeContext<'a> {
             .iter()
             .find_map(|(key, sysvar)| if id == key { sysvar.clone() } else { None })
     }
-
+    fn set_return_data(&mut self, return_data: Option<(Pubkey, Vec<u8>)>) {
+        self.return_data = return_data;
+    }
+    fn get_return_data(&self) -> &Option<(Pubkey, Vec<u8>)> {
+        &self.return_data
+    }
     fn voter_group(&self) -> &dyn VoteModerator{
         return self;
     }
@@ -485,3 +548,4 @@ impl<'a> VoteModerator for MockInvokeContext<'a> {
         true
     }
 }
+

@@ -158,8 +158,8 @@ recognized this block as finalized
   - It does not count votes on descendants of a block, only direct votes on that block.
   - This confirmation level also upholds "optimistic confirmation" guarantees in
     release 1.3 and onwards.
-- `"processed"` - the node will query its most recent block.  Note that the block
-may not be complete.
+- `"processed"` - the node will query its most recent block. Note that the block
+may still be skipped by the cluster.
 
 For processing many dependent transactions in series, it's recommended to use
 `"confirmed"` commitment, which balances speed with rollback safety.
@@ -873,12 +873,12 @@ None
 The result field will be an array of JSON objects, each with the following sub fields:
 
 - `pubkey: <string>` - Node public key, as base-58 encoded string
-- `gossip: <string>` - Gossip network address for the node
-- `tpu: <string>` - TPU network address for the node
-- `rpc: <string>|null` - JSON RPC network address for the node, or `null` if the JSON RPC service is not enabled
-- `version: <string>|null` - The software version of the node, or `null` if the version information is not available
-- `featureSet: <number>|null` - The unique identifier of the node's feature set
-- `shredVersion: <number>|null` - The shred version the node has been configured to use
+- `gossip: <string | null>` - Gossip network address for the node
+- `tpu: <string | null>` - TPU network address for the node
+- `rpc: <string | null>` - JSON RPC network address for the node, or `null` if the JSON RPC service is not enabled
+- `version: <string | null>` - The software version of the node, or `null` if the version information is not available
+- `featureSet: <u32 | null >` - The unique identifier of the node's feature set
+- `shredVersion: <u16 | null>` - The shred version the node has been configured to use
 
 #### Example:
 
@@ -923,6 +923,7 @@ The result field will be an object with the following fields:
 - `epoch: <u64>`, the current epoch
 - `slotIndex: <u64>`, the current slot relative to the start of the current epoch
 - `slotsInEpoch: <u64>`, the number of slots in this epoch
+- `transactionCount: <u64 | null>`, total number of transactions processed without error since genesis
 
 #### Example:
 
@@ -942,7 +943,8 @@ Result:
     "blockHeight": 166500,
     "epoch": 27,
     "slotIndex": 2790,
-    "slotsInEpoch": 8192
+    "slotsInEpoch": 8192,
+    "transactionCount": 22661093
   },
   "id": 1
 }
@@ -1340,7 +1342,7 @@ The result field will be a JSON object with the following fields:
 - `total: <f64>`, total inflation
 - `validator: <f64>`, inflation allocated to validators
 - `foundation: <f64>`, inflation allocated to the foundation
-- `epoch: <f64>`, epoch for which these values are valid
+- `epoch: <u64>`, epoch for which these values are valid
 
 #### Example:
 
@@ -2569,37 +2571,45 @@ Result:
     },
     "value": [
       {
-        "data": {
-          "program": "safe-token",
-          "parsed": {
-            "info": {
-              "tokenAmount": {
-                "amount": "1",
-                "decimals": 1,
-                "uiAmount": 0.1,
-                "uiAmountString": "0.1",
+        "account": {
+          "data": {
+            "program": "safe-token",
+            "parsed": {
+              "info": {
+                "tokenAmount": {
+                  "amount": "1",
+                  "decimals": 1,
+                  "uiAmount": 0.1,
+                  "uiAmountString": "0.1"
+                },
+                "delegate": "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
+                "delegatedAmount": {
+                  "amount": "1",
+                  "decimals": 1,
+                  "uiAmount": 0.1,
+                  "uiAmountString": "0.1"
+                },
+                "state": "initialized",
+                "isNative": false,
+                "mint": "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E",
+                "owner": "CnPoSPKXu7wJqxe59Fs72tkBeALovhsCxYeFwPCQH9TD"
               },
-              "delegate": "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
-              "delegatedAmount": {
-                "amount": "1",
-                "decimals": 1,
-                "uiAmount": 0.1,
-                "uiAmountString": "0.1",
-              },
-              "state": "initialized",
-              "isNative": false,
-              "mint": "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E",
-              "owner": "CnPoSPKXu7wJqxe59Fs72tkBeALovhsCxYeFwPCQH9TD"
+              "type": "account"
             },
-            "type": "account"
+            "space": 165
           },
-          "space": 165
+          "executable": false,
+          "lamports": 1726080,
+          "owner": "ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN",
+          "rentEpoch": 4
         },
+        "pubkey": "28YTZEwqtMHWrhWcvv34se7pjS7wctgqzCPB3gReCFKp"
         "executable": false,
         "lamports": 1726080,
         "owner": "ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN",
         "rentEpoch": 4
       }
+
     ]
   },
   "id": 1
@@ -2667,33 +2677,40 @@ Result:
     },
     "value": [
       {
-        "data": {
-          "program": "safe-token",
-          "parsed": {
-            "accountType": "account",
-            "info": {
-              "tokenAmount": {
-                "amount": "1",
-                "decimals": 1,
-                "uiAmount": 0.1,
-                "uiAmountString": "0.1",
+        "account": {
+          "data": {
+              "program": "safe-token",
+              "parsed": {
+                "accountType": "account",
+                "info": {
+                  "tokenAmount": {
+                    "amount": "1",
+                    "decimals": 1,
+                    "uiAmount": 0.1,
+                    "uiAmountString": "0.1"
+                  },
+                  "delegate": "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
+                  "delegatedAmount": {
+                    "amount": "1",
+                    "decimals": 1,
+                    "uiAmount": 0.1,
+                    "uiAmountString": "0.1"
+                  },
+                  "state": "initialized",
+                  "isNative": false,
+                  "mint": "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E",
+                  "owner": "4Qkev8aNZcqFNSRhQzwyLMFSsi94jHqE8WNVTJzTP99F"
+                },
+                "type": "account"
               },
-              "delegate": "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
-              "delegatedAmount": {
-                "amount": "1",
-                "decimals": 1,
-                "uiAmount": 0.1,
-                "uiAmountString": "0.1",
-              },
-              "state": "initialized",
-              "isNative": false,
-              "mint": "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E",
-              "owner": "4Qkev8aNZcqFNSRhQzwyLMFSsi94jHqE8WNVTJzTP99F"
+              "space": 165
             },
-            "type": "account"
-          },
-          "space": 165
+            "executable": false,
+            "lamports": 1726080,
+            "owner": "ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN",
+            "rentEpoch": 4
         },
+        "pubkey": "C2gJg6tKpQs41PRS1nC8aw3ZKNZK3HQQZGVrDFDup5nx"
         "executable": false,
         "lamports": 1726080,
         "owner": "ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN",
@@ -3039,7 +3056,7 @@ curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
 
 Result:
 ```json
-{"jsonrpc":"2.0","result":{"safecoin-core": "1.7.17"},"id":1}
+{"jsonrpc":"2.0","result":{"safecoin-core": "1.8.12"},"id":1}
 ```
 
 ### getVoteAccounts

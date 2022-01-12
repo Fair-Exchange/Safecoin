@@ -16,8 +16,9 @@ use solana_bpf_loader_program::{
 };
 use safecoin_cli_output::display::println_transaction;
 use solana_rbpf::{
+    elf::Executable,
     static_analysis::Analysis,
-    vm::{Config, Executable, Tracer},
+    vm::{Config, Tracer},
 };
 use solana_runtime::{
     bank::{Bank, ExecuteTimings, NonceRollbackInfo, TransactionBalancesSet, TransactionResults},
@@ -34,6 +35,7 @@ use safecoin_sdk::{
     bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable,
     client::SyncClient,
     clock::MAX_PROCESSING_AGE,
+    compute_budget,
     entrypoint::{MAX_PERMITTED_DATA_INCREASE, SUCCESS},
     instruction::{AccountMeta, CompiledInstruction, Instruction, InstructionError},
     keyed_account::KeyedAccount,
@@ -210,24 +212,32 @@ fn run_program(
     let mut instruction_meter = ThisInstructionMeter { compute_meter };
 
     let config = Config {
-        max_call_depth: 20,
-        stack_frame_size: 4096,
-        enable_instruction_meter: true,
         enable_instruction_tracing: true,
+        reject_unresolved_syscalls: true,
+        reject_section_virtual_address_file_offset_mismatch: true,
+        verify_mul64_imm_nonzero: false,
+        verify_shift32_imm: true,
+        ..Config::default()
     };
-    let mut executable =
-        <dyn Executable<BpfError, ThisInstructionMeter>>::from_elf(&data, None, config).unwrap();
-    executable.set_syscall_registry(register_syscalls(&mut invoke_context).unwrap());
-    executable.jit_compile().unwrap();
+    let mut executable = Executable::<BpfError, ThisInstructionMeter>::from_elf(
+        &data,
+        None,
+        config,
+        register_syscalls(&mut invoke_context).unwrap(),
+    )
+    .unwrap();
+    Executable::<BpfError, ThisInstructionMeter>::jit_compile(&mut executable).unwrap();
 
     let mut instruction_count = 0;
     let mut tracer = None;
     for i in 0..2 {
         let mut parameter_bytes = parameter_bytes.clone();
         {
+            invoke_context.set_return_data(None);
+
             let mut vm = create_vm(
                 &loader_id,
-                executable.as_ref(),
+                &executable,
                 parameter_bytes.as_slice_mut(),
                 &mut invoke_context,
             )
@@ -245,7 +255,7 @@ fn run_program(
             if config.enable_instruction_tracing {
                 if i == 1 {
                     if !Tracer::compare(tracer.as_ref().unwrap(), vm.get_tracer()) {
-                        let analysis = Analysis::from_executable(executable.as_ref());
+                        let analysis = Analysis::from_executable(&executable);
                         let stdout = std::io::stdout();
                         println!("TRACE (interpreted):");
                         tracer
@@ -259,7 +269,7 @@ fn run_program(
                             .unwrap();
                         assert!(false);
                     } else if log_enabled!(Trace) {
-                        let analysis = Analysis::from_executable(executable.as_ref());
+                        let analysis = Analysis::from_executable(&executable);
                         let mut trace_buffer = Vec::<u8>::new();
                         tracer
                             .as_ref()
@@ -428,6 +438,7 @@ fn test_program_bpf_sanity() {
             ("noop++", true),
             ("panic", false),
             ("relative_call", true),
+            ("return_data", true),
             ("sanity", true),
             ("sanity++", true),
             ("secp256k1_recover", true),
@@ -733,6 +744,55 @@ fn test_program_bpf_error_handling() {
 }
 
 #[test]
+#[cfg(any(feature = "bpf_c", feature = "bpf_rust"))]
+fn test_return_data_and_log_data_syscall() {
+    solana_logger::setup();
+
+    let mut programs = Vec::new();
+    #[cfg(feature = "bpf_c")]
+    {
+        programs.extend_from_slice(&[("log_data")]);
+    }
+    #[cfg(feature = "bpf_rust")]
+    {
+        programs.extend_from_slice(&[("solana_bpf_rust_log_data")]);
+    }
+
+    for program in programs.iter() {
+        let GenesisConfigInfo {
+            genesis_config,
+            mint_keypair,
+            ..
+        } = create_genesis_config(50);
+        let mut bank = Bank::new(&genesis_config);
+        let (name, id, entrypoint) = solana_bpf_loader_program!();
+        bank.add_builtin(&name, id, entrypoint);
+        let bank = Arc::new(bank);
+        let bank_client = BankClient::new_shared(&bank);
+
+        let program_id = load_bpf_program(&bank_client, &bpf_loader::id(), &mint_keypair, program);
+
+        bank.freeze();
+
+        let account_metas = vec![AccountMeta::new(mint_keypair.pubkey(), true)];
+        let instruction =
+            Instruction::new_with_bytes(program_id, &[1, 2, 3, 0, 4, 5, 6], account_metas);
+
+        let blockhash = bank.last_blockhash();
+        let message = Message::new(&[instruction], Some(&mint_keypair.pubkey()));
+        let transaction = Transaction::new(&[&mint_keypair], message, blockhash);
+
+        let (result, logs, _) = bank.simulate_transaction(&transaction);
+
+        assert!(result.is_ok());
+
+        assert_eq!(logs[1], "Program data: AQID BAUG");
+
+        assert_eq!(logs[3], format!("Program return: {} CAFE", program_id));
+    }
+}
+
+#[test]
 fn test_program_bpf_invoke_sanity() {
     solana_logger::setup();
 
@@ -752,6 +812,7 @@ fn test_program_bpf_invoke_sanity() {
     const TEST_WRITABLE_DEESCALATION_WRITABLE: u8 = 14;
     const TEST_NESTED_INVOKE_TOO_DEEP: u8 = 15;
     const TEST_EXECUTABLE_LAMPORTS: u8 = 16;
+    const TEST_RETURN_DATA_TOO_LARGE: u8 = 18;
 
     #[allow(dead_code)]
     #[derive(Debug)]
@@ -874,6 +935,7 @@ fn test_program_bpf_invoke_sanity() {
                 invoked_program_id.clone(),
                 invoked_program_id.clone(),
                 invoked_program_id.clone(),
+                invoked_program_id.clone(),
             ],
             Languages::Rust => vec![
                 safecoin_sdk::system_program::id(),
@@ -898,6 +960,7 @@ fn test_program_bpf_invoke_sanity() {
                 invoked_program_id.clone(),
                 invoked_program_id.clone(),
                 safecoin_sdk::system_program::id(),
+                invoked_program_id.clone(),
             ],
         };
         assert_eq!(invoked_programs.len(), expected_invoked_programs.len());
@@ -1024,6 +1087,12 @@ fn test_program_bpf_invoke_sanity() {
             TEST_EXECUTABLE_LAMPORTS,
             TransactionError::InstructionError(0, InstructionError::ExecutableLamportChange),
             &[invoke_program_id.clone()],
+        );
+
+        do_invoke_failure_test_local(
+            TEST_RETURN_DATA_TOO_LARGE,
+            TransactionError::InstructionError(0, InstructionError::ProgramFailedToComplete),
+            &[],
         );
 
         // Check resulting state
@@ -1232,8 +1301,6 @@ fn test_program_bpf_call_depth() {
 
     solana_logger::setup();
 
-    println!("Test program: solana_bpf_rust_call_depth");
-
     let GenesisConfigInfo {
         genesis_config,
         mint_keypair,
@@ -1267,6 +1334,40 @@ fn test_program_bpf_call_depth() {
     assert!(result.is_err());
 }
 
+#[cfg(feature = "bpf_rust")]
+#[test]
+fn test_program_bpf_compute_budget() {
+    solana_logger::setup();
+
+    let GenesisConfigInfo {
+        genesis_config,
+        mint_keypair,
+        ..
+    } = create_genesis_config(50);
+    let mut bank = Bank::new(&genesis_config);
+    let (name, id, entrypoint) = solana_bpf_loader_program!();
+    bank.add_builtin(&name, id, entrypoint);
+    let bank_client = BankClient::new(bank);
+    let program_id = load_bpf_program(
+        &bank_client,
+        &bpf_loader::id(),
+        &mint_keypair,
+        "solana_bpf_rust_noop",
+    );
+    let message = Message::new(
+        &[
+            compute_budget::request_units(1),
+            Instruction::new_with_bincode(program_id, &0, vec![]),
+        ],
+        Some(&mint_keypair.pubkey()),
+    );
+    let result = bank_client.send_and_confirm_message(&[&mint_keypair], message);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        TransactionError::InstructionError(1, InstructionError::ProgramFailedToComplete),
+    );
+}
+
 #[test]
 fn assert_instruction_count() {
     solana_logger::setup();
@@ -1275,18 +1376,19 @@ fn assert_instruction_count() {
     #[cfg(feature = "bpf_c")]
     {
         programs.extend_from_slice(&[
-            ("alloc", 1137),
-            ("bpf_to_bpf", 13),
-            ("multiple_static", 8),
-            ("noop", 42),
-            ("noop++", 42),
-            ("relative_call", 10),
-            ("sanity", 174),
-            ("sanity++", 174),
-            ("secp256k1_recover", 357),
-            ("sha", 694),
-            ("struct_pass", 8),
-            ("struct_ret", 22),
+            ("alloc", 1237),
+            ("bpf_to_bpf", 96),
+            ("multiple_static", 52),
+            ("noop", 5),
+            ("noop++", 5),
+            ("relative_call", 26),
+            ("return_data", 980),
+            ("sanity", 1255),
+            ("sanity++", 1260),
+            ("secp256k1_recover", 25383),
+            ("sha", 1328),
+            ("struct_pass", 108),
+            ("struct_ret", 28),
         ]);
     }
     #[cfg(feature = "bpf_rust")]

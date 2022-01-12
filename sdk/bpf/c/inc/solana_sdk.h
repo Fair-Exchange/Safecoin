@@ -619,6 +619,11 @@ static uint64_t sol_invoke(
   );
 }
 
+/**
+ * Print the base64 representation of some arrays.
+ */
+void sol_log_data(SafeBytes *fields, uint64_t fields_len);
+
 /**@}*/
 
 /**
@@ -694,6 +699,7 @@ uint64_t entrypoint(const uint8_t *input);
  * Stub functions when building tests
  */
 #include <stdio.h>
+#include <stdlib.h>
 void sol_log_(const char *s, uint64_t len) {
   printf("Program log: %s\n", s);
 }
@@ -715,6 +721,29 @@ void sol_panic_(const char *file, uint64_t len, uint64_t line, uint64_t column) 
   abort();
 }
 #endif
+
+/**
+ * Maximum size of return data
+ */
+#define MAX_RETURN_DATA 1024
+
+/**
+ * Set the return data
+ *
+ * @param bytes byte array to set
+ * @param bytes_len length of byte array. This may not exceed MAX_RETURN_DATA.
+ */
+void sol_set_return_data(const uint8_t *bytes, uint64_t bytes_len);
+
+/**
+ * Get the return data
+ *
+ * @param bytes byte buffer
+ * @param bytes_len maximum length of buffer
+ * @param program_id the program_id which set the return data. Only set if there was some return data (the function returns non-zero).
+ * @param result length of return data (may exceed bytes_len if the return data is longer)
+ */
+uint64_t sol_get_return_data(const uint8_t *bytes, uint64_t bytes_len, SafePubkey *program_id);
 
 #ifdef __cplusplus
 }

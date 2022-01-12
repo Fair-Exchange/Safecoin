@@ -1,19 +1,21 @@
-use clap::{crate_description, crate_name, value_t_or_exit, ArgMatches};
-use console::style;
-use safecoin_clap_utils::{
-    input_validators::normalize_to_url_if_moniker,
-    keypair::{CliSigners, DefaultSigner},
-    DisplayError,
+use {
+    clap::{crate_description, crate_name, value_t_or_exit, ArgMatches},
+    console::style,
+    safecoin_clap_utils::{
+        input_validators::normalize_to_url_if_moniker,
+        keypair::{CliSigners, DefaultSigner},
+        DisplayError,
+    },
+    solana_cli::{
+        clap_app::get_clap_app,
+        cli::{parse_command, process_command, CliCommandInfo, CliConfig, SettingType},
+    },
+    safecoin_cli_config::Config,
+    safecoin_cli_output::{display::println_name_value, OutputFormat},
+    safecoin_client::rpc_config::RpcSendTransactionConfig,
+    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
+    std::{collections::HashMap, error, path::PathBuf, sync::Arc, time::Duration},
 };
-use solana_cli::{
-    clap_app::get_clap_app,
-    cli::{parse_command, process_command, CliCommandInfo, CliConfig, SettingType},
-};
-use safecoin_cli_config::Config;
-use safecoin_cli_output::{display::println_name_value, OutputFormat};
-use safecoin_client::rpc_config::RpcSendTransactionConfig;
-use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
-use std::{collections::HashMap, error, path::PathBuf, sync::Arc, time::Duration};
 
 pub fn println_name_value_or(name: &str, value: &str, setting_type: SettingType) {
     let description = match setting_type {

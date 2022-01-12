@@ -1,9 +1,11 @@
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(min_specialization))]
 
 extern crate serde_derive;
-use serde_derive::{Deserialize, Serialize};
-use safecoin_sdk::sanitize::Sanitize;
-use std::{convert::TryInto, fmt};
+use {
+    serde_derive::{Deserialize, Serialize},
+    safecoin_sdk::sanitize::Sanitize,
+    std::{convert::TryInto, fmt},
+};
 #[macro_use]
 extern crate safecoin_frozen_abi_macro;
 

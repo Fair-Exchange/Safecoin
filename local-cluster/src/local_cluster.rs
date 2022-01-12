@@ -1,52 +1,53 @@
-use crate::{
-    cluster::{Cluster, ClusterValidatorInfo, ValidatorInfo},
-    cluster_tests,
-    validator_configs::*,
-};
-use itertools::izip;
-use log::*;
-use safecoin_client::thin_client::{create_client, ThinClient};
-use solana_core::validator::{Validator, ValidatorConfig, ValidatorStartProgress};
-use safecoin_gossip::{
-    cluster_info::{Node, VALIDATOR_PORT_RANGE},
-    contact_info::ContactInfo,
-    gossip_service::discover_cluster,
-};
-use solana_ledger::create_new_tmp_ledger;
-use solana_runtime::genesis_utils::{
-    create_genesis_config_with_vote_accounts_and_cluster_type, GenesisConfigInfo,
-    ValidatorVoteKeypairs,
-};
-use safecoin_sdk::{
-    account::Account,
-    account::AccountSharedData,
-    client::SyncClient,
-    clock::{DEFAULT_DEV_SLOTS_PER_EPOCH, DEFAULT_TICKS_PER_SLOT},
-    commitment_config::CommitmentConfig,
-    epoch_schedule::EpochSchedule,
-    genesis_config::{ClusterType, GenesisConfig},
-    message::Message,
-    poh_config::PohConfig,
-    pubkey::Pubkey,
-    signature::{Keypair, Signer},
-    stake::{
-        config as stake_config, instruction as stake_instruction,
-        state::{Authorized, Lockup},
+use {
+    crate::{
+        cluster::{Cluster, ClusterValidatorInfo, ValidatorInfo},
+        cluster_tests,
+        validator_configs::*,
     },
-    system_transaction,
-    transaction::Transaction,
-};
-use solana_stake_program::{config::create_account as create_stake_config_account, stake_state};
-use solana_streamer::socket::SocketAddrSpace;
-use solana_vote_program::{
-    vote_instruction,
-    vote_state::{VoteInit, VoteState},
-};
-use std::{
-    collections::HashMap,
-    io::{Error, ErrorKind, Result},
-    iter,
-    sync::{Arc, RwLock},
+    itertools::izip,
+    log::*,
+    safecoin_client::thin_client::{create_client, ThinClient},
+    safecoin_core::validator::{Validator, ValidatorConfig, ValidatorStartProgress},
+    safecoin_gossip::{
+        cluster_info::{Node, VALIDATOR_PORT_RANGE},
+        contact_info::ContactInfo,
+        gossip_service::discover_cluster,
+    },
+    solana_ledger::create_new_tmp_ledger,
+    solana_runtime::genesis_utils::{
+        create_genesis_config_with_vote_accounts_and_cluster_type, GenesisConfigInfo,
+        ValidatorVoteKeypairs,
+    },
+    safecoin_sdk::{
+        account::{Account, AccountSharedData},
+        client::SyncClient,
+        clock::{DEFAULT_DEV_SLOTS_PER_EPOCH, DEFAULT_TICKS_PER_SLOT},
+        commitment_config::CommitmentConfig,
+        epoch_schedule::EpochSchedule,
+        genesis_config::{ClusterType, GenesisConfig},
+        message::Message,
+        poh_config::PohConfig,
+        pubkey::Pubkey,
+        signature::{Keypair, Signer},
+        stake::{
+            config as stake_config, instruction as stake_instruction,
+            state::{Authorized, Lockup},
+        },
+        system_transaction,
+        transaction::Transaction,
+    },
+    solana_stake_program::{config::create_account as create_stake_config_account, stake_state},
+    solana_streamer::socket::SocketAddrSpace,
+    solana_vote_program::{
+        vote_instruction,
+        vote_state::{VoteInit, VoteState},
+    },
+    std::{
+        collections::HashMap,
+        io::{Error, ErrorKind, Result},
+        iter,
+        sync::{Arc, RwLock},
+    },
 };
 
 #[derive(Debug)]
@@ -272,7 +273,7 @@ impl LocalCluster {
         let mut listener_config = safe_clone_config(&config.validator_configs[0]);
         listener_config.voting_disabled = true;
         (0..config.num_listeners).for_each(|_| {
-            cluster.add_validator(
+            cluster.add_validator_listener(
                 &listener_config,
                 0,
                 Arc::new(Keypair::new()),
@@ -315,9 +316,48 @@ impl LocalCluster {
         }
     }
 
+    /// Set up validator without voting or staking accounts
+    pub fn add_validator_listener(
+        &mut self,
+        validator_config: &ValidatorConfig,
+        stake: u64,
+        validator_keypair: Arc<Keypair>,
+        voting_keypair: Option<Arc<Keypair>>,
+        socket_addr_space: SocketAddrSpace,
+    ) -> Pubkey {
+        self.do_add_validator(
+            validator_config,
+            true,
+            stake,
+            validator_keypair,
+            voting_keypair,
+            socket_addr_space,
+        )
+    }
+
+    /// Set up validator with voting and staking accounts
     pub fn add_validator(
         &mut self,
         validator_config: &ValidatorConfig,
+        stake: u64,
+        validator_keypair: Arc<Keypair>,
+        voting_keypair: Option<Arc<Keypair>>,
+        socket_addr_space: SocketAddrSpace,
+    ) -> Pubkey {
+        self.do_add_validator(
+            validator_config,
+            false,
+            stake,
+            validator_keypair,
+            voting_keypair,
+            socket_addr_space,
+        )
+    }
+
+    fn do_add_validator(
+        &mut self,
+        validator_config: &ValidatorConfig,
+        is_listener: bool,
         stake: u64,
         validator_keypair: Arc<Keypair>,
         mut voting_keypair: Option<Arc<Keypair>>,
@@ -338,30 +378,28 @@ impl LocalCluster {
         let contact_info = validator_node.info.clone();
         let (ledger_path, _blockhash) = create_new_tmp_ledger!(&self.genesis_config);
 
-        if validator_config.voting_disabled {
+        // Give the validator some lamports to setup vote accounts
+        if is_listener {
             // setup as a listener
             info!("listener {} ", validator_pubkey,);
-        } else {
-            // Give the validator some lamports to setup vote accounts
-            if should_create_vote_pubkey {
-                let validator_balance = Self::transfer_with_client(
-                    &client,
-                    &self.funding_keypair,
-                    &validator_pubkey,
-                    stake * 2 + 2,
-                );
-                info!(
-                    "validator {} balance {}",
-                    validator_pubkey, validator_balance
-                );
-                Self::setup_vote_and_stake_accounts(
-                    &client,
-                    voting_keypair.as_ref().unwrap(),
-                    &validator_keypair,
-                    stake,
-                )
-                .unwrap();
-            }
+        } else if should_create_vote_pubkey {
+            let validator_balance = Self::transfer_with_client(
+                &client,
+                &self.funding_keypair,
+                &validator_pubkey,
+                stake * 2 + 2,
+            );
+            info!(
+                "validator {} balance {}",
+                validator_pubkey, validator_balance
+            );
+            Self::setup_vote_and_stake_accounts(
+                &client,
+                voting_keypair.as_ref().unwrap(),
+                &validator_keypair,
+                stake,
+            )
+            .unwrap();
         }
 
         let mut config = safe_clone_config(validator_config);
@@ -741,40 +779,5 @@ impl Cluster for LocalCluster {
 impl Drop for LocalCluster {
     fn drop(&mut self) {
         self.close();
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use safecoin_sdk::epoch_schedule::MINIMUM_SLOTS_PER_EPOCH;
-
-    #[test]
-    fn test_local_cluster_start_and_exit() {
-        solana_logger::setup();
-        let num_nodes = 1;
-        let cluster =
-            LocalCluster::new_with_equal_stakes(num_nodes, 100, 3, SocketAddrSpace::Unspecified);
-        assert_eq!(cluster.validators.len(), num_nodes);
-    }
-
-    #[test]
-    fn test_local_cluster_start_and_exit_with_config() {
-        solana_logger::setup();
-        const NUM_NODES: usize = 1;
-        let mut config = ClusterConfig {
-            validator_configs: make_identical_validator_configs(
-                &ValidatorConfig::default(),
-                NUM_NODES,
-            ),
-            node_stakes: vec![3; NUM_NODES],
-            cluster_lamports: 100,
-            ticks_per_slot: 8,
-            slots_per_epoch: MINIMUM_SLOTS_PER_EPOCH as u64,
-            stakers_slot_offset: MINIMUM_SLOTS_PER_EPOCH as u64,
-            ..ClusterConfig::default()
-        };
-        let cluster = LocalCluster::new(&mut config, SocketAddrSpace::Unspecified);
-        assert_eq!(cluster.validators.len(), NUM_NODES);
     }
 }

@@ -1,13 +1,15 @@
-use serde::Serialize;
-use safecoin_sdk::{
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-    client::Client,
-    instruction::{AccountMeta, Instruction},
-    loader_instruction,
-    message::Message,
-    pubkey::Pubkey,
-    signature::{Keypair, Signer},
-    system_instruction,
+use {
+    serde::Serialize,
+    safecoin_sdk::{
+        bpf_loader_upgradeable::{self, UpgradeableLoaderState},
+        client::Client,
+        instruction::{AccountMeta, Instruction},
+        loader_instruction,
+        message::Message,
+        pubkey::Pubkey,
+        signature::{Keypair, Signer},
+        system_instruction,
+    },
 };
 
 pub fn load_program<T: Client>(

@@ -189,20 +189,22 @@ safecoin_sdk::pubkeys!(
         "GeMGyvsTEsANVvcT5cme65Xq5MVU8fVVzMQ13KAZFNS2",
         "Bj3aQ2oFnZYfNR1njzRjmWizzuhvfcYLckh76cqsbuBM",
         "4ZJhPQAgUseCsWhKvJLTmmRRUV74fdoTpQLNfKoekbPY",
+        "HXdYQ5gixrY2H6Y9gqsD8kPM2JQKSaRiohDQtLbZkRWE",
     ]
 );
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use safecoin_sdk::{
-        account::Account,
-        account::AccountSharedData,
-        epoch_schedule::EpochSchedule,
-        genesis_config::{ClusterType, GenesisConfig},
-        stake::state::{Authorized, Lockup, Meta},
+    use {
+        super::*,
+        safecoin_sdk::{
+            account::{Account, AccountSharedData},
+            epoch_schedule::EpochSchedule,
+            genesis_config::{ClusterType, GenesisConfig},
+            stake::state::{Authorized, Lockup, Meta},
+        },
+        std::{collections::BTreeMap, sync::Arc},
     };
-    use std::{collections::BTreeMap, sync::Arc};
 
     fn new_from_parent(parent: &Arc<Bank>) -> Bank {
         Bank::new_from_parent(parent, &Pubkey::default(), parent.slot() + 1)

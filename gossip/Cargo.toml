@@ -3,7 +3,7 @@ authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2018"
 name = "safecoin-gossip"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.7.17"
+version = "1.8.12"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -15,9 +15,9 @@ bv = { version = "0.11.1", features = ["serde"] }
 clap = "2.33.1"
 flate2 = "1.0"
 indexmap = { version = "1.5", features = ["rayon"] }
-itertools = "0.9.0"
+itertools = "0.10.1"
 log = "0.4.11"
-lru = "0.6.1"
+lru = "0.7.1"
 matches = "0.1.8"
 num-traits = "0.2"
 rand = "0.7.0"
@@ -26,22 +26,22 @@ rayon = "1.5.0"
 serde = "1.0.122"
 serde_bytes = "0.11"
 serde_derive = "1.0.103"
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.7.17" }
-safecoin-client = { path = "../client", version = "=1.7.17" }
-safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.7.17" }
-safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.7.17" }
-safecoin-ledger = { path = "../ledger", version = "=1.7.17" }
-safecoin-logger = { path = "../logger", version = "=1.7.17" }
-safecoin-measure = { path = "../measure", version = "=1.7.17" }
-safecoin-metrics = { path = "../metrics", version = "=1.7.17" }
-safecoin-net-utils = { path = "../net-utils", version = "=1.7.17" }
-safecoin-perf = { path = "../perf", version = "=1.7.17" }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.7.17" }
-safecoin-runtime = { path = "../runtime", version = "=1.7.17" }
-safecoin-streamer = { path = "../streamer", version = "=1.7.17" }
-safecoin-sdk = { path = "../sdk", version = "=1.7.17" }
-safecoin-version = { path = "../version", version = "=1.7.17" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.7.17" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.8.12" }
+safecoin-client = { path = "../client", version = "=1.8.12" }
+safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.8.12" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.8.12" }
+safecoin-ledger = { path = "../ledger", version = "=1.8.12" }
+safecoin-logger = { path = "../logger", version = "=1.8.12" }
+safecoin-measure = { path = "../measure", version = "=1.8.12" }
+safecoin-metrics = { path = "../metrics", version = "=1.8.12" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.8.12" }
+safecoin-perf = { path = "../perf", version = "=1.8.12" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.8.12" }
+safecoin-runtime = { path = "../runtime", version = "=1.8.12" }
+safecoin-streamer = { path = "../streamer", version = "=1.8.12" }
+safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
+safecoin-version = { path = "../version", version = "=1.8.12" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.8.12" }
 thiserror = "1.0"
 
 [dev-dependencies]

@@ -1,12 +1,14 @@
-use solana_cli::cli::{process_command, CliCommand, CliConfig};
-use safecoin_client::rpc_client::RpcClient;
-use solana_core::test_validator::TestValidator;
-use safecoin_faucet::faucet::run_local_faucet;
-use safecoin_sdk::{
-    commitment_config::CommitmentConfig,
-    signature::{Keypair, Signer},
+use {
+    solana_cli::cli::{process_command, CliCommand, CliConfig},
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_core::test_validator::TestValidator,
+    safecoin_faucet::faucet::run_local_faucet,
+    safecoin_sdk::{
+        commitment_config::CommitmentConfig,
+        signature::{Keypair, Signer},
+    },
+    solana_streamer::socket::SocketAddrSpace,
 };
-use solana_streamer::socket::SocketAddrSpace;
 
 #[test]
 fn test_cli_request_airdrop() {

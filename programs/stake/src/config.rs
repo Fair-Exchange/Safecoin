@@ -1,20 +1,21 @@
 //! config for staking
 //!  carries variables that the stake program cares about
-use bincode::deserialize;
-use solana_config_program::{create_config_account, get_config_data};
-use safecoin_sdk::{
-    account::{AccountSharedData, ReadableAccount, WritableAccount},
-    genesis_config::GenesisConfig,
-    instruction::InstructionError,
-    keyed_account::KeyedAccount,
-    stake::config::{self, Config},
-};
-
 #[deprecated(
     since = "1.7.2",
     note = "Please use `safecoin_sdk::stake::config` or `safecoin_program::stake::config` instead"
 )]
 pub use safecoin_sdk::stake::config::*;
+use {
+    bincode::deserialize,
+    solana_config_program::{create_config_account, get_config_data},
+    safecoin_sdk::{
+        account::{AccountSharedData, ReadableAccount, WritableAccount},
+        genesis_config::GenesisConfig,
+        instruction::InstructionError,
+        keyed_account::KeyedAccount,
+        stake::config::{self, Config},
+    },
+};
 
 pub fn from<T: ReadableAccount>(account: &T) -> Option<Config> {
     get_config_data(account.data())
@@ -46,9 +47,7 @@ pub fn add_genesis_account(genesis_config: &mut GenesisConfig) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use safecoin_sdk::pubkey::Pubkey;
-    use std::cell::RefCell;
+    use {super::*, safecoin_sdk::pubkey::Pubkey, std::cell::RefCell};
 
     #[test]
     fn test() {

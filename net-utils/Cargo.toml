@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-net-utils"
-version = "1.7.17"
+version = "1.8.12"
 description = "Safecoin Network Utilities"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -18,10 +18,10 @@ rand = "0.7.0"
 serde = "1.0.122"
 serde_derive = "1.0.103"
 socket2 = "0.3.17"
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.7.17" }
-safecoin-logger = { path = "../logger", version = "=1.7.17" }
-safecoin-sdk = { path = "../sdk", version = "=1.7.17" }
-safecoin-version = { path = "../version", version = "=1.7.17" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.8.12" }
+safecoin-logger = { path = "../logger", version = "=1.8.12" }
+safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
+safecoin-version = { path = "../version", version = "=1.8.12" }
 tokio = { version = "1", features = ["full"] }
 url = "2.1.1"
 

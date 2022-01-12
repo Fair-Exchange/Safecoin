@@ -1,0 +1,26 @@
+[package]
+name = "solana-ed25519-program"
+description = "Safecoin Ed25519 program"
+version = "1.8.12"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/solana-ed25519-program"
+repository = "https://github.com/fair-exchange/safecoin"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+license = "Apache-2.0"
+edition = "2018"
+
+[dependencies]
+safecoin-sdk = { path = "../../sdk", version = "=1.8.12" }
+
+[dev-dependencies]
+bytemuck = { version = "1.7.2", features = ["derive"] }
+ed25519-dalek = "=1.0.1"
+rand = "0.7.0"
+safecoin-logger = { path = "../../logger", version = "=1.8.12" }
+
+[lib]
+crate-type = ["lib"]
+name = "solana_ed25519_program"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

@@ -1,11 +1,13 @@
-use log::*;
-use rayon::prelude::*;
-use safecoin_measure::measure::Measure;
-use safecoin_sdk::{
-    hash::{Hash, Hasher},
-    pubkey::Pubkey,
+use {
+    log::*,
+    rayon::prelude::*,
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::{
+        hash::{Hash, Hasher},
+        pubkey::Pubkey,
+    },
+    std::{convert::TryInto, sync::Mutex},
 };
-use std::{convert::TryInto, sync::Mutex};
 
 pub const ZERO_RAW_LAMPORTS_SENTINEL: u64 = std::u64::MAX;
 pub const MERKLE_FANOUT: usize = 16;
@@ -782,8 +784,7 @@ impl AccountsHash {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-    use std::str::FromStr;
+    use {super::*, std::str::FromStr};
 
     #[test]
     fn test_accountsdb_div_ceil() {

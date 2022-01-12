@@ -3,39 +3,41 @@
 
 extern crate test;
 
-use crossbeam_channel::unbounded;
-use log::*;
-use rand::{thread_rng, Rng};
-use rayon::prelude::*;
-use solana_core::banking_stage::{BankingStage, BankingStageStats};
-use safecoin_gossip::cluster_info::ClusterInfo;
-use safecoin_gossip::cluster_info::Node;
-use solana_ledger::blockstore_processor::process_entries;
-use solana_ledger::entry::{next_hash, Entry};
-use solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo};
-use solana_ledger::{blockstore::Blockstore, get_tmp_ledger_path};
-use solana_perf::packet::to_packets_chunked;
-use solana_perf::test_tx::test_tx;
-use solana_poh::poh_recorder::{create_test_recorder, WorkingBankEntry};
-use solana_runtime::bank::Bank;
-use safecoin_sdk::genesis_config::GenesisConfig;
-use safecoin_sdk::hash::Hash;
-use safecoin_sdk::message::Message;
-use safecoin_sdk::pubkey;
-use safecoin_sdk::signature::Keypair;
-use safecoin_sdk::signature::Signature;
-use safecoin_sdk::signature::Signer;
-use safecoin_sdk::system_instruction;
-use safecoin_sdk::system_transaction;
-use safecoin_sdk::timing::{duration_as_us, timestamp};
-use safecoin_sdk::transaction::Transaction;
-use solana_streamer::socket::SocketAddrSpace;
-use std::collections::VecDeque;
-use std::sync::atomic::Ordering;
-use std::sync::mpsc::Receiver;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use test::Bencher;
+use {
+    crossbeam_channel::unbounded,
+    log::*,
+    rand::{thread_rng, Rng},
+    rayon::prelude::*,
+    safecoin_core::banking_stage::{BankingStage, BankingStageStats},
+    safecoin_gossip::cluster_info::{ClusterInfo, Node},
+    solana_ledger::{
+        blockstore::Blockstore,
+        blockstore_processor::process_entries,
+        entry::{next_hash, Entry},
+        genesis_utils::{create_genesis_config, GenesisConfigInfo},
+        get_tmp_ledger_path,
+    },
+    solana_perf::{packet::to_packet_batches, test_tx::test_tx},
+    solana_poh::poh_recorder::{create_test_recorder, WorkingBankEntry},
+    solana_runtime::{bank::Bank, cost_model::CostModel},
+    safecoin_sdk::{
+        genesis_config::GenesisConfig,
+        hash::Hash,
+        message::Message,
+        pubkey,
+        signature::{Keypair, Signature, Signer},
+        system_instruction, system_transaction,
+        timing::{duration_as_us, timestamp},
+        transaction::Transaction,
+    },
+    solana_streamer::socket::SocketAddrSpace,
+    std::{
+        collections::VecDeque,
+        sync::{atomic::Ordering, mpsc::Receiver, Arc, RwLock},
+        time::{Duration, Instant},
+    },
+    test::Bencher,
+};
 
 fn check_txs(receiver: &Arc<Receiver<WorkingBankEntry>>, ref_tx_count: usize) {
     let mut total = 0;
@@ -72,11 +74,11 @@ fn bench_consume_buffered(bencher: &mut Bencher) {
         let tx = test_tx();
         let len = 4096;
         let chunk_size = 1024;
-        let batches = to_packets_chunked(&vec![tx; len], chunk_size);
-        let mut packets = VecDeque::new();
+        let batches = to_packet_batches(&vec![tx; len], chunk_size);
+        let mut packet_batches = VecDeque::new();
         for batch in batches {
             let batch_len = batch.packets.len();
-            packets.push_back((batch, vec![0usize; batch_len], false));
+            packet_batches.push_back((batch, vec![0usize; batch_len], false));
         }
         let (s, _r) = unbounded();
         // This tests the performance of buffering packets.
@@ -86,12 +88,13 @@ fn bench_consume_buffered(bencher: &mut Bencher) {
                 &my_pubkey,
                 std::u128::MAX,
                 &poh_recorder,
-                &mut packets,
+                &mut packet_batches,
                 None,
                 &s,
                 None::<Box<dyn Fn()>>,
                 &BankingStageStats::default(),
                 &recorder,
+                &Arc::new(RwLock::new(CostModel::default())),
             );
         });
 
@@ -165,6 +168,11 @@ fn bench_banking(bencher: &mut Bencher, tx_type: TransactionType) {
     bank.ns_per_slot = std::u128::MAX;
     let bank = Arc::new(Bank::new(&genesis_config));
 
+    // set cost tracker limits to MAX so it will not filter out TXs
+    bank.write_cost_tracker()
+        .unwrap()
+        .set_limits(std::u64::MAX, std::u64::MAX);
+
     debug!("threads: {} txs: {}", num_threads, txes);
 
     let transactions = match tx_type {
@@ -195,7 +203,7 @@ fn bench_banking(bencher: &mut Bencher, tx_type: TransactionType) {
         assert!(r.is_ok(), "sanity parallel execution");
     }
     bank.clear_signatures();
-    let verified: Vec<_> = to_packets_chunked(&transactions, PACKETS_PER_BATCH);
+    let verified: Vec<_> = to_packet_batches(&transactions, PACKETS_PER_BATCH);
     let ledger_path = get_tmp_ledger_path!();
     {
         let blockstore = Arc::new(
@@ -218,6 +226,7 @@ fn bench_banking(bencher: &mut Bencher, tx_type: TransactionType) {
             vote_receiver,
             None,
             s,
+            Arc::new(RwLock::new(CostModel::default())),
         );
         poh_recorder.lock().unwrap().set_bank(&bank);
 

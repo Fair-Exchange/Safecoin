@@ -1,74 +1,75 @@
 //! The `replay_stage` replays transactions broadcast by the leader.
 
-use crate::{
-    broadcast_stage::RetransmitSlotsSender,
-    cache_block_meta_service::CacheBlockMetaSender,
-    cluster_info_vote_listener::{
-        GossipDuplicateConfirmedSlotsReceiver, GossipVerifiedVoteHashReceiver, VoteTracker,
+use {
+    crate::{
+        broadcast_stage::RetransmitSlotsSender,
+        cache_block_meta_service::CacheBlockMetaSender,
+        cluster_info_vote_listener::{
+            GossipDuplicateConfirmedSlotsReceiver, GossipVerifiedVoteHashReceiver, VoteTracker,
+        },
+        cluster_slot_state_verifier::*,
+        cluster_slots::ClusterSlots,
+        cluster_slots_service::ClusterSlotsUpdateSender,
+        commitment_service::{AggregateCommitmentService, CommitmentAggregationData},
+        consensus::{
+            ComputedBankState, Stake, SwitchForkDecision, Tower, VotedStakes, SWITCH_FORK_THRESHOLD,
+        },
+        cost_update_service::CostUpdate,
+        fork_choice::{ForkChoice, SelectVoteAndResetForkResult},
+        heaviest_subtree_fork_choice::HeaviestSubtreeForkChoice,
+        latest_validator_votes_for_frozen_banks::LatestValidatorVotesForFrozenBanks,
+        progress_map::{ForkProgress, ProgressMap, PropagatedStats},
+        repair_service::DuplicateSlotsResetReceiver,
+        rewards_recorder_service::RewardsRecorderSender,
+        unfrozen_gossip_verified_vote_hashes::UnfrozenGossipVerifiedVoteHashes,
+        voting_service::VoteOp,
+        window_service::DuplicateSlotReceiver,
     },
-    cluster_slot_state_verifier::*,
-    cluster_slots::ClusterSlots,
-    cluster_slots_service::ClusterSlotsUpdateSender,
-    commitment_service::{AggregateCommitmentService, CommitmentAggregationData},
-    consensus::{
-        ComputedBankState, Stake, SwitchForkDecision, Tower, VotedStakes, SWITCH_FORK_THRESHOLD,
+    safecoin_client::rpc_response::SlotUpdate,
+    safecoin_gossip::cluster_info::ClusterInfo,
+    solana_ledger::{
+        block_error::BlockError,
+        blockstore::Blockstore,
+        blockstore_processor::{self, BlockstoreProcessorError, TransactionStatusSender},
+        entry::VerifyRecyclers,
+        leader_schedule_cache::LeaderScheduleCache,
     },
-    fork_choice::{ForkChoice, SelectVoteAndResetForkResult},
-    heaviest_subtree_fork_choice::HeaviestSubtreeForkChoice,
-    latest_validator_votes_for_frozen_banks::LatestValidatorVotesForFrozenBanks,
-    progress_map::{ForkProgress, ProgressMap, PropagatedStats},
-    repair_service::DuplicateSlotsResetReceiver,
-    result::Result,
-    rewards_recorder_service::RewardsRecorderSender,
-    unfrozen_gossip_verified_vote_hashes::UnfrozenGossipVerifiedVoteHashes,
-    voting_service::VoteOp,
-    window_service::DuplicateSlotReceiver,
-};
-use safecoin_client::rpc_response::SlotUpdate;
-use safecoin_gossip::cluster_info::ClusterInfo;
-use solana_ledger::{
-    block_error::BlockError,
-    blockstore::Blockstore,
-    blockstore_processor::{self, BlockstoreProcessorError, TransactionStatusSender},
-    entry::VerifyRecyclers,
-    leader_schedule_cache::LeaderScheduleCache,
-};
-use safecoin_measure::measure::Measure;
-use solana_metrics::inc_new_counter_info;
-use solana_poh::poh_recorder::{PohRecorder, GRACE_TICKS_FACTOR, MAX_GRACE_SLOTS};
-use solana_rpc::{
-    optimistically_confirmed_bank_tracker::{BankNotification, BankNotificationSender},
-    rpc_subscriptions::RpcSubscriptions,
-};
-use solana_runtime::{
-    accounts_background_service::AbsRequestSender,
-    bank::{Bank, NewBankOptions},
-    bank_forks::BankForks,
-    commitment::BlockCommitmentCache,
-    vote_sender_types::ReplayVoteSender,
-};
-use safecoin_sdk::{
-    clock::{Slot, MAX_PROCESSING_AGE, NUM_CONSECUTIVE_LEADER_SLOTS},
-    genesis_config::ClusterType,
-    hash::Hash,
-    pubkey::Pubkey,
-    signature::Signature,
-    signature::{Keypair, Signer},
-    timing::timestamp,
-    transaction::Transaction,
-    instruction::VoteModerator,
-};
-use solana_vote_program::vote_state::Vote;
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    result,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        mpsc::{Receiver, RecvTimeoutError, Sender},
-        Arc, Mutex, RwLock,
+    safecoin_measure::measure::Measure,
+    solana_metrics::inc_new_counter_info,
+    solana_poh::poh_recorder::{PohRecorder, GRACE_TICKS_FACTOR, MAX_GRACE_SLOTS},
+    solana_rpc::{
+        optimistically_confirmed_bank_tracker::{BankNotification, BankNotificationSender},
+        rpc_subscriptions::RpcSubscriptions,
     },
-    thread::{self, Builder, JoinHandle},
-    time::{Duration, Instant},
+    solana_runtime::{
+        accounts_background_service::AbsRequestSender,
+        bank::{Bank, ExecuteTimings, NewBankOptions},
+        bank_forks::BankForks,
+        commitment::BlockCommitmentCache,
+        vote_sender_types::ReplayVoteSender,
+    },
+    safecoin_sdk::{
+        clock::{Slot, MAX_PROCESSING_AGE, NUM_CONSECUTIVE_LEADER_SLOTS},
+        genesis_config::ClusterType,
+        hash::Hash,
+        pubkey::Pubkey,
+        signature::{Keypair, Signature, Signer},
+        timing::timestamp,
+        transaction::Transaction,
+        instruction::VoteModerator,
+    },
+    solana_vote_program::vote_state::Vote,
+    std::{
+        collections::{BTreeMap, HashMap, HashSet},
+        result,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            mpsc::{Receiver, RecvTimeoutError, Sender},
+            Arc, Mutex, RwLock,
+        },
+        thread::{self, Builder, JoinHandle},
+        time::{Duration, Instant},
+    },
 };
 
 pub const MAX_ENTRY_RECV_PER_ITER: usize = 512;
@@ -132,7 +133,6 @@ pub struct ReplayStageConfig {
     pub cache_block_meta_sender: Option<CacheBlockMetaSender>,
     pub bank_notification_sender: Option<BankNotificationSender>,
     pub wait_for_vote_to_start_leader: bool,
-    pub disable_epoch_boundary_optimization: bool,
 }
 
 #[derive(Default)]
@@ -282,7 +282,7 @@ impl ReplayTiming {
                     "process_duplicate_slots_elapsed",
                     self.process_duplicate_slots_elapsed as i64,
                     i64
-                )
+                ),
             );
 
             *self = ReplayTiming::default();
@@ -292,7 +292,7 @@ impl ReplayTiming {
 }
 
 pub struct ReplayStage {
-    t_replay: JoinHandle<Result<()>>,
+    t_replay: JoinHandle<()>,
     commitment_service: AggregateCommitmentService,
 }
 
@@ -316,6 +316,8 @@ impl ReplayStage {
         gossip_verified_vote_hash_receiver: GossipVerifiedVoteHashReceiver,
         cluster_slots_update_sender: ClusterSlotsUpdateSender,
         voting_sender: Sender<VoteOp>,
+        cost_update_sender: Sender<CostUpdate>,
+        drop_bank_sender: Sender<Vec<Arc<Bank>>>,
     ) -> Self {
         let ReplayStageConfig {
             my_pubkey,
@@ -332,7 +334,6 @@ impl ReplayStage {
             cache_block_meta_sender,
             bank_notification_sender,
             wait_for_vote_to_start_leader,
-            disable_epoch_boundary_optimization,
         } = config;
 
         trace!("replay stage");
@@ -413,6 +414,7 @@ impl ReplayStage {
                         &mut unfrozen_gossip_verified_vote_hashes,
                         &mut latest_validator_votes_for_frozen_banks,
                         &cluster_slots_update_sender,
+                        &cost_update_sender,
                     );
                     replay_active_banks_time.stop();
 
@@ -609,6 +611,7 @@ impl ReplayStage {
                             &mut has_new_vote_been_rooted,
                             &mut replay_timing,
                             &voting_sender,
+                            &drop_bank_sender,
                         );
                     };
                     voting_time.stop();
@@ -695,7 +698,6 @@ impl ReplayStage {
                             &retransmit_slots_sender,
                             &mut skipped_slots_info,
                             has_new_vote_been_rooted,
-                            disable_epoch_boundary_optimization,
                         );
 
                         let poh_bank = poh_recorder.lock().unwrap().bank();
@@ -743,7 +745,6 @@ impl ReplayStage {
                         process_duplicate_slots_time.as_us(),
                     );
                 }
-                Ok(())
             })
             .unwrap();
 
@@ -1087,7 +1088,6 @@ impl ReplayStage {
         retransmit_slots_sender: &RetransmitSlotsSender,
         skipped_slots_info: &mut SkippedSlotsInfo,
         has_new_vote_been_rooted: bool,
-        disable_epoch_boundary_optimization: bool,
     ) {
         // all the individual calls to poh_recorder.lock() are designed to
         // increase granularity, decrease contention
@@ -1191,7 +1191,7 @@ impl ReplayStage {
             );
 
             let root_distance = poh_slot - root_slot;
-            const MAX_ROOT_DISTANCE_FOR_VOTE_ONLY: Slot = 500;
+            const MAX_ROOT_DISTANCE_FOR_VOTE_ONLY: Slot = 400;
             let vote_only_bank = if root_distance > MAX_ROOT_DISTANCE_FOR_VOTE_ONLY {
                 datapoint_info!("vote-only-bank", ("slot", poh_slot, i64));
                 true
@@ -1205,10 +1205,7 @@ impl ReplayStage {
                 root_slot,
                 my_pubkey,
                 rpc_subscriptions,
-                NewBankOptions {
-                    vote_only_bank,
-                    disable_epoch_boundary_optimization,
-                },
+                NewBankOptions { vote_only_bank },
             );
 
             let tpu_bank = bank_forks.write().unwrap().insert(tpu_bank);
@@ -1334,6 +1331,7 @@ impl ReplayStage {
         has_new_vote_been_rooted: &mut bool,
         replay_timing: &mut ReplayTiming,
         voting_sender: &Sender<VoteOp>,
+        bank_drop_sender: &Sender<Vec<Arc<Bank>>>,
     ) {
         if bank.is_empty() {
             inc_new_counter_info!("replay_stage-voted_empty_bank", 1);
@@ -1383,6 +1381,7 @@ impl ReplayStage {
                 unfrozen_gossip_verified_vote_hashes,
                 has_new_vote_been_rooted,
                 vote_signatures,
+                bank_drop_sender,
             );
             rpc_subscriptions.notify_roots(rooted_slots);
             if let Some(sender) = bank_notification_sender {
@@ -1402,6 +1401,7 @@ impl ReplayStage {
         Self::update_commitment_cache(
             bank.clone(),
             bank_forks.read().unwrap().root(),
+            progress.get_fork_stats(bank.slot()).unwrap().total_stake,
             lockouts_sender,
         );
         update_commitment_cache_time.stop();
@@ -1434,7 +1434,6 @@ impl ReplayStage {
         if authorized_voter_keypairs.is_empty() {
             return None;
         }
-
         let vote_account = match bank.get_vote_account(vote_account_pubkey) {
             None => {
                 warn!(
@@ -1468,29 +1467,29 @@ impl ReplayStage {
                 return None;
             };
 
-
-        log::trace!("authorized_voter_pubkey.replay_stage {}", authorized_voter_pubkey);
-        log::trace!("authorized_voter_pubkey_string.replay_stage {}", authorized_voter_pubkey.to_string());
-        log::trace!("vote_hash.replay_stage: {}", vote.hash);
-	log::trace!("vote_slots.replay_stage: {}", vote.slots[0]);
-        let vote_ok = bank.vote_allowed(vote.slots[0],vote.hash,authorized_voter_pubkey);
-        if vote_ok  {
-            warn!(
-                "I ({}) will vote if I can!!!",authorized_voter_pubkey.to_string()
-            );
-        } else {
-            warn!(
-                "Vote account {} not selected voter for slot {}.  Better luck next time",
-		  authorized_voter_pubkey.to_string(),
-                    vote.slots[0]
-            );
-            return None;
-        }
-
-
-
-
-
+            log::trace!("authorized_voter_pubkey.replay_stage {}", authorized_voter_pubkey);
+            log::trace!("authorized_voter_pubkey_string.replay_stage {}", authorized_voter_pubkey.to_string());
+            log::trace!("vote_hash.replay_stage: {}", vote.hash);
+            log::trace!("vote_slots.replay_stage: {}", vote.slots[0]);
+            let mut check_allowed = Measure::start("check allowed vote");
+    
+            let vote_ok = bank.vote_allowed(vote.slots[0],vote.hash,authorized_voter_pubkey);
+            check_allowed.stop();
+            if vote_ok  {
+                warn!(
+                    "I ({}) will vote if I can!!!",authorized_voter_pubkey.to_string()
+                );
+            } else {
+                warn!(
+                    "Vote account {} not selected voter for slot {}.  Better luck next time",
+              authorized_voter_pubkey.to_string(),
+                        vote.slots[0]
+                );
+                return None;
+            }
+    
+    
+    
         let authorized_voter_keypair = match authorized_voter_keypairs
             .iter()
             .find(|keypair| keypair.pubkey() == authorized_voter_pubkey)
@@ -1650,10 +1649,11 @@ impl ReplayStage {
     fn update_commitment_cache(
         bank: Arc<Bank>,
         root: Slot,
+        total_stake: Stake,
         lockouts_sender: &Sender<CommitmentAggregationData>,
     ) {
         if let Err(e) =
-            lockouts_sender.send(CommitmentAggregationData::new(bank, root ))
+            lockouts_sender.send(CommitmentAggregationData::new(bank, root, total_stake))
         {
             trace!("lockouts_sender failed: {:?}", e);
         }
@@ -1713,9 +1713,11 @@ impl ReplayStage {
         unfrozen_gossip_verified_vote_hashes: &mut UnfrozenGossipVerifiedVoteHashes,
         latest_validator_votes_for_frozen_banks: &mut LatestValidatorVotesForFrozenBanks,
         cluster_slots_update_sender: &ClusterSlotsUpdateSender,
+        cost_update_sender: &Sender<CostUpdate>,
     ) -> bool {
         let mut did_complete_bank = false;
         let mut tx_count = 0;
+        let mut execute_timings = ExecuteTimings::default();
         let active_banks = bank_forks.read().unwrap().active_banks();
         trace!("active banks {:?}", active_banks);
 
@@ -1786,6 +1788,12 @@ impl ReplayStage {
             }
             assert_eq!(*bank_slot, bank.slot());
             if bank.is_complete() {
+                execute_timings.accumulate(&bank_progress.replay_stats.execute_timings);
+                debug!("bank {} is completed replay from blockstore, contribute to update cost with {:?}",
+                       bank.slot(),
+                       bank_progress.replay_stats.execute_timings
+                       );
+
                 bank_progress.replay_stats.report_stats(
                     bank.slot(),
                     bank_progress.replay_progress.num_entries,
@@ -1798,6 +1806,13 @@ impl ReplayStage {
                     transaction_status_sender.send_transaction_status_freeze_message(&bank);
                 }
                 bank.freeze();
+                // report cost tracker stats
+                cost_update_sender
+                    .send(CostUpdate::FrozenBank { bank: bank.clone() })
+                    .unwrap_or_else(|err| {
+                        warn!("cost_update_sender failed sending bank stats: {:?}", err)
+                    });
+
                 let bank_hash = bank.hash();
                 assert_ne!(bank_hash, Hash::default());
                 // Needs to be updated before `check_slot_agrees_with_cluster()` so that
@@ -1847,6 +1862,14 @@ impl ReplayStage {
                 );
             }
         }
+
+        // send accumulated excute-timings to cost_update_service
+        if !execute_timings.details.per_program_timings.is_empty() {
+            cost_update_sender
+                .send(CostUpdate::ExecuteTiming { execute_timings })
+                .unwrap_or_else(|err| warn!("cost_update_sender failed: {:?}", err));
+        }
+
         inc_new_counter_info!("replay_stage-replay_transactions", tx_count);
         did_complete_bank
     }
@@ -1880,7 +1903,7 @@ impl ReplayStage {
                     let computed_bank_state = Tower::collect_vote_lockouts(
                         my_vote_pubkey,
                         bank_slot,
-                        bank.vote_accounts().into_iter(),
+                        &bank.vote_accounts(),
                         ancestors,
                         |slot| progress.get_hash(slot),
                         latest_validator_votes_for_frozen_banks,
@@ -2404,12 +2427,19 @@ impl ReplayStage {
         unfrozen_gossip_verified_vote_hashes: &mut UnfrozenGossipVerifiedVoteHashes,
         has_new_vote_been_rooted: &mut bool,
         voted_signatures: &mut Vec<Signature>,
+        bank_drop_sender: &Sender<Vec<Arc<Bank>>>,
     ) {
-        bank_forks.write().unwrap().set_root(
+        let removed_banks = bank_forks.write().unwrap().set_root(
             new_root,
             accounts_background_request_sender,
             highest_confirmed_root,
         );
+        bank_drop_sender
+            .send(removed_banks)
+            .unwrap_or_else(|err| warn!("bank drop failed: {:?}", err));
+
+        // Dropping the bank_forks write lock and reacquiring as a read lock is
+        // safe because updates to bank_forks are only made by a single thread.
         let r_bank_forks = bank_forks.read().unwrap();
         let new_root_bank = &r_bank_forks[new_root];
         if !*has_new_vote_been_rooted {
@@ -2549,60 +2579,62 @@ impl ReplayStage {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        consensus::test::{initialize_state, VoteSimulator},
-        consensus::Tower,
-        progress_map::ValidatorStakeInfo,
-        replay_stage::ReplayStage,
-    };
-    use crossbeam_channel::unbounded;
-    use safecoin_gossip::{cluster_info::Node, crds::Cursor};
-    use solana_ledger::{
-        blockstore::make_slot_entries,
-        blockstore::{entries_to_test_shreds, BlockstoreError},
-        create_new_tmp_ledger,
-        entry::{self, Entry},
-        genesis_utils::{create_genesis_config, create_genesis_config_with_leader},
-        get_tmp_ledger_path,
-        shred::{
-            CodingShredHeader, DataShredHeader, Shred, ShredCommonHeader, DATA_COMPLETE_SHRED,
-            SIZE_OF_COMMON_SHRED_HEADER, SIZE_OF_DATA_SHRED_HEADER, SIZE_OF_DATA_SHRED_PAYLOAD,
+    use {
+        super::*,
+        crate::{
+            consensus::{
+                test::{initialize_state, VoteSimulator},
+                Tower,
+            },
+            progress_map::ValidatorStakeInfo,
+            replay_stage::ReplayStage,
         },
+        crossbeam_channel::unbounded,
+        safecoin_gossip::{cluster_info::Node, crds::Cursor},
+        solana_ledger::{
+            blockstore::{entries_to_test_shreds, make_slot_entries, BlockstoreError},
+            create_new_tmp_ledger,
+            entry::{self, Entry},
+            genesis_utils::{create_genesis_config, create_genesis_config_with_leader},
+            get_tmp_ledger_path,
+            shred::{
+                CodingShredHeader, DataShredHeader, Shred, ShredCommonHeader, DATA_COMPLETE_SHRED,
+                SIZE_OF_COMMON_SHRED_HEADER, SIZE_OF_DATA_SHRED_HEADER, SIZE_OF_DATA_SHRED_PAYLOAD,
+            },
+        },
+        solana_rpc::{
+            optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
+            rpc::create_test_transactions_and_populate_blockstore,
+        },
+        solana_runtime::{
+            accounts_background_service::AbsRequestSender,
+            commitment::BlockCommitment,
+            genesis_utils::{GenesisConfigInfo, ValidatorVoteKeypairs},
+        },
+        safecoin_sdk::{
+            clock::NUM_CONSECUTIVE_LEADER_SLOTS,
+            genesis_config,
+            hash::{hash, Hash},
+            instruction::InstructionError,
+            packet::PACKET_DATA_SIZE,
+            poh_config::PohConfig,
+            signature::{Keypair, Signer},
+            system_transaction,
+            transaction::TransactionError,
+        },
+        solana_streamer::socket::SocketAddrSpace,
+        safecoin_transaction_status::TransactionWithStatusMeta,
+        solana_vote_program::{
+            vote_state::{VoteState, VoteStateVersions},
+            vote_transaction,
+        },
+        std::{
+            fs::remove_dir_all,
+            iter,
+            sync::{atomic::AtomicU64, mpsc::channel, Arc, RwLock},
+        },
+        trees::{tr, Tree},
     };
-    use solana_rpc::{
-        optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
-        rpc::create_test_transactions_and_populate_blockstore,
-    };
-    use solana_runtime::{
-        accounts_background_service::AbsRequestSender,
-        commitment::BlockCommitment,
-        genesis_utils::{GenesisConfigInfo, ValidatorVoteKeypairs},
-    };
-    use safecoin_sdk::{
-        clock::NUM_CONSECUTIVE_LEADER_SLOTS,
-        genesis_config,
-        hash::{hash, Hash},
-        instruction::InstructionError,
-        packet::PACKET_DATA_SIZE,
-        poh_config::PohConfig,
-        signature::{Keypair, Signer},
-        system_transaction,
-        transaction::TransactionError,
-    };
-    use solana_streamer::socket::SocketAddrSpace;
-    use safecoin_transaction_status::TransactionWithStatusMeta;
-    use solana_vote_program::{
-        vote_state::{VoteState, VoteStateVersions},
-        vote_transaction,
-    };
-    use std::sync::mpsc::channel;
-    use std::{
-        fs::remove_dir_all,
-        iter,
-        sync::{atomic::AtomicU64, Arc, RwLock},
-    };
-    use trees::{tr, Tree};
 
     #[test]
     fn test_is_partition_detected() {
@@ -2866,6 +2898,7 @@ mod tests {
                     .map(|s| (s, HashMap::new()))
                     .collect(),
             };
+        let (bank_drop_sender, _bank_drop_receiver) = channel();
         ReplayStage::handle_new_root(
             root,
             &bank_forks,
@@ -2878,6 +2911,7 @@ mod tests {
             &mut unfrozen_gossip_verified_vote_hashes,
             &mut true,
             &mut Vec::new(),
+            &bank_drop_sender,
         );
         assert_eq!(bank_forks.read().unwrap().root(), root);
         assert_eq!(progress.len(), 1);
@@ -2937,6 +2971,7 @@ mod tests {
         for i in 0..=root {
             progress.insert(i, ForkProgress::new(Hash::default(), None, None, 0, 0));
         }
+        let (bank_drop_sender, _bank_drop_receiver) = channel();
         ReplayStage::handle_new_root(
             root,
             &bank_forks,
@@ -2949,6 +2984,7 @@ mod tests {
             &mut UnfrozenGossipVerifiedVoteHashes::default(),
             &mut true,
             &mut Vec::new(),
+            &bank_drop_sender,
         );
         assert_eq!(bank_forks.read().unwrap().root(), root);
         assert!(bank_forks.read().unwrap().get(confirmed_root).is_some());
@@ -3309,6 +3345,7 @@ mod tests {
             ReplayStage::update_commitment_cache(
                 arc_bank.clone(),
                 0,
+                leader_lamports,
                 &lockouts_sender,
             );
             arc_bank.freeze();
@@ -4754,7 +4791,7 @@ mod tests {
         );
 
         let mut cursor = Cursor::default();
-        let (_, votes) = cluster_info.get_votes(&mut cursor);
+        let votes = cluster_info.get_votes(&mut cursor);
         assert_eq!(votes.len(), 1);
         let vote_tx = &votes[0];
         assert_eq!(vote_tx.message.recent_blockhash, bank0.last_blockhash());
@@ -4783,7 +4820,7 @@ mod tests {
             );
 
             // No new votes have been submitted to gossip
-            let (_, votes) = cluster_info.get_votes(&mut cursor);
+            let votes = cluster_info.get_votes(&mut cursor);
             assert!(votes.is_empty());
             // Tower's latest vote tx blockhash hasn't changed either
             assert_eq!(tower.last_vote_tx_blockhash(), bank0.last_blockhash());
@@ -4814,7 +4851,7 @@ mod tests {
             vote_info,
             false,
         );
-        let (_, votes) = cluster_info.get_votes(&mut cursor);
+        let votes = cluster_info.get_votes(&mut cursor);
         assert_eq!(votes.len(), 1);
         let vote_tx = &votes[0];
         assert_eq!(vote_tx.message.recent_blockhash, bank1.last_blockhash());
@@ -4837,7 +4874,7 @@ mod tests {
         );
 
         // No new votes have been submitted to gossip
-        let (_, votes) = cluster_info.get_votes(&mut cursor);
+        let votes = cluster_info.get_votes(&mut cursor);
         assert!(votes.is_empty());
         assert_eq!(tower.last_vote_tx_blockhash(), bank1.last_blockhash());
         assert_eq!(tower.last_voted_slot().unwrap(), 1);
@@ -4883,7 +4920,7 @@ mod tests {
         );
 
         assert!(last_vote_refresh_time.last_refresh_time > clone_refresh_time);
-        let (_, votes) = cluster_info.get_votes(&mut cursor);
+        let votes = cluster_info.get_votes(&mut cursor);
         assert_eq!(votes.len(), 1);
         let vote_tx = &votes[0];
         assert_eq!(
@@ -4939,7 +4976,7 @@ mod tests {
             &voting_sender,
         );
 
-        let (_, votes) = cluster_info.get_votes(&mut cursor);
+        let votes = cluster_info.get_votes(&mut cursor);
         assert!(votes.is_empty());
         assert_eq!(
             vote_tx.message.recent_blockhash,
@@ -4951,7 +4988,6 @@ mod tests {
         );
         assert_eq!(tower.last_voted_slot().unwrap(), 1);
     }
-
     fn run_compute_and_select_forks(
         bank_forks: &RwLock<BankForks>,
         progress: &mut ProgressMap,

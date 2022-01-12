@@ -1,38 +1,38 @@
-use crate::blockstore_meta;
-use bincode::{deserialize, serialize};
-use byteorder::{BigEndian, ByteOrder};
-use log::*;
-use prost::Message;
 pub use rocksdb::Direction as IteratorDirection;
-use rocksdb::{
-    self,
-    compaction_filter::CompactionFilter,
-    compaction_filter_factory::{CompactionFilterContext, CompactionFilterFactory},
-    ColumnFamily, ColumnFamilyDescriptor, CompactionDecision, DBIterator, DBRawIterator,
-    DBRecoveryMode, IteratorMode as RocksIteratorMode, Options, WriteBatch as RWriteBatch, DB,
-};
-
-use serde::de::DeserializeOwned;
-use serde::Serialize;
-use solana_runtime::hardened_unpack::UnpackError;
-use safecoin_sdk::{
-    clock::{Slot, UnixTimestamp},
-    pubkey::Pubkey,
-    signature::Signature,
-};
-use solana_storage_proto::convert::generated;
-use std::{
-    collections::{HashMap, HashSet},
-    ffi::{CStr, CString},
-    fs,
-    marker::PhantomData,
-    path::Path,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
+use {
+    crate::blockstore_meta,
+    bincode::{deserialize, serialize},
+    byteorder::{BigEndian, ByteOrder},
+    log::*,
+    prost::Message,
+    rocksdb::{
+        self,
+        compaction_filter::CompactionFilter,
+        compaction_filter_factory::{CompactionFilterContext, CompactionFilterFactory},
+        ColumnFamily, ColumnFamilyDescriptor, CompactionDecision, DBIterator, DBRawIterator,
+        DBRecoveryMode, IteratorMode as RocksIteratorMode, Options, WriteBatch as RWriteBatch, DB,
     },
+    serde::{de::DeserializeOwned, Serialize},
+    solana_runtime::hardened_unpack::UnpackError,
+    safecoin_sdk::{
+        clock::{Slot, UnixTimestamp},
+        pubkey::Pubkey,
+        signature::Signature,
+    },
+    solana_storage_proto::convert::generated,
+    std::{
+        collections::{HashMap, HashSet},
+        ffi::{CStr, CString},
+        fs,
+        marker::PhantomData,
+        path::Path,
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc,
+        },
+    },
+    thiserror::Error,
 };
-use thiserror::Error;
 
 const MAX_WRITE_BUFFER_SIZE: u64 = 256 * 1024 * 1024; // 256MB
 
@@ -534,6 +534,11 @@ impl Rocks {
 
     fn put_cf(&self, cf: &ColumnFamily, key: &[u8], value: &[u8]) -> Result<()> {
         self.0.put_cf(cf, key, value)?;
+        Ok(())
+    }
+
+    fn delete_cf(&self, cf: &ColumnFamily, key: &[u8]) -> Result<()> {
+        self.0.delete_cf(cf, key)?;
         Ok(())
     }
 
@@ -1217,6 +1222,10 @@ where
         self.backend
             .put_cf(self.handle(), &C::key(key), &serialized_value)
     }
+
+    pub fn delete(&self, key: C::Index) -> Result<()> {
+        self.backend.delete_cf(self.handle(), &C::key(key))
+    }
 }
 
 impl<C> LedgerColumn<C>
@@ -1364,7 +1373,7 @@ fn get_cf_options<C: 'static + Column + ColumnName>(
     options.set_max_bytes_for_level_base(total_size_base);
     options.set_target_file_size_base(file_size_base);
 
-    // TransactionStatusIndex must be excluded from LedgerCleanupService's rocksdb
+    // TransactionStatusIndex and ProgramCosts must be excluded from LedgerCleanupService's rocksdb
     // compactions....
     if matches!(access_type, AccessType::PrimaryOnly) && !excludes_from_compaction(C::NAME) {
         options.set_compaction_filter_factory(PurgedSlotFilterFactory::<C> {
@@ -1421,8 +1430,7 @@ fn excludes_from_compaction(cf_name: &str) -> bool {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-    use crate::blockstore_db::columns::ShredData;
+    use {super::*, crate::blockstore_db::columns::ShredData};
 
     #[test]
     fn test_compaction_filter() {

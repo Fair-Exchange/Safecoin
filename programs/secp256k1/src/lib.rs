@@ -13,14 +13,18 @@ pub fn process_instruction(
 
 #[cfg(test)]
 pub mod test {
-    use rand::{thread_rng, Rng};
-    use safecoin_sdk::{
-        hash::Hash,
-        secp256k1_instruction::{
-            new_secp256k1_instruction, SecpSignatureOffsets, SIGNATURE_OFFSETS_SERIALIZED_SIZE,
+    use {
+        rand::{thread_rng, Rng},
+        safecoin_sdk::{
+            feature_set,
+            hash::Hash,
+            secp256k1_instruction::{
+                new_secp256k1_instruction, SecpSignatureOffsets, SIGNATURE_OFFSETS_SERIALIZED_SIZE,
+            },
+            signature::{Keypair, Signer},
+            transaction::Transaction,
         },
-        signature::{Keypair, Signer},
-        transaction::Transaction,
+        std::sync::Arc,
     };
 
     #[test]
@@ -36,6 +40,14 @@ pub mod test {
         let message_arr = b"hello";
         let mut secp_instruction = new_secp256k1_instruction(&secp_privkey, message_arr);
         let mint_keypair = Keypair::new();
+        let mut feature_set = feature_set::FeatureSet::all_enabled();
+        feature_set
+            .active
+            .remove(&feature_set::libsecp256k1_0_5_upgrade_enabled::id());
+        feature_set
+            .inactive
+            .insert(feature_set::libsecp256k1_0_5_upgrade_enabled::id());
+        let feature_set = Arc::new(feature_set);
 
         let tx = Transaction::new_signed_with_payer(
             &[secp_instruction.clone()],
@@ -44,7 +56,7 @@ pub mod test {
             Hash::default(),
         );
 
-        assert!(tx.verify_precompiles(false).is_ok());
+        assert!(tx.verify_precompiles(&feature_set).is_ok());
 
         let index = thread_rng().gen_range(0, secp_instruction.data.len());
         secp_instruction.data[index] = secp_instruction.data[index].wrapping_add(12);
@@ -54,6 +66,6 @@ pub mod test {
             &[&mint_keypair],
             Hash::default(),
         );
-        assert!(tx.verify_precompiles(false).is_err());
+        assert!(tx.verify_precompiles(&feature_set).is_err());
     }
 }

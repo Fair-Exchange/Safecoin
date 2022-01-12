@@ -2,6 +2,7 @@ use {
     crate::{
         accounts_db::{AccountShrinkThreshold, AccountsDb},
         accounts_index::AccountSecondaryIndexes,
+        accounts_update_notifier_interface::AccountsUpdateNotifier,
         bank::{Bank, BankSlotDelta, Builtins},
         bank_forks::ArchiveFormat,
         hardened_unpack::{unpack_snapshot, ParallelSelector, UnpackError, UnpackedAppendVecMap},
@@ -22,20 +23,17 @@ use {
     safecoin_measure::measure::Measure,
     safecoin_sdk::{clock::Slot, genesis_config::GenesisConfig, hash::Hash, pubkey::Pubkey},
     std::{
-        cmp::max,
-        cmp::Ordering,
+        cmp::{max, Ordering},
         collections::HashSet,
         fmt,
         fs::{self, File},
-        io::{
-            self, BufReader, BufWriter, Error as IoError, ErrorKind, Read, Seek, SeekFrom, Write,
-        },
+        io::{BufReader, BufWriter, Error as IoError, ErrorKind, Read, Seek, SeekFrom, Write},
         path::{Path, PathBuf},
-        process::{self, ExitStatus},
+        process::ExitStatus,
         str::FromStr,
         sync::Arc,
     },
-    tar::Archive,
+    tar::{self, Archive},
     thiserror::Error,
 };
 
@@ -43,6 +41,7 @@ pub const SNAPSHOT_STATUS_CACHE_FILE_NAME: &str = "status_cache";
 
 pub const MAX_SNAPSHOTS: usize = 8; // Save some snapshots but not too many
 const MAX_SNAPSHOT_DATA_FILE_SIZE: u64 = 32 * 1024 * 1024 * 1024; // 32 GiB
+const MAX_SNAPSHOT_VERSION_FILE_SIZE: u64 = 8; // byte
 const VERSION_STRING_V1_2_0: &str = "1.2.0";
 const DEFAULT_SNAPSHOT_VERSION: SnapshotVersion = SnapshotVersion::V1_2_0;
 const TMP_SNAPSHOT_PREFIX: &str = "tmp-snapshot-";
@@ -312,69 +311,46 @@ pub fn archive_snapshot_package(
     let file_ext = get_archive_ext(snapshot_package.archive_format);
 
     // Tar the staging directory into the archive at `archive_path`
-    //
-    // system `tar` program is used for -S (sparse file support)
     let archive_path = tar_dir.join(format!(
         "{}{}.{}",
         TMP_SNAPSHOT_PREFIX, snapshot_package.slot, file_ext
     ));
 
-    let mut tar = process::Command::new("tar")
-        .args(&[
-            "chS",
-            "-C",
-            staging_dir.path().to_str().unwrap(),
-            "accounts",
-            "snapshots",
-            "version",
-        ])
-        .stdin(process::Stdio::null())
-        .stdout(process::Stdio::piped())
-        .stderr(process::Stdio::inherit())
-        .spawn()
-        .map_err(|e| SnapshotError::IoWithSource(e, "tar process spawn"))?;
+    {
+        let mut archive_file = fs::File::create(&archive_path)?;
 
-    match &mut tar.stdout {
-        None => {
-            return Err(SnapshotError::Io(IoError::new(
-                ErrorKind::Other,
-                "tar stdout unavailable".to_string(),
-            )));
-        }
-        Some(tar_output) => {
-            let mut archive_file = fs::File::create(&archive_path)?;
+        let do_archive_files = |encoder: &mut dyn Write| -> Result<()> {
+            let mut archive = tar::Builder::new(encoder);
+            for dir in &["accounts", "snapshots"] {
+                archive.append_dir_all(dir, staging_dir.as_ref().join(dir))?;
+            }
+            archive.append_path_with_name(staging_dir.as_ref().join("version"), "version")?;
+            archive.into_inner()?;
+            Ok(())
+        };
 
-            match snapshot_package.archive_format {
-                ArchiveFormat::TarBzip2 => {
-                    let mut encoder =
-                        bzip2::write::BzEncoder::new(archive_file, bzip2::Compression::Best);
-                    io::copy(tar_output, &mut encoder)?;
-                    let _ = encoder.finish()?;
-                }
-                ArchiveFormat::TarGzip => {
-                    let mut encoder =
-                        flate2::write::GzEncoder::new(archive_file, flate2::Compression::default());
-                    io::copy(tar_output, &mut encoder)?;
-                    let _ = encoder.finish()?;
-                }
-                ArchiveFormat::Tar => {
-                    io::copy(tar_output, &mut archive_file)?;
-                }
-                ArchiveFormat::TarZstd => {
-                    let mut encoder = zstd::stream::Encoder::new(archive_file, 0)?;
-                    io::copy(tar_output, &mut encoder)?;
-                    let _ = encoder.finish()?;
-                }
-            };
-        }
-    }
-
-    let tar_exit_status = tar
-        .wait()
-        .map_err(|e| SnapshotError::IoWithSource(e, "tar process wait"))?;
-    if !tar_exit_status.success() {
-        warn!("tar command failed with exit code: {}", tar_exit_status);
-        return Err(SnapshotError::ArchiveGenerationFailure(tar_exit_status));
+        match snapshot_package.archive_format {
+            ArchiveFormat::TarBzip2 => {
+                let mut encoder =
+                    bzip2::write::BzEncoder::new(archive_file, bzip2::Compression::Best);
+                do_archive_files(&mut encoder)?;
+                encoder.finish()?;
+            }
+            ArchiveFormat::TarGzip => {
+                let mut encoder =
+                    flate2::write::GzEncoder::new(archive_file, flate2::Compression::default());
+                do_archive_files(&mut encoder)?;
+                encoder.finish()?;
+            }
+            ArchiveFormat::TarZstd => {
+                let mut encoder = zstd::stream::Encoder::new(archive_file, 0)?;
+                do_archive_files(&mut encoder)?;
+                encoder.finish()?;
+            }
+            ArchiveFormat::Tar => {
+                do_archive_files(&mut archive_file)?;
+            }
+        };
     }
 
     // Atomically move the archive into position for other validators to find
@@ -633,6 +609,7 @@ pub fn bank_from_archive<P: AsRef<Path> + std::marker::Sync>(
     shrink_ratio: AccountShrinkThreshold,
     test_hash_calculation: bool,
     accounts_db_skip_shrink: bool,
+    accounts_update_notifier: Option<AccountsUpdateNotifier>,
 ) -> Result<(Bank, BankFromArchiveTimings)> {
     let unpack_dir = tempfile::Builder::new()
         .prefix(TMP_SNAPSHOT_PREFIX)
@@ -657,11 +634,10 @@ pub fn bank_from_archive<P: AsRef<Path> + std::marker::Sync>(
     let unpacked_snapshots_dir = unpack_dir.as_ref().join("snapshots");
     let unpacked_version_file = unpack_dir.as_ref().join("version");
 
-    let mut snapshot_version = String::new();
-    File::open(unpacked_version_file).and_then(|mut f| f.read_to_string(&mut snapshot_version))?;
+    let snapshot_version = snapshot_version_from_file(unpacked_version_file)?;
 
     let bank = rebuild_bank_from_snapshots(
-        snapshot_version.trim(),
+        &snapshot_version,
         frozen_account_pubkeys,
         &unpacked_snapshots_dir,
         account_paths,
@@ -673,6 +649,7 @@ pub fn bank_from_archive<P: AsRef<Path> + std::marker::Sync>(
         accounts_db_caching_enabled,
         limit_load_slot_count_from_snapshot,
         shrink_ratio,
+        accounts_update_notifier,
     )?;
     measure.stop();
 
@@ -690,6 +667,28 @@ pub fn bank_from_archive<P: AsRef<Path> + std::marker::Sync>(
     };
 
     Ok((bank, timings))
+}
+
+/// Reads the `snapshot_version` from a file. Before opening the file, its size
+/// is compared to `MAX_SNAPSHOT_VERSION_FILE_SIZE`. If the size exceeds this
+/// threshold, it is not opened and an error is returned.
+fn snapshot_version_from_file(path: impl AsRef<Path>) -> Result<String> {
+    // Check file size.
+    let file_size = fs::metadata(&path)?.len();
+    if file_size > MAX_SNAPSHOT_VERSION_FILE_SIZE {
+        let error_message = format!(
+            "snapshot version file too large: {} has {} bytes (max size is {} bytes)",
+            path.as_ref().display(),
+            file_size,
+            MAX_SNAPSHOT_VERSION_FILE_SIZE,
+        );
+        return Err(get_io_error(&error_message));
+    }
+
+    // Read snapshot_version from file.
+    let mut snapshot_version = String::new();
+    File::open(path).and_then(|mut f| f.read_to_string(&mut snapshot_version))?;
+    Ok(snapshot_version.trim().to_string())
 }
 
 pub fn get_snapshot_archive_path(
@@ -900,6 +899,7 @@ fn rebuild_bank_from_snapshots(
     accounts_db_caching_enabled: bool,
     limit_load_slot_count_from_snapshot: Option<usize>,
     shrink_ratio: AccountShrinkThreshold,
+    accounts_update_notifier: Option<AccountsUpdateNotifier>,
 ) -> Result<Bank> {
     let (snapshot_version_enum, root_paths) =
         verify_snapshot_version_and_folder(snapshot_version, unpacked_snapshots_dir)?;
@@ -922,6 +922,7 @@ fn rebuild_bank_from_snapshots(
                 accounts_db_caching_enabled,
                 limit_load_slot_count_from_snapshot,
                 shrink_ratio,
+                accounts_update_notifier,
             ),
         }?)
     })?;
@@ -1133,10 +1134,13 @@ pub fn process_accounts_package_pre(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use assert_matches::assert_matches;
-    use bincode::{deserialize_from, serialize_into};
-    use std::mem::size_of;
+    use {
+        super::*,
+        assert_matches::assert_matches,
+        bincode::{deserialize_from, serialize_into},
+        std::{convert::TryFrom, mem::size_of},
+        tempfile::NamedTempFile,
+    };
 
     #[test]
     fn test_serialize_snapshot_data_file_under_limit() {
@@ -1241,6 +1245,27 @@ mod tests {
             |stream| Ok(deserialize_from::<_, u32>(stream)?),
         );
         assert_matches!(result, Err(SnapshotError::Io(ref message)) if message.to_string().starts_with("invalid snapshot data file"));
+    }
+
+    #[test]
+    fn test_snapshot_version_from_file_under_limit() {
+        let file_content = format!("v{}", DEFAULT_SNAPSHOT_VERSION);
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(file_content.as_bytes()).unwrap();
+        let version_from_file = snapshot_version_from_file(file.path()).unwrap();
+        assert_eq!(version_from_file, file_content);
+    }
+
+    #[test]
+    fn test_snapshot_version_from_file_over_limit() {
+        let over_limit_size = usize::try_from(MAX_SNAPSHOT_VERSION_FILE_SIZE + 1).unwrap();
+        let file_content = vec![7u8; over_limit_size];
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(&file_content).unwrap();
+        assert_matches!(
+            snapshot_version_from_file(file.path()),
+            Err(SnapshotError::Io(ref message)) if message.to_string().starts_with("snapshot version file too large")
+        );
     }
 
     #[test]

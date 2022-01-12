@@ -241,9 +241,11 @@ pub enum TokenAccountsFilter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::rpc_config::RpcTokenAccountsFilter;
-    use safecoin_sdk::commitment_config::{CommitmentConfig, CommitmentLevel};
+    use {
+        super::*,
+        crate::rpc_config::RpcTokenAccountsFilter,
+        safecoin_sdk::commitment_config::{CommitmentConfig, CommitmentLevel},
+    };
 
     #[test]
     fn test_build_request_json() {

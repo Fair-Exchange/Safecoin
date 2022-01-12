@@ -1,16 +1,20 @@
 #![allow(clippy::integer_arithmetic)]
-use clap::{crate_description, crate_name, value_t, value_t_or_exit, App, Arg};
-use log::*;
-use rand::{thread_rng, Rng};
-use safecoin_client::rpc_client::RpcClient;
-use solana_core::serve_repair::RepairProtocol;
-use safecoin_gossip::{contact_info::ContactInfo, gossip_service::discover};
-use safecoin_sdk::pubkey::Pubkey;
-use solana_streamer::socket::SocketAddrSpace;
-use std::net::{SocketAddr, UdpSocket};
-use std::process::exit;
-use std::str::FromStr;
-use std::time::{Duration, Instant};
+use {
+    clap::{crate_description, crate_name, value_t, value_t_or_exit, App, Arg},
+    log::*,
+    rand::{thread_rng, Rng},
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_core::serve_repair::RepairProtocol,
+    safecoin_gossip::{contact_info::ContactInfo, gossip_service::discover},
+    safecoin_sdk::pubkey::Pubkey,
+    solana_streamer::socket::SocketAddrSpace,
+    std::{
+        net::{SocketAddr, UdpSocket},
+        process::exit,
+        str::FromStr,
+        time::{Duration, Instant},
+    },
+};
 
 fn get_repair_contact(nodes: &[ContactInfo]) -> ContactInfo {
     let source = thread_rng().gen_range(0, nodes.len());
@@ -267,8 +271,7 @@ fn main() {
 
 #[cfg(test)]
 pub mod test {
-    use super::*;
-    use safecoin_sdk::timing::timestamp;
+    use {super::*, safecoin_sdk::timing::timestamp};
 
     #[test]
     fn test_dos() {

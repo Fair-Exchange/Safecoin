@@ -1,46 +1,48 @@
-use crate::{
-    accounts_db::{
-        AccountShrinkThreshold, AccountsDb, BankHashInfo, ErrorCounters, LoadHint, LoadedAccount,
-        ScanStorageResult,
+use {
+    crate::{
+        accounts_db::{
+            AccountShrinkThreshold, AccountsAddRootTiming, AccountsDb, BankHashInfo, ErrorCounters,
+            LoadHint, LoadedAccount, ScanStorageResult,
+        },
+        accounts_index::{AccountSecondaryIndexes, IndexKey, ScanResult},
+        accounts_update_notifier_interface::AccountsUpdateNotifier,
+        ancestors::Ancestors,
+        bank::{
+            NonceRollbackFull, NonceRollbackInfo, RentDebits, TransactionCheckResult,
+            TransactionExecutionResult,
+        },
+        blockhash_queue::BlockhashQueue,
+        rent_collector::RentCollector,
+        system_instruction_processor::{get_system_account_kind, SystemAccountKind},
     },
-    accounts_index::{AccountSecondaryIndexes, IndexKey, ScanResult},
-    ancestors::Ancestors,
-    bank::{
-        NonceRollbackFull, NonceRollbackInfo, RentDebits, TransactionCheckResult,
-        TransactionExecutionResult,
+    dashmap::{
+        mapref::entry::Entry::{Occupied, Vacant},
+        DashMap,
     },
-    blockhash_queue::BlockhashQueue,
-    rent_collector::RentCollector,
-    system_instruction_processor::{get_system_account_kind, SystemAccountKind},
-};
-use dashmap::{
-    mapref::entry::Entry::{Occupied, Vacant},
-    DashMap,
-};
-use log::*;
-use rand::{thread_rng, Rng};
-use safecoin_sdk::{
-    account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
-    account_utils::StateMut,
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-    clock::{BankId, Slot, INITIAL_RENT_EPOCH},
-    feature_set::{self, FeatureSet},
-    fee_calculator::FeeCalculator,
-    genesis_config::ClusterType,
-    hash::Hash,
-    message::{Message, MessageProgramIdsCache},
-    native_loader, nonce,
-    nonce::NONCED_TX_MARKER_IX_INDEX,
-    pubkey::Pubkey,
-    transaction::Result,
-    transaction::{Transaction, TransactionError},
-};
-use std::{
-    cmp::Reverse,
-    collections::{hash_map, BinaryHeap, HashMap, HashSet},
-    ops::RangeBounds,
-    path::PathBuf,
-    sync::{Arc, Mutex},
+    log::*,
+    rand::{thread_rng, Rng},
+    safecoin_sdk::{
+        account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
+        account_utils::StateMut,
+        bpf_loader_upgradeable::{self, UpgradeableLoaderState},
+        clock::{BankId, Slot, INITIAL_RENT_EPOCH},
+        feature_set::{self, FeatureSet},
+        fee_calculator::FeeCalculator,
+        genesis_config::ClusterType,
+        hash::Hash,
+        message::{Message, MessageProgramIdsCache},
+        native_loader,
+        nonce::{self, NONCED_TX_MARKER_IX_INDEX},
+        pubkey::Pubkey,
+        transaction::{Result, Transaction, TransactionError},
+    },
+    std::{
+        cmp::Reverse,
+        collections::{hash_map, BinaryHeap, HashMap, HashSet},
+        ops::RangeBounds,
+        path::PathBuf,
+        sync::{Arc, Mutex},
+    },
 };
 
 #[derive(Debug, Default, AbiExample)]
@@ -128,6 +130,7 @@ impl Accounts {
             AccountSecondaryIndexes::default(),
             false,
             shrink_ratio,
+            None,
         )
     }
 
@@ -137,6 +140,7 @@ impl Accounts {
         account_indexes: AccountSecondaryIndexes,
         caching_enabled: bool,
         shrink_ratio: AccountShrinkThreshold,
+        accounts_update_notifier: Option<AccountsUpdateNotifier>,
     ) -> Self {
         Self {
             accounts_db: Arc::new(AccountsDb::new_with_config(
@@ -145,6 +149,7 @@ impl Accounts {
                 account_indexes,
                 caching_enabled,
                 shrink_ratio,
+                accounts_update_notifier,
             )),
             account_locks: Mutex::new(AccountLocks::default()),
         }
@@ -283,7 +288,7 @@ impl Accounts {
                         }
 
                         tx_rent += rent;
-                        rent_debits.push(key, rent, account.lamports());
+                        rent_debits.insert(key, rent, account.lamports());
 
                         account
                     }
@@ -476,6 +481,7 @@ impl Accounts {
                             nonce_rollback,
                             tx.message(),
                             &loaded_transaction.accounts,
+                            &loaded_transaction.rent_debits,
                         ) {
                             Ok(nonce_rollback) => Some(nonce_rollback),
                             Err(e) => return (Err(e), None),
@@ -970,7 +976,7 @@ impl Accounts {
     }
 
     /// Add a slot to root.  Root slots cannot be purged
-    pub fn add_root(&self, slot: Slot) {
+    pub fn add_root(&self, slot: Slot) -> AccountsAddRootTiming {
         self.accounts_db.add_root(slot)
     }
 
@@ -1061,7 +1067,7 @@ impl Accounts {
                         loaded_transaction.rent += rent;
                         loaded_transaction
                             .rent_debits
-                            .push(key, rent, account.lamports());
+                            .insert(key, rent, account.lamports());
                     }
                     accounts.push((&*key, &*account));
                 }
@@ -1150,24 +1156,26 @@ pub fn update_accounts_bench(accounts: &Accounts, pubkeys: &[Pubkey], slot: u64)
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::rent_collector::RentCollector;
-    use safecoin_sdk::{
-        account::{AccountSharedData, WritableAccount},
-        epoch_schedule::EpochSchedule,
-        fee_calculator::FeeCalculator,
-        genesis_config::ClusterType,
-        hash::Hash,
-        instruction::{CompiledInstruction, InstructionError},
-        message::Message,
-        nonce, nonce_account,
-        rent::Rent,
-        signature::{keypair_from_seed, Keypair, Signer},
-        system_instruction, system_program,
-    };
-    use std::{
-        sync::atomic::{AtomicBool, AtomicU64, Ordering},
-        {thread, time},
+    use {
+        super::*,
+        crate::rent_collector::RentCollector,
+        safecoin_sdk::{
+            account::{AccountSharedData, WritableAccount},
+            epoch_schedule::EpochSchedule,
+            fee_calculator::FeeCalculator,
+            genesis_config::ClusterType,
+            hash::Hash,
+            instruction::{CompiledInstruction, InstructionError},
+            message::Message,
+            nonce, nonce_account,
+            rent::Rent,
+            signature::{keypair_from_seed, Keypair, Signer},
+            system_instruction, system_program,
+        },
+        std::{
+            sync::atomic::{AtomicBool, AtomicU64, Ordering},
+            thread, time,
+        },
     };
 
     fn load_accounts_with_fee_and_rent(
@@ -1185,6 +1193,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         for ka in ka.iter() {
             accounts.store_slow_uncached(0, &ka.0, &ka.1);
@@ -1723,6 +1732,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
 
         // Load accounts owned by various programs into AccountsDb
@@ -1993,6 +2003,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         let mut error_counters = ErrorCounters::default();
         let ancestors = vec![(0, 0)].into_iter().collect();
@@ -2017,6 +2028,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         accounts.bank_hash_at(1);
     }
@@ -2039,6 +2051,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         accounts.store_slow_uncached(0, &keypair0.pubkey(), &account0);
         accounts.store_slow_uncached(0, &keypair1.pubkey(), &account1);
@@ -2151,6 +2164,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         accounts.store_slow_uncached(0, &keypair0.pubkey(), &account0);
         accounts.store_slow_uncached(0, &keypair1.pubkey(), &account1);
@@ -2239,6 +2253,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         accounts.store_slow_uncached(0, &keypair0.pubkey(), &account0);
         accounts.store_slow_uncached(0, &keypair1.pubkey(), &account1);
@@ -2361,6 +2376,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         {
             accounts
@@ -2417,6 +2433,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         let mut old_pubkey = Pubkey::default();
         let zero_account = AccountSharedData::new(0, 0, AccountSharedData::default().owner());
@@ -2465,6 +2482,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
 
         let instructions_key = safecoin_sdk::sysvar::instructions::id();
@@ -2755,6 +2773,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         let txs = &[tx];
         let collected_accounts = accounts.collect_accounts_to_store(
@@ -2874,6 +2893,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
         let txs = &[tx];
         let collected_accounts = accounts.collect_accounts_to_store(
@@ -2912,6 +2932,7 @@ mod tests {
             AccountSecondaryIndexes::default(),
             false,
             AccountShrinkThreshold::default(),
+            None,
         );
 
         let pubkey0 = Pubkey::new_unique();

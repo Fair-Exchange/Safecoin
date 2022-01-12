@@ -1,42 +1,46 @@
-use crate::{
-    cluster_slots::ClusterSlots,
-    repair_response,
-    repair_service::{OutstandingRepairs, RepairStats},
-    request_response::RequestResponse,
-    result::{Error, Result},
-};
-use bincode::serialize;
-use lru::LruCache;
-use rand::{
-    distributions::{Distribution, WeightedError, WeightedIndex},
-    Rng,
-};
-use safecoin_gossip::{
-    cluster_info::{ClusterInfo, ClusterInfoError},
-    contact_info::ContactInfo,
-    weighted_shuffle::weighted_best,
-};
-use solana_ledger::{
-    blockstore::Blockstore,
-    shred::{Nonce, Shred},
-};
-use safecoin_measure::measure::Measure;
-use solana_metrics::inc_new_counter_debug;
-use solana_perf::packet::{limited_deserialize, Packets, PacketsRecycler};
-use safecoin_sdk::{
-    clock::Slot,
-    pubkey::Pubkey,
-    signature::{Keypair, Signer},
-    timing::duration_as_ms,
-};
-use solana_streamer::streamer::{PacketReceiver, PacketSender};
-use std::{
-    collections::HashSet,
-    net::SocketAddr,
-    sync::atomic::{AtomicBool, Ordering},
-    sync::{Arc, RwLock},
-    thread::{Builder, JoinHandle},
-    time::{Duration, Instant},
+use {
+    crate::{
+        cluster_slots::ClusterSlots,
+        repair_response,
+        repair_service::{OutstandingRepairs, RepairStats},
+        request_response::RequestResponse,
+        result::{Error, Result},
+    },
+    bincode::serialize,
+    lru::LruCache,
+    rand::{
+        distributions::{Distribution, WeightedError, WeightedIndex},
+        Rng,
+    },
+    safecoin_gossip::{
+        cluster_info::{ClusterInfo, ClusterInfoError},
+        contact_info::ContactInfo,
+        weighted_shuffle::weighted_best,
+    },
+    solana_ledger::{
+        blockstore::Blockstore,
+        shred::{Nonce, Shred},
+    },
+    safecoin_measure::measure::Measure,
+    solana_metrics::inc_new_counter_debug,
+    solana_perf::packet::{limited_deserialize, PacketBatch, PacketBatchRecycler},
+    safecoin_sdk::{
+        clock::Slot,
+        pubkey::Pubkey,
+        signature::{Keypair, Signer},
+        timing::duration_as_ms,
+    },
+    solana_streamer::streamer::{PacketBatchReceiver, PacketBatchSender},
+    std::{
+        collections::HashSet,
+        net::SocketAddr,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, RwLock,
+        },
+        thread::{Builder, JoinHandle},
+        time::{Duration, Instant},
+    },
 };
 
 /// the number of slots to respond with when responding to `Orphan` requests
@@ -179,12 +183,12 @@ impl ServeRepair {
 
     fn handle_repair(
         me: &Arc<RwLock<Self>>,
-        recycler: &PacketsRecycler,
+        recycler: &PacketBatchRecycler,
         from_addr: &SocketAddr,
         blockstore: Option<&Arc<Blockstore>>,
         request: RepairProtocol,
         stats: &mut ServeRepairStats,
-    ) -> Option<Packets> {
+    ) -> Option<PacketBatch> {
         let now = Instant::now();
 
         //TODO verify from is signed
@@ -260,10 +264,10 @@ impl ServeRepair {
     /// Process messages from the network
     fn run_listen(
         obj: &Arc<RwLock<Self>>,
-        recycler: &PacketsRecycler,
+        recycler: &PacketBatchRecycler,
         blockstore: Option<&Arc<Blockstore>>,
-        requests_receiver: &PacketReceiver,
-        response_sender: &PacketSender,
+        requests_receiver: &PacketBatchReceiver,
+        response_sender: &PacketBatchSender,
         stats: &mut ServeRepairStats,
         max_packets: &mut usize,
     ) -> Result<()> {
@@ -332,12 +336,12 @@ impl ServeRepair {
     pub fn listen(
         me: Arc<RwLock<Self>>,
         blockstore: Option<Arc<Blockstore>>,
-        requests_receiver: PacketReceiver,
-        response_sender: PacketSender,
+        requests_receiver: PacketBatchReceiver,
+        response_sender: PacketBatchSender,
         exit: &Arc<AtomicBool>,
     ) -> JoinHandle<()> {
         let exit = exit.clone();
-        let recycler = PacketsRecycler::default();
+        let recycler = PacketBatchRecycler::default();
         Builder::new()
             .name("solana-repair-listen".to_string())
             .spawn(move || {
@@ -372,14 +376,14 @@ impl ServeRepair {
 
     fn handle_packets(
         me: &Arc<RwLock<Self>>,
-        recycler: &PacketsRecycler,
+        recycler: &PacketBatchRecycler,
         blockstore: Option<&Arc<Blockstore>>,
-        packets: Packets,
-        response_sender: &PacketSender,
+        packet_batch: PacketBatch,
+        response_sender: &PacketBatchSender,
         stats: &mut ServeRepairStats,
     ) {
         // iter over the packets
-        packets.packets.iter().for_each(|packet| {
+        packet_batch.packets.iter().for_each(|packet| {
             let from_addr = packet.meta.addr();
             limited_deserialize(&packet.data[..packet.meta.size])
                 .into_iter()
@@ -522,7 +526,7 @@ impl ServeRepair {
     }
 
     fn run_window_request(
-        recycler: &PacketsRecycler,
+        recycler: &PacketBatchRecycler,
         from: &ContactInfo,
         from_addr: &SocketAddr,
         blockstore: Option<&Arc<Blockstore>>,
@@ -530,7 +534,7 @@ impl ServeRepair {
         slot: Slot,
         shred_index: u64,
         nonce: Nonce,
-    ) -> Option<Packets> {
+    ) -> Option<PacketBatch> {
         if let Some(blockstore) = blockstore {
             // Try to find the requested index in one of the slots
             let packet = repair_response::repair_response_packet(
@@ -543,7 +547,7 @@ impl ServeRepair {
 
             if let Some(packet) = packet {
                 inc_new_counter_debug!("serve_repair-window-request-ledger", 1);
-                return Some(Packets::new_unpinned_with_recycler_data(
+                return Some(PacketBatch::new_unpinned_with_recycler_data(
                     recycler,
                     "run_window_request",
                     vec![packet],
@@ -564,13 +568,13 @@ impl ServeRepair {
     }
 
     fn run_highest_window_request(
-        recycler: &PacketsRecycler,
+        recycler: &PacketBatchRecycler,
         from_addr: &SocketAddr,
         blockstore: Option<&Arc<Blockstore>>,
         slot: Slot,
         highest_index: u64,
         nonce: Nonce,
-    ) -> Option<Packets> {
+    ) -> Option<PacketBatch> {
         let blockstore = blockstore?;
         // Try to find the requested index in one of the slots
         let meta = blockstore.meta(slot).ok()??;
@@ -583,7 +587,7 @@ impl ServeRepair {
                 from_addr,
                 nonce,
             )?;
-            return Some(Packets::new_unpinned_with_recycler_data(
+            return Some(PacketBatch::new_unpinned_with_recycler_data(
                 recycler,
                 "run_highest_window_request",
                 vec![packet],
@@ -593,14 +597,14 @@ impl ServeRepair {
     }
 
     fn run_orphan(
-        recycler: &PacketsRecycler,
+        recycler: &PacketBatchRecycler,
         from_addr: &SocketAddr,
         blockstore: Option<&Arc<Blockstore>>,
         mut slot: Slot,
         max_responses: usize,
         nonce: Nonce,
-    ) -> Option<Packets> {
-        let mut res = Packets::new_unpinned_with_recycler(recycler.clone(), 64, "run_orphan");
+    ) -> Option<PacketBatch> {
+        let mut res = PacketBatch::new_unpinned_with_recycler(recycler.clone(), 64, "run_orphan");
         if let Some(blockstore) = blockstore {
             // Try to find the next "n" parent slots of the input slot
             while let Ok(Some(meta)) = blockstore.meta(slot) {
@@ -635,18 +639,20 @@ impl ServeRepair {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{repair_response, result::Error};
-    use safecoin_gossip::{socketaddr, socketaddr_any};
-    use solana_ledger::get_tmp_ledger_path;
-    use solana_ledger::{
-        blockstore::make_many_slot_entries,
-        blockstore_processor::fill_blockstore_slot_with_ticks,
-        shred::{max_ticks_per_n_shreds, Shred},
+    use {
+        super::*,
+        crate::{repair_response, result::Error},
+        safecoin_gossip::{socketaddr, socketaddr_any},
+        solana_ledger::{
+            blockstore::make_many_slot_entries,
+            blockstore_processor::fill_blockstore_slot_with_ticks,
+            get_tmp_ledger_path,
+            shred::{max_ticks_per_n_shreds, Shred},
+        },
+        solana_perf::packet::Packet,
+        safecoin_sdk::{hash::Hash, pubkey::Pubkey, signature::Keypair, timing::timestamp},
+        solana_streamer::socket::SocketAddrSpace,
     };
-    use solana_perf::packet::Packet;
-    use safecoin_sdk::{hash::Hash, pubkey::Pubkey, signature::Keypair, timing::timestamp};
-    use solana_streamer::socket::SocketAddrSpace;
 
     #[test]
     fn test_run_highest_window_request() {
@@ -655,7 +661,7 @@ mod tests {
 
     /// test run_window_request responds with the right shred, and do not overrun
     fn run_highest_window_request(slot: Slot, num_slots: u64, nonce: Nonce) {
-        let recycler = PacketsRecycler::default();
+        let recycler = PacketBatchRecycler::default();
         solana_logger::setup();
         let ledger_path = get_tmp_ledger_path!();
         {
@@ -725,7 +731,7 @@ mod tests {
 
     /// test window requests respond with the right shred, and do not overrun
     fn run_window_request(slot: Slot, nonce: Nonce) {
-        let recycler = PacketsRecycler::default();
+        let recycler = PacketBatchRecycler::default();
         solana_logger::setup();
         let ledger_path = get_tmp_ledger_path!();
         {
@@ -894,7 +900,7 @@ mod tests {
 
     fn run_orphan(slot: Slot, num_slots: u64, nonce: Nonce) {
         solana_logger::setup();
-        let recycler = PacketsRecycler::default();
+        let recycler = PacketBatchRecycler::default();
         let ledger_path = get_tmp_ledger_path!();
         {
             let blockstore = Arc::new(Blockstore::open(&ledger_path).unwrap());
@@ -968,7 +974,7 @@ mod tests {
     #[test]
     fn run_orphan_corrupted_shred_size() {
         solana_logger::setup();
-        let recycler = PacketsRecycler::default();
+        let recycler = PacketBatchRecycler::default();
         let ledger_path = get_tmp_ledger_path!();
         {
             let blockstore = Arc::new(Blockstore::open(&ledger_path).unwrap());
@@ -1046,23 +1052,23 @@ mod tests {
         // 2) repair validator set only includes our own id
         // then no repairs should be generated
         for pubkey in &[safecoin_sdk::pubkey::new_rand(), me.id] {
-            let trusted_validators = Some(vec![*pubkey].into_iter().collect());
-            assert!(serve_repair.repair_peers(&trusted_validators, 1).is_empty());
+            let known_validators = Some(vec![*pubkey].into_iter().collect());
+            assert!(serve_repair.repair_peers(&known_validators, 1).is_empty());
             assert!(serve_repair
                 .repair_request(
                     &cluster_slots,
                     RepairType::Shred(0, 0),
                     &mut LruCache::new(100),
                     &mut RepairStats::default(),
-                    &trusted_validators,
+                    &known_validators,
                     &mut OutstandingRepairs::default(),
                 )
                 .is_err());
         }
 
-        // If trusted validator exists in gossip, should return repair successfully
-        let trusted_validators = Some(vec![contact_info2.id].into_iter().collect());
-        let repair_peers = serve_repair.repair_peers(&trusted_validators, 1);
+        // If known validator exists in gossip, should return repair successfully
+        let known_validators = Some(vec![contact_info2.id].into_iter().collect());
+        let repair_peers = serve_repair.repair_peers(&known_validators, 1);
         assert_eq!(repair_peers.len(), 1);
         assert_eq!(repair_peers[0].id, contact_info2.id);
         assert!(serve_repair
@@ -1071,12 +1077,12 @@ mod tests {
                 RepairType::Shred(0, 0),
                 &mut LruCache::new(100),
                 &mut RepairStats::default(),
-                &trusted_validators,
+                &known_validators,
                 &mut OutstandingRepairs::default(),
             )
             .is_ok());
 
-        // Using no trusted validators should default to all
+        // Using no known validators should default to all
         // validator's available in gossip, excluding myself
         let repair_peers: HashSet<Pubkey> = serve_repair
             .repair_peers(&None, 1)

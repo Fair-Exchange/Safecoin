@@ -1,8 +1,10 @@
-use safecoin_account_decoder::parse_token::real_number_string_trimmed;
-use safecoin_sdk::native_token::lamports_to_sol;
-use std::{
-    fmt::{Debug, Display, Formatter, Result},
-    ops::Add,
+use {
+    safecoin_account_decoder::parse_token::real_number_string_trimmed,
+    safecoin_sdk::native_token::lamports_to_sol,
+    std::{
+        fmt::{Debug, Display, Formatter, Result},
+        ops::Add,
+    },
 };
 
 const SAFE_SYMBOL: &str = "◎";

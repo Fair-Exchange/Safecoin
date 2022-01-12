@@ -1,9 +1,8 @@
-use safecoin_sdk::genesis_config::{DEFAULT_GENESIS_ARCHIVE, DEFAULT_GENESIS_FILE};
 use {
     bzip2::bufread::BzDecoder,
     log::*,
     rand::{thread_rng, Rng},
-    safecoin_sdk::genesis_config::GenesisConfig,
+    safecoin_sdk::genesis_config::{GenesisConfig, DEFAULT_GENESIS_ARCHIVE, DEFAULT_GENESIS_FILE},
     std::{
         collections::HashMap,
         fs::{self, File},
@@ -346,7 +345,7 @@ fn all_digits(v: &str) -> bool {
         return false;
     }
     for x in v.chars() {
-        if !x.is_numeric() {
+        if !x.is_digit(10) {
             return false;
         }
     }
@@ -357,7 +356,7 @@ fn like_storage(v: &str) -> bool {
     let mut periods = 0;
     let mut saw_numbers = false;
     for x in v.chars() {
-        if !x.is_numeric() {
+        if !x.is_digit(10) {
             if x == '.' {
                 if periods > 0 || !saw_numbers {
                     return false;
@@ -474,9 +473,11 @@ fn is_valid_genesis_archive_entry(parts: &[&str], kind: tar::EntryType) -> bool 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use assert_matches::assert_matches;
-    use tar::{Builder, Header};
+    use {
+        super::*,
+        assert_matches::assert_matches,
+        tar::{Builder, Header},
+    };
 
     #[test]
     fn test_archive_is_valid_entry() {
@@ -519,6 +520,10 @@ mod tests {
         ));
         assert!(!is_valid_snapshot_archive_entry(
             &["snapshots", "0x"],
+            tar::EntryType::Directory
+        ));
+        assert!(!is_valid_snapshot_archive_entry(
+            &["snapshots", "①"],
             tar::EntryType::Directory
         ));
         assert!(!is_valid_snapshot_archive_entry(
@@ -565,6 +570,10 @@ mod tests {
         ));
         assert!(!is_valid_snapshot_archive_entry(
             &["accounts", "232323"],
+            tar::EntryType::Regular
+        ));
+        assert!(!is_valid_snapshot_archive_entry(
+            &["accounts", "৬.¾"],
             tar::EntryType::Regular
         ));
     }

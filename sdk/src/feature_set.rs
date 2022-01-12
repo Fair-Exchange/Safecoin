@@ -1,10 +1,12 @@
-use lazy_static::lazy_static;
-use safecoin_sdk::{
-    clock::Slot,
-    hash::{Hash, Hasher},
-    pubkey::Pubkey,
+use {
+    lazy_static::lazy_static,
+    safecoin_sdk::{
+        clock::Slot,
+        hash::{Hash, Hasher},
+        pubkey::Pubkey,
+    },
+    std::collections::{HashMap, HashSet},
 };
-use std::collections::{HashMap, HashSet};
 
 pub mod instructions_sysvar_enabled {
     safecoin_sdk::declare_id!("7TfFp6Tf2XqXQQfx16qvXbjekXtn68kiQj9pPfXZ5Bua");
@@ -163,6 +165,14 @@ pub mod libsecp256k1_0_5_upgrade_enabled {
     safecoin_sdk::declare_id!("EVHL8iX15Gf6PpjdMd7pqPivjPQ2LLbK9fkGsrsGWy9r");
 }
 
+pub mod stop_verify_mul64_imm_nonzero {
+    safecoin_sdk::declare_id!("EHFwHg2vhwUb7ifm7BuY9RMbsyt1rS1rUii7yeDJtGnN");
+}
+
+pub mod start_verify_shift32_imm {
+    safecoin_sdk::declare_id!("CqvdhqAYMc6Eq6tjW3H42Qg39TK2SCsL8ydMsC363PRp");
+}
+
 pub mod merge_nonce_error_into_system_error {
     safecoin_sdk::declare_id!("4n5Ko6ax8yLi21CXoBMFbCy52QydH7jpy42W5df7GZqT");
 }
@@ -223,16 +233,68 @@ pub mod optimize_epoch_boundary_updates {
     safecoin_sdk::declare_id!("9aRcTW6CA2gm66oFyRqp9bV6qF5VYHiuSxdxTGm78rEi");
 }
 
+pub mod tx_wide_compute_cap {
+    safecoin_sdk::declare_id!("5ekBxc8itEnPv4NzGJtr8BVVQLNMQuLMNQQj7pHoLNZ9");
+}
+
+
 pub mod remove_native_loader {
     safecoin_sdk::declare_id!("ATWHHk7mdfaatNZTuKPUMvcBc9iKZStmph9ASzaWoSSj");
 }
 
-pub mod spl_token_v2_set_authority_fix {
-    safecoin_sdk::declare_id!("Cb3jN13cfCNDV9dp36djNpcZXF7r82UAE4U1tZjXnFx5");
+pub mod return_data_syscall_enabled {
+    safecoin_sdk::declare_id!("DwScAzPUjuv65TMbDnFY7AgwmotzWy3xpEJMXM3hZFaB");
+}
+
+pub mod sol_log_data_syscall_enabled {
+    safecoin_sdk::declare_id!("6uaHcKPGUy4J7emLBgUTeufhJdiwhngW6a1R9B7c2ob9");
+}
+
+pub mod ed25519_program_enabled {
+    safecoin_sdk::declare_id!("6ppMXNYLhVd7GcsZ5uV11wQEW7spppiMVfqQv5SXhDpX");
+}
+
+pub mod requestable_heap_size {
+    safecoin_sdk::declare_id!("CCu4boMmfLuqcmfTLPHQiUo22ZdUsXjgzPAURYaWt1Bw");
+}
+
+pub mod add_compute_budget_program {
+    safecoin_sdk::declare_id!("4d5AKtxoh93Dwm1vHXUU3iRATuMndx1c431KgT2td52r");
+}
+
+pub mod reject_deployment_of_unresolved_syscalls {
+    safecoin_sdk::declare_id!("DqniU3MfvdpU3yhmNF1RKeaM5TZQELZuyFGosASRVUoy");
+}
+
+pub mod reject_section_virtual_address_file_offset_mismatch {
+    safecoin_sdk::declare_id!("5N4NikcJLEiZNqwndhNyvZw15LvFXp1oF7AJQTNTZY5k");
+}
+
+pub mod reject_all_elf_rw {
+    safecoin_sdk::declare_id!("DeMpxgMq51j3rZfNK2hQKZyXknQvqevPSFPJFNTbXxsS");
+}
+
+pub mod safe_token_v3_3_0_release {
+    safecoin_sdk::declare_id!("Ftok2jhqAqxUWEiCVRrfRs9DPppWP8cgTB7NQNKL88mS");
+}
+
+pub mod reject_non_rent_exempt_vote_withdraws {
+    safecoin_sdk::declare_id!("7txXZZD6Um59YoLMF7XUNimbMjsqsWhc7g2EniiTrmp1");
+}
+
+pub mod evict_invalid_stakes_cache_entries {
+    safecoin_sdk::declare_id!("EMX9Q7TVFAmQ9V1CggAkhMzhXSg8ECp7fHrWQX2G1chf");
 }
 
 pub mod voter_groups_consensus {
     safecoin_sdk::declare_id!("5jvJyof7JXy7JEwGag4qdEuCA2DuEhkQSKMaEsELJxQU");
+}
+pub mod use_new_hash {
+    safecoin_sdk::declare_id!("UNHufqFsvHBU7ouiUKvJifLChnrZ2LyKPUefYjvAN22");
+}
+
+pub mod really_use_voter_groups {
+    safecoin_sdk::declare_id!("RuvGybt7c8A4dr72B3PW9PTtMov4bKhHo2KN3FgrTdb");
 }
 
 lazy_static! {
@@ -276,10 +338,11 @@ lazy_static! {
         (neon_evm_compute_budget::id(), "bump neon_evm's compute budget"),
         (rent_for_sysvars::id(), "collect rent from accounts owned by sysvars"),
         (libsecp256k1_0_5_upgrade_enabled::id(), "upgrade libsecp256k1 to v0.5.0"),
+        (stop_verify_mul64_imm_nonzero::id(), "Sets rbpf vm config verify_mul64_imm_nonzero to false"),
+        (start_verify_shift32_imm::id(), "sets rbpf vm config verify_shift32_imm to true"),
         (merge_nonce_error_into_system_error::id(), "merge NonceError into SystemError"),
         (safe_token_v2_set_authority_fix::id(), "safe-token set_authority fix"),
         (stake_merge_with_unmatched_credits_observed::id(), "allow merging active stakes with unmatched credits_observed #18985"),
-        (gate_large_block::id(), "validator checks block cost against max limit in realtime, reject if exceeds."),
         (mem_overlap_fix::id(), "Memory overlap fix"),
         (close_upgradeable_program_accounts::id(), "enable closing upgradeable program accounts"),
         (stake_program_advance_activating_credits_observed::id(), "Enable advancing credits observed for activation epoch #19309"),
@@ -291,9 +354,23 @@ lazy_static! {
         (stakes_remove_delegation_if_inactive::id(), "remove delegations from stakes cache when inactive"),
         (send_to_tpu_vote_port::id(), "Send votes to the tpu vote port"),
         (optimize_epoch_boundary_updates::id(), "Optimize epoch boundary updates"),
+        (tx_wide_compute_cap::id(), "Transaction wide compute cap"),
+        (gate_large_block::id(), "validator checks block cost against max limit in realtime, reject if exceeds."),
         (remove_native_loader::id(), "Remove support for the native loader"),
-        (spl_token_v2_set_authority_fix::id(), "safe-token set_authority fix"),
+        (return_data_syscall_enabled::id(), "enable sol_{set,get}_return_data syscall"),
+        (sol_log_data_syscall_enabled::id(), "enable sol_log_data syscall"),
+        (ed25519_program_enabled::id(), "enable builtin ed25519 signature verify program"),
+        (requestable_heap_size::id(), "Requestable heap frame size"),
+        (add_compute_budget_program::id(), "Add compute_budget_program"),
+        (reject_deployment_of_unresolved_syscalls::id(), "Reject deployment of programs with unresolved syscall symbols"),
+        (reject_section_virtual_address_file_offset_mismatch::id(), "enforce section virtual addresses and file offsets in ELF to be equal"),
+        (reject_all_elf_rw::id(), "reject all read-write data in program elfs"),
+        (safe_token_v3_3_0_release::id(), "safe-token v3.3.0 release"),
+        (reject_non_rent_exempt_vote_withdraws::id(), "fail vote withdraw instructions which leave the account non-rent-exempt"),
+        (evict_invalid_stakes_cache_entries::id(), "evict invalid stakes cache entries on epoch boundaries"),
         (voter_groups_consensus::id(), "use a random subset of voters for block consensus"),
+        (use_new_hash::id(), "use better hash for rando voters"),
+        (really_use_voter_groups::id(), "fix voter_groups"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()

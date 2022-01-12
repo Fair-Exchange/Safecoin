@@ -1,6 +1,6 @@
 [package]
 name = "solana-bpf-rust-noop"
-version = "1.7.17"
+version = "1.8.12"
 description = "Safecoin BPF noop program written in Rust"
 authors = ["Solana Maintainers <maintainers@solana.com>"]
 repository = "https://github.com/fair-exchange/safecoin"

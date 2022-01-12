@@ -2,35 +2,40 @@
 //! unique ID that is the hash of the Entry before it, plus the hash of the
 //! transactions within it. Entries cannot be reordered, and its field `num_hashes`
 //! represents an approximate amount of time since the last Entry was created.
-use crate::poh::Poh;
-use dlopen::symbor::{Container, SymBorApi, Symbol};
-use dlopen_derive::SymBorApi;
-use log::*;
-use rand::{thread_rng, Rng};
-use rayon::prelude::*;
-use rayon::ThreadPool;
-use serde::{Deserialize, Serialize};
-use safecoin_measure::measure::Measure;
-use solana_merkle_tree::MerkleTree;
-use solana_metrics::*;
-use solana_perf::cuda_runtime::PinnedVec;
-use solana_perf::perf_libs;
-use solana_perf::recycler::Recycler;
-use safecoin_rayon_threadlimit::get_thread_count;
-use solana_runtime::hashed_transaction::HashedTransaction;
-use safecoin_sdk::hash::Hash;
-use safecoin_sdk::packet::PACKET_DATA_SIZE;
-use safecoin_sdk::timing;
-use safecoin_sdk::transaction::Transaction;
-use std::borrow::Cow;
-use std::cell::RefCell;
-use std::ffi::OsStr;
-use std::sync::mpsc::{Receiver, Sender};
-use std::sync::Once;
-use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
-use std::time::Instant;
-use std::{cmp, thread};
+use {
+    crate::poh::Poh,
+    dlopen::symbor::{Container, SymBorApi, Symbol},
+    dlopen_derive::SymBorApi,
+    log::*,
+    rand::{thread_rng, Rng},
+    rayon::{prelude::*, ThreadPool},
+    serde::{Deserialize, Serialize},
+    safecoin_measure::measure::Measure,
+    solana_merkle_tree::MerkleTree,
+    solana_metrics::*,
+    solana_perf::{cuda_runtime::PinnedVec, perf_libs, recycler::Recycler},
+    safecoin_rayon_threadlimit::get_thread_count,
+    solana_runtime::hashed_transaction::HashedTransaction,
+    safecoin_sdk::{
+        feature_set::{self, FeatureSet},
+        hash::Hash,
+        packet::PACKET_DATA_SIZE,
+        timing,
+        transaction::Transaction,
+    },
+    std::{
+        borrow::Cow,
+        cell::RefCell,
+        cmp,
+        ffi::OsStr,
+        sync::{
+            mpsc::{Receiver, Sender},
+            Arc, Mutex, Once,
+        },
+        thread::{self, JoinHandle},
+        time::Instant,
+    },
+};
 
 thread_local!(static PAR_THREAD_POOL: RefCell<ThreadPool> = RefCell::new(rayon::ThreadPoolBuilder::new()
                     .num_threads(get_thread_count())
@@ -359,8 +364,7 @@ pub trait EntrySlice {
     fn verify_and_hash_transactions(
         &self,
         skip_verification: bool,
-        libsecp256k1_0_5_upgrade_enabled: bool,
-        verify_tx_signatures_len: bool,
+        feature_set: &Arc<FeatureSet>,
     ) -> Option<Vec<EntryType<'_>>>;
 }
 
@@ -515,8 +519,7 @@ impl EntrySlice for [Entry] {
     fn verify_and_hash_transactions<'a>(
         &'a self,
         skip_verification: bool,
-        libsecp256k1_0_5_upgrade_enabled: bool,
-        verify_tx_signatures_len: bool,
+        feature_set: &Arc<FeatureSet>,
     ) -> Option<Vec<EntryType<'a>>> {
         let verify_and_hash = |tx: &'a Transaction| -> Option<HashedTransaction<'a>> {
             let message_hash = if !skip_verification {
@@ -524,9 +527,10 @@ impl EntrySlice for [Entry] {
                 if size > PACKET_DATA_SIZE as u64 {
                     return None;
                 }
-                tx.verify_precompiles(libsecp256k1_0_5_upgrade_enabled)
-                    .ok()?;
-                if verify_tx_signatures_len && !tx.verify_signatures_len() {
+                tx.verify_precompiles(feature_set).ok()?;
+                if feature_set.is_active(&feature_set::verify_tx_signatures_len::id())
+                    && !tx.verify_signatures_len()
+                {
                     return None;
                 }
                 tx.verify_and_hash_message().ok()?
@@ -534,7 +538,11 @@ impl EntrySlice for [Entry] {
                 tx.message().hash()
             };
 
-            Some(HashedTransaction::new(Cow::Borrowed(tx), message_hash))
+            Some(HashedTransaction::new(
+                Cow::Borrowed(tx),
+                message_hash,
+                None,
+            ))
         };
 
         PAR_THREAD_POOL.with(|thread_pool| {
@@ -725,16 +733,18 @@ pub fn next_entry(prev_hash: &Hash, num_hashes: u64, transactions: Vec<Transacti
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::entry::Entry;
-    use safecoin_sdk::{
-        hash::{hash, new_rand as hash_new_rand, Hash},
-        message::Message,
-        packet::PACKET_DATA_SIZE,
-        pubkey::Pubkey,
-        signature::{Keypair, Signer},
-        system_instruction, system_transaction,
-        transaction::Transaction,
+    use {
+        super::*,
+        crate::entry::Entry,
+        safecoin_sdk::{
+            hash::{hash, new_rand as hash_new_rand, Hash},
+            message::Message,
+            packet::PACKET_DATA_SIZE,
+            pubkey::Pubkey,
+            signature::{Keypair, Signer},
+            system_instruction, system_transaction,
+            transaction::Transaction,
+        },
     };
 
     #[test]
@@ -924,22 +934,34 @@ mod tests {
         {
             let tx = make_transaction(TestCase::RemoveSignature);
             let entries = vec![next_entry(&recent_blockhash, 1, vec![tx])];
+            let features = Arc::new(feature_set::FeatureSet::default());
             assert!(entries[..]
-                .verify_and_hash_transactions(false, false, false)
+                .verify_and_hash_transactions(false, &features)
                 .is_some());
+            let mut features = feature_set::FeatureSet::default();
+            features
+                .active
+                .insert(feature_set::verify_tx_signatures_len::id(), 0);
+            let features = Arc::new(features);
             assert!(entries[..]
-                .verify_and_hash_transactions(false, false, true)
+                .verify_and_hash_transactions(false, &features)
                 .is_none());
         }
         // Too many signatures.
         {
             let tx = make_transaction(TestCase::AddSignature);
             let entries = vec![next_entry(&recent_blockhash, 1, vec![tx])];
+            let features = Arc::new(feature_set::FeatureSet::default());
             assert!(entries[..]
-                .verify_and_hash_transactions(false, false, false)
+                .verify_and_hash_transactions(false, &features)
                 .is_some());
+            let mut features = feature_set::FeatureSet::default();
+            features
+                .active
+                .insert(feature_set::verify_tx_signatures_len::id(), 0);
+            let features = Arc::new(features);
             assert!(entries[..]
-                .verify_and_hash_transactions(false, false, true)
+                .verify_and_hash_transactions(false, &features)
                 .is_none());
         }
     }
@@ -950,6 +972,7 @@ mod tests {
         let recent_blockhash = hash_new_rand(&mut rng);
         let keypair = Keypair::new();
         let pubkey = keypair.pubkey();
+        let features = Arc::new(feature_set::FeatureSet::default());
         let make_transaction = |size| {
             let ixs: Vec<_> = std::iter::repeat_with(|| {
                 system_instruction::transfer(&pubkey, &Pubkey::new_unique(), 1)
@@ -965,7 +988,7 @@ mod tests {
             let entries = vec![next_entry(&recent_blockhash, 1, vec![tx.clone()])];
             assert!(bincode::serialized_size(&tx).unwrap() <= PACKET_DATA_SIZE as u64);
             assert!(entries[..]
-                .verify_and_hash_transactions(false, false, false)
+                .verify_and_hash_transactions(false, &features)
                 .is_some());
         }
         // Big transaction.
@@ -974,7 +997,7 @@ mod tests {
             let entries = vec![next_entry(&recent_blockhash, 1, vec![tx.clone()])];
             assert!(bincode::serialized_size(&tx).unwrap() > PACKET_DATA_SIZE as u64);
             assert!(entries[..]
-                .verify_and_hash_transactions(false, false, false)
+                .verify_and_hash_transactions(false, &features)
                 .is_none());
         }
         // Assert that verify fails as soon as serialized
@@ -985,7 +1008,7 @@ mod tests {
             assert_eq!(
                 bincode::serialized_size(&tx).unwrap() <= PACKET_DATA_SIZE as u64,
                 entries[..]
-                    .verify_and_hash_transactions(false, false, false)
+                    .verify_and_hash_transactions(false, &features)
                     .is_some(),
             );
         }

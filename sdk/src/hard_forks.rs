@@ -3,8 +3,10 @@
 
 #![cfg(feature = "full")]
 
-use byteorder::{ByteOrder, LittleEndian};
-use safecoin_sdk::clock::Slot;
+use {
+    byteorder::{ByteOrder, LittleEndian},
+    safecoin_sdk::clock::Slot,
+};
 
 #[derive(Default, Clone, Debug, Deserialize, Serialize, AbiExample, PartialEq, Eq)]
 pub struct HardForks {

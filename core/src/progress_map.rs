@@ -1,15 +1,17 @@
-use crate::{
-    cluster_info_vote_listener::SlotVoteTracker,
-    cluster_slots::SlotPubkeys,
-    replay_stage::SUPERMINORITY_THRESHOLD,
-    {consensus::Stake, consensus::VotedStakes},
-};
-use solana_ledger::blockstore_processor::{ConfirmationProgress, ConfirmationTiming};
-use solana_runtime::{bank::Bank, bank_forks::BankForks, vote_account::ArcVoteAccount};
-use safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey};
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    sync::{Arc, RwLock},
+use {
+    crate::{
+        cluster_info_vote_listener::SlotVoteTracker,
+        cluster_slots::SlotPubkeys,
+        consensus::{Stake, VotedStakes},
+        replay_stage::SUPERMINORITY_THRESHOLD,
+    },
+    solana_ledger::blockstore_processor::{ConfirmationProgress, ConfirmationTiming},
+    solana_runtime::{bank::Bank, bank_forks::BankForks, vote_account::VoteAccount},
+    safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey},
+    std::{
+        collections::{BTreeMap, HashMap, HashSet},
+        sync::{Arc, RwLock},
+    },
 };
 
 type VotedSlot = Slot;
@@ -118,6 +120,54 @@ impl ReplaySlotStats {
                 self.execute_timings.details.data_size_changed,
                 i64
             ),
+        );
+
+        let mut per_pubkey_timings: Vec<_> = self
+            .execute_timings
+            .details
+            .per_program_timings
+            .iter()
+            .collect();
+        per_pubkey_timings.sort_by(|a, b| b.1.accumulated_us.cmp(&a.1.accumulated_us));
+        let (total_us, total_units, total_count, total_errored_units, total_errored_count) =
+            per_pubkey_timings.iter().fold(
+                (0, 0, 0, 0, 0),
+                |(sum_us, sum_units, sum_count, sum_errored_units, sum_errored_count), a| {
+                    (
+                        sum_us + a.1.accumulated_us,
+                        sum_units + a.1.accumulated_units,
+                        sum_count + a.1.count,
+                        sum_errored_units + a.1.total_errored_units,
+                        sum_errored_count + a.1.errored_txs_compute_consumed.len(),
+                    )
+                },
+            );
+
+        for (pubkey, time) in per_pubkey_timings.iter().take(5) {
+            datapoint_info!(
+                "per_program_timings",
+                ("slot", slot as i64, i64),
+                ("pubkey", pubkey.to_string(), String),
+                ("execute_us", time.accumulated_us, i64),
+                ("accumulated_units", time.accumulated_units, i64),
+                ("errored_units", time.total_errored_units, i64),
+                ("count", time.count, i64),
+                (
+                    "errored_count",
+                    time.errored_txs_compute_consumed.len(),
+                    i64
+                ),
+            );
+        }
+        datapoint_info!(
+            "per_program_timings",
+            ("slot", slot as i64, i64),
+            ("pubkey", "all", String),
+            ("execute_us", total_us, i64),
+            ("accumulated_units", total_units, i64),
+            ("count", total_count, i64),
+            ("errored_units", total_errored_units, i64),
+            ("count", total_errored_count, i64)
         );
     }
 }
@@ -304,7 +354,7 @@ impl PropagatedStats {
         &mut self,
         node_pubkey: &Pubkey,
         vote_account_pubkeys: &[Pubkey],
-        epoch_vote_accounts: &HashMap<Pubkey, (u64, ArcVoteAccount)>,
+        epoch_vote_accounts: &HashMap<Pubkey, (u64, VoteAccount)>,
     ) {
         self.propagated_node_ids.insert(*node_pubkey);
         for vote_account_pubkey in vote_account_pubkeys.iter() {
@@ -500,7 +550,7 @@ mod test {
         let epoch_vote_accounts: HashMap<_, _> = vote_account_pubkeys
             .iter()
             .skip(num_vote_accounts - staked_vote_accounts)
-            .map(|pubkey| (*pubkey, (1, ArcVoteAccount::default())))
+            .map(|pubkey| (*pubkey, (1, VoteAccount::default())))
             .collect();
 
         let mut stats = PropagatedStats::default();
@@ -542,7 +592,7 @@ mod test {
         let epoch_vote_accounts: HashMap<_, _> = vote_account_pubkeys
             .iter()
             .skip(num_vote_accounts - staked_vote_accounts)
-            .map(|pubkey| (*pubkey, (1, ArcVoteAccount::default())))
+            .map(|pubkey| (*pubkey, (1, VoteAccount::default())))
             .collect();
         stats.add_node_pubkey_internal(&node_pubkey, &vote_account_pubkeys, &epoch_vote_accounts);
         assert!(stats.propagated_node_ids.contains(&node_pubkey));

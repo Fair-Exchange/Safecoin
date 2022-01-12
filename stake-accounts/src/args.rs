@@ -1,13 +1,14 @@
-use clap::ArgMatches;
-use safecoin_clap_utils::keypair::{pubkey_from_path, signer_from_path};
-use safecoin_remote_wallet::remote_wallet::RemoteWalletManager;
-use safecoin_sdk::{
-    clock::{Epoch, UnixTimestamp},
-    pubkey::Pubkey,
-    signature::Signer,
+use {
+    clap::ArgMatches,
+    safecoin_clap_utils::keypair::{pubkey_from_path, signer_from_path},
+    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
+    safecoin_sdk::{
+        clock::{Epoch, UnixTimestamp},
+        pubkey::Pubkey,
+        signature::Signer,
+    },
+    std::{error::Error, sync::Arc},
 };
-use std::error::Error;
-use std::sync::Arc;
 
 pub(crate) struct NewArgs<P, K> {
     pub fee_payer: K,

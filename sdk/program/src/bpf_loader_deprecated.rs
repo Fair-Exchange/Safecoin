@@ -1,4 +1,4 @@
-//! @brief The original and now deprecated Safecoin BPF loader.
+//! The original and now deprecated Safecoin BPF loader.
 //!
 //! The BPF loader is responsible for loading, finalizing, and executing BPF
 //! programs.

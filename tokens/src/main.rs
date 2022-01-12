@@ -1,14 +1,16 @@
-use safecoin_cli_config::{Config, CONFIG_FILE};
-use safecoin_client::rpc_client::RpcClient;
-use safecoin_tokens::{arg_parser::parse_args, args::Command, commands, safe_token};
-use std::{
-    env,
-    error::Error,
-    path::Path,
-    process,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
+use {
+    safecoin_cli_config::{Config, CONFIG_FILE},
+    safecoin_client::rpc_client::RpcClient,
+    safecoin_tokens::{arg_parser::parse_args, args::Command, commands, safe_token},
+    std::{
+        env,
+        error::Error,
+        path::Path,
+        process,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
     },
 };
 

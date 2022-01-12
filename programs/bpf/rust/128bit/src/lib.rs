@@ -1,4 +1,4 @@
-//! @brief Example Rust-based BPF program tests loop iteration
+//! Example Rust-based BPF program tests loop iteration
 
 extern crate safecoin_program;
 use safecoin_program::{custom_panic_default, entrypoint::SUCCESS};

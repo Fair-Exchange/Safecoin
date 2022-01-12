@@ -1,6 +1,8 @@
 //! lockups generator
-use safecoin_sdk::{clock::Epoch, epoch_schedule::EpochSchedule, timing::years_as_slots};
-use std::time::Duration;
+use {
+    safecoin_sdk::{clock::Epoch, epoch_schedule::EpochSchedule, timing::years_as_slots},
+    std::time::Duration,
+};
 
 #[derive(Debug)]
 pub struct UnlockInfo {

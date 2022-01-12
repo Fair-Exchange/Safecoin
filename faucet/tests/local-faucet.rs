@@ -1,10 +1,12 @@
-use safecoin_faucet::faucet::{request_airdrop_transaction, run_local_faucet};
-use safecoin_sdk::{
-    hash::Hash,
-    message::Message,
-    signature::{Keypair, Signer},
-    system_instruction,
-    transaction::Transaction,
+use {
+    safecoin_faucet::faucet::{request_airdrop_transaction, run_local_faucet},
+    safecoin_sdk::{
+        hash::Hash,
+        message::Message,
+        signature::{Keypair, Signer},
+        system_instruction,
+        transaction::Transaction,
+    },
 };
 
 #[test]
