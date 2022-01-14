@@ -1,9 +1,9 @@
 [package]
-name = "solana-ed25519-program"
+name = "safecoin-ed25519-program"
 description = "Safecoin Ed25519 program"
 version = "1.8.12"
 homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/solana-ed25519-program"
+documentation = "https://docs.rs/safecoin-ed25519-program"
 repository = "https://github.com/fair-exchange/safecoin"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 license = "Apache-2.0"

@@ -4928,7 +4928,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "safecoin-compute-budget-program",
- "solana-ed25519-program",
+ "safecoin-ed25519-program",
  "symlink",
  "tar",
  "tempfile",
@@ -5900,7 +5900,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-ed25519-program"
+name = "safecoin-ed25519-program"
 version = "1.8.12"
 dependencies = [
  "bytemuck",
