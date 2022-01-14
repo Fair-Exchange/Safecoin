@@ -46,7 +46,7 @@ safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.8.12" }
 safecoin-version = { path = "../version", version = "=1.8.12" }
 safecoin-vote-program = { path = "../programs/vote", version = "=1.8.12" }
-safe-memo = { version = "=3.0.5", features = ["no-entrypoint"] }
+safe-memo = { version = "=3.0.6", features = ["no-entrypoint"] }
 thiserror = "1.0.21"
 tiny-bip39 = "0.8.1"
 url = "2.1.1"
