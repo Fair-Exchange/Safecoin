@@ -6,7 +6,7 @@ use {
     },
     safecoin_cli_output::OutputFormat,
     safecoin_client::rpc_client::RpcClient,
-    safecoin_core::test_validator::TestValidator,
+    solana_core::test_validator::TestValidator,
     safecoin_faucet::faucet::run_local_faucet,
     safecoin_sdk::{
         account_utils::StateMut,

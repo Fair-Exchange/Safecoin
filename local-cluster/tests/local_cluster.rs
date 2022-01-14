@@ -17,7 +17,7 @@ use {
         rpc_response::RpcSignatureResult,
         thin_client::{create_client, ThinClient},
     },
-    safecoin_core::{
+    solana_core::{
         broadcast_stage::BroadcastStageType,
         consensus::{Tower, SWITCH_FORK_THRESHOLD, VOTE_THRESHOLD_DEPTH},
         optimistic_confirmation_verifier::OptimisticConfirmationVerifier,

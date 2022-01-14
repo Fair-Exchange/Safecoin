@@ -8,7 +8,7 @@ use {
     log::*,
     rand::{thread_rng, Rng},
     rayon::prelude::*,
-    safecoin_core::banking_stage::{BankingStage, BankingStageStats},
+    solana_core::banking_stage::{BankingStage, BankingStageStats},
     safecoin_gossip::cluster_info::{ClusterInfo, Node},
     solana_ledger::{
         blockstore::Blockstore,

@@ -10,7 +10,7 @@ use {
         nonce_utils,
         rpc_client::RpcClient,
     },
-    safecoin_core::test_validator::TestValidator,
+    solana_core::test_validator::TestValidator,
     safecoin_faucet::faucet::run_local_faucet,
     safecoin_sdk::{
         commitment_config::CommitmentConfig,

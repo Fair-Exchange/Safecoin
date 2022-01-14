@@ -14,7 +14,7 @@ use {
         rpc_response::{Response as RpcResponse, RpcSignatureResult, SlotUpdate},
         tpu_client::{TpuClient, TpuClientConfig},
     },
-    safecoin_core::test_validator::TestValidator,
+    solana_core::test_validator::TestValidator,
     solana_rpc::rpc_pubsub::gen_client::Client as PubsubClient,
     safecoin_sdk::{
         commitment_config::CommitmentConfig,

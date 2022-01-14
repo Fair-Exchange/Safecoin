@@ -2846,7 +2846,7 @@ Result:
 
 ```bash
 curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0","id":1, "method":"setLogFilter", "params":["safecoin_core=debug"]}
+  {"jsonrpc":"2.0","id":1, "method":"setLogFilter", "params":["solana_core=debug"]}
 '
 ```
 

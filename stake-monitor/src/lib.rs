@@ -360,7 +360,7 @@ mod test {
     use super::*;
     use serial_test::serial;
     use safecoin_client::rpc_config::RpcSendTransactionConfig;
-    use safecoin_core::{rpc::JsonRpcConfig, validator::ValidatorConfig};
+    use solana_core::{rpc::JsonRpcConfig, validator::ValidatorConfig};
     use solana_local_cluster::local_cluster::{ClusterConfig, LocalCluster};
     use safecoin_sdk::{
         commitment_config::CommitmentConfig,

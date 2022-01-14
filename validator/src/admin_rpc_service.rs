@@ -6,7 +6,7 @@ use {
     jsonrpc_server_utils::tokio,
     log::*,
     serde::{Deserialize, Serialize},
-    safecoin_core::validator::ValidatorStartProgress,
+    solana_core::validator::ValidatorStartProgress,
     safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
     safecoin_sdk::{
         exit::Exit,

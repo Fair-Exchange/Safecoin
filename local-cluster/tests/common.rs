@@ -2,7 +2,7 @@
 use {
     log::*,
     safecoin_client::rpc_client::RpcClient,
-    safecoin_core::{
+    solana_core::{
         broadcast_stage::BroadcastStageType,
         consensus::{Tower, SWITCH_FORK_THRESHOLD},
         validator::ValidatorConfig,
@@ -43,7 +43,7 @@ use {
 };
 
 pub const RUST_LOG_FILTER: &str =
-    "error,safecoin_core::replay_stage=warn,solana_local_cluster=info,local_cluster=info";
+    "error,solana_core::replay_stage=warn,solana_local_cluster=info,local_cluster=info";
 
 pub fn last_vote_in_tower(ledger_path: &Path, node_pubkey: &Pubkey) -> Option<(Slot, Hash)> {
     restore_tower(ledger_path, node_pubkey).map(|tower| tower.last_voted_slot_hash().unwrap())

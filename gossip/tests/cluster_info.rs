@@ -125,8 +125,8 @@ fn run_simulation(stakes: &[u64], fanout: usize) {
             let mut seed = [0; 32];
             seed[0..4].copy_from_slice(&i.to_le_bytes());
             // TODO: Ideally these should use the new methods in
-            // safecoin_core::cluster_nodes, however that would add build
-            // dependency on safecoin_core which is not desired.
+            // solana_core::cluster_nodes, however that would add build
+            // dependency on solana_core which is not desired.
             let (peers, stakes_and_index) =
                 sorted_retransmit_peers_and_stakes(&cluster_info, Some(&staked_nodes));
             let (_, shuffled_stakes_and_indexes) =

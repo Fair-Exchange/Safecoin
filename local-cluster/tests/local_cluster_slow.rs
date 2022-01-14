@@ -9,7 +9,7 @@ use {
     },
     log::*,
     serial_test::serial,
-    safecoin_core::{
+    solana_core::{
         broadcast_stage::{BroadcastDuplicatesConfig, BroadcastStageType},
         consensus::SWITCH_FORK_THRESHOLD,
         validator::ValidatorConfig,
