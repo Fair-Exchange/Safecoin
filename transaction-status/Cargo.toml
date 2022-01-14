@@ -25,7 +25,7 @@ safecoin-metrics = { path = "../metrics", version = "=1.8.12" }
 safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
 safecoin-runtime = { path = "../runtime", version = "=1.8.12" }
 safecoin-vote-program = { path = "../programs/vote", version = "=1.8.12" }
-safe-associated-token-account = { version = "=1.0.9", features = ["no-entrypoint"] }
+safe-associated-token-account = { version = "=1.0.10", features = ["no-entrypoint"] }
 safe-memo = { version = "=3.0.6", features = ["no-entrypoint"] }
 safe-token = { version = "=3.2.2", features = ["no-entrypoint"] }
 thiserror = "1.0"
