@@ -1,9 +1,9 @@
 [package]
-name = "solana-compute-budget-program"
+name = "safecoin-compute-budget-program"
 description = "Safecoin Compute Budget program"
 version = "1.8.12"
 homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/solana-compute-budget-program"
+documentation = "https://docs.rs/safecoin-compute-budget-program"
 repository = "https://github.com/fair-exchange/safecoin"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 license = "Apache-2.0"

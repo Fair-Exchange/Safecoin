@@ -4927,7 +4927,7 @@ dependencies = [
  "safecoin-vote-program",
  "serde",
  "serde_derive",
- "solana-compute-budget-program",
+ "safecoin-compute-budget-program",
  "solana-ed25519-program",
  "symlink",
  "tar",
@@ -5893,7 +5893,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-compute-budget-program"
+name = "safecoin-compute-budget-program"
 version = "1.8.12"
 dependencies = [
  "safecoin-sdk",
