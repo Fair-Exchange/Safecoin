@@ -31,7 +31,7 @@ pub mod state {
 }
 
 pub mod native_mint {
-    safecoin_sdk::declare_id!("Safe111111111111111111111111111111111111112");
+    safecoin_sdk::declare_id!("Safe111111111111111111111111111111111111111");
 
     /*
         Mint {
