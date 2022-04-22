@@ -1,6 +1,9 @@
 //! @brief Safecoin Rust-based BPF program entry point supported by the latest
 //! BPFLoader.  For more information see './bpf_loader.rs'
 
+#![allow(overflowing_literals)]
+
+
 extern crate alloc;
 use crate::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use alloc::vec::Vec;
