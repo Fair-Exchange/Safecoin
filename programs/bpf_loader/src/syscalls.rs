@@ -142,9 +142,9 @@ pub fn register_syscalls(
 
     syscall_registry.register_syscall_by_name(b"sol_sha256", SyscallSha256::call)?;
 
-    if invoke_context.is_feature_active(&keccak256_syscall_enabled::id()) {
-        syscall_registry.register_syscall_by_name(b"sol_keccak256", SyscallKeccak256::call)?;
-    }
+//    if invoke_context.is_feature_active(&keccak256_syscall_enabled::id()) {
+//        syscall_registry.register_syscall_by_name(b"sol_keccak256", SyscallKeccak256::call)?;
+//    }
 
     if invoke_context.is_feature_active(&secp256k1_recover_syscall_enabled::id()) {
         syscall_registry
@@ -306,7 +306,7 @@ pub fn bind_syscall_context_objects<'a>(
 
     bind_feature_gated_syscall_context_object!(
         vm,
-        invoke_context.is_feature_active(&keccak256_syscall_enabled::id()),
+        false,
         Box::new(SyscallKeccak256 {
             base_cost: bpf_compute_budget.sha256_base_cost,
             byte_cost: bpf_compute_budget.sha256_byte_cost,
