@@ -1,4 +1,4 @@
-#[cfg(test)]
+#![cfg(test)]
 use {
     super::*,
     crate::{
@@ -23,12 +23,13 @@ use {
     tempfile::TempDir,
 };
 
-#[cfg(test)]
 fn copy_append_vecs<P: AsRef<Path>>(
     accounts_db: &AccountsDb,
     output_dir: P,
 ) -> std::io::Result<UnpackedAppendVecMap> {
-    let storage_entries = accounts_db.get_snapshot_storages(Slot::max_value(), None).0;
+    let storage_entries = accounts_db
+        .get_snapshot_storages(Slot::max_value(), None, None)
+        .0;
     let mut unpacked_append_vec_map = UnpackedAppendVecMap::new();
     for storage in storage_entries.iter().flatten() {
         let storage_path = storage.get_path();
@@ -41,7 +42,6 @@ fn copy_append_vecs<P: AsRef<Path>>(
     Ok(unpacked_append_vec_map)
 }
 
-#[cfg(test)]
 fn check_accounts(accounts: &Accounts, pubkeys: &[Pubkey], num: usize) {
     for _ in 1..num {
         let idx = thread_rng().gen_range(0, num - 1);
@@ -55,7 +55,6 @@ fn check_accounts(accounts: &Accounts, pubkeys: &[Pubkey], num: usize) {
     }
 }
 
-#[cfg(test)]
 fn context_accountsdb_from_stream<'a, C, R>(
     stream: &mut BufReader<R>,
     account_paths: &[PathBuf],
@@ -66,20 +65,30 @@ where
     R: Read,
 {
     // read and deserialise the accounts database directly from the stream
+    let accounts_db_fields = C::deserialize_accounts_db_fields(stream)?;
+    let snapshot_accounts_db_fields = SnapshotAccountsDbFields {
+        full_snapshot_accounts_db_fields: accounts_db_fields,
+        incremental_snapshot_accounts_db_fields: None,
+    };
     reconstruct_accountsdb_from_fields(
-        C::deserialize_accounts_db_fields(stream)?,
+        snapshot_accounts_db_fields,
         account_paths,
         unpacked_append_vec_map,
-        &ClusterType::Development,
+        &GenesisConfig {
+            cluster_type: ClusterType::Development,
+            ..GenesisConfig::default()
+        },
         AccountSecondaryIndexes::default(),
         false,
         None,
         AccountShrinkThreshold::default(),
+        false,
+        Some(crate::accounts_db::ACCOUNTS_DB_CONFIG_FOR_TESTING),
         None,
     )
+    .map(|(accounts_db, _)| accounts_db)
 }
 
-#[cfg(test)]
 fn accountsdb_from_stream<R>(
     serde_style: SerdeStyle,
     stream: &mut BufReader<R>,
@@ -90,7 +99,7 @@ where
     R: Read,
 {
     match serde_style {
-        SerdeStyle::Newer => context_accountsdb_from_stream::<TypeContextFuture, R>(
+        SerdeStyle::Newer => context_accountsdb_from_stream::<newer::Context, R>(
             stream,
             account_paths,
             unpacked_append_vec_map,
@@ -98,7 +107,6 @@ where
     }
 }
 
-#[cfg(test)]
 fn accountsdb_to_stream<W>(
     serde_style: SerdeStyle,
     stream: &mut W,
@@ -112,7 +120,7 @@ where
     match serde_style {
         SerdeStyle::Newer => serialize_into(
             stream,
-            &SerializableAccountsDb::<TypeContextFuture> {
+            &SerializableAccountsDb::<newer::Context> {
                 accounts_db,
                 slot,
                 account_storage_entries,
@@ -122,17 +130,15 @@ where
     }
 }
 
-#[cfg(test)]
 fn test_accounts_serialize_style(serde_style: SerdeStyle) {
     solana_logger::setup();
     let (_accounts_dir, paths) = get_temp_accounts_paths(4).unwrap();
-    let accounts = Accounts::new_with_config(
+    let accounts = Accounts::new_with_config_for_tests(
         paths,
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
-        None,
     );
 
     let mut pubkeys: Vec<Pubkey> = vec![];
@@ -146,7 +152,7 @@ fn test_accounts_serialize_style(serde_style: SerdeStyle) {
         &mut writer,
         &*accounts.accounts_db,
         0,
-        &accounts.accounts_db.get_snapshot_storages(0, None).0,
+        &accounts.accounts_db.get_snapshot_storages(0, None, None).0,
     )
     .unwrap();
 
@@ -172,11 +178,10 @@ fn test_accounts_serialize_style(serde_style: SerdeStyle) {
     assert_eq!(accounts.bank_hash_at(0), daccounts.bank_hash_at(0));
 }
 
-#[cfg(test)]
 fn test_bank_serialize_style(serde_style: SerdeStyle) {
     solana_logger::setup();
     let (genesis_config, _) = create_genesis_config(500);
-    let bank0 = Arc::new(Bank::new(&genesis_config));
+    let bank0 = Arc::new(Bank::new_for_tests(&genesis_config));
     let bank1 = Bank::new_from_parent(&bank0, &Pubkey::default(), 1);
     bank0.squash();
 
@@ -198,7 +203,7 @@ fn test_bank_serialize_style(serde_style: SerdeStyle) {
     bank2.squash();
     bank2.force_flush_accounts_cache();
 
-    let snapshot_storages = bank2.get_snapshot_storages();
+    let snapshot_storages = bank2.get_snapshot_storages(None);
     let mut buf = vec![];
     let mut writer = Cursor::new(&mut buf);
     crate::serde_snapshot::bank_to_stream(
@@ -220,19 +225,24 @@ fn test_bank_serialize_style(serde_style: SerdeStyle) {
     let copied_accounts = TempDir::new().unwrap();
     let unpacked_append_vec_map =
         copy_append_vecs(&bank2.rc.accounts.accounts_db, copied_accounts.path()).unwrap();
-    let mut dbank = crate::serde_snapshot::bank_from_stream(
+    let mut snapshot_streams = SnapshotStreams {
+        full_snapshot_stream: &mut reader,
+        incremental_snapshot_stream: None,
+    };
+    let mut dbank = crate::serde_snapshot::bank_from_streams(
         serde_style,
-        &mut reader,
+        &mut snapshot_streams,
         &dbank_paths,
         unpacked_append_vec_map,
         &genesis_config,
-        &[],
         None,
         None,
         AccountSecondaryIndexes::default(),
         false,
         None,
         AccountShrinkThreshold::default(),
+        false,
+        Some(crate::accounts_db::ACCOUNTS_DB_CONFIG_FOR_TESTING),
         None,
     )
     .unwrap();
@@ -243,13 +253,12 @@ fn test_bank_serialize_style(serde_style: SerdeStyle) {
     assert!(bank2 == dbank);
 }
 
-#[cfg(test)]
 pub(crate) fn reconstruct_accounts_db_via_serialization(
     accounts: &AccountsDb,
     slot: Slot,
 ) -> AccountsDb {
     let mut writer = Cursor::new(vec![]);
-    let snapshot_storages = accounts.get_snapshot_storages(slot, None).0;
+    let snapshot_storages = accounts.get_snapshot_storages(slot, None, None).0;
     accountsdb_to_stream(
         SerdeStyle::Newer,
         &mut writer,
@@ -290,20 +299,20 @@ fn test_bank_serialize_newer() {
     test_bank_serialize_style(SerdeStyle::Newer)
 }
 
-#[cfg(all(test, RUSTC_WITH_SPECIALIZATION))]
+#[cfg(RUSTC_WITH_SPECIALIZATION)]
 mod test_bank_serialize {
     use super::*;
 
     // This some what long test harness is required to freeze the ABI of
     // Bank's serialization due to versioned nature
-    #[frozen_abi(digest = "9jiGyuG8pK3nBNbCEtLZBghXRNg3PHhkf1jS1GgTTdGz")]
+    #[frozen_abi(digest = "4ErcJ2QhDjq9ieZC2LzbaX3r9R4ZwdANT3cnS4u5tzVn")]
     #[derive(Serialize, AbiExample)]
-    pub struct BankAbiTestWrapperFuture {
-        #[serde(serialize_with = "wrapper_future")]
+    pub struct BankAbiTestWrapperNewer {
+        #[serde(serialize_with = "wrapper_newer")]
         bank: Bank,
     }
 
-    pub fn wrapper_future<S>(bank: &Bank, s: S) -> std::result::Result<S::Ok, S::Error>
+    pub fn wrapper_newer<S>(bank: &Bank, s: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
@@ -311,12 +320,12 @@ mod test_bank_serialize {
             .rc
             .accounts
             .accounts_db
-            .get_snapshot_storages(0, None)
+            .get_snapshot_storages(0, None, None)
             .0;
         // ensure there is a single snapshot storage example for ABI digesting
         assert_eq!(snapshot_storages.len(), 1);
 
-        (SerializableBankAndStorage::<future::Context> {
+        (SerializableBankAndStorage::<newer::Context> {
             bank,
             snapshot_storages: &snapshot_storages,
             phantom: std::marker::PhantomData::default(),

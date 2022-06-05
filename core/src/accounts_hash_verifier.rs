@@ -5,16 +5,23 @@
 // set and halt the node if a mismatch is detected.
 
 use {
-    crate::snapshot_packager_service::PendingSnapshotPackage,
     rayon::ThreadPool,
     safecoin_gossip::cluster_info::{ClusterInfo, MAX_SNAPSHOT_HASHES},
+    safecoin_measure::measure::Measure,
     solana_runtime::{
-        accounts_db,
-        snapshot_package::{AccountsPackage, AccountsPackagePre, AccountsPackageReceiver},
+        accounts_db::{self, AccountsDb},
+        accounts_hash::HashStats,
+        snapshot_config::SnapshotConfig,
+        snapshot_package::{
+            AccountsPackage, AccountsPackageReceiver, PendingSnapshotPackage, SnapshotPackage,
+            SnapshotType,
+        },
+        sorted_storages::SortedStorages,
     },
     safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey},
     std::{
         collections::{HashMap, HashSet},
+        path::{Path, PathBuf},
         sync::{
             atomic::{AtomicBool, Ordering},
             mpsc::RecvTimeoutError,
@@ -38,7 +45,8 @@ impl AccountsHashVerifier {
         known_validators: Option<HashSet<Pubkey>>,
         halt_on_known_validators_accounts_hash_mismatch: bool,
         fault_injection_rate_slots: u64,
-        snapshot_interval_slots: u64,
+        snapshot_config: Option<SnapshotConfig>,
+        ledger_path: PathBuf,
     ) -> Self {
         let exit = exit.clone();
         let cluster_info = cluster_info.clone();
@@ -46,7 +54,7 @@ impl AccountsHashVerifier {
             .name("solana-hash-accounts".to_string())
             .spawn(move || {
                 let mut hashes = vec![];
-                let mut thread_pool_storage = None;
+                let mut thread_pool = None;
                 loop {
                     if exit.load(Ordering::Relaxed) {
                         break;
@@ -54,24 +62,23 @@ impl AccountsHashVerifier {
 
                     match accounts_package_receiver.recv_timeout(Duration::from_secs(1)) {
                         Ok(accounts_package) => {
-                            if accounts_package.hash_for_testing.is_some()
-                                && thread_pool_storage.is_none()
+                            if accounts_package.hash_for_testing.is_some() && thread_pool.is_none()
                             {
-                                thread_pool_storage =
-                                    Some(accounts_db::make_min_priority_thread_pool());
+                                thread_pool = Some(accounts_db::make_min_priority_thread_pool());
                             }
 
-                            Self::process_accounts_package_pre(
+                            Self::process_accounts_package(
                                 accounts_package,
                                 &cluster_info,
-                                &known_validators,
+                                known_validators.as_ref(),
                                 halt_on_known_validators_accounts_hash_mismatch,
-                                &pending_snapshot_package,
+                                pending_snapshot_package.as_ref(),
                                 &mut hashes,
                                 &exit,
                                 fault_injection_rate_slots,
-                                snapshot_interval_slots,
-                                thread_pool_storage.as_ref(),
+                                snapshot_config.as_ref(),
+                                thread_pool.as_ref(),
+                                &ledger_path,
                             );
                         }
                         Err(RecvTimeoutError::Disconnected) => break,
@@ -86,45 +93,72 @@ impl AccountsHashVerifier {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn process_accounts_package_pre(
-        accounts_package: AccountsPackagePre,
-        cluster_info: &ClusterInfo,
-        known_validators: &Option<HashSet<Pubkey>>,
-        halt_on_known_validator_accounts_hash_mismatch: bool,
-        pending_snapshot_package: &Option<PendingSnapshotPackage>,
-        hashes: &mut Vec<(Slot, Hash)>,
-        exit: &Arc<AtomicBool>,
-        fault_injection_rate_slots: u64,
-        snapshot_interval_slots: u64,
-        thread_pool: Option<&ThreadPool>,
-    ) {
-        let accounts_package = solana_runtime::snapshot_utils::process_accounts_package_pre(
-            accounts_package,
-            thread_pool,
-        );
-        Self::process_accounts_package(
-            accounts_package,
-            cluster_info,
-            known_validators,
-            halt_on_known_validator_accounts_hash_mismatch,
-            pending_snapshot_package,
-            hashes,
-            exit,
-            fault_injection_rate_slots,
-            snapshot_interval_slots,
-        );
-    }
-
     fn process_accounts_package(
         accounts_package: AccountsPackage,
         cluster_info: &ClusterInfo,
-        known_validators: &Option<HashSet<Pubkey>>,
+        known_validators: Option<&HashSet<Pubkey>>,
         halt_on_known_validator_accounts_hash_mismatch: bool,
-        pending_snapshot_package: &Option<PendingSnapshotPackage>,
+        pending_snapshot_package: Option<&PendingSnapshotPackage>,
         hashes: &mut Vec<(Slot, Hash)>,
         exit: &Arc<AtomicBool>,
         fault_injection_rate_slots: u64,
-        snapshot_interval_slots: u64,
+        snapshot_config: Option<&SnapshotConfig>,
+        thread_pool: Option<&ThreadPool>,
+        ledger_path: &Path,
+    ) {
+        Self::verify_accounts_package_hash(&accounts_package, thread_pool, ledger_path);
+
+        Self::push_accounts_hashes_to_cluster(
+            &accounts_package,
+            cluster_info,
+            known_validators,
+            halt_on_known_validator_accounts_hash_mismatch,
+            hashes,
+            exit,
+            fault_injection_rate_slots,
+        );
+
+        Self::submit_for_packaging(accounts_package, pending_snapshot_package, snapshot_config);
+    }
+
+    fn verify_accounts_package_hash(
+        accounts_package: &AccountsPackage,
+        thread_pool: Option<&ThreadPool>,
+        ledger_path: &Path,
+    ) {
+        let mut measure_hash = Measure::start("hash");
+        if let Some(expected_hash) = accounts_package.hash_for_testing {
+            let sorted_storages = SortedStorages::new(&accounts_package.snapshot_storages);
+            let (hash, lamports) = AccountsDb::calculate_accounts_hash_without_index(
+                ledger_path,
+                &sorted_storages,
+                thread_pool,
+                HashStats::default(),
+                false,
+                None,
+                None, // this will fail with filler accounts
+                None, // this code path is only for testing, so use default # passes here
+            )
+            .unwrap();
+
+            assert_eq!(accounts_package.expected_capitalization, lamports);
+            assert_eq!(expected_hash, hash);
+        };
+        measure_hash.stop();
+        datapoint_info!(
+            "accounts_hash_verifier",
+            ("calculate_hash", measure_hash.as_us(), i64),
+        );
+    }
+
+    fn push_accounts_hashes_to_cluster(
+        accounts_package: &AccountsPackage,
+        cluster_info: &ClusterInfo,
+        known_validators: Option<&HashSet<Pubkey>>,
+        halt_on_known_validator_accounts_hash_mismatch: bool,
+        hashes: &mut Vec<(Slot, Hash)>,
+        exit: &Arc<AtomicBool>,
+        fault_injection_rate_slots: u64,
     ) {
         let hash = accounts_package.hash;
         if fault_injection_rate_slots != 0
@@ -157,23 +191,51 @@ impl AccountsHashVerifier {
             }
         }
 
-        if accounts_package.block_height % snapshot_interval_slots == 0 {
-            if let Some(pending_snapshot_package) = pending_snapshot_package.as_ref() {
-                *pending_snapshot_package.lock().unwrap() = Some(accounts_package);
-            }
-        }
-
         cluster_info.push_accounts_hashes(hashes.clone());
+    }
+
+    fn submit_for_packaging(
+        accounts_package: AccountsPackage,
+        pending_snapshot_package: Option<&PendingSnapshotPackage>,
+        snapshot_config: Option<&SnapshotConfig>,
+    ) {
+        if accounts_package.snapshot_type.is_none()
+            || pending_snapshot_package.is_none()
+            || snapshot_config.is_none()
+        {
+            return;
+        };
+
+        let snapshot_package = SnapshotPackage::from(accounts_package);
+        let pending_snapshot_package = pending_snapshot_package.unwrap();
+        let _snapshot_config = snapshot_config.unwrap();
+
+        // If the snapshot package is an Incremental Snapshot, do not submit it if there's already
+        // a pending Full Snapshot.
+        let can_submit = match snapshot_package.snapshot_type {
+            SnapshotType::FullSnapshot => true,
+            SnapshotType::IncrementalSnapshot(_) => pending_snapshot_package
+                .lock()
+                .unwrap()
+                .as_ref()
+                .map_or(true, |snapshot_package| {
+                    snapshot_package.snapshot_type.is_incremental_snapshot()
+                }),
+        };
+
+        if can_submit {
+            *pending_snapshot_package.lock().unwrap() = Some(snapshot_package);
+        }
     }
 
     fn should_halt(
         cluster_info: &ClusterInfo,
-        known_validators: &Option<HashSet<Pubkey>>,
+        known_validators: Option<&HashSet<Pubkey>>,
         slot_to_hash: &mut HashMap<Slot, Hash>,
     ) -> bool {
         let mut verified_count = 0;
         let mut highest_slot = 0;
-        if let Some(known_validators) = known_validators.as_ref() {
+        if let Some(known_validators) = known_validators {
             for known_validator in known_validators {
                 let is_conflicting = cluster_info.get_accounts_hash_for_node(known_validator, |accounts_hashes|
                 {
@@ -222,8 +284,9 @@ mod tests {
     use {
         super::*,
         safecoin_gossip::{cluster_info::make_accounts_hashes_message, contact_info::ContactInfo},
-        solana_runtime::{bank_forks::ArchiveFormat, snapshot_utils::SnapshotVersion},
+        solana_runtime::snapshot_utils::{ArchiveFormat, SnapshotVersion},
         safecoin_sdk::{
+            genesis_config::ClusterType,
             hash::hash,
             signature::{Keypair, Signer},
         },
@@ -250,7 +313,7 @@ mod tests {
         let mut slot_to_hash = HashMap::new();
         assert!(!AccountsHashVerifier::should_halt(
             &cluster_info,
-            &Some(known_validators.clone()),
+            Some(&known_validators),
             &mut slot_to_hash,
         ));
 
@@ -266,7 +329,7 @@ mod tests {
         known_validators.insert(validator1.pubkey());
         assert!(AccountsHashVerifier::should_halt(
             &cluster_info,
-            &Some(known_validators),
+            Some(&known_validators),
             &mut slot_to_hash,
         ));
     }
@@ -284,31 +347,45 @@ mod tests {
         let known_validators = HashSet::new();
         let exit = Arc::new(AtomicBool::new(false));
         let mut hashes = vec![];
+        let full_snapshot_archive_interval_slots = 100;
+        let snapshot_config = SnapshotConfig {
+            full_snapshot_archive_interval_slots,
+            incremental_snapshot_archive_interval_slots: Slot::MAX,
+            ..SnapshotConfig::default()
+        };
         for i in 0..MAX_SNAPSHOT_HASHES + 1 {
-            let snapshot_links = TempDir::new().unwrap();
             let accounts_package = AccountsPackage {
-                hash: hash(&[i as u8]),
-                block_height: 100 + i as u64,
-                slot: 100 + i as u64,
+                slot: full_snapshot_archive_interval_slots + i as u64,
+                block_height: full_snapshot_archive_interval_slots + i as u64,
                 slot_deltas: vec![],
-                snapshot_links,
-                tar_output_file: PathBuf::from("."),
-                storages: vec![],
+                snapshot_links: TempDir::new().unwrap(),
+                snapshot_storages: vec![],
+                hash: hash(&[i as u8]),
                 archive_format: ArchiveFormat::TarBzip2,
                 snapshot_version: SnapshotVersion::default(),
+                snapshot_archives_dir: PathBuf::default(),
+                expected_capitalization: 0,
+                hash_for_testing: None,
+                cluster_type: ClusterType::MainnetBeta,
+                snapshot_type: None,
             };
+
+            let ledger_path = TempDir::new().unwrap();
 
             AccountsHashVerifier::process_accounts_package(
                 accounts_package,
                 &cluster_info,
-                &Some(known_validators.clone()),
+                Some(&known_validators),
                 false,
-                &None,
+                None,
                 &mut hashes,
                 &exit,
                 0,
-                100,
+                Some(&snapshot_config),
+                None,
+                ledger_path.path(),
             );
+
             // sleep for 1ms to create a newer timestmap for gossip entry
             // otherwise the timestamp won't be newer.
             std::thread::sleep(Duration::from_millis(1));
@@ -320,11 +397,14 @@ mod tests {
         info!("{:?}", cluster_hashes);
         assert_eq!(hashes.len(), MAX_SNAPSHOT_HASHES);
         assert_eq!(cluster_hashes.len(), MAX_SNAPSHOT_HASHES);
-        assert_eq!(cluster_hashes[0], (101, hash(&[1])));
+        assert_eq!(
+            cluster_hashes[0],
+            (full_snapshot_archive_interval_slots + 1, hash(&[1]))
+        );
         assert_eq!(
             cluster_hashes[MAX_SNAPSHOT_HASHES - 1],
             (
-                100 + MAX_SNAPSHOT_HASHES as u64,
+                full_snapshot_archive_interval_slots + MAX_SNAPSHOT_HASHES as u64,
                 hash(&[MAX_SNAPSHOT_HASHES as u8])
             )
         );

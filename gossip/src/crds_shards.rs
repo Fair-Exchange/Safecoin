@@ -149,7 +149,7 @@ mod test {
         let mut crds = Crds::default();
         crds.insert(value, timestamp(), GossipRoute::LocalMessage)
             .unwrap();
-        crds.get(&label).cloned().unwrap()
+        crds.get::<&VersionedCrdsValue>(&label).cloned().unwrap()
     }
 
     // Returns true if the first mask_bits most significant bits of hash is the

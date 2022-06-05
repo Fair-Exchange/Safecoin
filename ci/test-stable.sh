@@ -41,26 +41,26 @@ test-stable-bpf)
 
   # safecoin-keygen required when building C programs
   _ "$cargo" build --manifest-path=keygen/Cargo.toml
+
   export PATH="$PWD/target/debug":$PATH
   cargo_build_bpf="$(realpath ./cargo-build-bpf)"
+  cargo_test_bpf="$(realpath ./cargo-test-bpf)"
 
   # BPF safecoin-sdk legacy compile test
   "$cargo_build_bpf" --manifest-path sdk/Cargo.toml
 
-  # BPF Program unit tests
-  "$cargo" test --manifest-path programs/bpf/Cargo.toml
-  "$cargo_build_bpf" --manifest-path programs/bpf/Cargo.toml --bpf-sdk sdk/bpf
-
-  # BPF program system tests
+  # BPF C program system tests
   _ make -C programs/bpf/c tests
   _ "$cargo" stable test \
     --manifest-path programs/bpf/Cargo.toml \
     --no-default-features --features=bpf_c,bpf_rust -- --nocapture
 
-  # Dump BPF program assembly listings
+  # BPF Rust program unit tests
   for bpf_test in programs/bpf/rust/*; do
     if pushd "$bpf_test"; then
-      "$cargo_build_bpf" --dump
+      "$cargo" test
+      "$cargo_build_bpf" --bpf-sdk ../../../../sdk/bpf --dump
+      "$cargo_test_bpf" --bpf-sdk ../../../../sdk/bpf
       popd
     fi
   done
@@ -111,6 +111,19 @@ test-local-cluster-flakey)
 test-local-cluster-slow)
   _ "$cargo" stable build --release --bins ${V:+--verbose}
   _ "$cargo" stable test --release --package solana-local-cluster --test local_cluster_slow ${V:+--verbose} -- --nocapture --test-threads=1
+  exit 0
+  ;;
+test-wasm)
+  _ node --version
+  _ npm --version
+  for dir in sdk/{program,}; do
+    if [[ -r "$dir"/package.json ]]; then
+      pushd "$dir"
+      _ npm install
+      _ npm test
+      popd
+    fi
+  done
   exit 0
   ;;
 *)

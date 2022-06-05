@@ -1,8 +1,8 @@
 #![allow(clippy::integer_arithmetic)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-use solana_ledger::entry::{self, create_ticks, init_poh, EntrySlice, VerifyRecyclers};
+use solana_entry::entry::{self, create_ticks, init_poh, EntrySlice, VerifyRecyclers};
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-use solana_ledger::entry::{create_ticks, init_poh, EntrySlice, VerifyRecyclers};
+use solana_entry::entry::{create_ticks, init_poh, EntrySlice, VerifyRecyclers};
 use {
     clap::{crate_description, crate_name, value_t, App, Arg},
     safecoin_measure::measure::Measure,

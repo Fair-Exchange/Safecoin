@@ -8,9 +8,9 @@ import { RawDetails } from "./RawDetails";
 import { RawParsedDetails } from "./RawParsedDetails";
 import { SignatureContext } from "../../pages/TransactionDetailsPage";
 import {
-  useTransactionDetails,
   useFetchRawTransaction,
-} from "providers/transactions/details";
+  useRawTransactionDetails,
+} from "providers/transactions/raw";
 import { Address } from "components/common/Address";
 
 type InstructionProps = {
@@ -37,11 +37,11 @@ export function InstructionCard({
   const [resultClass] = ixResult(result, index);
   const [showRaw, setShowRaw] = React.useState(defaultRaw || false);
   const signature = useContext(SignatureContext);
-  const details = useTransactionDetails(signature);
+  const rawDetails = useRawTransactionDetails(signature);
 
   let raw: TransactionInstruction | undefined = undefined;
-  if (details && childIndex === undefined) {
-    raw = details?.data?.raw?.instructions[index];
+  if (rawDetails && childIndex === undefined) {
+    raw = rawDetails?.data?.raw?.transaction.instructions[index];
   }
 
   const fetchRaw = useFetchRawTransaction();
@@ -59,7 +59,7 @@ export function InstructionCard({
     <div className="card">
       <div className="card-header">
         <h3 className="card-header-title mb-0 d-flex align-items-center">
-          <span className={`badge badge-soft-${resultClass} mr-2`}>
+          <span className={`badge bg-${resultClass}-soft me-2`}>
             #{index + 1}
             {childIndex !== undefined ? `.${childIndex + 1}` : ""}
           </span>
@@ -73,7 +73,7 @@ export function InstructionCard({
           }`}
           onClick={rawClickHandler}
         >
-          <span className="fe fe-code mr-1"></span>
+          <span className="fe fe-code me-1"></span>
           Raw
         </button>
       </div>
@@ -84,7 +84,7 @@ export function InstructionCard({
               <>
                 <tr>
                   <td>Program</td>
-                  <td className="text-lg-right">
+                  <td className="text-lg-end">
                     <Address pubkey={ix.programId} alignRight link />
                   </td>
                 </tr>

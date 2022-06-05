@@ -21,7 +21,7 @@ fn bench_weighted_shuffle_old(bencher: &mut Bencher) {
     let weights = make_weights(&mut rng);
     bencher.iter(|| {
         rng.fill(&mut seed[..]);
-        weighted_shuffle(&weights, seed);
+        weighted_shuffle::<u64, &u64, std::slice::Iter<'_, u64>>(weights.iter(), seed);
     });
 }
 
@@ -32,8 +32,8 @@ fn bench_weighted_shuffle_new(bencher: &mut Bencher) {
     let weights = make_weights(&mut rng);
     bencher.iter(|| {
         rng.fill(&mut seed[..]);
-        WeightedShuffle::new(&mut ChaChaRng::from_seed(seed), &weights)
-            .unwrap()
+        WeightedShuffle::new("", &weights)
+            .shuffle(&mut ChaChaRng::from_seed(seed))
             .collect::<Vec<_>>()
     });
 }

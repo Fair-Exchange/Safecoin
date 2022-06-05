@@ -17,9 +17,11 @@ use {
         io::{Read, Write},
         path::Path,
     },
+    wasm_bindgen::prelude::*,
 };
 
 /// A vanilla Ed25519 key pair
+#[wasm_bindgen]
 #[derive(Debug)]
 pub struct Keypair(ed25519_dalek::Keypair);
 
@@ -168,7 +170,7 @@ pub fn keypair_from_seed_and_derivation_path(
     seed: &[u8],
     derivation_path: Option<DerivationPath>,
 ) -> Result<Keypair, Box<dyn error::Error>> {
-    let derivation_path = derivation_path.unwrap_or_else(DerivationPath::default);
+    let derivation_path = derivation_path.unwrap_or_default();
     bip32_derived_keypair(seed, derivation_path).map_err(|err| err.to_string().into())
 }
 

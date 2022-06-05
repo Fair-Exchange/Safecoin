@@ -46,7 +46,7 @@ make -C <program directory>
 
 Safecoin uses the [Criterion](https://github.com/Snaipe/Criterion) test framework
 and tests are executed each time the program is built [How to
-Build](#how-to-build)].
+Build](#how-to-build).
 
 To add tests, create a new file next to your source file named `test_<program name>.c` and populate it with criterion test cases. For an example see the
 [helloworld C
@@ -65,7 +65,7 @@ see the [overview](overview#loaders).
 Currently there are two supported loaders [BPF
 Loader](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader.rs#L17)
 and [BPF loader
-deprecated](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader_deprecated.rs#L14)
+deprecated](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader_deprecated.rs#L14).
 
 They both have the same raw entrypoint definition, the following is the raw
 symbol that the runtime looks up and calls:
@@ -140,7 +140,7 @@ the [runtime enforcement
 policy](developing/programming-model/accounts.md#policy). When an instruction
 reference the same account multiple times there may be duplicate
 `SafeAccountInfo` entries in the array but they both point back to the original
-input byte array. A program should handle these case delicately to avoid
+input byte array. A program should handle these cases delicately to avoid
 overlapping read/writes to the same buffer. If a program implements their own
 deserialization function care should be taken to handle duplicate accounts
 appropriately.

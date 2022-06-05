@@ -1,13 +1,15 @@
+#![allow(clippy::integer_arithmetic)]
 use {
     solana_cli::cli::{process_command, CliCommand, CliConfig},
     safecoin_client::rpc_client::RpcClient,
-    solana_core::test_validator::TestValidator,
     safecoin_faucet::faucet::run_local_faucet,
     safecoin_sdk::{
         commitment_config::CommitmentConfig,
+        native_token::sol_to_lamports,
         signature::{Keypair, Signer},
     },
     solana_streamer::socket::SocketAddrSpace,
+    solana_test_validator::TestValidator,
 };
 
 #[test]
@@ -22,7 +24,7 @@ fn test_cli_request_airdrop() {
     bob_config.json_rpc_url = test_validator.rpc_url();
     bob_config.command = CliCommand::Airdrop {
         pubkey: None,
-        lamports: 50,
+        lamports: sol_to_lamports(50.0),
     };
     let keypair = Keypair::new();
     bob_config.signers = vec![&keypair];
@@ -36,5 +38,5 @@ fn test_cli_request_airdrop() {
     let balance = rpc_client
         .get_balance(&bob_config.signers[0].pubkey())
         .unwrap();
-    assert_eq!(balance, 50);
+    assert_eq!(balance, sol_to_lamports(50.0));
 }

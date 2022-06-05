@@ -6,17 +6,12 @@
 use {
     solana_ledger::blockstore::Blockstore,
     safecoin_measure::measure::Measure,
-    solana_runtime::{
-        bank::{Bank, ExecuteTimings},
-        cost_model::CostModel,
-    },
+    safecoin_program_runtime::timings::ExecuteTimings,
+    solana_runtime::{bank::Bank, cost_model::CostModel},
     safecoin_sdk::timing::timestamp,
     std::{
-        sync::{
-            atomic::{AtomicBool, Ordering},
-            mpsc::Receiver,
-            Arc, RwLock,
-        },
+        sync::atomic::{AtomicBool, Ordering},
+        sync::{mpsc::Receiver, Arc, RwLock},
         thread::{self, Builder, JoinHandle},
         time::Duration,
     },
@@ -27,19 +22,12 @@ pub struct CostUpdateServiceTiming {
     last_print: u64,
     update_cost_model_count: u64,
     update_cost_model_elapsed: u64,
-    persist_cost_table_elapsed: u64,
 }
 
 impl CostUpdateServiceTiming {
-    fn update(
-        &mut self,
-        update_cost_model_count: u64,
-        update_cost_model_elapsed: u64,
-        persist_cost_table_elapsed: u64,
-    ) {
+    fn update(&mut self, update_cost_model_count: u64, update_cost_model_elapsed: u64) {
         self.update_cost_model_count += update_cost_model_count;
         self.update_cost_model_elapsed += update_cost_model_elapsed;
-        self.persist_cost_table_elapsed += persist_cost_table_elapsed;
 
         let now = timestamp();
         let elapsed_ms = now - self.last_print;
@@ -57,11 +45,6 @@ impl CostUpdateServiceTiming {
                     self.update_cost_model_elapsed as i64,
                     i64
                 ),
-                (
-                    "persist_cost_table_elapsed",
-                    self.persist_cost_table_elapsed as i64,
-                    i64
-                ),
             );
 
             *self = CostUpdateServiceTiming::default();
@@ -71,8 +54,12 @@ impl CostUpdateServiceTiming {
 }
 
 pub enum CostUpdate {
-    FrozenBank { bank: Arc<Bank> },
-    ExecuteTiming { execute_timings: ExecuteTimings },
+    FrozenBank {
+        bank: Arc<Bank>,
+    },
+    ExecuteTiming {
+        execute_timings: Box<ExecuteTimings>,
+    },
 }
 
 pub type CostUpdateReceiver = Receiver<CostUpdate>;
@@ -105,12 +92,11 @@ impl CostUpdateService {
 
     fn service_loop(
         exit: Arc<AtomicBool>,
-        blockstore: Arc<Blockstore>,
+        _blockstore: Arc<Blockstore>,
         cost_model: Arc<RwLock<CostModel>>,
         cost_update_receiver: CostUpdateReceiver,
     ) {
         let mut cost_update_service_timing = CostUpdateServiceTiming::default();
-        let mut dirty: bool;
         let mut update_count: u64;
         let wait_timer = Duration::from_millis(100);
 
@@ -119,7 +105,6 @@ impl CostUpdateService {
                 break;
             }
 
-            dirty = false;
             update_count = 0_u64;
             let mut update_cost_model_time = Measure::start("update_cost_model_time");
             for cost_update in cost_update_receiver.try_iter() {
@@ -130,24 +115,14 @@ impl CostUpdateService {
                     CostUpdate::ExecuteTiming {
                         mut execute_timings,
                     } => {
-                        dirty |= Self::update_cost_model(&cost_model, &mut execute_timings);
+                        Self::update_cost_model(&cost_model, &mut execute_timings);
                         update_count += 1;
                     }
                 }
             }
             update_cost_model_time.stop();
 
-            let mut persist_cost_table_time = Measure::start("persist_cost_table_time");
-            if dirty {
-                Self::persist_cost_table(&blockstore, &cost_model);
-            }
-            persist_cost_table_time.stop();
-
-            cost_update_service_timing.update(
-                update_count,
-                update_cost_model_time.as_us(),
-                persist_cost_table_time.as_us(),
-            );
+            cost_update_service_timing.update(update_count, update_cost_model_time.as_us());
 
             thread::sleep(wait_timer);
         }
@@ -196,32 +171,11 @@ impl CostUpdateService {
         );
         dirty
     }
-
-    fn persist_cost_table(blockstore: &Blockstore, cost_model: &RwLock<CostModel>) {
-        let cost_model_read = cost_model.read().unwrap();
-        let cost_table = cost_model_read.get_instruction_cost_table();
-        let db_records = blockstore.read_program_costs().expect("read programs");
-
-        // delete records from blockstore if they are no longer in cost_table
-        db_records.iter().for_each(|(pubkey, _)| {
-            if cost_table.get(pubkey).is_none() {
-                blockstore
-                    .delete_program_cost(pubkey)
-                    .expect("delete old program");
-            }
-        });
-
-        for (key, cost) in cost_table.iter() {
-            blockstore
-                .write_program_cost(key, cost)
-                .expect("persist program costs to blockstore");
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_runtime::message_processor::ProgramTiming, safecoin_sdk::pubkey::Pubkey};
+    use {super::*, safecoin_program_runtime::timings::ProgramTiming, safecoin_sdk::pubkey::Pubkey};
 
     #[test]
     fn test_update_cost_model_with_empty_execute_timings() {

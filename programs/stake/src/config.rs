@@ -1,7 +1,7 @@
 //! config for staking
 //!  carries variables that the stake program cares about
 #[deprecated(
-    since = "1.7.2",
+    since = "1.8.0",
     note = "Please use `safecoin_sdk::stake::config` or `safecoin_program::stake::config` instead"
 )]
 pub use safecoin_sdk::stake::config::*;

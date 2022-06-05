@@ -67,7 +67,7 @@ impl FromStr for ClusterType {
     }
 }
 
-#[frozen_abi(digest = "Bj6E2ZCpEUuNFM7HREcL5Dg3CPsbndNuCR1aVmBBFFU4")]
+#[frozen_abi(digest = "3V3ZVRyzNhRfe8RJwDeGpeTP8xBWGGFBEbwTkvKKVjEa")]
 #[derive(Serialize, Deserialize, Debug, Clone, AbiExample)]
 pub struct GenesisConfig {
     /// when the network (bootstrap validator) was started relative to the UNIX Epoch
@@ -278,9 +278,7 @@ impl fmt::Display for GenesisConfig {
                 self.accounts
                     .iter()
                     .map(|(pubkey, account)| {
-                        if account.lamports == 0 {
-                            panic!("{:?}", (pubkey, account));
-                        }
+                        assert!(account.lamports > 0, "{:?}", (pubkey, account));
                         account.lamports
                     })
                     .sum::<u64>()

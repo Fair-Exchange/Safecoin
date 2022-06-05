@@ -2,7 +2,13 @@
  * @brief Example C-based BPF program that tests cross-program invocations
  */
 #include "../invoked/instruction.h"
-#include <safecoin_sdk.h>
+#include <sol/entrypoint.h>
+#include <sol/cpi.h>
+#include <sol/pubkey.h>
+#include <sol/log.h>
+#include <sol/assert.h>
+#include <sol/deserialize.h>
+#include <sol/return_data.h>
 
 static const uint8_t TEST_SUCCESS = 1;
 static const uint8_t TEST_PRIVILEGE_ESCALATION_SIGNER = 2;
@@ -20,8 +26,11 @@ static const uint8_t TEST_PRIVILEGE_DEESCALATION_ESCALATION_WRITABLE = 13;
 static const uint8_t TEST_WRITABLE_DEESCALATION_WRITABLE = 14;
 static const uint8_t TEST_NESTED_INVOKE_TOO_DEEP = 15;
 static const uint8_t TEST_EXECUTABLE_LAMPORTS = 16;
-static const uint8_t ADD_LAMPORTS = 17;
-static const uint8_t TEST_RETURN_DATA_TOO_LARGE = 18;
+static const uint8_t TEST_CALL_PRECOMPILE = 17;
+static const uint8_t ADD_LAMPORTS = 18;
+static const uint8_t TEST_RETURN_DATA_TOO_LARGE = 19;
+static const uint8_t TEST_DUPLICATE_PRIVILEGE_ESCALATION_SIGNER = 20;
+static const uint8_t TEST_DUPLICATE_PRIVILEGE_ESCALATION_WRITABLE = 21;
 
 static const int MINT_INDEX = 0;
 static const int ARGUMENT_INDEX = 1;
@@ -34,6 +43,8 @@ static const int DERIVED_KEY2_INDEX = 7;
 static const int DERIVED_KEY3_INDEX = 8;
 static const int SYSTEM_PROGRAM_INDEX = 9;
 static const int FROM_INDEX = 10;
+static const int ED25519_PROGRAM_INDEX = 11;
+static const int INVOKE_PROGRAM_INDEX = 12;
 
 uint64_t do_nested_invokes(uint64_t num_nested_invokes,
                            SafeAccountInfo *accounts, uint64_t num_accounts) {
@@ -67,7 +78,7 @@ uint64_t do_nested_invokes(uint64_t num_nested_invokes,
 extern uint64_t entrypoint(const uint8_t *input) {
   sol_log("Invoke C program");
 
-  SafeAccountInfo accounts[12];
+  SafeAccountInfo accounts[13];
   SafeParameters params = (SafeParameters){.ka = accounts};
 
   if (!sol_deserialize(input, &params, SAFE_ARRAY_SIZE(accounts))) {
@@ -582,6 +593,16 @@ extern uint64_t entrypoint(const uint8_t *input) {
     *accounts[ARGUMENT_INDEX].lamports += 1;
     break;
   }
+  case TEST_CALL_PRECOMPILE: {
+    sol_log("Test calling precompile from cpi");
+    SafeAccountMeta arguments[] = {};
+    uint8_t data[] = {};
+    const SafeInstruction instruction = {accounts[ED25519_PROGRAM_INDEX].key,
+					arguments, SAFE_ARRAY_SIZE(arguments),
+					data, SAFE_ARRAY_SIZE(data)};
+    sol_invoke(&instruction, accounts, SAFE_ARRAY_SIZE(accounts));
+    break;
+  }
   case ADD_LAMPORTS: {
     *accounts[0].lamports += 1;
      break;
@@ -590,6 +611,42 @@ extern uint64_t entrypoint(const uint8_t *input) {
     sol_log("Test setting return data too long");
     // The actual buffer doesn't matter, just pass null
     sol_set_return_data(NULL, 1027);
+    break;
+  }
+  case TEST_DUPLICATE_PRIVILEGE_ESCALATION_SIGNER: {
+    sol_log("Test duplicate privilege escalation signer");
+    SafeAccountMeta arguments[] = {
+        {accounts[DERIVED_KEY3_INDEX].key, false, false},
+        {accounts[DERIVED_KEY3_INDEX].key, false, false},
+        {accounts[DERIVED_KEY3_INDEX].key, false, false}};
+    uint8_t data[] = {VERIFY_PRIVILEGE_ESCALATION};
+    const SafeInstruction instruction = {accounts[INVOKED_PROGRAM_INDEX].key,
+                                        arguments, SAFE_ARRAY_SIZE(arguments),
+                                        data, SAFE_ARRAY_SIZE(data)};
+    sol_assert(SUCCESS ==
+               sol_invoke(&instruction, accounts, SAFE_ARRAY_SIZE(accounts)));
+
+    // Signer privilege escalation will always fail the whole transaction
+    instruction.accounts[1].is_signer = true;
+    sol_invoke(&instruction, accounts, SAFE_ARRAY_SIZE(accounts));
+    break;
+  }
+  case TEST_DUPLICATE_PRIVILEGE_ESCALATION_WRITABLE: {
+    sol_log("Test duplicate privilege escalation writable");
+    SafeAccountMeta arguments[] = {
+        {accounts[DERIVED_KEY3_INDEX].key, false, false},
+        {accounts[DERIVED_KEY3_INDEX].key, false, false},
+        {accounts[DERIVED_KEY3_INDEX].key, false, false}};
+    uint8_t data[] = {VERIFY_PRIVILEGE_ESCALATION};
+    const SafeInstruction instruction = {accounts[INVOKED_PROGRAM_INDEX].key,
+                                        arguments, SAFE_ARRAY_SIZE(arguments),
+                                        data, SAFE_ARRAY_SIZE(data)};
+    sol_assert(SUCCESS ==
+               sol_invoke(&instruction, accounts, SAFE_ARRAY_SIZE(accounts)));
+
+    // Writable privilege escalation will always fail the whole transaction
+    instruction.accounts[1].is_writable = true;
+    sol_invoke(&instruction, accounts, SAFE_ARRAY_SIZE(accounts));
     break;
   }
 

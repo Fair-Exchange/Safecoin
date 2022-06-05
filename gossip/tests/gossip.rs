@@ -269,7 +269,7 @@ pub fn cluster_info_scale() {
         &vote_keypairs,
         vec![100; vote_keypairs.len()],
     );
-    let bank0 = Bank::new(&genesis_config_info.genesis_config);
+    let bank0 = Bank::new_for_tests(&genesis_config_info.genesis_config);
     let bank_forks = Arc::new(RwLock::new(BankForks::new(bank0)));
 
     let nodes: Vec<_> = vote_keypairs
@@ -330,18 +330,17 @@ pub fn cluster_info_scale() {
             let mut num_push_total = 0;
             let mut num_pushes = 0;
             let mut num_pulls = 0;
-            for node in nodes.iter() {
+            for (node, _, _) in nodes.iter() {
                 //if node.0.get_votes(0).1.len() != (num_nodes * num_votes) {
                 let has_tx = node
-                    .0
                     .get_votes(&mut Cursor::default())
                     .iter()
                     .filter(|v| v.message.account_keys == tx.message.account_keys)
                     .count();
-                num_old += node.0.gossip.read().unwrap().push.num_old;
-                num_push_total += node.0.gossip.read().unwrap().push.num_total;
-                num_pushes += node.0.gossip.read().unwrap().push.num_pushes;
-                num_pulls += node.0.gossip.read().unwrap().pull.num_pulls;
+                num_old += node.gossip.push.num_old.load(Ordering::Relaxed);
+                num_push_total += node.gossip.push.num_total.load(Ordering::Relaxed);
+                num_pushes += node.gossip.push.num_pushes.load(Ordering::Relaxed);
+                num_pulls += node.gossip.pull.num_pulls.load(Ordering::Relaxed);
                 if has_tx == 0 {
                     not_done += 1;
                 }
@@ -363,11 +362,11 @@ pub fn cluster_info_scale() {
             num_votes, time, success
         );
         sleep(Duration::from_millis(200));
-        for node in nodes.iter() {
-            node.0.gossip.write().unwrap().push.num_old = 0;
-            node.0.gossip.write().unwrap().push.num_total = 0;
-            node.0.gossip.write().unwrap().push.num_pushes = 0;
-            node.0.gossip.write().unwrap().pull.num_pulls = 0;
+        for (node, _, _) in nodes.iter() {
+            node.gossip.push.num_old.store(0, Ordering::Relaxed);
+            node.gossip.push.num_total.store(0, Ordering::Relaxed);
+            node.gossip.push.num_pushes.store(0, Ordering::Relaxed);
+            node.gossip.pull.num_pulls.store(0, Ordering::Relaxed);
         }
     }
 

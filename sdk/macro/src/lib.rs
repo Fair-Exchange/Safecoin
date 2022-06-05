@@ -65,6 +65,36 @@ fn id_to_tokens(
     });
 }
 
+fn deprecated_id_to_tokens(
+    id: &proc_macro2::TokenStream,
+    pubkey_type: proc_macro2::TokenStream,
+    tokens: &mut proc_macro2::TokenStream,
+) {
+    tokens.extend(quote! {
+        /// The static program ID
+        pub static ID: #pubkey_type = #id;
+
+        /// Confirms that a given pubkey is equivalent to the program ID
+        #[deprecated()]
+        pub fn check_id(id: &#pubkey_type) -> bool {
+            id == &ID
+        }
+
+        /// Returns the program ID
+        #[deprecated()]
+        pub fn id() -> #pubkey_type {
+            ID
+        }
+
+        #[cfg(test)]
+        #[test]
+            fn test_id() {
+            #[allow(deprecated)]
+            assert!(check_id(&id()));
+        }
+    });
+}
+
 struct SdkPubkey(proc_macro2::TokenStream);
 
 impl Parse for SdkPubkey {
@@ -109,8 +139,21 @@ impl ToTokens for Id {
     }
 }
 
-struct ProgramSdkId(proc_macro2::TokenStream);
+struct IdDeprecated(proc_macro2::TokenStream);
 
+impl Parse for IdDeprecated {
+    fn parse(input: ParseStream) -> Result<Self> {
+        parse_id(input, quote! { ::safecoin_sdk::pubkey::Pubkey }).map(Self)
+    }
+}
+
+impl ToTokens for IdDeprecated {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        deprecated_id_to_tokens(&self.0, quote! { ::safecoin_sdk::pubkey::Pubkey }, tokens)
+    }
+}
+
+struct ProgramSdkId(proc_macro2::TokenStream);
 impl Parse for ProgramSdkId {
     fn parse(input: ParseStream) -> Result<Self> {
         parse_id(input, quote! { ::safecoin_program::pubkey::Pubkey }).map(Self)
@@ -120,6 +163,19 @@ impl Parse for ProgramSdkId {
 impl ToTokens for ProgramSdkId {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         id_to_tokens(&self.0, quote! { ::safecoin_program::pubkey::Pubkey }, tokens)
+    }
+}
+
+struct ProgramSdkIdDeprecated(proc_macro2::TokenStream);
+impl Parse for ProgramSdkIdDeprecated {
+    fn parse(input: ParseStream) -> Result<Self> {
+        parse_id(input, quote! { ::safecoin_program::pubkey::Pubkey }).map(Self)
+    }
+}
+
+impl ToTokens for ProgramSdkIdDeprecated {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        deprecated_id_to_tokens(&self.0, quote! { ::safecoin_program::pubkey::Pubkey }, tokens)
     }
 }
 
@@ -142,6 +198,10 @@ impl Parse for RespanInput {
                     respan_using: ident.span(),
                 })
             }
+            TokenTree::Ident(i) => Ok(RespanInput {
+                to_respan,
+                respan_using: i.span(),
+            }),
             val => Err(syn::Error::new_spanned(
                 val,
                 "expected None-delimited group",
@@ -208,8 +268,20 @@ pub fn declare_id(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
+pub fn declare_deprecated_id(input: TokenStream) -> TokenStream {
+    let id = parse_macro_input!(input as IdDeprecated);
+    TokenStream::from(quote! {#id})
+}
+
+#[proc_macro]
 pub fn program_declare_id(input: TokenStream) -> TokenStream {
     let id = parse_macro_input!(input as ProgramSdkId);
+    TokenStream::from(quote! {#id})
+}
+
+#[proc_macro]
+pub fn program_declare_deprecated_id(input: TokenStream) -> TokenStream {
+    let id = parse_macro_input!(input as ProgramSdkIdDeprecated);
     TokenStream::from(quote! {#id})
 }
 
@@ -304,4 +376,32 @@ impl ToTokens for Pubkeys {
 pub fn pubkeys(input: TokenStream) -> TokenStream {
     let pubkeys = parse_macro_input!(input as Pubkeys);
     TokenStream::from(quote! {#pubkeys})
+}
+
+// The normal `wasm_bindgen` macro generates a .bss section which causes the resulting
+// BPF program to fail to load, so for now this stub should be used when building for BPF
+#[proc_macro_attribute]
+pub fn wasm_bindgen_stub(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    match parse_macro_input!(item as syn::Item) {
+        syn::Item::Struct(mut item_struct) => {
+            if let syn::Fields::Named(fields) = &mut item_struct.fields {
+                // Strip out any `#[wasm_bindgen]` added to struct fields. This is custom
+                // syntax supplied by the normal `wasm_bindgen` macro.
+                for field in fields.named.iter_mut() {
+                    field.attrs.retain(|attr| {
+                        !attr
+                            .path
+                            .segments
+                            .iter()
+                            .any(|segment| segment.ident == "wasm_bindgen")
+                    });
+                }
+            }
+            quote! { #item_struct }
+        }
+        item => {
+            quote!(#item)
+        }
+    }
+    .into()
 }

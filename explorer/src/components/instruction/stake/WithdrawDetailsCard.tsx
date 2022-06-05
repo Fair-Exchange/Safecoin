@@ -4,7 +4,7 @@ import {
   StakeProgram,
   ParsedInstruction,
 } from "@safecoin/web3.js";
-import { lamportsToSafeString } from "utils";
+import { SafeBalance } from "utils";
 import { InstructionCard } from "../InstructionCard";
 import { Address } from "components/common/Address";
 import { WithdrawInfo } from "./types";
@@ -24,41 +24,43 @@ export function WithdrawDetailsCard(props: {
       ix={ix}
       index={index}
       result={result}
-      title="Withdraw Stake"
+      title="System Program: Withdraw Stake"
       innerCards={innerCards}
       childIndex={childIndex}
     >
       <tr>
         <td>Program</td>
-        <td className="text-lg-right">
+        <td className="text-lg-end">
           <Address pubkey={StakeProgram.programId} alignRight link />
         </td>
       </tr>
 
       <tr>
         <td>Stake Address</td>
-        <td className="text-lg-right">
+        <td className="text-lg-end">
           <Address pubkey={info.stakeAccount} alignRight link />
         </td>
       </tr>
 
       <tr>
         <td>Authority Address</td>
-        <td className="text-lg-right">
+        <td className="text-lg-end">
           <Address pubkey={info.withdrawAuthority} alignRight link />
         </td>
       </tr>
 
       <tr>
         <td>To Address</td>
-        <td className="text-lg-right">
+        <td className="text-lg-end">
           <Address pubkey={info.destination} alignRight link />
         </td>
       </tr>
 
       <tr>
         <td>Withdraw Amount (SAFE)</td>
-        <td className="text-lg-right">{lamportsToSafeString(info.lamports)}</td>
+        <td className="text-lg-end">
+          <SafeBalance lamports={info.lamports} />
+        </td>
       </tr>
     </InstructionCard>
   );

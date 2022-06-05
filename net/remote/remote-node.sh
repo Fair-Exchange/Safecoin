@@ -20,16 +20,14 @@ internalNodesLamports="${11}"
 nodeIndex="${12}"
 numBenchTpsClients="${13}"
 benchTpsExtraArgs="${14}"
-numBenchExchangeClients="${15}"
-benchExchangeExtraArgs="${16}"
-genesisOptions="${17}"
-extraNodeArgs="${18}"
-gpuMode="${19:-auto}"
-maybeWarpSlot="${20}"
-maybeFullRpc="${21}"
-waitForNodeInit="${22}"
-extraPrimordialStakes="${23:=0}"
-tmpfsAccounts="${24:false}"
+genesisOptions="${15}"
+extraNodeArgs="${16}"
+gpuMode="${17:-auto}"
+maybeWarpSlot="${18}"
+maybeFullRpc="${19}"
+waitForNodeInit="${20}"
+extraPrimordialStakes="${21:=0}"
+tmpfsAccounts="${22:false}"
 set +x
 
 missing() {
@@ -193,13 +191,6 @@ EOF
           --target-lamports-per-signature "$lamports_per_signature" $benchTpsExtraArgs
         # Skip first line, as it contains header
         tail -n +2 -q config/bench-tps"$i".yml >> config/client-accounts.yml
-        echo "" >> config/client-accounts.yml
-      done
-      for i in $(seq 0 $((numBenchExchangeClients-1))); do
-        # shellcheck disable=SC2086 # Do not want to quote $benchExchangeExtraArgs
-        safecoin-bench-exchange --batch-size 1000 --fund-amount 20000 \
-          --write-client-keys config/bench-exchange"$i".yml $benchExchangeExtraArgs
-        tail -n +2 -q config/bench-exchange"$i".yml >> config/client-accounts.yml
         echo "" >> config/client-accounts.yml
       done
       if [[ -f $externalPrimordialAccountsFile ]]; then

@@ -5,15 +5,17 @@ use {
     jsonrpc_ipc_server::{RequestContext, ServerBuilder},
     jsonrpc_server_utils::tokio,
     log::*,
-    serde::{Deserialize, Serialize},
-    solana_core::validator::ValidatorStartProgress,
-    safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
+    solana_core::{
+        consensus::Tower, tower_storage::TowerStorage, validator::ValidatorStartProgress,
+    },
+    safecoin_gossip::cluster_info::ClusterInfo,
+    solana_runtime::bank_forks::BankForks,
     safecoin_sdk::{
         exit::Exit,
+        pubkey::Pubkey,
         signature::{read_keypair_file, Keypair, Signer},
     },
     std::{
-        fmt::{self, Display},
         net::SocketAddr,
         path::{Path, PathBuf},
         sync::{Arc, RwLock},
@@ -23,83 +25,36 @@ use {
 };
 
 #[derive(Clone)]
+pub struct AdminRpcRequestMetadataPostInit {
+    pub cluster_info: Arc<ClusterInfo>,
+    pub bank_forks: Arc<RwLock<BankForks>>,
+    pub vote_account: Pubkey,
+}
+
+#[derive(Clone)]
 pub struct AdminRpcRequestMetadata {
     pub rpc_addr: Option<SocketAddr>,
     pub start_time: SystemTime,
     pub start_progress: Arc<RwLock<ValidatorStartProgress>>,
     pub validator_exit: Arc<RwLock<Exit>>,
     pub authorized_voter_keypairs: Arc<RwLock<Vec<Arc<Keypair>>>>,
-    pub cluster_info: Arc<RwLock<Option<Arc<ClusterInfo>>>>,
+    pub tower_storage: Arc<dyn TowerStorage>,
+    pub post_init: Arc<RwLock<Option<AdminRpcRequestMetadataPostInit>>>,
 }
 impl Metadata for AdminRpcRequestMetadata {}
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct AdminRpcContactInfo {
-    pub id: String,
-    pub gossip: SocketAddr,
-    pub tvu: SocketAddr,
-    pub tvu_forwards: SocketAddr,
-    pub repair: SocketAddr,
-    pub tpu: SocketAddr,
-    pub tpu_forwards: SocketAddr,
-    pub tpu_vote: SocketAddr,
-    pub rpc: SocketAddr,
-    pub rpc_pubsub: SocketAddr,
-    pub serve_repair: SocketAddr,
-    pub last_updated_timestamp: u64,
-    pub shred_version: u16,
-}
-
-impl From<ContactInfo> for AdminRpcContactInfo {
-    fn from(contact_info: ContactInfo) -> Self {
-        let ContactInfo {
-            id,
-            gossip,
-            tvu,
-            tvu_forwards,
-            repair,
-            tpu,
-            tpu_forwards,
-            tpu_vote,
-            rpc,
-            rpc_pubsub,
-            serve_repair,
-            wallclock,
-            shred_version,
-        } = contact_info;
-        Self {
-            id: id.to_string(),
-            last_updated_timestamp: wallclock,
-            gossip,
-            tvu,
-            tvu_forwards,
-            repair,
-            tpu,
-            tpu_forwards,
-            tpu_vote,
-            rpc,
-            rpc_pubsub,
-            serve_repair,
-            shred_version,
+impl AdminRpcRequestMetadata {
+    fn with_post_init<F>(&self, func: F) -> Result<()>
+    where
+        F: FnOnce(&AdminRpcRequestMetadataPostInit) -> Result<()>,
+    {
+        if let Some(post_init) = self.post_init.read().unwrap().as_ref() {
+            func(post_init)
+        } else {
+            Err(jsonrpc_core::error::Error::invalid_params(
+                "Retry once validator start up is complete",
+            ))
         }
-    }
-}
-
-impl Display for AdminRpcContactInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "Identity: {}", self.id)?;
-        writeln!(f, "Gossip: {}", self.gossip)?;
-        writeln!(f, "TVU: {}", self.tvu)?;
-        writeln!(f, "TVU Forwards: {}", self.tvu_forwards)?;
-        writeln!(f, "Repair: {}", self.repair)?;
-        writeln!(f, "TPU: {}", self.tpu)?;
-        writeln!(f, "TPU Forwards: {}", self.tpu_forwards)?;
-        writeln!(f, "TPU Votes: {}", self.tpu_vote)?;
-        writeln!(f, "RPC: {}", self.rpc)?;
-        writeln!(f, "RPC Pubsub: {}", self.rpc_pubsub)?;
-        writeln!(f, "Serve Repair: {}", self.serve_repair)?;
-        writeln!(f, "Last Updated Timestamp: {}", self.last_updated_timestamp)?;
-        writeln!(f, "Shred Version: {}", self.shred_version)
     }
 }
 
@@ -128,8 +83,13 @@ pub trait AdminRpc {
     #[rpc(meta, name = "removeAllAuthorizedVoters")]
     fn remove_all_authorized_voters(&self, meta: Self::Metadata) -> Result<()>;
 
-    #[rpc(meta, name = "contactInfo")]
-    fn contact_info(&self, meta: Self::Metadata) -> Result<AdminRpcContactInfo>;
+    #[rpc(meta, name = "setIdentity")]
+    fn set_identity(
+        &self,
+        meta: Self::Metadata,
+        keypair_file: String,
+        require_tower: bool,
+    ) -> Result<()>;
 }
 
 pub struct AdminRpcImpl;
@@ -206,14 +166,40 @@ impl AdminRpc for AdminRpcImpl {
         Ok(())
     }
 
-    fn contact_info(&self, meta: Self::Metadata) -> Result<AdminRpcContactInfo> {
-        if let Some(cluster_info) = meta.cluster_info.read().unwrap().as_ref() {
-            Ok(cluster_info.my_contact_info().into())
-        } else {
-            Err(jsonrpc_core::error::Error::invalid_params(
-                "Retry once validator start up is complete",
+    fn set_identity(
+        &self,
+        meta: Self::Metadata,
+        keypair_file: String,
+        require_tower: bool,
+    ) -> Result<()> {
+        debug!("set_identity request received");
+
+        let identity_keypair = read_keypair_file(&keypair_file).map_err(|err| {
+            jsonrpc_core::error::Error::invalid_params(format!(
+                "Failed to read identity keypair from {}: {}",
+                keypair_file, err
             ))
-        }
+        })?;
+
+        meta.with_post_init(|post_init| {
+            if require_tower {
+                let _ = Tower::restore(meta.tower_storage.as_ref(), &identity_keypair.pubkey())
+                    .map_err(|err| {
+                        jsonrpc_core::error::Error::invalid_params(format!(
+                            "Unable to load tower file for identity {}: {}",
+                            identity_keypair.pubkey(),
+                            err
+                        ))
+                    })?;
+            }
+
+            solana_metrics::set_host_id(identity_keypair.pubkey().to_string());
+            post_init
+                .cluster_info
+                .set_keypair(Arc::new(identity_keypair));
+            warn!("Identity set to {}", post_init.cluster_info.id());
+            Ok(())
+        })
     }
 }
 

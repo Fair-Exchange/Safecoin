@@ -3,17 +3,6 @@ module.exports = {
     About: ["introduction", "terminology", "history"],
     Wallets: [
       "wallet-guide",
-      "wallet-guide/apps",
-      {
-        type: "category",
-        label: "Web Wallets",
-        items: ["wallet-guide/web-wallets", "wallet-guide/solflare"],
-      },
-      {
-        type: "category",
-        label: "Hardware Wallets",
-        items: ["wallet-guide/ledger-live"],
-      },
       {
         type: "category",
         label: "Command-line Wallets",
@@ -91,7 +80,7 @@ module.exports = {
       },
       "developing/test-validator",
       "developing/backwards-compatibility",
-      "developing/plugins/accountsdb_plugin"
+      "developing/plugins/geyser-plugins"
     ],
     Integrating: ["integrations/exchange"],
     Validating: [
@@ -102,6 +91,7 @@ module.exports = {
       "running-validator/validator-stake",
       "running-validator/validator-monitor",
       "running-validator/validator-info",
+      "running-validator/validator-failover",
       "running-validator/validator-troubleshoot",
     ],
     Clusters: [

@@ -1,11 +1,12 @@
-use safecoin_sdk::{
-    instruction::InstructionError, process_instruction::InvokeContext, pubkey::Pubkey,
+use {
+    safecoin_program_runtime::invoke_context::InvokeContext,
+    safecoin_sdk::instruction::InstructionError,
 };
 
 pub fn process_instruction(
-    _program_id: &Pubkey,
+    _first_instruction_account: usize,
     _data: &[u8],
-    _invoke_context: &mut dyn InvokeContext,
+    _invoke_context: &mut InvokeContext,
 ) -> Result<(), InstructionError> {
     // Do nothing, compute budget instructions handled by the runtime
     Ok(())

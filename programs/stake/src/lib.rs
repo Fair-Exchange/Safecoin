@@ -2,7 +2,7 @@
 #![allow(clippy::integer_arithmetic)]
 use safecoin_sdk::genesis_config::GenesisConfig;
 #[deprecated(
-    since = "1.7.2",
+    since = "1.8.0",
     note = "Please use `safecoin_sdk::stake::program::id` or `safecoin_program::stake::program::id` instead"
 )]
 pub use safecoin_sdk::stake::program::{check_id, id};

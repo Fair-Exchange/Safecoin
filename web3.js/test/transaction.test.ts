@@ -1,5 +1,4 @@
 import bs58 from 'bs58';
-import invariant from 'assert';
 import {Buffer} from 'buffer';
 import nacl from 'tweetnacl';
 import {expect} from 'chai';
@@ -10,6 +9,7 @@ import {Transaction} from '../src/transaction';
 import {StakeProgram} from '../src/stake-program';
 import {SystemProgram} from '../src/system-program';
 import {Message} from '../src/message';
+import invariant from '../src/util/assert';
 import {toBuffer} from '../src/util/to-buffer';
 
 describe('Transaction', () => {
@@ -65,9 +65,7 @@ describe('Transaction', () => {
 
     it('validation', () => {
       const payer = Keypair.generate();
-      const other = Keypair.generate();
       const recentBlockhash = Keypair.generate().publicKey.toBase58();
-      const programId = Keypair.generate().publicKey;
 
       const transaction = new Transaction();
       expect(() => {
@@ -75,18 +73,6 @@ describe('Transaction', () => {
       }).to.throw('Transaction recentBlockhash required');
 
       transaction.recentBlockhash = recentBlockhash;
-
-      expect(() => {
-        transaction.compileMessage();
-      }).to.throw('No instructions provided');
-
-      transaction.add({
-        keys: [
-          {pubkey: other.publicKey, isSigner: true, isWritable: true},
-          {pubkey: payer.publicKey, isSigner: true, isWritable: true},
-        ],
-        programId,
-      });
 
       expect(() => {
         transaction.compileMessage();

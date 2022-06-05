@@ -1,5 +1,6 @@
 import React from "react";
-import { lamportsToSafeString } from "utils";
+import { SafeBalance } from "utils";
+import { Epoch } from "components/common/Epoch";
 import {
   SysvarAccount,
   StakeHistoryInfo,
@@ -55,15 +56,17 @@ export function StakeHistoryCard({
 const renderAccountRow = (entry: StakeHistoryEntry, index: number) => {
   return (
     <tr key={index}>
-      <td className="w-1 text-monospace">{entry.epoch}</td>
-      <td className="text-monospace">
-        {lamportsToSafeString(entry.stakeHistory.effective)}
+      <td className="w-1 font-monospace">
+        <Epoch epoch={entry.epoch} link />
       </td>
-      <td className="text-monospace">
-        {lamportsToSafeString(entry.stakeHistory.activating)}
+      <td className="font-monospace">
+        <SafeBalance lamports={entry.stakeHistory.effective} />
       </td>
-      <td className="text-monospace">
-        {lamportsToSafeString(entry.stakeHistory.deactivating)}
+      <td className="font-monospace">
+        <SafeBalance lamports={entry.stakeHistory.activating} />
+      </td>
+      <td className="font-monospace">
+        <SafeBalance lamports={entry.stakeHistory.deactivating} />
       </td>
     </tr>
   );

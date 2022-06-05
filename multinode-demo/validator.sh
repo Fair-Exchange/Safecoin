@@ -9,6 +9,7 @@ source "$here"/common.sh
 args=(
   --max-genesis-archive-unpacked-size 1073741824
   --no-poh-speed-test
+  --no-os-network-limits-test
 )
 airdrops_enabled=1
 node_sol=500 # 500 SAFE: number of SAFE to airdrop the node for transaction fees and vote account rent exemption (ignored if airdrops_enabled=0)
@@ -247,6 +248,7 @@ default_arg --identity "$identity"
 default_arg --vote-account "$vote_account"
 default_arg --ledger "$ledger_dir"
 default_arg --log -
+default_arg --full-rpc-api
 
 if [[ $maybeRequireTower = true ]]; then
   default_arg --require-tower

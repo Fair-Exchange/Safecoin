@@ -213,7 +213,7 @@ pub trait RemoteWallet {
         confirm_key: bool,
     ) -> Result<Pubkey, RemoteWalletError>;
 
-    /// Sign transaction data with wallet managing pubkey at derivation path m/44'/19165'/<account>'/<change>'.
+    /// Sign transaction data with wallet managing pubkey at derivation path m/44'/501'/<account>'/<change>'.
     fn sign_message(
         &self,
         derivation_path: &DerivationPath,
@@ -224,6 +224,7 @@ pub trait RemoteWallet {
 /// `RemoteWallet` device
 #[derive(Debug)]
 pub struct Device {
+    #[allow(dead_code)]
     pub(crate) path: String,
     pub(crate) info: RemoteWalletInfo,
     pub wallet_type: RemoteWalletType,

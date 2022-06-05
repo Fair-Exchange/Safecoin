@@ -1,18 +1,19 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import bs58 from "bs58";
 import {
   useFetchTransactionStatus,
   useTransactionStatus,
   useTransactionDetails,
 } from "providers/transactions";
-import { useFetchTransactionDetails } from "providers/transactions/details";
+import { useFetchTransactionDetails } from "providers/transactions/parsed";
 import { useCluster, ClusterStatus } from "providers/cluster";
 import {
   TransactionSignature,
   SystemProgram,
   SystemInstruction,
 } from "@safecoin/web3.js";
-import { lamportsToSafeString } from "utils";
+import { SafeBalance } from "utils";
 import { ErrorCard } from "components/common/ErrorCard";
 import { LoadingCard } from "components/common/LoadingCard";
 import { TableCardBody } from "components/common/TableCardBody";
@@ -28,6 +29,7 @@ import { BalanceDelta } from "components/common/BalanceDelta";
 import { TokenBalancesCard } from "components/transaction/TokenBalancesCard";
 import { InstructionsSection } from "components/transaction/InstructionsSection";
 import { ProgramLogSection } from "components/transaction/ProgramLogSection";
+import { clusterPath } from "utils/url";
 
 const AUTO_REFRESH_INTERVAL = 2000;
 const ZERO_CONFIRMATION_BAILOUT = 5;
@@ -103,10 +105,7 @@ export function TransactionDetailsPage({ signature: raw }: SignatureProps) {
       ) : (
         <SignatureContext.Provider value={signature}>
           <StatusCard signature={signature} autoRefresh={autoRefresh} />
-          <AccountsCard signature={signature} autoRefresh={autoRefresh} />
-          <TokenBalancesCard signature={signature} />
-          <InstructionsSection signature={signature} />
-          <ProgramLogSection signature={signature} />
+          <DetailsSection signature={signature} />
         </SignatureContext.Provider>
       )}
     </div>
@@ -120,7 +119,7 @@ function StatusCard({
   const fetchStatus = useFetchTransactionStatus();
   const status = useTransactionStatus(signature);
   const details = useTransactionDetails(signature);
-  const { firstAvailableBlock, status: clusterStatus } = useCluster();
+  const { clusterInfo, status: clusterStatus } = useCluster();
 
   // Fetch transaction on load
   React.useEffect(() => {
@@ -154,12 +153,12 @@ function StatusCard({
       <ErrorCard retry={() => fetchStatus(signature)} text="Fetch Failed" />
     );
   } else if (!status.data?.info) {
-    if (firstAvailableBlock !== undefined && firstAvailableBlock > 1) {
+    if (clusterInfo && clusterInfo.firstAvailableBlock > 0) {
       return (
         <ErrorCard
           retry={() => fetchStatus(signature)}
           text="Not Found"
-          subtext={`Note: Transactions processed before block ${firstAvailableBlock} are not available at this time`}
+          subtext={`Note: Transactions processed before block ${clusterInfo.firstAvailableBlock} are not available at this time`}
         />
       );
     }
@@ -178,7 +177,7 @@ function StatusCard({
 
     return (
       <h3 className="mb-0">
-        <span className={`badge badge-soft-${statusClass}`}>{statusText}</span>
+        <span className={`badge bg-${statusClass}-soft`}>{statusText}</span>
       </h3>
     );
   };
@@ -206,6 +205,13 @@ function StatusCard({
     <div className="card">
       <div className="card-header align-items-center">
         <h3 className="card-header-title">Overview</h3>
+        <Link
+          to={clusterPath(`/tx/${signature}/inspect`)}
+          className="btn btn-white btn-sm me-2"
+        >
+          <span className="fe fe-settings me-2"></span>
+          Inspect
+        </Link>
         {autoRefresh === AutoRefresh.Active ? (
           <span className="spinner-grow spinner-grow-sm"></span>
         ) : (
@@ -213,7 +219,7 @@ function StatusCard({
             className="btn btn-white btn-sm"
             onClick={() => fetchStatus(signature)}
           >
-            <span className="fe fe-refresh-cw mr-2"></span>
+            <span className="fe fe-refresh-cw me-2"></span>
             Refresh
           </button>
         )}
@@ -222,21 +228,21 @@ function StatusCard({
       <TableCardBody>
         <tr>
           <td>Signature</td>
-          <td className="text-lg-right">
+          <td className="text-lg-end">
             <Signature signature={signature} alignRight />
           </td>
         </tr>
 
         <tr>
           <td>Result</td>
-          <td className="text-lg-right">{renderResult()}</td>
+          <td className="text-lg-end">{renderResult()}</td>
         </tr>
 
         <tr>
           <td>Timestamp</td>
-          <td className="text-lg-right">
+          <td className="text-lg-end">
             {info.timestamp !== "unavailable" ? (
-              <span className="text-monospace">
+              <span className="font-monospace">
                 {displayTimestamp(info.timestamp * 1000)}
               </span>
             ) : (
@@ -253,19 +259,19 @@ function StatusCard({
 
         <tr>
           <td>Confirmation Status</td>
-          <td className="text-lg-right text-uppercase">
+          <td className="text-lg-end text-uppercase">
             {info.confirmationStatus || "Unknown"}
           </td>
         </tr>
 
         <tr>
           <td>Confirmations</td>
-          <td className="text-lg-right text-uppercase">{info.confirmations}</td>
+          <td className="text-lg-end text-uppercase">{info.confirmations}</td>
         </tr>
 
         <tr>
           <td>Block</td>
-          <td className="text-lg-right">
+          <td className="text-lg-end">
             <Slot slot={info.slot} link />
           </td>
         </tr>
@@ -281,14 +287,16 @@ function StatusCard({
                 </InfoTooltip>
               )}
             </td>
-            <td className="text-lg-right">{blockhash}</td>
+            <td className="text-lg-end">{blockhash}</td>
           </tr>
         )}
 
         {fee && (
           <tr>
             <td>Fee (SAFE)</td>
-            <td className="text-lg-right">{lamportsToSafeString(fee)}</td>
+            <td className="text-lg-end">
+              <SafeBalance lamports={fee} />
+            </td>
           </tr>
         )}
       </TableCardBody>
@@ -296,40 +304,29 @@ function StatusCard({
   );
 }
 
-function AccountsCard({
-  signature,
-  autoRefresh,
-}: SignatureProps & AutoRefreshProps) {
+function DetailsSection({ signature }: SignatureProps) {
   const details = useTransactionDetails(signature);
   const fetchDetails = useFetchTransactionDetails();
-  const fetchStatus = useFetchTransactionStatus();
-  const refreshDetails = () => fetchDetails(signature);
-  const refreshStatus = () => fetchStatus(signature);
+  const status = useTransactionStatus(signature);
   const transaction = details?.data?.transaction?.transaction;
   const message = transaction?.message;
-  const status = useTransactionStatus(signature);
+  const { status: clusterStatus } = useCluster();
+  const refreshDetails = () => fetchDetails(signature);
 
   // Fetch details on load
   React.useEffect(() => {
-    if (status?.data?.info?.confirmations === "max" && !details) {
+    if (
+      !details &&
+      clusterStatus === ClusterStatus.Connected &&
+      status?.status === FetchStatus.Fetched
+    ) {
       fetchDetails(signature);
     }
-  }, [signature, details, status, fetchDetails]);
+  }, [signature, clusterStatus, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!status?.data?.info) {
     return null;
-  } else if (autoRefresh === AutoRefresh.BailedOut) {
-    return (
-      <ErrorCard
-        text="Details are not available until the transaction reaches MAX confirmations"
-        retry={refreshStatus}
-      />
-    );
-  } else if (autoRefresh === AutoRefresh.Active) {
-    return (
-      <ErrorCard text="Details are not available until the transaction reaches MAX confirmations" />
-    );
-  } else if (!details || details.status === FetchStatus.Fetching) {
+  } else if (!details) {
     return <LoadingCard />;
   } else if (details.status === FetchStatus.FetchFailed) {
     return <ErrorCard retry={refreshDetails} text="Failed to fetch details" />;
@@ -337,7 +334,26 @@ function AccountsCard({
     return <ErrorCard text="Details are not available" />;
   }
 
-  const { meta } = details.data.transaction;
+  return (
+    <>
+      <AccountsCard signature={signature} />
+      <TokenBalancesCard signature={signature} />
+      <InstructionsSection signature={signature} />
+      <ProgramLogSection signature={signature} />
+    </>
+  );
+}
+
+function AccountsCard({ signature }: SignatureProps) {
+  const details = useTransactionDetails(signature);
+
+  if (!details?.data?.transaction) {
+    return null;
+  }
+
+  const { meta, transaction } = details.data.transaction;
+  const { message } = transaction;
+
   if (!meta) {
     return <ErrorCard text="Transaction metadata is missing" />;
   }
@@ -351,25 +367,28 @@ function AccountsCard({
 
     return (
       <tr key={key}>
+        <td>{index + 1}</td>
         <td>
           <Address pubkey={pubkey} link />
         </td>
         <td>
           <BalanceDelta delta={delta} isSafe />
         </td>
-        <td>{lamportsToSafeString(post)}</td>
+        <td>
+          <SafeBalance lamports={post} />
+        </td>
         <td>
           {index === 0 && (
-            <span className="badge badge-soft-info mr-1">Fee Payer</span>
+            <span className="badge bg-info-soft me-1">Fee Payer</span>
           )}
-          {!account.writable && (
-            <span className="badge badge-soft-info mr-1">Readonly</span>
+          {account.writable && (
+            <span className="badge bg-info-soft me-1">Writable</span>
           )}
           {account.signer && (
-            <span className="badge badge-soft-info mr-1">Signer</span>
+            <span className="badge bg-info-soft me-1">Signer</span>
           )}
           {message.instructions.find((ix) => ix.programId.equals(pubkey)) && (
-            <span className="badge badge-soft-info mr-1">Program</span>
+            <span className="badge bg-info-soft me-1">Program</span>
           )}
         </td>
       </tr>
@@ -379,12 +398,13 @@ function AccountsCard({
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="card-header-title">Account Inputs</h3>
+        <h3 className="card-header-title">Account Input(s)</h3>
       </div>
       <div className="table-responsive mb-0">
         <table className="table table-sm table-nowrap card-table">
           <thead>
             <tr>
+              <th className="text-muted">#</th>
               <th className="text-muted">Address</th>
               <th className="text-muted">Change (SAFE)</th>
               <th className="text-muted">Post Balance (SAFE)</th>

@@ -1,0 +1,20 @@
+[package]
+name = "solana-send-transaction-service"
+version = "1.9.29"
+description = "Safecoin send transaction service"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/solana-send-transaction-service"
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+log = "0.4.14"
+safecoin-logger = { path = "../logger", version = "=1.9.29" }
+safecoin-metrics = { path = "../metrics", version = "=1.9.29" }
+safecoin-runtime = { path = "../runtime", version = "=1.9.29" }
+safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

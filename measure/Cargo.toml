@@ -1,19 +1,18 @@
 [package]
 name = "safecoin-measure"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.8.12"
+version = "1.9.29"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/safecoin-measure"
 readme = "../README.md"
 repository = "https://github.com/fair-exchange/safecoin"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 license = "Apache-2.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-log = "0.4.11"
-safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
-safecoin-metrics = { path = "../metrics", version = "=1.8.12" }
+log = "0.4.14"
+safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

@@ -172,11 +172,11 @@ function TpsBarChart({ performanceInfo }: TpsBarChartProps) {
       <TableCardBody>
         <tr>
           <td className="w-100">Transaction count</td>
-          <td className="text-lg-right text-monospace">{transactionCount} </td>
+          <td className="text-lg-end font-monospace">{transactionCount} </td>
         </tr>
         <tr>
           <td className="w-100">Transactions per second (TPS)</td>
-          <td className="text-lg-right text-monospace">{averageTps} </td>
+          <td className="text-lg-end font-monospace">{averageTps} </td>
         </tr>
       </TableCardBody>
 
@@ -192,7 +192,7 @@ function TpsBarChart({ performanceInfo }: TpsBarChartProps) {
                 <button
                   key={key}
                   onClick={() => setSeries(key)}
-                  className={classNames("btn btn-sm btn-white ml-2", {
+                  className={classNames("btn btn-sm btn-white ms-2", {
                     active: series === key,
                   })}
                 >
@@ -230,8 +230,14 @@ function AnimatedTransactionCount({ info }: { info: PerformanceInfo }) {
       // and start from there.
       const elapsed = Date.now() - countUp.lastUpdate;
       const elapsedPeriods = elapsed / (PERF_UPDATE_SEC * 1000);
-      countUp.start = countUp.start + elapsedPeriods * countUp.period;
-      countUp.period = txCount - countUp.start;
+      countUp.start = Math.floor(
+        countUp.start + elapsedPeriods * countUp.period
+      );
+
+      // if counter gets ahead of actual count, just hold for a bit
+      // until txCount catches up (this will sometimes happen when a tab is
+      // sent to the background and/or connection drops)
+      countUp.period = Math.max(txCount - countUp.start, 1);
     } else {
       // Since this is the first tx count value, estimate the previous
       // tx count in order to have a starting point for our animation

@@ -51,7 +51,7 @@ $ safecoin-validator \
     --only-known-rpc \
     --ledger ledger \
     --rpc-port 8328 \
-    --dynamic-port-range 8000-8010 \
+    --dynamic-port-range 8000-8020 \
     --entrypoint entrypoint.devnet.safecoin.org:10015 \
     --entrypoint entrypoint2.devnet.safecoin.org:10015 \
     --entrypoint entrypoint3.devnet.safecoin.org:10015 \
@@ -97,13 +97,14 @@ $ safecoin-validator \
     --identity validator-keypair.json \
     --vote-account vote-account-keypair.json \
     --known-validator 5D1fNXzvv5NjV1ysLjirC4WY92RNsVH18vjmcszZd8on \
-    --known-validator 7XSY3MrYnK8vq693Rju17bbPkCN3Z7KvvfvJx4kdrsSY \
+    --known-validator dDzy5SR3AXdYWVqbDEkVFdvSPCtS9ihF5kJkHCtXoFs \
     --known-validator Ft5fbkqNa76vnsjYNwjDZUXoTWpP7VYm3mtsaQckQADN \
+    --known-validator eoKpUABi59aT4rR9HGS3LcMecfut9x7zJyodWWP43YQ \
     --known-validator 9QxCLckBiJc783jnMvXZubK4wH86Eqqvashtrwvcsgkv \
     --only-known-rpc \
     --ledger ledger \
     --rpc-port 8328 \
-    --dynamic-port-range 8000-8010 \
+    --dynamic-port-range 8000-8020 \
     --entrypoint entrypoint.testnet.safecoin.org:10015 \
     --entrypoint entrypoint2.testnet.safecoin.org:10015 \
     --entrypoint entrypoint3.testnet.safecoin.org:10015 \
@@ -116,7 +117,9 @@ The identities of the
 [`--known-validator`s](running-validator/validator-start.md#known-validators) are:
 
 - `5D1fNXzvv5NjV1ysLjirC4WY92RNsVH18vjmcszZd8on` - Safecoin Labs (testnet.safecoin.org)
+- `dDzy5SR3AXdYWVqbDEkVFdvSPCtS9ihF5kJkHCtXoFs` - MonkeDAO
 - `Ft5fbkqNa76vnsjYNwjDZUXoTWpP7VYm3mtsaQckQADN` - Certus One
+- `eoKpUABi59aT4rR9HGS3LcMecfut9x7zJyodWWP43YQ` - SerGo
 - `9QxCLckBiJc783jnMvXZubK4wH86Eqqvashtrwvcsgkv` - Algo|Stake
 
 ## Mainnet Beta
@@ -126,9 +129,8 @@ A permissionless, persistent cluster for early token holders and launch partners
 - Tokens that are issued on Mainnet Beta are **real** SAFE
 - If you have paid money to purchase/be issued tokens, such as through our
   CoinList auction, these tokens will be transferred on Mainnet Beta.
-  - Note: If you are using a non-command-line wallet such as
-    [Safeflare](wallet-guide/solflare.md),
-    the wallet will always be connecting to Mainnet Beta.
+  - Note: If you are using a non-command-line wallet, the wallet will always be
+connecting to Mainnet Beta.
 - Gossip entrypoint for Mainnet Beta: `entrypoint.mainnet-beta.safecoin.org:10015`
 - Metrics environment variable for Mainnet Beta:
 
@@ -158,7 +160,7 @@ $ safecoin-validator \
     --ledger ledger \
     --rpc-port 8328 \
     --private-rpc \
-    --dynamic-port-range 8000-8010 \
+    --dynamic-port-range 8000-8020 \
     --entrypoint entrypoint.mainnet-beta.safecoin.org:10015 \
     --entrypoint entrypoint2.mainnet-beta.safecoin.org:10015 \
     --entrypoint entrypoint3.mainnet-beta.safecoin.org:10015 \

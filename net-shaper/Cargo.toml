@@ -1,9 +1,9 @@
 [package]
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-edition = "2018"
+edition = "2021"
 name = "safecoin-net-shaper"
 description = "The safecoin cluster network shaping tool"
-version = "1.8.12"
+version = "1.9.29"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -11,10 +11,10 @@ publish = false
 
 [dependencies]
 clap = "2.33.1"
-serde = "1.0.122"
-serde_json = "1.0.56"
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.8.12" }
-safecoin-logger = { path = "../logger", version = "=1.8.12" }
+serde = "1.0.130"
+serde_json = "1.0.72"
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.9.29" }
+safecoin-logger = { path = "../logger", version = "=1.9.29" }
 rand = "0.7.0"
 
 [[bin]]

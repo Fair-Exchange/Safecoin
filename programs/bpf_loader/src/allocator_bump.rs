@@ -7,6 +7,7 @@ use {
 
 #[derive(Debug)]
 pub struct BpfAllocator {
+    #[allow(dead_code)]
     heap: AlignedMemory,
     start: u64,
     len: u64,

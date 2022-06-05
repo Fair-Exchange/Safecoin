@@ -1,6 +1,12 @@
 use {
     crate::{alloc, BpfError},
     alloc::Alloc,
+    safecoin_program_runtime::{
+        ic_logger_msg, ic_msg,
+        invoke_context::{ComputeMeter, InvokeContext},
+        stable_log,
+        timings::ExecuteTimings,
+    },
     solana_rbpf::{
         aligned_memory::AlignedMemory,
         ebpf,
@@ -9,47 +15,43 @@ use {
         question_mark,
         vm::{EbpfVm, SyscallObject, SyscallRegistry},
     },
-    solana_runtime::message_processor::MessageProcessor,
     safecoin_sdk::{
-        account::{Account, AccountSharedData, ReadableAccount},
+        account::{AccountSharedData, ReadableAccount, WritableAccount},
         account_info::AccountInfo,
-        account_utils::StateMut,
-        bpf_loader, bpf_loader_deprecated,
-        bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-        clock::Clock,
+        blake3, bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable,
         entrypoint::{BPF_ALIGN_OF_U128, MAX_PERMITTED_DATA_INCREASE, SUCCESS},
-        epoch_schedule::EpochSchedule,
         feature_set::{
-            allow_native_ids, check_seed_length, close_upgradeable_program_accounts, cpi_data_cost,
-            demote_program_write_locks, enforce_aligned_host_addrs, keccak256_syscall_enabled,
-            libsecp256k1_0_5_upgrade_enabled, mem_overlap_fix, memory_ops_syscalls,
+            add_get_processed_sibling_instruction_syscall, blake3_syscall_enabled,
+            disable_fees_sysvar, do_support_realloc, fixed_memcpy_nonoverlapping_check,
+            libsecp256k1_0_5_upgrade_enabled, prevent_calling_precompiles_as_programs,
             return_data_syscall_enabled, secp256k1_recover_syscall_enabled,
-            set_upgrade_authority_via_cpi_enabled, sol_log_data_syscall_enabled,
-            sysvar_via_syscall, update_data_on_realloc,
+            sol_log_data_syscall_enabled, update_syscall_base_costs,
         },
         hash::{Hasher, HASH_BYTES},
-        ic_msg,
-        instruction::{AccountMeta, Instruction, InstructionError},
+        instruction::{
+            AccountMeta, Instruction, InstructionError, ProcessedSiblingInstruction,
+            TRANSACTION_LEVEL_STACK_HEIGHT,
+        },
         keccak,
-        keyed_account::KeyedAccount,
+        message::{Message, SanitizedMessage},
         native_loader,
-        process_instruction::{self, stable_log, ComputeMeter, InvokeContext, Logger},
+        precompiles::is_precompile,
         program::MAX_RETURN_DATA,
+        program_stubs::is_nonoverlapping,
         pubkey::{Pubkey, PubkeyError, MAX_SEEDS, MAX_SEED_LEN},
-        rent::Rent,
         secp256k1_recover::{
             Secp256k1RecoverError, SECP256K1_PUBLIC_KEY_LENGTH, SECP256K1_SIGNATURE_LENGTH,
         },
-        sysvar::{self, fees::Fees, Sysvar, SysvarId},
+        sysvar::{Sysvar, SysvarId},
     },
     std::{
         alloc::Layout,
         cell::{Ref, RefCell, RefMut},
-        cmp::min,
         mem::{align_of, size_of},
         rc::Rc,
         slice::from_raw_parts_mut,
         str::{from_utf8, Utf8Error},
+        sync::Arc,
     },
     thiserror::Error as ThisError,
 };
@@ -88,6 +90,8 @@ pub enum SyscallError {
     CopyOverlapping,
     #[error("Return data too large ({0} > {1})")]
     ReturnDataTooLarge(u64, u64),
+    #[error("Hashing too many sequences")]
+    TooManySlices,
 }
 impl From<SyscallError> for EbpfError<BpfError> {
     fn from(error: SyscallError) -> Self {
@@ -98,7 +102,7 @@ impl From<SyscallError> for EbpfError<BpfError> {
 trait SyscallConsume {
     fn consume(&mut self, amount: u64) -> Result<(), EbpfError<BpfError>>;
 }
-impl SyscallConsume for Rc<RefCell<dyn ComputeMeter>> {
+impl SyscallConsume for Rc<RefCell<ComputeMeter>> {
     fn consume(&mut self, amount: u64) -> Result<(), EbpfError<BpfError>> {
         self.try_borrow_mut()
             .map_err(|_| SyscallError::InvokeContextBorrowFailed)?
@@ -117,7 +121,7 @@ impl SyscallConsume for Rc<RefCell<dyn ComputeMeter>> {
 use crate::allocator_bump::BpfAllocator;
 
 pub fn register_syscalls(
-    invoke_context: &mut dyn InvokeContext,
+    invoke_context: &mut InvokeContext,
 ) -> Result<SyscallRegistry, EbpfError<BpfError>> {
     let mut syscall_registry = SyscallRegistry::default();
 
@@ -141,35 +145,43 @@ pub fn register_syscalls(
     )?;
 
     syscall_registry.register_syscall_by_name(b"sol_sha256", SyscallSha256::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_keccak256", SyscallKeccak256::call)?;
 
-    if invoke_context.is_feature_active(&keccak256_syscall_enabled::id()) {
-        syscall_registry.register_syscall_by_name(b"sol_keccak256", SyscallKeccak256::call)?;
-    }
-
-    if invoke_context.is_feature_active(&secp256k1_recover_syscall_enabled::id()) {
+    if invoke_context
+        .feature_set
+        .is_active(&secp256k1_recover_syscall_enabled::id())
+    {
         syscall_registry
             .register_syscall_by_name(b"sol_secp256k1_recover", SyscallSecp256k1Recover::call)?;
     }
 
-    if invoke_context.is_feature_active(&sysvar_via_syscall::id()) {
-        syscall_registry
-            .register_syscall_by_name(b"sol_get_clock_sysvar", SyscallGetClockSysvar::call)?;
-        syscall_registry.register_syscall_by_name(
-            b"sol_get_epoch_schedule_sysvar",
-            SyscallGetEpochScheduleSysvar::call,
-        )?;
-        syscall_registry
-            .register_syscall_by_name(b"sol_get_fees_sysvar", SyscallGetFeesSysvar::call)?;
-        syscall_registry
-            .register_syscall_by_name(b"sol_get_rent_sysvar", SyscallGetRentSysvar::call)?;
+    if invoke_context
+        .feature_set
+        .is_active(&blake3_syscall_enabled::id())
+    {
+        syscall_registry.register_syscall_by_name(b"sol_blake3", SyscallBlake3::call)?;
     }
 
-    if invoke_context.is_feature_active(&memory_ops_syscalls::id()) {
-        syscall_registry.register_syscall_by_name(b"sol_memcpy_", SyscallMemcpy::call)?;
-        syscall_registry.register_syscall_by_name(b"sol_memmove_", SyscallMemmove::call)?;
-        syscall_registry.register_syscall_by_name(b"sol_memcmp_", SyscallMemcmp::call)?;
-        syscall_registry.register_syscall_by_name(b"sol_memset_", SyscallMemset::call)?;
+    syscall_registry
+        .register_syscall_by_name(b"sol_get_clock_sysvar", SyscallGetClockSysvar::call)?;
+    syscall_registry.register_syscall_by_name(
+        b"sol_get_epoch_schedule_sysvar",
+        SyscallGetEpochScheduleSysvar::call,
+    )?;
+    if !invoke_context
+        .feature_set
+        .is_active(&disable_fees_sysvar::id())
+    {
+        syscall_registry
+            .register_syscall_by_name(b"sol_get_fees_sysvar", SyscallGetFeesSysvar::call)?;
     }
+    syscall_registry
+        .register_syscall_by_name(b"sol_get_rent_sysvar", SyscallGetRentSysvar::call)?;
+
+    syscall_registry.register_syscall_by_name(b"sol_memcpy_", SyscallMemcpy::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_memmove_", SyscallMemmove::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_memcmp_", SyscallMemcmp::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_memset_", SyscallMemset::call)?;
 
     // Cross-program invocation syscalls
     syscall_registry
@@ -181,7 +193,10 @@ pub fn register_syscalls(
     syscall_registry.register_syscall_by_name(b"sol_alloc_free_", SyscallAllocFree::call)?;
 
     // Return data
-    if invoke_context.is_feature_active(&return_data_syscall_enabled::id()) {
+    if invoke_context
+        .feature_set
+        .is_active(&return_data_syscall_enabled::id())
+    {
         syscall_registry
             .register_syscall_by_name(b"sol_set_return_data", SyscallSetReturnData::call)?;
         syscall_registry
@@ -189,8 +204,29 @@ pub fn register_syscalls(
     }
 
     // Log data
-    if invoke_context.is_feature_active(&sol_log_data_syscall_enabled::id()) {
+    if invoke_context
+        .feature_set
+        .is_active(&sol_log_data_syscall_enabled::id())
+    {
         syscall_registry.register_syscall_by_name(b"sol_log_data", SyscallLogData::call)?;
+    }
+
+    if invoke_context
+        .feature_set
+        .is_active(&add_get_processed_sibling_instruction_syscall::id())
+    {
+        syscall_registry.register_syscall_by_name(
+            b"sol_get_processed_sibling_instruction",
+            SyscallGetProcessedSiblingInstruction::call,
+        )?;
+    }
+
+    if invoke_context
+        .feature_set
+        .is_active(&add_get_processed_sibling_instruction_syscall::id())
+    {
+        syscall_registry
+            .register_syscall_by_name(b"sol_get_stack_height", SyscallGetStackHeight::call)?;
     }
 
     Ok(syscall_registry)
@@ -209,202 +245,162 @@ macro_rules! bind_feature_gated_syscall_context_object {
     };
 }
 
-pub fn bind_syscall_context_objects<'a>(
-    loader_id: &'a Pubkey,
+pub fn bind_syscall_context_objects<'a, 'b>(
     vm: &mut EbpfVm<'a, BpfError, crate::ThisInstructionMeter>,
-    invoke_context: &'a mut dyn InvokeContext,
+    invoke_context: &'a mut InvokeContext<'b>,
     heap: AlignedMemory,
+    orig_data_lens: &'a [usize],
 ) -> Result<(), EbpfError<BpfError>> {
-    let bpf_compute_budget = invoke_context.get_bpf_compute_budget();
-    let enforce_aligned_host_addrs =
-        invoke_context.is_feature_active(&enforce_aligned_host_addrs::id());
+    let is_blake3_syscall_active = invoke_context
+        .feature_set
+        .is_active(&blake3_syscall_enabled::id());
+    let is_secp256k1_recover_syscall_active = invoke_context
+        .feature_set
+        .is_active(&secp256k1_recover_syscall_enabled::id());
+    let is_fee_sysvar_via_syscall_active = !invoke_context
+        .feature_set
+        .is_active(&disable_fees_sysvar::id());
+    let is_return_data_syscall_active = invoke_context
+        .feature_set
+        .is_active(&return_data_syscall_enabled::id());
+    let is_sol_log_data_syscall_active = invoke_context
+        .feature_set
+        .is_active(&sol_log_data_syscall_enabled::id());
+    let add_get_processed_sibling_instruction_syscall = invoke_context
+        .feature_set
+        .is_active(&add_get_processed_sibling_instruction_syscall::id());
+
+    let loader_id = invoke_context
+        .get_loader()
+        .map_err(SyscallError::InstructionError)?;
+    let invoke_context = Rc::new(RefCell::new(invoke_context));
 
     // Syscall functions common across languages
 
     vm.bind_syscall_context_object(Box::new(SyscallAbort {}), None)?;
     vm.bind_syscall_context_object(
         Box::new(SyscallPanic {
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-            enforce_aligned_host_addrs,
+            invoke_context: invoke_context.clone(),
         }),
         None,
     )?;
     vm.bind_syscall_context_object(
         Box::new(SyscallLog {
-            compute_meter: invoke_context.get_compute_meter(),
-            logger: invoke_context.get_logger(),
-            loader_id,
-            enforce_aligned_host_addrs,
+            invoke_context: invoke_context.clone(),
         }),
         None,
     )?;
     vm.bind_syscall_context_object(
         Box::new(SyscallLogU64 {
-            cost: bpf_compute_budget.log_64_units,
-            compute_meter: invoke_context.get_compute_meter(),
-            logger: invoke_context.get_logger(),
+            invoke_context: invoke_context.clone(),
         }),
         None,
     )?;
 
     vm.bind_syscall_context_object(
         Box::new(SyscallLogBpfComputeUnits {
-            cost: 0,
-            compute_meter: invoke_context.get_compute_meter(),
-            logger: invoke_context.get_logger(),
+            invoke_context: invoke_context.clone(),
         }),
         None,
     )?;
-
     vm.bind_syscall_context_object(
         Box::new(SyscallLogPubkey {
-            cost: bpf_compute_budget.log_pubkey_units,
-            compute_meter: invoke_context.get_compute_meter(),
-            logger: invoke_context.get_logger(),
-            loader_id,
-            enforce_aligned_host_addrs,
+            invoke_context: invoke_context.clone(),
         }),
         None,
     )?;
 
-    let allow_native_ids = invoke_context.is_feature_active(&allow_native_ids::id());
-    let check_seed_length = invoke_context.is_feature_active(&check_seed_length::id());
     vm.bind_syscall_context_object(
         Box::new(SyscallCreateProgramAddress {
-            cost: bpf_compute_budget.create_program_address_units,
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-            enforce_aligned_host_addrs,
-            allow_native_ids,
-            check_seed_length,
+            invoke_context: invoke_context.clone(),
         }),
         None,
     )?;
     vm.bind_syscall_context_object(
         Box::new(SyscallTryFindProgramAddress {
-            cost: bpf_compute_budget.create_program_address_units,
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-            enforce_aligned_host_addrs,
-            allow_native_ids,
-            check_seed_length,
+            invoke_context: invoke_context.clone(),
         }),
         None,
     )?;
 
     vm.bind_syscall_context_object(
         Box::new(SyscallSha256 {
-            sha256_base_cost: bpf_compute_budget.sha256_base_cost,
-            sha256_byte_cost: bpf_compute_budget.sha256_byte_cost,
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-            enforce_aligned_host_addrs,
+            invoke_context: invoke_context.clone(),
+        }),
+        None,
+    )?;
+    vm.bind_syscall_context_object(
+        Box::new(SyscallKeccak256 {
+            invoke_context: invoke_context.clone(),
+        }),
+        None,
+    )?;
+
+    vm.bind_syscall_context_object(
+        Box::new(SyscallMemcpy {
+            invoke_context: invoke_context.clone(),
+        }),
+        None,
+    )?;
+    vm.bind_syscall_context_object(
+        Box::new(SyscallMemmove {
+            invoke_context: invoke_context.clone(),
+        }),
+        None,
+    )?;
+    vm.bind_syscall_context_object(
+        Box::new(SyscallMemcmp {
+            invoke_context: invoke_context.clone(),
+        }),
+        None,
+    )?;
+    vm.bind_syscall_context_object(
+        Box::new(SyscallMemset {
+            invoke_context: invoke_context.clone(),
         }),
         None,
     )?;
 
     bind_feature_gated_syscall_context_object!(
         vm,
-        invoke_context.is_feature_active(&keccak256_syscall_enabled::id()),
-        Box::new(SyscallKeccak256 {
-            base_cost: bpf_compute_budget.sha256_base_cost,
-            byte_cost: bpf_compute_budget.sha256_byte_cost,
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-        }),
-    );
-
-    bind_feature_gated_syscall_context_object!(
-        vm,
-        invoke_context.is_feature_active(&memory_ops_syscalls::id()),
-        Box::new(SyscallMemcpy {
-            cost: invoke_context.get_bpf_compute_budget().cpi_bytes_per_unit,
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-            mem_overlap_fix: invoke_context.is_feature_active(&mem_overlap_fix::id()),
-        }),
-    );
-    bind_feature_gated_syscall_context_object!(
-        vm,
-        invoke_context.is_feature_active(&memory_ops_syscalls::id()),
-        Box::new(SyscallMemmove {
-            cost: invoke_context.get_bpf_compute_budget().cpi_bytes_per_unit,
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-        }),
-    );
-    bind_feature_gated_syscall_context_object!(
-        vm,
-        invoke_context.is_feature_active(&memory_ops_syscalls::id()),
-        Box::new(SyscallMemcmp {
-            cost: invoke_context.get_bpf_compute_budget().cpi_bytes_per_unit,
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-        }),
-    );
-    bind_feature_gated_syscall_context_object!(
-        vm,
-        invoke_context.is_feature_active(&memory_ops_syscalls::id()),
-        Box::new(SyscallMemset {
-            cost: invoke_context.get_bpf_compute_budget().cpi_bytes_per_unit,
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-        }),
-    );
-
-    bind_feature_gated_syscall_context_object!(
-        vm,
-        invoke_context.is_feature_active(&secp256k1_recover_syscall_enabled::id()),
+        is_secp256k1_recover_syscall_active,
         Box::new(SyscallSecp256k1Recover {
-            cost: bpf_compute_budget.secp256k1_recover_cost,
-            compute_meter: invoke_context.get_compute_meter(),
-            loader_id,
-            libsecp256k1_0_5_upgrade_enabled: invoke_context
-                .is_feature_active(&libsecp256k1_0_5_upgrade_enabled::id()),
+            invoke_context: invoke_context.clone(),
+        }),
+    );
+    bind_feature_gated_syscall_context_object!(
+        vm,
+        is_blake3_syscall_active,
+        Box::new(SyscallBlake3 {
+            invoke_context: invoke_context.clone(),
         }),
     );
 
-    let is_sysvar_via_syscall_active = invoke_context.is_feature_active(&sysvar_via_syscall::id());
-    let is_return_data_syscall_active =
-        invoke_context.is_feature_active(&return_data_syscall_enabled::id());
-    let is_sol_log_data_syscall_active =
-        invoke_context.is_feature_active(&sol_log_data_syscall_enabled::id());
-
-    let invoke_context = Rc::new(RefCell::new(invoke_context));
-
-    bind_feature_gated_syscall_context_object!(
-        vm,
-        is_sysvar_via_syscall_active,
+    vm.bind_syscall_context_object(
         Box::new(SyscallGetClockSysvar {
             invoke_context: invoke_context.clone(),
-            loader_id,
         }),
-    );
-    bind_feature_gated_syscall_context_object!(
-        vm,
-        is_sysvar_via_syscall_active,
+        None,
+    )?;
+    vm.bind_syscall_context_object(
         Box::new(SyscallGetEpochScheduleSysvar {
             invoke_context: invoke_context.clone(),
-            loader_id,
         }),
-    );
+        None,
+    )?;
     bind_feature_gated_syscall_context_object!(
         vm,
-        is_sysvar_via_syscall_active,
+        is_fee_sysvar_via_syscall_active,
         Box::new(SyscallGetFeesSysvar {
             invoke_context: invoke_context.clone(),
-            loader_id,
         }),
     );
-    bind_feature_gated_syscall_context_object!(
-        vm,
-        is_sysvar_via_syscall_active,
+    vm.bind_syscall_context_object(
         Box::new(SyscallGetRentSysvar {
             invoke_context: invoke_context.clone(),
-            loader_id,
         }),
-    );
+        None,
+    )?;
 
     // Return data
     bind_feature_gated_syscall_context_object!(
@@ -412,7 +408,6 @@ pub fn bind_syscall_context_objects<'a>(
         is_return_data_syscall_active,
         Box::new(SyscallSetReturnData {
             invoke_context: invoke_context.clone(),
-            loader_id,
         }),
     );
 
@@ -421,7 +416,6 @@ pub fn bind_syscall_context_objects<'a>(
         is_return_data_syscall_active,
         Box::new(SyscallGetReturnData {
             invoke_context: invoke_context.clone(),
-            loader_id,
         }),
     );
 
@@ -431,7 +425,24 @@ pub fn bind_syscall_context_objects<'a>(
         is_sol_log_data_syscall_active,
         Box::new(SyscallLogData {
             invoke_context: invoke_context.clone(),
-            loader_id,
+        }),
+    );
+
+    // processed inner instructions
+    bind_feature_gated_syscall_context_object!(
+        vm,
+        add_get_processed_sibling_instruction_syscall,
+        Box::new(SyscallGetProcessedSiblingInstruction {
+            invoke_context: invoke_context.clone(),
+        }),
+    );
+
+    // Get stack height
+    bind_feature_gated_syscall_context_object!(
+        vm,
+        add_get_processed_sibling_instruction_syscall,
+        Box::new(SyscallGetStackHeight {
+            invoke_context: invoke_context.clone(),
         }),
     );
 
@@ -439,14 +450,14 @@ pub fn bind_syscall_context_objects<'a>(
     vm.bind_syscall_context_object(
         Box::new(SyscallInvokeSignedC {
             invoke_context: invoke_context.clone(),
-            loader_id,
+            orig_data_lens,
         }),
         None,
     )?;
     vm.bind_syscall_context_object(
         Box::new(SyscallInvokeSignedRust {
             invoke_context: invoke_context.clone(),
-            loader_id,
+            orig_data_lens,
         }),
         None,
     )?;
@@ -454,7 +465,7 @@ pub fn bind_syscall_context_objects<'a>(
     // Memory allocator
     vm.bind_syscall_context_object(
         Box::new(SyscallAllocFree {
-            aligned: *loader_id != bpf_loader_deprecated::id(),
+            aligned: loader_id != bpf_loader_deprecated::id(),
             allocator: BpfAllocator::new(heap, ebpf::MM_HEAP_START),
         }),
         None,
@@ -477,19 +488,10 @@ fn translate_type_inner<'a, T>(
     access_type: AccessType,
     vm_addr: u64,
     loader_id: &Pubkey,
-    enforce_aligned_host_addrs: bool,
 ) -> Result<&'a mut T, EbpfError<BpfError>> {
-    if !enforce_aligned_host_addrs
-        && loader_id != &bpf_loader_deprecated::id()
-        && (vm_addr as *mut T).align_offset(align_of::<T>()) != 0
-    {
-        return Err(SyscallError::UnalignedPointer.into());
-    }
-
     let host_addr = translate(memory_mapping, access_type, vm_addr, size_of::<T>() as u64)?;
 
-    if enforce_aligned_host_addrs
-        && loader_id != &bpf_loader_deprecated::id()
+    if loader_id != &bpf_loader_deprecated::id()
         && (host_addr as *mut T).align_offset(align_of::<T>()) != 0
     {
         return Err(SyscallError::UnalignedPointer.into());
@@ -500,30 +502,16 @@ fn translate_type_mut<'a, T>(
     memory_mapping: &MemoryMapping,
     vm_addr: u64,
     loader_id: &Pubkey,
-    enforce_aligned_host_addrs: bool,
 ) -> Result<&'a mut T, EbpfError<BpfError>> {
-    translate_type_inner::<T>(
-        memory_mapping,
-        AccessType::Store,
-        vm_addr,
-        loader_id,
-        enforce_aligned_host_addrs,
-    )
+    translate_type_inner::<T>(memory_mapping, AccessType::Store, vm_addr, loader_id)
 }
 fn translate_type<'a, T>(
     memory_mapping: &MemoryMapping,
     vm_addr: u64,
     loader_id: &Pubkey,
-    enforce_aligned_host_addrs: bool,
 ) -> Result<&'a T, EbpfError<BpfError>> {
-    translate_type_inner::<T>(
-        memory_mapping,
-        AccessType::Load,
-        vm_addr,
-        loader_id,
-        enforce_aligned_host_addrs,
-    )
-    .map(|value| &*value)
+    translate_type_inner::<T>(memory_mapping, AccessType::Load, vm_addr, loader_id)
+        .map(|value| &*value)
 }
 
 fn translate_slice_inner<'a, T>(
@@ -532,14 +520,7 @@ fn translate_slice_inner<'a, T>(
     vm_addr: u64,
     len: u64,
     loader_id: &Pubkey,
-    enforce_aligned_host_addrs: bool,
 ) -> Result<&'a mut [T], EbpfError<BpfError>> {
-    if !enforce_aligned_host_addrs
-        && loader_id != &bpf_loader_deprecated::id()
-        && (vm_addr as u64 as *mut T).align_offset(align_of::<T>()) != 0
-    {
-        return Err(SyscallError::UnalignedPointer.into());
-    }
     if len == 0 {
         return Ok(&mut []);
     }
@@ -551,8 +532,7 @@ fn translate_slice_inner<'a, T>(
         len.saturating_mul(size_of::<T>() as u64),
     )?;
 
-    if enforce_aligned_host_addrs
-        && loader_id != &bpf_loader_deprecated::id()
+    if loader_id != &bpf_loader_deprecated::id()
         && (host_addr as *mut T).align_offset(align_of::<T>()) != 0
     {
         return Err(SyscallError::UnalignedPointer.into());
@@ -564,33 +544,17 @@ fn translate_slice_mut<'a, T>(
     vm_addr: u64,
     len: u64,
     loader_id: &Pubkey,
-    enforce_aligned_host_addrs: bool,
 ) -> Result<&'a mut [T], EbpfError<BpfError>> {
-    translate_slice_inner::<T>(
-        memory_mapping,
-        AccessType::Store,
-        vm_addr,
-        len,
-        loader_id,
-        enforce_aligned_host_addrs,
-    )
+    translate_slice_inner::<T>(memory_mapping, AccessType::Store, vm_addr, len, loader_id)
 }
 fn translate_slice<'a, T>(
     memory_mapping: &MemoryMapping,
     vm_addr: u64,
     len: u64,
     loader_id: &Pubkey,
-    enforce_aligned_host_addrs: bool,
 ) -> Result<&'a [T], EbpfError<BpfError>> {
-    translate_slice_inner::<T>(
-        memory_mapping,
-        AccessType::Load,
-        vm_addr,
-        len,
-        loader_id,
-        enforce_aligned_host_addrs,
-    )
-    .map(|value| &*value)
+    translate_slice_inner::<T>(memory_mapping, AccessType::Load, vm_addr, len, loader_id)
+        .map(|value| &*value)
 }
 
 /// Take a virtual pointer to a string (points to BPF VM memory space), translate it
@@ -600,16 +564,9 @@ fn translate_string_and_do(
     addr: u64,
     len: u64,
     loader_id: &Pubkey,
-    enforce_aligned_host_addrs: bool,
     work: &mut dyn FnMut(&str) -> Result<u64, EbpfError<BpfError>>,
 ) -> Result<u64, EbpfError<BpfError>> {
-    let buf = translate_slice::<u8>(
-        memory_mapping,
-        addr,
-        len,
-        loader_id,
-        enforce_aligned_host_addrs,
-    )?;
+    let buf = translate_slice::<u8>(memory_mapping, addr, len, loader_id)?;
     let i = match buf.iter().position(|byte| *byte == 0) {
         Some(i) => i,
         None => len as usize,
@@ -643,12 +600,10 @@ impl SyscallObject<BpfError> for SyscallAbort {
 /// Panic syscall function, called when the BPF program calls 'sol_panic_()`
 /// Causes the BPF program to be halted immediately
 /// Log a user's info message
-pub struct SyscallPanic<'a> {
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
-    enforce_aligned_host_addrs: bool,
+pub struct SyscallPanic<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallPanic<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallPanic<'a, 'b> {
     fn call(
         &mut self,
         file: u64,
@@ -659,26 +614,39 @@ impl<'a> SyscallObject<BpfError> for SyscallPanic<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(len), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        if !invoke_context
+            .feature_set
+            .is_active(&update_syscall_base_costs::id())
+        {
+            question_mark!(invoke_context.get_compute_meter().consume(len), result);
+        }
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         *result = translate_string_and_do(
             memory_mapping,
             file,
             len,
-            self.loader_id,
-            self.enforce_aligned_host_addrs,
+            &loader_id,
             &mut |string: &str| Err(SyscallError::Panic(string.to_string(), line, column).into()),
         );
     }
 }
 
 /// Log a user's info message
-pub struct SyscallLog<'a> {
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    logger: Rc<RefCell<dyn Logger>>,
-    loader_id: &'a Pubkey,
-    enforce_aligned_host_addrs: bool,
+pub struct SyscallLog<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallLog<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallLog<'a, 'b> {
     fn call(
         &mut self,
         addr: u64,
@@ -689,16 +657,39 @@ impl<'a> SyscallObject<BpfError> for SyscallLog<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(len), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let cost = if invoke_context
+            .feature_set
+            .is_active(&update_syscall_base_costs::id())
+        {
+            invoke_context
+                .get_compute_budget()
+                .syscall_base_cost
+                .max(len)
+        } else {
+            len
+        };
+        question_mark!(invoke_context.get_compute_meter().consume(cost), result);
+
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         question_mark!(
             translate_string_and_do(
                 memory_mapping,
                 addr,
                 len,
-                self.loader_id,
-                self.enforce_aligned_host_addrs,
+                &loader_id,
                 &mut |string: &str| {
-                    stable_log::program_log(&self.logger, string);
+                    stable_log::program_log(&invoke_context.get_log_collector(), string);
                     Ok(0)
                 },
             ),
@@ -709,12 +700,10 @@ impl<'a> SyscallObject<BpfError> for SyscallLog<'a> {
 }
 
 /// Log 5 64-bit values
-pub struct SyscallLogU64 {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    logger: Rc<RefCell<dyn Logger>>,
+pub struct SyscallLogU64<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl SyscallObject<BpfError> for SyscallLogU64 {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallLogU64<'a, 'b> {
     fn call(
         &mut self,
         arg1: u64,
@@ -725,9 +714,17 @@ impl SyscallObject<BpfError> for SyscallLogU64 {
         _memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(self.cost), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let cost = invoke_context.get_compute_budget().log_64_units;
+        question_mark!(invoke_context.get_compute_meter().consume(cost), result);
+
         stable_log::program_log(
-            &self.logger,
+            &invoke_context.get_log_collector(),
             &format!(
                 "{:#x}, {:#x}, {:#x}, {:#x}, {:#x}",
                 arg1, arg2, arg3, arg4, arg5
@@ -738,12 +735,10 @@ impl SyscallObject<BpfError> for SyscallLogU64 {
 }
 
 /// Log current compute consumption
-pub struct SyscallLogBpfComputeUnits {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    logger: Rc<RefCell<dyn Logger>>,
+pub struct SyscallLogBpfComputeUnits<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl SyscallObject<BpfError> for SyscallLogBpfComputeUnits {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallLogBpfComputeUnits<'a, 'b> {
     fn call(
         &mut self,
         _arg1: u64,
@@ -754,32 +749,36 @@ impl SyscallObject<BpfError> for SyscallLogBpfComputeUnits {
         _memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(self.cost), result);
-        let logger = question_mark!(
-            self.logger
-                .try_borrow_mut()
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
                 .map_err(|_| SyscallError::InvokeContextBorrowFailed),
             result
         );
-        if logger.log_enabled() {
-            logger.log(&format!(
-                "Program consumption: {} units remaining",
-                self.compute_meter.borrow().get_remaining()
-            ));
-        }
+        let cost = if invoke_context
+            .feature_set
+            .is_active(&update_syscall_base_costs::id())
+        {
+            invoke_context.get_compute_budget().syscall_base_cost
+        } else {
+            0
+        };
+        question_mark!(invoke_context.get_compute_meter().consume(cost), result);
+
+        ic_logger_msg!(
+            invoke_context.get_log_collector(),
+            "Program consumption: {} units remaining",
+            invoke_context.get_compute_meter().borrow().get_remaining()
+        );
         *result = Ok(0);
     }
 }
 
 /// Log 5 64-bit values
-pub struct SyscallLogPubkey<'a> {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    logger: Rc<RefCell<dyn Logger>>,
-    loader_id: &'a Pubkey,
-    enforce_aligned_host_addrs: bool,
+pub struct SyscallLogPubkey<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallLogPubkey<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallLogPubkey<'a, 'b> {
     fn call(
         &mut self,
         pubkey_addr: u64,
@@ -790,17 +789,26 @@ impl<'a> SyscallObject<BpfError> for SyscallLogPubkey<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(self.cost), result);
-        let pubkey = question_mark!(
-            translate_type::<Pubkey>(
-                memory_mapping,
-                pubkey_addr,
-                self.loader_id,
-                self.enforce_aligned_host_addrs,
-            ),
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
             result
         );
-        stable_log::program_log(&self.logger, &pubkey.to_string());
+        let cost = invoke_context.get_compute_budget().log_pubkey_units;
+        question_mark!(invoke_context.get_compute_meter().consume(cost), result);
+
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
+        let pubkey = question_mark!(
+            translate_type::<Pubkey>(memory_mapping, pubkey_addr, &loader_id),
+            result
+        );
+        stable_log::program_log(&invoke_context.get_log_collector(), &pubkey.to_string());
         *result = Ok(0);
     }
 }
@@ -856,23 +864,16 @@ fn translate_and_check_program_address_inputs<'a>(
     program_id_addr: u64,
     memory_mapping: &MemoryMapping,
     loader_id: &Pubkey,
-    enforce_aligned_host_addrs: bool,
-    check_seed_length: bool,
 ) -> Result<(Vec<&'a [u8]>, &'a Pubkey), EbpfError<BpfError>> {
-    let untranslated_seeds = translate_slice::<&[&u8]>(
-        memory_mapping,
-        seeds_addr,
-        seeds_len,
-        loader_id,
-        enforce_aligned_host_addrs,
-    )?;
+    let untranslated_seeds =
+        translate_slice::<&[&u8]>(memory_mapping, seeds_addr, seeds_len, loader_id)?;
     if untranslated_seeds.len() > MAX_SEEDS {
         return Err(SyscallError::BadSeeds(PubkeyError::MaxSeedLengthExceeded).into());
     }
     let seeds = untranslated_seeds
         .iter()
         .map(|untranslated_seed| {
-            if check_seed_length && untranslated_seed.len() > MAX_SEED_LEN {
+            if untranslated_seed.len() > MAX_SEED_LEN {
                 return Err(SyscallError::BadSeeds(PubkeyError::MaxSeedLengthExceeded).into());
             }
             translate_slice::<u8>(
@@ -880,58 +881,18 @@ fn translate_and_check_program_address_inputs<'a>(
                 untranslated_seed.as_ptr() as *const _ as u64,
                 untranslated_seed.len() as u64,
                 loader_id,
-                enforce_aligned_host_addrs,
             )
         })
         .collect::<Result<Vec<_>, EbpfError<BpfError>>>()?;
-    let program_id = translate_type::<Pubkey>(
-        memory_mapping,
-        program_id_addr,
-        loader_id,
-        enforce_aligned_host_addrs,
-    )?;
+    let program_id = translate_type::<Pubkey>(memory_mapping, program_id_addr, loader_id)?;
     Ok((seeds, program_id))
 }
 
-fn is_native_id(seeds: &[&[u8]], program_id: &Pubkey) -> bool {
-    use safecoin_sdk::{config, feature, secp256k1_program, stake, system_program, vote};
-    // Does more than just check native ids in order to emulate the same failure
-    // signature that `compute_program_address` had before the removal of the
-    // check.
-    if seeds.len() > MAX_SEEDS {
-        return true;
-    }
-    for seed in seeds.iter() {
-        if seed.len() > MAX_SEED_LEN {
-            return true;
-        }
-    }
-
-    let native_ids = [
-        bpf_loader::id(),
-        bpf_loader_deprecated::id(),
-        feature::id(),
-        config::program::id(),
-        stake::program::id(),
-        stake::config::id(),
-        vote::program::id(),
-        secp256k1_program::id(),
-        system_program::id(),
-        sysvar::id(),
-    ];
-    native_ids.contains(program_id)
-}
-
 /// Create a program address
-struct SyscallCreateProgramAddress<'a> {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
-    enforce_aligned_host_addrs: bool,
-    allow_native_ids: bool,
-    check_seed_length: bool,
+struct SyscallCreateProgramAddress<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallCreateProgramAddress<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallCreateProgramAddress<'a, 'b> {
     fn call(
         &mut self,
         seeds_addr: u64,
@@ -942,31 +903,33 @@ impl<'a> SyscallObject<BpfError> for SyscallCreateProgramAddress<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        if self.check_seed_length {
-            question_mark!(self.compute_meter.consume(self.cost), result);
-        }
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let cost = invoke_context
+            .get_compute_budget()
+            .create_program_address_units;
+        question_mark!(invoke_context.get_compute_meter().consume(cost), result);
 
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         let (seeds, program_id) = question_mark!(
             translate_and_check_program_address_inputs(
                 seeds_addr,
                 seeds_len,
                 program_id_addr,
                 memory_mapping,
-                self.loader_id,
-                self.enforce_aligned_host_addrs,
-                self.check_seed_length,
+                &loader_id,
             ),
             result
         );
-
-        if !self.check_seed_length {
-            question_mark!(self.compute_meter.consume(self.cost), result);
-        }
-
-        if !self.allow_native_ids && is_native_id(&seeds, program_id) {
-            *result = Ok(1);
-            return;
-        }
 
         let new_address = match Pubkey::create_program_address(&seeds, program_id) {
             Ok(address) => address,
@@ -976,13 +939,7 @@ impl<'a> SyscallObject<BpfError> for SyscallCreateProgramAddress<'a> {
             }
         };
         let address = question_mark!(
-            translate_slice_mut::<u8>(
-                memory_mapping,
-                address_addr,
-                32,
-                self.loader_id,
-                self.enforce_aligned_host_addrs,
-            ),
+            translate_slice_mut::<u8>(memory_mapping, address_addr, 32, &loader_id),
             result
         );
         address.copy_from_slice(new_address.as_ref());
@@ -991,15 +948,10 @@ impl<'a> SyscallObject<BpfError> for SyscallCreateProgramAddress<'a> {
 }
 
 /// Create a program address
-struct SyscallTryFindProgramAddress<'a> {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
-    enforce_aligned_host_addrs: bool,
-    allow_native_ids: bool,
-    check_seed_length: bool,
+struct SyscallTryFindProgramAddress<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallTryFindProgramAddress<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallTryFindProgramAddress<'a, 'b> {
     fn call(
         &mut self,
         seeds_addr: u64,
@@ -1010,19 +962,30 @@ impl<'a> SyscallObject<BpfError> for SyscallTryFindProgramAddress<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        if self.check_seed_length {
-            question_mark!(self.compute_meter.consume(self.cost), result);
-        }
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let cost = invoke_context
+            .get_compute_budget()
+            .create_program_address_units;
+        question_mark!(invoke_context.get_compute_meter().consume(cost), result);
 
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         let (seeds, program_id) = question_mark!(
             translate_and_check_program_address_inputs(
                 seeds_addr,
                 seeds_len,
                 program_id_addr,
                 memory_mapping,
-                self.loader_id,
-                self.enforce_aligned_host_addrs,
-                self.check_seed_length,
+                &loader_id,
             ),
             result
         );
@@ -1033,58 +996,35 @@ impl<'a> SyscallObject<BpfError> for SyscallTryFindProgramAddress<'a> {
                 let mut seeds_with_bump = seeds.to_vec();
                 seeds_with_bump.push(&bump_seed);
 
-                if !self.check_seed_length {
-                    question_mark!(self.compute_meter.consume(self.cost), result);
-                }
-
-                if self.allow_native_ids || !is_native_id(&seeds, program_id) {
-                    if let Ok(new_address) =
-                        Pubkey::create_program_address(&seeds_with_bump, program_id)
-                    {
-                        let bump_seed_ref = question_mark!(
-                            translate_type_mut::<u8>(
-                                memory_mapping,
-                                bump_seed_addr,
-                                self.loader_id,
-                                self.enforce_aligned_host_addrs,
-                            ),
-                            result
-                        );
-                        let address = question_mark!(
-                            translate_slice_mut::<u8>(
-                                memory_mapping,
-                                address_addr,
-                                32,
-                                self.loader_id,
-                                self.enforce_aligned_host_addrs,
-                            ),
-                            result
-                        );
-                        *bump_seed_ref = bump_seed[0];
-                        address.copy_from_slice(new_address.as_ref());
-                        *result = Ok(0);
-                        return;
-                    }
+                if let Ok(new_address) =
+                    Pubkey::create_program_address(&seeds_with_bump, program_id)
+                {
+                    let bump_seed_ref = question_mark!(
+                        translate_type_mut::<u8>(memory_mapping, bump_seed_addr, &loader_id),
+                        result
+                    );
+                    let address = question_mark!(
+                        translate_slice_mut::<u8>(memory_mapping, address_addr, 32, &loader_id),
+                        result
+                    );
+                    *bump_seed_ref = bump_seed[0];
+                    address.copy_from_slice(new_address.as_ref());
+                    *result = Ok(0);
+                    return;
                 }
             }
             bump_seed[0] -= 1;
-            if self.check_seed_length {
-                question_mark!(self.compute_meter.consume(self.cost), result);
-            }
+            question_mark!(invoke_context.get_compute_meter().consume(cost), result);
         }
         *result = Ok(1);
     }
 }
 
 /// SHA256
-pub struct SyscallSha256<'a> {
-    sha256_base_cost: u64,
-    sha256_byte_cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
-    enforce_aligned_host_addrs: bool,
+pub struct SyscallSha256<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallSha256<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallSha256<'a, 'b> {
     fn call(
         &mut self,
         vals_addr: u64,
@@ -1095,27 +1035,48 @@ impl<'a> SyscallObject<BpfError> for SyscallSha256<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(self.sha256_base_cost), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let compute_budget = invoke_context.get_compute_budget();
+        if invoke_context
+            .feature_set
+            .is_active(&update_syscall_base_costs::id())
+            && compute_budget.sha256_max_slices < vals_len
+        {
+            ic_msg!(
+                invoke_context,
+                "Sha256 hashing {} sequences in one syscall is over the limit {}",
+                vals_len,
+                compute_budget.sha256_max_slices,
+            );
+            *result = Err(SyscallError::TooManySlices.into());
+            return;
+        }
+        question_mark!(
+            invoke_context
+                .get_compute_meter()
+                .consume(compute_budget.sha256_base_cost),
+            result
+        );
+
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         let hash_result = question_mark!(
-            translate_slice_mut::<u8>(
-                memory_mapping,
-                result_addr,
-                HASH_BYTES as u64,
-                self.loader_id,
-                self.enforce_aligned_host_addrs,
-            ),
+            translate_slice_mut::<u8>(memory_mapping, result_addr, HASH_BYTES as u64, &loader_id),
             result
         );
         let mut hasher = Hasher::default();
         if vals_len > 0 {
             let vals = question_mark!(
-                translate_slice::<&[u8]>(
-                    memory_mapping,
-                    vals_addr,
-                    vals_len,
-                    self.loader_id,
-                    self.enforce_aligned_host_addrs,
-                ),
+                translate_slice::<&[u8]>(memory_mapping, vals_addr, vals_len, &loader_id),
                 result
             );
             for val in vals.iter() {
@@ -1124,16 +1085,23 @@ impl<'a> SyscallObject<BpfError> for SyscallSha256<'a> {
                         memory_mapping,
                         val.as_ptr() as u64,
                         val.len() as u64,
-                        self.loader_id,
-                        self.enforce_aligned_host_addrs,
+                        &loader_id,
                     ),
                     result
                 );
-                question_mark!(
-                    self.compute_meter
-                        .consume(self.sha256_byte_cost * (val.len() as u64 / 2)),
-                    result
-                );
+                let cost = if invoke_context
+                    .feature_set
+                    .is_active(&update_syscall_base_costs::id())
+                {
+                    compute_budget.mem_op_base_cost.max(
+                        compute_budget
+                            .sha256_byte_cost
+                            .saturating_mul(val.len() as u64 / 2),
+                    )
+                } else {
+                    compute_budget.sha256_byte_cost * (val.len() as u64 / 2)
+                };
+                question_mark!(invoke_context.get_compute_meter().consume(cost), result);
                 hasher.hash(bytes);
             }
         }
@@ -1142,39 +1110,29 @@ impl<'a> SyscallObject<BpfError> for SyscallSha256<'a> {
     }
 }
 
-fn get_sysvar<T: std::fmt::Debug + Sysvar + SysvarId>(
-    id: &Pubkey,
+fn get_sysvar<T: std::fmt::Debug + Sysvar + SysvarId + Clone>(
+    sysvar: Result<Arc<T>, InstructionError>,
     var_addr: u64,
     loader_id: &Pubkey,
     memory_mapping: &MemoryMapping,
-    invoke_context: Rc<RefCell<&mut dyn InvokeContext>>,
+    invoke_context: &mut InvokeContext,
 ) -> Result<u64, EbpfError<BpfError>> {
-    let invoke_context = invoke_context
-        .try_borrow()
-        .map_err(|_| SyscallError::InvokeContextBorrowFailed)?;
+    invoke_context
+        .get_compute_meter()
+        .consume(invoke_context.get_compute_budget().sysvar_base_cost + size_of::<T>() as u64)?;
+    let var = translate_type_mut::<T>(memory_mapping, var_addr, loader_id)?;
 
-    invoke_context.get_compute_meter().consume(
-        invoke_context.get_bpf_compute_budget().sysvar_base_cost + size_of::<T>() as u64,
-    )?;
-    let var = translate_type_mut::<T>(
-        memory_mapping,
-        var_addr,
-        loader_id,
-        invoke_context.is_feature_active(&enforce_aligned_host_addrs::id()),
-    )?;
-
-    *var = process_instruction::get_sysvar::<T>(*invoke_context, id)
-        .map_err(SyscallError::InstructionError)?;
+    let sysvar: Arc<T> = sysvar.map_err(SyscallError::InstructionError)?;
+    *var = T::clone(sysvar.as_ref());
 
     Ok(SUCCESS)
 }
 
 /// Get a Clock sysvar
-struct SyscallGetClockSysvar<'a> {
-    invoke_context: Rc<RefCell<&'a mut dyn InvokeContext>>,
-    loader_id: &'a Pubkey,
+struct SyscallGetClockSysvar<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallGetClockSysvar<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallGetClockSysvar<'a, 'b> {
     fn call(
         &mut self,
         var_addr: u64,
@@ -1185,21 +1143,32 @@ impl<'a> SyscallObject<BpfError> for SyscallGetClockSysvar<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        *result = get_sysvar::<Clock>(
-            &sysvar::clock::id(),
+        let mut invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow_mut()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
+        *result = get_sysvar(
+            invoke_context.get_sysvar_cache().get_clock(),
             var_addr,
-            self.loader_id,
+            &loader_id,
             memory_mapping,
-            self.invoke_context.clone(),
+            &mut invoke_context,
         );
     }
 }
 /// Get a EpochSchedule sysvar
-struct SyscallGetEpochScheduleSysvar<'a> {
-    invoke_context: Rc<RefCell<&'a mut dyn InvokeContext>>,
-    loader_id: &'a Pubkey,
+struct SyscallGetEpochScheduleSysvar<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallGetEpochScheduleSysvar<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallGetEpochScheduleSysvar<'a, 'b> {
     fn call(
         &mut self,
         var_addr: u64,
@@ -1210,21 +1179,33 @@ impl<'a> SyscallObject<BpfError> for SyscallGetEpochScheduleSysvar<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        *result = get_sysvar::<EpochSchedule>(
-            &sysvar::epoch_schedule::id(),
+        let mut invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow_mut()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
+        *result = get_sysvar(
+            invoke_context.get_sysvar_cache().get_epoch_schedule(),
             var_addr,
-            self.loader_id,
+            &loader_id,
             memory_mapping,
-            self.invoke_context.clone(),
+            &mut invoke_context,
         );
     }
 }
 /// Get a Fees sysvar
-struct SyscallGetFeesSysvar<'a> {
-    invoke_context: Rc<RefCell<&'a mut dyn InvokeContext>>,
-    loader_id: &'a Pubkey,
+struct SyscallGetFeesSysvar<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallGetFeesSysvar<'a> {
+#[allow(deprecated)]
+impl<'a, 'b> SyscallObject<BpfError> for SyscallGetFeesSysvar<'a, 'b> {
     fn call(
         &mut self,
         var_addr: u64,
@@ -1235,21 +1216,32 @@ impl<'a> SyscallObject<BpfError> for SyscallGetFeesSysvar<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        *result = get_sysvar::<Fees>(
-            &sysvar::fees::id(),
+        let mut invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow_mut()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
+        *result = get_sysvar(
+            invoke_context.get_sysvar_cache().get_fees(),
             var_addr,
-            self.loader_id,
+            &loader_id,
             memory_mapping,
-            self.invoke_context.clone(),
+            &mut invoke_context,
         );
     }
 }
 /// Get a Rent sysvar
-struct SyscallGetRentSysvar<'a> {
-    invoke_context: Rc<RefCell<&'a mut dyn InvokeContext>>,
-    loader_id: &'a Pubkey,
+struct SyscallGetRentSysvar<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallGetRentSysvar<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallGetRentSysvar<'a, 'b> {
     fn call(
         &mut self,
         var_addr: u64,
@@ -1260,24 +1252,33 @@ impl<'a> SyscallObject<BpfError> for SyscallGetRentSysvar<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        *result = get_sysvar::<Rent>(
-            &sysvar::rent::id(),
+        let mut invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow_mut()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
+        *result = get_sysvar(
+            invoke_context.get_sysvar_cache().get_rent(),
             var_addr,
-            self.loader_id,
+            &loader_id,
             memory_mapping,
-            self.invoke_context.clone(),
+            &mut invoke_context,
         );
     }
 }
 
 // Keccak256
-pub struct SyscallKeccak256<'a> {
-    base_cost: u64,
-    byte_cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
+pub struct SyscallKeccak256<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallKeccak256<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallKeccak256<'a, 'b> {
     fn call(
         &mut self,
         vals_addr: u64,
@@ -1288,21 +1289,53 @@ impl<'a> SyscallObject<BpfError> for SyscallKeccak256<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(self.base_cost), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let compute_budget = invoke_context.get_compute_budget();
+        if invoke_context
+            .feature_set
+            .is_active(&update_syscall_base_costs::id())
+            && compute_budget.sha256_max_slices < vals_len
+        {
+            ic_msg!(
+                invoke_context,
+                "Keccak256 hashing {} sequences in one syscall is over the limit {}",
+                vals_len,
+                compute_budget.sha256_max_slices,
+            );
+            *result = Err(SyscallError::TooManySlices.into());
+            return;
+        }
+        question_mark!(
+            invoke_context
+                .get_compute_meter()
+                .consume(compute_budget.sha256_base_cost),
+            result
+        );
+
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         let hash_result = question_mark!(
             translate_slice_mut::<u8>(
                 memory_mapping,
                 result_addr,
                 keccak::HASH_BYTES as u64,
-                self.loader_id,
-                true,
+                &loader_id,
             ),
             result
         );
         let mut hasher = keccak::Hasher::default();
         if vals_len > 0 {
             let vals = question_mark!(
-                translate_slice::<&[u8]>(memory_mapping, vals_addr, vals_len, self.loader_id, true),
+                translate_slice::<&[u8]>(memory_mapping, vals_addr, vals_len, &loader_id),
                 result
             );
             for val in vals.iter() {
@@ -1311,16 +1344,23 @@ impl<'a> SyscallObject<BpfError> for SyscallKeccak256<'a> {
                         memory_mapping,
                         val.as_ptr() as u64,
                         val.len() as u64,
-                        self.loader_id,
-                        true,
+                        &loader_id,
                     ),
                     result
                 );
-                question_mark!(
-                    self.compute_meter
-                        .consume(self.byte_cost * (val.len() as u64 / 2)),
-                    result
-                );
+                let cost = if invoke_context
+                    .feature_set
+                    .is_active(&update_syscall_base_costs::id())
+                {
+                    compute_budget.mem_op_base_cost.max(
+                        compute_budget
+                            .sha256_byte_cost
+                            .saturating_mul(val.len() as u64 / 2),
+                    )
+                } else {
+                    compute_budget.sha256_byte_cost * (val.len() as u64 / 2)
+                };
+                question_mark!(invoke_context.get_compute_meter().consume(cost), result);
                 hasher.hash(bytes);
             }
         }
@@ -1329,19 +1369,36 @@ impl<'a> SyscallObject<BpfError> for SyscallKeccak256<'a> {
     }
 }
 
-fn check_overlapping(src_addr: u64, dst_addr: u64, n: u64) -> bool {
+/// This function is incorrect due to arithmetic overflow and only exists for
+/// backwards compatibility. Instead use program_stubs::is_nonoverlapping.
+fn check_overlapping_do_not_use(src_addr: u64, dst_addr: u64, n: u64) -> bool {
     (src_addr <= dst_addr && src_addr + n > dst_addr)
         || (dst_addr <= src_addr && dst_addr + n > src_addr)
 }
 
-/// memcpy
-pub struct SyscallMemcpy<'a> {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
-    mem_overlap_fix: bool,
+fn mem_op_consume<'a, 'b>(
+    invoke_context: &Ref<&'a mut InvokeContext<'b>>,
+    n: u64,
+) -> Result<(), EbpfError<BpfError>> {
+    let compute_budget = invoke_context.get_compute_budget();
+    let cost = if invoke_context
+        .feature_set
+        .is_active(&update_syscall_base_costs::id())
+    {
+        compute_budget
+            .mem_op_base_cost
+            .max(n / compute_budget.cpi_bytes_per_unit)
+    } else {
+        n / compute_budget.cpi_bytes_per_unit
+    };
+    invoke_context.get_compute_meter().consume(cost)
 }
-impl<'a> SyscallObject<BpfError> for SyscallMemcpy<'a> {
+
+/// memcpy
+pub struct SyscallMemcpy<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
+}
+impl<'a, 'b> SyscallObject<BpfError> for SyscallMemcpy<'a, 'b> {
     fn call(
         &mut self,
         dst_addr: u64,
@@ -1352,22 +1409,64 @@ impl<'a> SyscallObject<BpfError> for SyscallMemcpy<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        if if self.mem_overlap_fix {
-            check_overlapping(src_addr, dst_addr, n)
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let use_fixed_nonoverlapping_check = invoke_context
+            .feature_set
+            .is_active(&fixed_memcpy_nonoverlapping_check::id());
+
+        #[allow(clippy::collapsible_else_if)]
+        if use_fixed_nonoverlapping_check {
+            if !is_nonoverlapping(src_addr, dst_addr, n) {
+                *result = Err(SyscallError::CopyOverlapping.into());
+                return;
+            }
         } else {
-            dst_addr + n > src_addr && src_addr > dst_addr
-        } {
-            *result = Err(SyscallError::CopyOverlapping.into());
-            return;
+            if check_overlapping_do_not_use(src_addr, dst_addr, n) {
+                *result = Err(SyscallError::CopyOverlapping.into());
+                return;
+            }
         }
 
-        question_mark!(self.compute_meter.consume(n / self.cost), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        // When deprecating `update_syscall_base_costs` switch to `mem_op_consume`
+        let compute_budget = invoke_context.get_compute_budget();
+        let update_syscall_base_costs = invoke_context
+            .feature_set
+            .is_active(&update_syscall_base_costs::id());
+        if update_syscall_base_costs {
+            let cost = compute_budget
+                .mem_op_base_cost
+                .max(n / compute_budget.cpi_bytes_per_unit);
+            question_mark!(invoke_context.get_compute_meter().consume(cost), result);
+        }
+
+        if !update_syscall_base_costs {
+            let cost = n / compute_budget.cpi_bytes_per_unit;
+            question_mark!(invoke_context.get_compute_meter().consume(cost), result);
+        };
+
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         let dst = question_mark!(
-            translate_slice_mut::<u8>(memory_mapping, dst_addr, n, self.loader_id, true),
+            translate_slice_mut::<u8>(memory_mapping, dst_addr, n, &loader_id),
             result
         );
         let src = question_mark!(
-            translate_slice::<u8>(memory_mapping, src_addr, n, self.loader_id, true),
+            translate_slice::<u8>(memory_mapping, src_addr, n, &loader_id),
             result
         );
         unsafe {
@@ -1377,12 +1476,10 @@ impl<'a> SyscallObject<BpfError> for SyscallMemcpy<'a> {
     }
 }
 /// memmove
-pub struct SyscallMemmove<'a> {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
+pub struct SyscallMemmove<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallMemmove<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallMemmove<'a, 'b> {
     fn call(
         &mut self,
         dst_addr: u64,
@@ -1393,13 +1490,26 @@ impl<'a> SyscallObject<BpfError> for SyscallMemmove<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(n / self.cost), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        question_mark!(mem_op_consume(&invoke_context, n), result);
+
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         let dst = question_mark!(
-            translate_slice_mut::<u8>(memory_mapping, dst_addr, n, self.loader_id, true),
+            translate_slice_mut::<u8>(memory_mapping, dst_addr, n, &loader_id),
             result
         );
         let src = question_mark!(
-            translate_slice::<u8>(memory_mapping, src_addr, n, self.loader_id, true),
+            translate_slice::<u8>(memory_mapping, src_addr, n, &loader_id),
             result
         );
         unsafe {
@@ -1409,12 +1519,10 @@ impl<'a> SyscallObject<BpfError> for SyscallMemmove<'a> {
     }
 }
 /// memcmp
-pub struct SyscallMemcmp<'a> {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
+pub struct SyscallMemcmp<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallMemcmp<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallMemcmp<'a, 'b> {
     fn call(
         &mut self,
         s1_addr: u64,
@@ -1425,17 +1533,30 @@ impl<'a> SyscallObject<BpfError> for SyscallMemcmp<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(n / self.cost), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        question_mark!(mem_op_consume(&invoke_context, n), result);
+
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         let s1 = question_mark!(
-            translate_slice::<u8>(memory_mapping, s1_addr, n, self.loader_id, true),
+            translate_slice::<u8>(memory_mapping, s1_addr, n, &loader_id),
             result
         );
         let s2 = question_mark!(
-            translate_slice::<u8>(memory_mapping, s2_addr, n, self.loader_id, true),
+            translate_slice::<u8>(memory_mapping, s2_addr, n, &loader_id),
             result
         );
         let cmp_result = question_mark!(
-            translate_type_mut::<i32>(memory_mapping, cmp_result_addr, self.loader_id, true),
+            translate_type_mut::<i32>(memory_mapping, cmp_result_addr, &loader_id),
             result
         );
         let mut i = 0;
@@ -1454,12 +1575,10 @@ impl<'a> SyscallObject<BpfError> for SyscallMemcmp<'a> {
     }
 }
 /// memset
-pub struct SyscallMemset<'a> {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
+pub struct SyscallMemset<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallMemset<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallMemset<'a, 'b> {
     fn call(
         &mut self,
         s_addr: u64,
@@ -1470,9 +1589,22 @@ impl<'a> SyscallObject<BpfError> for SyscallMemset<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(n / self.cost), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        question_mark!(mem_op_consume(&invoke_context, n), result);
+
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         let s = question_mark!(
-            translate_slice_mut::<u8>(memory_mapping, s_addr, n, self.loader_id, true),
+            translate_slice_mut::<u8>(memory_mapping, s_addr, n, &loader_id),
             result
         );
         for val in s.iter_mut().take(n as usize) {
@@ -1483,14 +1615,11 @@ impl<'a> SyscallObject<BpfError> for SyscallMemset<'a> {
 }
 
 /// secp256k1_recover
-pub struct SyscallSecp256k1Recover<'a> {
-    cost: u64,
-    compute_meter: Rc<RefCell<dyn ComputeMeter>>,
-    loader_id: &'a Pubkey,
-    libsecp256k1_0_5_upgrade_enabled: bool,
+pub struct SyscallSecp256k1Recover<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
 
-impl<'a> SyscallObject<BpfError> for SyscallSecp256k1Recover<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallSecp256k1Recover<'a, 'b> {
     fn call(
         &mut self,
         hash_addr: u64,
@@ -1501,15 +1630,27 @@ impl<'a> SyscallObject<BpfError> for SyscallSecp256k1Recover<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<BpfError>>,
     ) {
-        question_mark!(self.compute_meter.consume(self.cost), result);
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let cost = invoke_context.get_compute_budget().secp256k1_recover_cost;
+        question_mark!(invoke_context.get_compute_meter().consume(cost), result);
 
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
         let hash = question_mark!(
             translate_slice::<u8>(
                 memory_mapping,
                 hash_addr,
                 keccak::HASH_BYTES as u64,
-                self.loader_id,
-                true,
+                &loader_id,
             ),
             result
         );
@@ -1518,8 +1659,7 @@ impl<'a> SyscallObject<BpfError> for SyscallSecp256k1Recover<'a> {
                 memory_mapping,
                 signature_addr,
                 SECP256K1_SIGNATURE_LENGTH as u64,
-                self.loader_id,
-                true,
+                &loader_id,
             ),
             result
         );
@@ -1528,8 +1668,7 @@ impl<'a> SyscallObject<BpfError> for SyscallSecp256k1Recover<'a> {
                 memory_mapping,
                 result_addr,
                 SECP256K1_PUBLIC_KEY_LENGTH as u64,
-                self.loader_id,
-                true,
+                &loader_id,
             ),
             result
         );
@@ -1548,7 +1687,10 @@ impl<'a> SyscallObject<BpfError> for SyscallSecp256k1Recover<'a> {
                 return;
             }
         };
-        let sig_parse_result = if self.libsecp256k1_0_5_upgrade_enabled {
+        let sig_parse_result = if invoke_context
+            .feature_set
+            .is_active(&libsecp256k1_0_5_upgrade_enabled::id())
+        {
             libsecp256k1::Signature::parse_standard_slice(signature)
         } else {
             libsecp256k1::Signature::parse_overflowing_slice(signature)
@@ -1575,102 +1717,183 @@ impl<'a> SyscallObject<BpfError> for SyscallSecp256k1Recover<'a> {
     }
 }
 
+// Blake3
+pub struct SyscallBlake3<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
+}
+impl<'a, 'b> SyscallObject<BpfError> for SyscallBlake3<'a, 'b> {
+    fn call(
+        &mut self,
+        vals_addr: u64,
+        vals_len: u64,
+        result_addr: u64,
+        _arg4: u64,
+        _arg5: u64,
+        memory_mapping: &MemoryMapping,
+        result: &mut Result<u64, EbpfError<BpfError>>,
+    ) {
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let compute_budget = invoke_context.get_compute_budget();
+        if invoke_context
+            .feature_set
+            .is_active(&update_syscall_base_costs::id())
+            && compute_budget.sha256_max_slices < vals_len
+        {
+            ic_msg!(
+                invoke_context,
+                "Blake3 hashing {} sequences in one syscall is over the limit {}",
+                vals_len,
+                compute_budget.sha256_max_slices,
+            );
+            *result = Err(SyscallError::TooManySlices.into());
+            return;
+        }
+        question_mark!(
+            invoke_context
+                .get_compute_meter()
+                .consume(compute_budget.sha256_base_cost),
+            result
+        );
+
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
+        let hash_result = question_mark!(
+            translate_slice_mut::<u8>(
+                memory_mapping,
+                result_addr,
+                blake3::HASH_BYTES as u64,
+                &loader_id,
+            ),
+            result
+        );
+        let mut hasher = blake3::Hasher::default();
+        if vals_len > 0 {
+            let vals = question_mark!(
+                translate_slice::<&[u8]>(memory_mapping, vals_addr, vals_len, &loader_id),
+                result
+            );
+            for val in vals.iter() {
+                let bytes = question_mark!(
+                    translate_slice::<u8>(
+                        memory_mapping,
+                        val.as_ptr() as u64,
+                        val.len() as u64,
+                        &loader_id,
+                    ),
+                    result
+                );
+                let cost = if invoke_context
+                    .feature_set
+                    .is_active(&update_syscall_base_costs::id())
+                {
+                    compute_budget.mem_op_base_cost.max(
+                        compute_budget
+                            .sha256_byte_cost
+                            .saturating_mul(val.len() as u64 / 2),
+                    )
+                } else {
+                    compute_budget.sha256_byte_cost * (val.len() as u64 / 2)
+                };
+                question_mark!(invoke_context.get_compute_meter().consume(cost), result);
+                hasher.hash(bytes);
+            }
+        }
+        hash_result.copy_from_slice(&hasher.result().to_bytes());
+        *result = Ok(0);
+    }
+}
+
 // Cross-program invocation syscalls
 
-struct AccountReferences<'a> {
+struct CallerAccount<'a> {
     lamports: &'a mut u64,
     owner: &'a mut Pubkey,
+    original_data_len: usize,
     data: &'a mut [u8],
     vm_data_addr: u64,
     ref_to_len_in_vm: &'a mut u64,
     serialized_len_ptr: &'a mut u64,
+    executable: bool,
+    rent_epoch: u64,
 }
-type TranslatedAccount<'a> = (
-    Rc<RefCell<AccountSharedData>>,
-    Option<AccountReferences<'a>>,
-);
 type TranslatedAccounts<'a> = (
-    Vec<(Pubkey, Rc<RefCell<AccountSharedData>>)>,
-    Vec<Option<AccountReferences<'a>>>,
+    Vec<usize>,
+    Vec<(Rc<RefCell<AccountSharedData>>, Option<CallerAccount<'a>>)>,
 );
 
 /// Implemented by language specific data structure translators
-trait SyscallInvokeSigned<'a> {
-    fn get_context_mut(&self) -> Result<RefMut<&'a mut dyn InvokeContext>, EbpfError<BpfError>>;
-    fn get_context(&self) -> Result<Ref<&'a mut dyn InvokeContext>, EbpfError<BpfError>>;
+trait SyscallInvokeSigned<'a, 'b> {
+    fn get_context_mut(&self) -> Result<RefMut<&'a mut InvokeContext<'b>>, EbpfError<BpfError>>;
     fn translate_instruction(
         &self,
+        loader_id: &Pubkey,
         addr: u64,
         memory_mapping: &MemoryMapping,
-        enforce_aligned_host_addrs: bool,
+        invoke_context: &mut InvokeContext,
     ) -> Result<Instruction, EbpfError<BpfError>>;
-    fn translate_accounts(
-        &self,
-        account_keys: &[Pubkey],
-        program_account_index: usize,
+    fn translate_accounts<'c>(
+        &'c self,
+        loader_id: &Pubkey,
+        message: &Message,
         account_infos_addr: u64,
         account_infos_len: u64,
         memory_mapping: &MemoryMapping,
-    ) -> Result<TranslatedAccounts<'a>, EbpfError<BpfError>>;
+        invoke_context: &mut InvokeContext,
+    ) -> Result<TranslatedAccounts<'c>, EbpfError<BpfError>>;
     fn translate_signers(
         &self,
+        loader_id: &Pubkey,
         program_id: &Pubkey,
         signers_seeds_addr: u64,
         signers_seeds_len: u64,
         memory_mapping: &MemoryMapping,
-        enforce_aligned_host_addrs: bool,
     ) -> Result<Vec<Pubkey>, EbpfError<BpfError>>;
 }
 
 /// Cross-program invocation called from Rust
-pub struct SyscallInvokeSignedRust<'a> {
-    invoke_context: Rc<RefCell<&'a mut dyn InvokeContext>>,
-    loader_id: &'a Pubkey,
+pub struct SyscallInvokeSignedRust<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
+    orig_data_lens: &'a [usize],
 }
-impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
-    fn get_context_mut(&self) -> Result<RefMut<&'a mut dyn InvokeContext>, EbpfError<BpfError>> {
+impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedRust<'a, 'b> {
+    fn get_context_mut(&self) -> Result<RefMut<&'a mut InvokeContext<'b>>, EbpfError<BpfError>> {
         self.invoke_context
             .try_borrow_mut()
             .map_err(|_| SyscallError::InvokeContextBorrowFailed.into())
     }
-    fn get_context(&self) -> Result<Ref<&'a mut dyn InvokeContext>, EbpfError<BpfError>> {
-        self.invoke_context
-            .try_borrow()
-            .map_err(|_| SyscallError::InvokeContextBorrowFailed.into())
-    }
+
     fn translate_instruction(
         &self,
+        loader_id: &Pubkey,
         addr: u64,
         memory_mapping: &MemoryMapping,
-        enforce_aligned_host_addrs: bool,
+        invoke_context: &mut InvokeContext,
     ) -> Result<Instruction, EbpfError<BpfError>> {
-        let ix = translate_type::<Instruction>(
-            memory_mapping,
-            addr,
-            self.loader_id,
-            enforce_aligned_host_addrs,
-        )?;
+        let ix = translate_type::<Instruction>(memory_mapping, addr, loader_id)?;
 
-        check_instruction_size(
-            ix.accounts.len(),
-            ix.data.len(),
-            &self.invoke_context.borrow(),
-        )?;
+        check_instruction_size(ix.accounts.len(), ix.data.len(), invoke_context)?;
 
         let accounts = translate_slice::<AccountMeta>(
             memory_mapping,
             ix.accounts.as_ptr() as u64,
             ix.accounts.len() as u64,
-            self.loader_id,
-            enforce_aligned_host_addrs,
+            loader_id,
         )?
         .to_vec();
         let data = translate_slice::<u8>(
             memory_mapping,
             ix.data.as_ptr() as u64,
             ix.data.len() as u64,
-            self.loader_id,
-            enforce_aligned_host_addrs,
+            loader_id,
         )?
         .to_vec();
         Ok(Instruction {
@@ -1680,40 +1903,34 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
         })
     }
 
-    fn translate_accounts(
-        &self,
-        account_keys: &[Pubkey],
-        program_account_index: usize,
+    fn translate_accounts<'c>(
+        &'c self,
+        loader_id: &Pubkey,
+        message: &Message,
         account_infos_addr: u64,
         account_infos_len: u64,
         memory_mapping: &MemoryMapping,
-    ) -> Result<TranslatedAccounts<'a>, EbpfError<BpfError>> {
-        let invoke_context = self.invoke_context.borrow();
-        let enforce_aligned_host_addrs =
-            invoke_context.is_feature_active(&enforce_aligned_host_addrs::id());
-
+        invoke_context: &mut InvokeContext,
+    ) -> Result<TranslatedAccounts<'c>, EbpfError<BpfError>> {
         let account_infos = translate_slice::<AccountInfo>(
             memory_mapping,
             account_infos_addr,
             account_infos_len,
-            self.loader_id,
-            enforce_aligned_host_addrs,
+            loader_id,
         )?;
-        check_account_infos(account_infos.len(), &invoke_context)?;
+        check_account_infos(account_infos.len(), invoke_context)?;
         let account_info_keys = account_infos
             .iter()
             .map(|account_info| {
                 translate_type::<Pubkey>(
                     memory_mapping,
                     account_info.key as *const _ as u64,
-                    self.loader_id,
-                    enforce_aligned_host_addrs,
+                    loader_id,
                 )
             })
             .collect::<Result<Vec<_>, EbpfError<BpfError>>>()?;
 
-        let translate = |account_info: &AccountInfo,
-                         invoke_context: &Ref<&mut dyn InvokeContext>| {
+        let translate = |account_info: &AccountInfo, invoke_context: &InvokeContext| {
             // Translate the account from user space
 
             let lamports = {
@@ -1721,21 +1938,14 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
                 let ptr = translate_type::<u64>(
                     memory_mapping,
                     account_info.lamports.as_ptr() as u64,
-                    self.loader_id,
-                    enforce_aligned_host_addrs,
+                    loader_id,
                 )?;
-                translate_type_mut::<u64>(
-                    memory_mapping,
-                    *ptr,
-                    self.loader_id,
-                    enforce_aligned_host_addrs,
-                )?
+                translate_type_mut::<u64>(memory_mapping, *ptr, loader_id)?
             };
             let owner = translate_type_mut::<Pubkey>(
                 memory_mapping,
                 account_info.owner as *const _ as u64,
-                self.loader_id,
-                enforce_aligned_host_addrs,
+                loader_id,
             )?;
 
             let (data, vm_data_addr, ref_to_len_in_vm, serialized_len_ptr) = {
@@ -1743,16 +1953,12 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
                 let data = *translate_type::<&[u8]>(
                     memory_mapping,
                     account_info.data.as_ptr() as *const _ as u64,
-                    self.loader_id,
-                    enforce_aligned_host_addrs,
+                    loader_id,
                 )?;
 
-                if invoke_context.is_feature_active(&cpi_data_cost::id()) {
-                    invoke_context.get_compute_meter().consume(
-                        data.len() as u64
-                            / invoke_context.get_bpf_compute_budget().cpi_bytes_per_unit,
-                    )?;
-                }
+                invoke_context.get_compute_meter().consume(
+                    data.len() as u64 / invoke_context.get_compute_budget().cpi_bytes_per_unit,
+                )?;
 
                 let translated = translate(
                     memory_mapping,
@@ -1765,8 +1971,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
                 let serialized_len_ptr = translate_type_mut::<u64>(
                     memory_mapping,
                     ref_of_len_in_input_buffer as *const _ as u64,
-                    self.loader_id,
-                    enforce_aligned_host_addrs,
+                    loader_id,
                 )?;
                 let vm_data_addr = data.as_ptr() as u64;
                 (
@@ -1774,8 +1979,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
                         memory_mapping,
                         vm_data_addr,
                         data.len() as u64,
-                        self.loader_id,
-                        enforce_aligned_host_addrs,
+                        loader_id,
                     )?,
                     vm_data_addr,
                     ref_to_len_in_vm,
@@ -1783,42 +1987,36 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
                 )
             };
 
-            Ok((
-                Rc::new(RefCell::new(AccountSharedData::from(Account {
-                    lamports: *lamports,
-                    data: data.to_vec(),
-                    executable: account_info.executable,
-                    owner: *owner,
-                    rent_epoch: account_info.rent_epoch,
-                }))),
-                Some(AccountReferences {
-                    lamports,
-                    owner,
-                    data,
-                    vm_data_addr,
-                    ref_to_len_in_vm,
-                    serialized_len_ptr,
-                }),
-            ))
+            Ok(CallerAccount {
+                lamports,
+                owner,
+                original_data_len: 0, // set later
+                data,
+                vm_data_addr,
+                ref_to_len_in_vm,
+                serialized_len_ptr,
+                executable: account_info.executable,
+                rent_epoch: account_info.rent_epoch,
+            })
         };
 
         get_translated_accounts(
-            account_keys,
-            program_account_index,
+            message,
             &account_info_keys,
             account_infos,
-            &invoke_context,
+            invoke_context,
+            self.orig_data_lens,
             translate,
         )
     }
 
     fn translate_signers(
         &self,
+        loader_id: &Pubkey,
         program_id: &Pubkey,
         signers_seeds_addr: u64,
         signers_seeds_len: u64,
         memory_mapping: &MemoryMapping,
-        enforce_aligned_host_addrs: bool,
     ) -> Result<Vec<Pubkey>, EbpfError<BpfError>> {
         let mut signers = Vec::new();
         if signers_seeds_len > 0 {
@@ -1826,8 +2024,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
                 memory_mapping,
                 signers_seeds_addr,
                 signers_seeds_len,
-                self.loader_id,
-                enforce_aligned_host_addrs,
+                loader_id,
             )?;
             if signers_seeds.len() > MAX_SIGNERS {
                 return Err(SyscallError::TooManySigners.into());
@@ -1837,8 +2034,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
                     memory_mapping,
                     signer_seeds.as_ptr() as *const _ as u64,
                     signer_seeds.len() as u64,
-                    self.loader_id,
-                    enforce_aligned_host_addrs,
+                    loader_id,
                 )?;
                 if untranslated_seeds.len() > MAX_SEEDS {
                     return Err(SyscallError::InstructionError(
@@ -1853,8 +2049,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
                             memory_mapping,
                             untranslated_seed.as_ptr() as *const _ as u64,
                             untranslated_seed.len() as u64,
-                            self.loader_id,
-                            enforce_aligned_host_addrs,
+                            loader_id,
                         )
                     })
                     .collect::<Result<Vec<_>, EbpfError<BpfError>>>()?;
@@ -1868,7 +2063,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
         }
     }
 }
-impl<'a> SyscallObject<BpfError> for SyscallInvokeSignedRust<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallInvokeSignedRust<'a, 'b> {
     fn call(
         &mut self,
         instruction_addr: u64,
@@ -1918,7 +2113,9 @@ struct SafeAccountInfo {
     data_addr: u64,
     owner_addr: u64,
     rent_epoch: u64,
+    #[allow(dead_code)]
     is_signer: bool,
+    #[allow(dead_code)]
     is_writable: bool,
     executable: bool,
 }
@@ -1933,75 +2130,53 @@ struct SafeSignerSeedC {
 /// Rust representation of C's SafeSignerSeeds
 #[derive(Debug)]
 struct SafeSignerSeedsC {
+    #[allow(dead_code)]
     addr: u64,
+    #[allow(dead_code)]
     len: u64,
 }
 
 /// Cross-program invocation called from C
-pub struct SyscallInvokeSignedC<'a> {
-    invoke_context: Rc<RefCell<&'a mut dyn InvokeContext>>,
-    loader_id: &'a Pubkey,
+pub struct SyscallInvokeSignedC<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
+    orig_data_lens: &'a [usize],
 }
-impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedC<'a> {
-    fn get_context_mut(&self) -> Result<RefMut<&'a mut dyn InvokeContext>, EbpfError<BpfError>> {
+impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedC<'a, 'b> {
+    fn get_context_mut(&self) -> Result<RefMut<&'a mut InvokeContext<'b>>, EbpfError<BpfError>> {
         self.invoke_context
             .try_borrow_mut()
-            .map_err(|_| SyscallError::InvokeContextBorrowFailed.into())
-    }
-    fn get_context(&self) -> Result<Ref<&'a mut dyn InvokeContext>, EbpfError<BpfError>> {
-        self.invoke_context
-            .try_borrow()
             .map_err(|_| SyscallError::InvokeContextBorrowFailed.into())
     }
 
     fn translate_instruction(
         &self,
+        loader_id: &Pubkey,
         addr: u64,
         memory_mapping: &MemoryMapping,
-        enforce_aligned_host_addrs: bool,
+        invoke_context: &mut InvokeContext,
     ) -> Result<Instruction, EbpfError<BpfError>> {
-        let ix_c = translate_type::<SafeInstruction>(
-            memory_mapping,
-            addr,
-            self.loader_id,
-            enforce_aligned_host_addrs,
-        )?;
+        let ix_c = translate_type::<SafeInstruction>(memory_mapping, addr, loader_id)?;
 
-        check_instruction_size(
-            ix_c.accounts_len,
-            ix_c.data_len,
-            &self.invoke_context.borrow(),
-        )?;
-        let program_id = translate_type::<Pubkey>(
-            memory_mapping,
-            ix_c.program_id_addr,
-            self.loader_id,
-            enforce_aligned_host_addrs,
-        )?;
+        check_instruction_size(ix_c.accounts_len, ix_c.data_len, invoke_context)?;
+        let program_id = translate_type::<Pubkey>(memory_mapping, ix_c.program_id_addr, loader_id)?;
         let meta_cs = translate_slice::<SafeAccountMeta>(
             memory_mapping,
             ix_c.accounts_addr,
             ix_c.accounts_len as u64,
-            self.loader_id,
-            enforce_aligned_host_addrs,
+            loader_id,
         )?;
         let data = translate_slice::<u8>(
             memory_mapping,
             ix_c.data_addr,
             ix_c.data_len as u64,
-            self.loader_id,
-            enforce_aligned_host_addrs,
+            loader_id,
         )?
         .to_vec();
         let accounts = meta_cs
             .iter()
             .map(|meta_c| {
-                let pubkey = translate_type::<Pubkey>(
-                    memory_mapping,
-                    meta_c.pubkey_addr,
-                    self.loader_id,
-                    enforce_aligned_host_addrs,
-                )?;
+                let pubkey =
+                    translate_type::<Pubkey>(memory_mapping, meta_c.pubkey_addr, loader_id)?;
                 Ok(AccountMeta {
                     pubkey: *pubkey,
                     is_signer: meta_c.is_signer,
@@ -2017,69 +2192,47 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedC<'a> {
         })
     }
 
-    fn translate_accounts(
-        &self,
-        account_keys: &[Pubkey],
-        program_account_index: usize,
+    fn translate_accounts<'c>(
+        &'c self,
+        loader_id: &Pubkey,
+        message: &Message,
         account_infos_addr: u64,
         account_infos_len: u64,
         memory_mapping: &MemoryMapping,
-    ) -> Result<TranslatedAccounts<'a>, EbpfError<BpfError>> {
-        let invoke_context = self.invoke_context.borrow();
-        let enforce_aligned_host_addrs =
-            invoke_context.is_feature_active(&enforce_aligned_host_addrs::id());
-
+        invoke_context: &mut InvokeContext,
+    ) -> Result<TranslatedAccounts<'c>, EbpfError<BpfError>> {
         let account_infos = translate_slice::<SafeAccountInfo>(
             memory_mapping,
             account_infos_addr,
             account_infos_len,
-            self.loader_id,
-            enforce_aligned_host_addrs,
+            loader_id,
         )?;
-        check_account_infos(account_infos.len(), &invoke_context)?;
+        check_account_infos(account_infos.len(), invoke_context)?;
         let account_info_keys = account_infos
             .iter()
             .map(|account_info| {
-                translate_type::<Pubkey>(
-                    memory_mapping,
-                    account_info.key_addr,
-                    self.loader_id,
-                    enforce_aligned_host_addrs,
-                )
+                translate_type::<Pubkey>(memory_mapping, account_info.key_addr, loader_id)
             })
             .collect::<Result<Vec<_>, EbpfError<BpfError>>>()?;
 
-        let translate = |account_info: &SafeAccountInfo,
-                         invoke_context: &Ref<&mut dyn InvokeContext>| {
+        let translate = |account_info: &SafeAccountInfo, invoke_context: &InvokeContext| {
             // Translate the account from user space
 
-            let lamports = translate_type_mut::<u64>(
-                memory_mapping,
-                account_info.lamports_addr,
-                self.loader_id,
-                enforce_aligned_host_addrs,
-            )?;
-            let owner = translate_type_mut::<Pubkey>(
-                memory_mapping,
-                account_info.owner_addr,
-                self.loader_id,
-                enforce_aligned_host_addrs,
-            )?;
+            let lamports =
+                translate_type_mut::<u64>(memory_mapping, account_info.lamports_addr, loader_id)?;
+            let owner =
+                translate_type_mut::<Pubkey>(memory_mapping, account_info.owner_addr, loader_id)?;
             let vm_data_addr = account_info.data_addr;
 
-            if invoke_context.is_feature_active(&cpi_data_cost::id()) {
-                invoke_context.get_compute_meter().consume(
-                    account_info.data_len
-                        / invoke_context.get_bpf_compute_budget().cpi_bytes_per_unit,
-                )?;
-            }
+            invoke_context.get_compute_meter().consume(
+                account_info.data_len / invoke_context.get_compute_budget().cpi_bytes_per_unit,
+            )?;
 
             let data = translate_slice_mut::<u8>(
                 memory_mapping,
                 vm_data_addr,
                 account_info.data_len,
-                self.loader_id,
-                enforce_aligned_host_addrs,
+                loader_id,
             )?;
 
             let first_info_addr = &account_infos[0] as *const _ as u64;
@@ -2098,54 +2251,46 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedC<'a> {
             let serialized_len_ptr = translate_type_mut::<u64>(
                 memory_mapping,
                 ref_of_len_in_input_buffer as *const _ as u64,
-                self.loader_id,
-                enforce_aligned_host_addrs,
+                loader_id,
             )?;
 
-            Ok((
-                Rc::new(RefCell::new(AccountSharedData::from(Account {
-                    lamports: *lamports,
-                    data: data.to_vec(),
-                    executable: account_info.executable,
-                    owner: *owner,
-                    rent_epoch: account_info.rent_epoch,
-                }))),
-                Some(AccountReferences {
-                    lamports,
-                    owner,
-                    data,
-                    vm_data_addr,
-                    ref_to_len_in_vm,
-                    serialized_len_ptr,
-                }),
-            ))
+            Ok(CallerAccount {
+                lamports,
+                owner,
+                original_data_len: 0, // set later
+                data,
+                vm_data_addr,
+                ref_to_len_in_vm,
+                serialized_len_ptr,
+                executable: account_info.executable,
+                rent_epoch: account_info.rent_epoch,
+            })
         };
 
         get_translated_accounts(
-            account_keys,
-            program_account_index,
+            message,
             &account_info_keys,
             account_infos,
-            &invoke_context,
+            invoke_context,
+            self.orig_data_lens,
             translate,
         )
     }
 
     fn translate_signers(
         &self,
+        loader_id: &Pubkey,
         program_id: &Pubkey,
         signers_seeds_addr: u64,
         signers_seeds_len: u64,
         memory_mapping: &MemoryMapping,
-        enforce_aligned_host_addrs: bool,
     ) -> Result<Vec<Pubkey>, EbpfError<BpfError>> {
         if signers_seeds_len > 0 {
             let signers_seeds = translate_slice::<SafeSignerSeedC>(
                 memory_mapping,
                 signers_seeds_addr,
                 signers_seeds_len,
-                self.loader_id,
-                enforce_aligned_host_addrs,
+                loader_id,
             )?;
             if signers_seeds.len() > MAX_SIGNERS {
                 return Err(SyscallError::TooManySigners.into());
@@ -2157,8 +2302,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedC<'a> {
                         memory_mapping,
                         signer_seeds.addr,
                         signer_seeds.len,
-                        self.loader_id,
-                        enforce_aligned_host_addrs,
+                        loader_id,
                     )?;
                     if seeds.len() > MAX_SEEDS {
                         return Err(SyscallError::InstructionError(
@@ -2169,13 +2313,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedC<'a> {
                     let seeds_bytes = seeds
                         .iter()
                         .map(|seed| {
-                            translate_slice::<u8>(
-                                memory_mapping,
-                                seed.addr,
-                                seed.len,
-                                self.loader_id,
-                                enforce_aligned_host_addrs,
-                            )
+                            translate_slice::<u8>(memory_mapping, seed.addr, seed.len, loader_id)
                         })
                         .collect::<Result<Vec<_>, EbpfError<BpfError>>>()?;
                     Pubkey::create_program_address(&seeds_bytes, program_id)
@@ -2187,7 +2325,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedC<'a> {
         }
     }
 }
-impl<'a> SyscallObject<BpfError> for SyscallInvokeSignedC<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallInvokeSignedC<'a, 'b> {
     fn call(
         &mut self,
         instruction_addr: u64,
@@ -2211,71 +2349,101 @@ impl<'a> SyscallObject<BpfError> for SyscallInvokeSignedC<'a> {
 }
 
 fn get_translated_accounts<'a, T, F>(
-    account_keys: &[Pubkey],
-    program_account_index: usize,
+    message: &Message,
     account_info_keys: &[&Pubkey],
     account_infos: &[T],
-    invoke_context: &Ref<&mut dyn InvokeContext>,
+    invoke_context: &mut InvokeContext,
+    orig_data_lens: &[usize],
     do_translate: F,
 ) -> Result<TranslatedAccounts<'a>, EbpfError<BpfError>>
 where
-    F: Fn(&T, &Ref<&mut dyn InvokeContext>) -> Result<TranslatedAccount<'a>, EbpfError<BpfError>>,
+    F: Fn(&T, &InvokeContext) -> Result<CallerAccount<'a>, EbpfError<BpfError>>,
 {
-    let mut accounts = Vec::with_capacity(account_keys.len());
-    let mut refs = Vec::with_capacity(account_keys.len());
-    for (i, ref account_key) in account_keys.iter().enumerate() {
-        let account = invoke_context.get_account(account_key).ok_or_else(|| {
-            ic_msg!(
-                invoke_context,
-                "Instruction references an unknown account {}",
-                account_key
-            );
-            SyscallError::InstructionError(InstructionError::MissingAccount)
-        })?;
-
-        if i == program_account_index || account.borrow().executable() {
-            // Use the known account
-            accounts.push((**account_key, account));
-            refs.push(None);
-        } else if let Some(account_info) =
-            account_info_keys
-                .iter()
-                .zip(account_infos)
-                .find_map(|(key, account_info)| {
-                    if key == account_key {
-                        Some(account_info)
+    let keyed_accounts = invoke_context
+        .get_instruction_keyed_accounts()
+        .map_err(SyscallError::InstructionError)?;
+    let mut account_indices = Vec::with_capacity(message.account_keys.len());
+    let mut accounts = Vec::with_capacity(message.account_keys.len());
+    for (i, account_key) in message.account_keys.iter().enumerate() {
+        if let Some((account_index, account)) = invoke_context.get_account(account_key) {
+            if i == message.instructions[0].program_id_index as usize
+                || account.borrow().executable()
+            {
+                // Use the known account
+                account_indices.push(account_index);
+                accounts.push((account, None));
+                continue;
+            } else if let Some(caller_account_index) =
+                account_info_keys.iter().position(|key| *key == account_key)
+            {
+                let mut caller_account =
+                    do_translate(&account_infos[caller_account_index], invoke_context)?;
+                {
+                    let mut account = account.borrow_mut();
+                    account.copy_into_owner_from_slice(caller_account.owner.as_ref());
+                    account.set_data_from_slice(caller_account.data);
+                    account.set_lamports(*caller_account.lamports);
+                    account.set_executable(caller_account.executable);
+                    account.set_rent_epoch(caller_account.rent_epoch);
+                }
+                let caller_account = if message.is_writable(i) {
+                    if let Some(orig_data_len_index) = keyed_accounts
+                        .iter()
+                        .position(|keyed_account| keyed_account.unsigned_key() == account_key)
+                        .map(|index| {
+                            // index starts at first instruction account
+                            index - keyed_accounts.len().saturating_sub(orig_data_lens.len())
+                        })
+                        .and_then(|index| {
+                            if index >= orig_data_lens.len() {
+                                None
+                            } else {
+                                Some(index)
+                            }
+                        })
+                    {
+                        caller_account.original_data_len = orig_data_lens[orig_data_len_index];
                     } else {
-                        None
+                        ic_msg!(
+                            invoke_context,
+                            "Internal error: index mismatch for account {}",
+                            account_key
+                        );
+                        return Err(SyscallError::InstructionError(
+                            InstructionError::MissingAccount,
+                        )
+                        .into());
                     }
-                })
-        {
-            let (account, account_ref) = do_translate(account_info, invoke_context)?;
-            accounts.push((**account_key, account));
-            refs.push(account_ref);
-        } else {
-            ic_msg!(
-                invoke_context,
-                "Instruction references an unknown account {}",
-                account_key
-            );
-            return Err(SyscallError::InstructionError(InstructionError::MissingAccount).into());
+
+                    Some(caller_account)
+                } else {
+                    None
+                };
+                account_indices.push(account_index);
+                accounts.push((account, caller_account));
+                continue;
+            }
         }
+        ic_msg!(
+            invoke_context,
+            "Instruction references an unknown account {}",
+            account_key
+        );
+        return Err(SyscallError::InstructionError(InstructionError::MissingAccount).into());
     }
 
-    Ok((accounts, refs))
+    Ok((account_indices, accounts))
 }
 
 fn check_instruction_size(
     num_accounts: usize,
     data_len: usize,
-    invoke_context: &Ref<&mut dyn InvokeContext>,
+    invoke_context: &mut InvokeContext,
 ) -> Result<(), EbpfError<BpfError>> {
     let size = num_accounts
         .saturating_mul(size_of::<AccountMeta>())
         .saturating_add(data_len);
-    let max_size = invoke_context
-        .get_bpf_compute_budget()
-        .max_cpi_instruction_size;
+    let max_size = invoke_context.get_compute_budget().max_cpi_instruction_size;
     if size > max_size {
         return Err(SyscallError::InstructionTooLarge(size, max_size).into());
     }
@@ -2284,13 +2452,9 @@ fn check_instruction_size(
 
 fn check_account_infos(
     len: usize,
-    invoke_context: &Ref<&mut dyn InvokeContext>,
+    invoke_context: &mut InvokeContext,
 ) -> Result<(), EbpfError<BpfError>> {
-    if len * size_of::<Pubkey>()
-        > invoke_context
-            .get_bpf_compute_budget()
-            .max_cpi_instruction_size
-    {
+    if len * size_of::<Pubkey>() > invoke_context.get_compute_budget().max_cpi_instruction_size {
         // Cap the number of account_infos a caller can pass to approximate
         // maximum that accounts that could be passed in an instruction
         return Err(SyscallError::TooManyAccounts.into());
@@ -2301,64 +2465,31 @@ fn check_account_infos(
 fn check_authorized_program(
     program_id: &Pubkey,
     instruction_data: &[u8],
-    invoke_context: &Ref<&mut dyn InvokeContext>,
+    invoke_context: &InvokeContext,
 ) -> Result<(), EbpfError<BpfError>> {
+    #[allow(clippy::blocks_in_if_conditions)]
     if native_loader::check_id(program_id)
         || bpf_loader::check_id(program_id)
         || bpf_loader_deprecated::check_id(program_id)
         || (bpf_loader_upgradeable::check_id(program_id)
             && !(bpf_loader_upgradeable::is_upgrade_instruction(instruction_data)
-                || (bpf_loader_upgradeable::is_set_authority_instruction(instruction_data)
-                    && invoke_context
-                        .is_feature_active(&set_upgrade_authority_via_cpi_enabled::id()))
-                || (bpf_loader_upgradeable::is_close_instruction(instruction_data)
-                    && invoke_context
-                        .is_feature_active(&close_upgradeable_program_accounts::id()))))
+                || bpf_loader_upgradeable::is_set_authority_instruction(instruction_data)
+                || bpf_loader_upgradeable::is_close_instruction(instruction_data)))
+        || (invoke_context
+            .feature_set
+            .is_active(&prevent_calling_precompiles_as_programs::id())
+            && is_precompile(program_id, |feature_id: &Pubkey| {
+                invoke_context.feature_set.is_active(feature_id)
+            }))
     {
         return Err(SyscallError::ProgramNotSupported(*program_id).into());
     }
     Ok(())
 }
 
-#[allow(clippy::type_complexity)]
-fn get_upgradeable_executable(
-    callee_program_id: &Pubkey,
-    program_account: &Rc<RefCell<AccountSharedData>>,
-    invoke_context: &Ref<&mut dyn InvokeContext>,
-) -> Result<Option<(Pubkey, Rc<RefCell<AccountSharedData>>)>, EbpfError<BpfError>> {
-    if program_account.borrow().owner() == &bpf_loader_upgradeable::id() {
-        match program_account.borrow().state() {
-            Ok(UpgradeableLoaderState::Program {
-                programdata_address,
-            }) => {
-                if let Some(account) = invoke_context.get_account(&programdata_address) {
-                    Ok(Some((programdata_address, account)))
-                } else {
-                    ic_msg!(
-                        invoke_context,
-                        "Unknown upgradeable programdata account {}",
-                        programdata_address,
-                    );
-                    Err(SyscallError::InstructionError(InstructionError::MissingAccount).into())
-                }
-            }
-            _ => {
-                ic_msg!(
-                    invoke_context,
-                    "Invalid upgradeable program account {}",
-                    callee_program_id,
-                );
-                Err(SyscallError::InstructionError(InstructionError::InvalidAccountData).into())
-            }
-        }
-    } else {
-        Ok(None)
-    }
-}
-
 /// Call process instruction, common to both Rust and C
-fn call<'a>(
-    syscall: &mut dyn SyscallInvokeSigned<'a>,
+fn call<'a, 'b: 'a>(
+    syscall: &mut dyn SyscallInvokeSigned<'a, 'b>,
     instruction_addr: u64,
     account_infos_addr: u64,
     account_infos_len: u64,
@@ -2366,183 +2497,114 @@ fn call<'a>(
     signers_seeds_len: u64,
     memory_mapping: &MemoryMapping,
 ) -> Result<u64, EbpfError<BpfError>> {
-    let (
-        message,
-        executables,
-        accounts,
-        account_refs,
-        caller_write_privileges,
-        demote_program_write_locks,
-    ) = {
-        let invoke_context = syscall.get_context()?;
+    let mut invoke_context = syscall.get_context_mut()?;
+    invoke_context
+        .get_compute_meter()
+        .consume(invoke_context.get_compute_budget().invoke_units)?;
+    let do_support_realloc = invoke_context
+        .feature_set
+        .is_active(&do_support_realloc::id());
 
-        invoke_context
-            .get_compute_meter()
-            .consume(invoke_context.get_bpf_compute_budget().invoke_units)?;
+    // Translate and verify caller's data
+    let loader_id = invoke_context
+        .get_loader()
+        .map_err(SyscallError::InstructionError)?;
+    let instruction = syscall.translate_instruction(
+        &loader_id,
+        instruction_addr,
+        memory_mapping,
+        *invoke_context,
+    )?;
+    let caller_program_id = invoke_context
+        .get_caller()
+        .map_err(SyscallError::InstructionError)?;
+    let signers = syscall.translate_signers(
+        &loader_id,
+        caller_program_id,
+        signers_seeds_addr,
+        signers_seeds_len,
+        memory_mapping,
+    )?;
+    let stack_height = invoke_context.get_stack_height();
+    let (message, caller_write_privileges, program_indices) = invoke_context
+        .create_message(&instruction, &signers)
+        .map_err(SyscallError::InstructionError)?;
+    check_authorized_program(&instruction.program_id, &instruction.data, *invoke_context)?;
+    let (account_indices, mut accounts) = syscall.translate_accounts(
+        &loader_id,
+        &message,
+        account_infos_addr,
+        account_infos_len,
+        memory_mapping,
+        *invoke_context,
+    )?;
 
-        let enforce_aligned_host_addrs =
-            invoke_context.is_feature_active(&enforce_aligned_host_addrs::id());
-
-        let caller_program_id = invoke_context
-            .get_caller()
-            .map_err(SyscallError::InstructionError)?;
-
-        // Translate and verify caller's data
-
-        let instruction = syscall.translate_instruction(
-            instruction_addr,
-            memory_mapping,
-            enforce_aligned_host_addrs,
-        )?;
-        let signers = syscall.translate_signers(
-            caller_program_id,
-            signers_seeds_addr,
-            signers_seeds_len,
-            memory_mapping,
-            enforce_aligned_host_addrs,
-        )?;
-        let keyed_account_refs = invoke_context
-            .get_keyed_accounts()
-            .map_err(SyscallError::InstructionError)?
-            .iter()
-            .collect::<Vec<&KeyedAccount>>();
-        let (message, callee_program_id, callee_program_id_index) =
-            MessageProcessor::create_message(
-                &instruction,
-                &keyed_account_refs,
-                &signers,
-                &invoke_context,
-            )
-            .map_err(SyscallError::InstructionError)?;
-        let caller_write_privileges = message
-            .account_keys
-            .iter()
-            .map(|key| {
-                if let Some(keyed_account) = keyed_account_refs
-                    .iter()
-                    .find(|keyed_account| key == keyed_account.unsigned_key())
-                {
-                    keyed_account.is_writable()
-                } else {
-                    false
-                }
-            })
-            .collect::<Vec<bool>>();
-        check_authorized_program(&callee_program_id, &instruction.data, &invoke_context)?;
-        let (accounts, account_refs) = syscall.translate_accounts(
-            &message.account_keys,
-            callee_program_id_index,
-            account_infos_addr,
-            account_infos_len,
-            memory_mapping,
-        )?;
-
-        // Construct executables
-
-        let program_account = accounts
-            .get(callee_program_id_index)
-            .ok_or_else(|| {
-                ic_msg!(invoke_context, "Unknown program {}", callee_program_id,);
-                SyscallError::InstructionError(InstructionError::MissingAccount)
-            })?
-            .1
-            .clone();
-        let programdata_executable =
-            get_upgradeable_executable(&callee_program_id, &program_account, &invoke_context)?;
-        let mut executables = vec![(callee_program_id, program_account)];
-        if let Some(executable) = programdata_executable {
-            executables.push(executable);
-        }
-
-        // Record the instruction
-
-        invoke_context.record_instruction(&instruction);
-
-        (
-            message,
-            executables,
-            accounts,
-            account_refs,
-            caller_write_privileges,
-            invoke_context.is_feature_active(&demote_program_write_locks::id()),
-        )
-    };
+    // Record the instruction
+    invoke_context.record_instruction(stack_height.saturating_add(1), instruction);
 
     // Process instruction
-
-    #[allow(clippy::deref_addrof)]
-    match MessageProcessor::process_cross_program_instruction(
-        &message,
-        &executables,
-        &accounts,
-        &caller_write_privileges,
-        *(&mut *(syscall.get_context_mut()?)),
-    ) {
-        Ok(()) => (),
-        Err(err) => {
-            return Err(SyscallError::InstructionError(err).into());
-        }
-    }
+    let message = SanitizedMessage::Legacy(message);
+    invoke_context
+        .process_instruction(
+            &message,
+            &message.instructions()[0],
+            &program_indices,
+            &account_indices,
+            &caller_write_privileges,
+            &mut ExecuteTimings::default(),
+        )
+        .result
+        .map_err(SyscallError::InstructionError)?;
 
     // Copy results back to caller
-    {
-        let invoke_context = syscall.get_context()?;
-        for (i, ((_key, account), account_ref)) in accounts.iter().zip(account_refs).enumerate() {
-            let account = account.borrow();
-            if let Some(mut account_ref) = account_ref {
-                if message.is_writable(i, demote_program_write_locks) && !account.executable() {
-                    *account_ref.lamports = account.lamports();
-                    *account_ref.owner = *account.owner();
-                    if account_ref.data.len() != account.data().len() {
-                        if !account_ref.data.is_empty() {
-                            // Only support for `CreateAccount` at this time.
-                            // Need a way to limit total realloc size across multiple CPI calls
-                            ic_msg!(
-                                invoke_context,
-                                "Inner instructions do not support realloc, only SystemProgram::CreateAccount",
-                            );
-                            return Err(SyscallError::InstructionError(
-                                InstructionError::InvalidRealloc,
-                            )
-                            .into());
-                        }
-                        if account.data().len()
-                            > account_ref.data.len() + MAX_PERMITTED_DATA_INCREASE
-                        {
-                            ic_msg!(
-                                invoke_context,
-                                "SystemProgram::CreateAccount data size limited to {} in inner instructions",
-                                MAX_PERMITTED_DATA_INCREASE
-                            );
-                            return Err(SyscallError::InstructionError(
-                                InstructionError::InvalidRealloc,
-                            )
-                            .into());
-                        }
-                        if invoke_context.is_feature_active(&update_data_on_realloc::id()) {
-                            account_ref.data = translate_slice_mut::<u8>(
-                                memory_mapping,
-                                account_ref.vm_data_addr,
-                                account.data().len() as u64,
-                                &bpf_loader_deprecated::id(), // Don't care since it is byte aligned
-                                true,
-                            )?;
-                        } else {
-                            let _ = translate(
-                                memory_mapping,
-                                AccessType::Store,
-                                account_ref.vm_data_addr,
-                                account.data().len() as u64,
-                            )?;
-                        }
-                        *account_ref.ref_to_len_in_vm = account.data().len() as u64;
-                        *account_ref.serialized_len_ptr = account.data().len() as u64;
-                    }
-                    account_ref
-                        .data
-                        .copy_from_slice(&account.data()[0..account_ref.data.len()]);
+    for (callee_account, caller_account) in accounts.iter_mut() {
+        if let Some(caller_account) = caller_account {
+            let callee_account = callee_account.borrow();
+            *caller_account.lamports = callee_account.lamports();
+            *caller_account.owner = *callee_account.owner();
+            let new_len = callee_account.data().len();
+            if caller_account.data.len() != new_len {
+                if !do_support_realloc && !caller_account.data.is_empty() {
+                    // Only support for `CreateAccount` at this time.
+                    // Need a way to limit total realloc size across multiple CPI calls
+                    ic_msg!(
+                        invoke_context,
+                        "Inner instructions do not support realloc, only SystemProgram::CreateAccount",
+                    );
+                    return Err(
+                        SyscallError::InstructionError(InstructionError::InvalidRealloc).into(),
+                    );
                 }
+                let data_overflow = if do_support_realloc {
+                    new_len > caller_account.original_data_len + MAX_PERMITTED_DATA_INCREASE
+                } else {
+                    new_len > caller_account.data.len() + MAX_PERMITTED_DATA_INCREASE
+                };
+                if data_overflow {
+                    ic_msg!(
+                        invoke_context,
+                        "Account data size realloc limited to {} in inner instructions",
+                        MAX_PERMITTED_DATA_INCREASE
+                    );
+                    return Err(
+                        SyscallError::InstructionError(InstructionError::InvalidRealloc).into(),
+                    );
+                }
+                if new_len < caller_account.data.len() {
+                    caller_account.data[new_len..].fill(0);
+                }
+                caller_account.data = translate_slice_mut::<u8>(
+                    memory_mapping,
+                    caller_account.vm_data_addr,
+                    new_len as u64,
+                    &bpf_loader_deprecated::id(), // Don't care since it is byte aligned
+                )?;
+                *caller_account.ref_to_len_in_vm = new_len as u64;
+                *caller_account.serialized_len_ptr = new_len as u64;
             }
+            caller_account
+                .data
+                .copy_from_slice(&callee_account.data()[0..new_len]);
         }
     }
 
@@ -2550,11 +2612,10 @@ fn call<'a>(
 }
 
 // Return data handling
-pub struct SyscallSetReturnData<'a> {
-    invoke_context: Rc<RefCell<&'a mut dyn InvokeContext>>,
-    loader_id: &'a Pubkey,
+pub struct SyscallSetReturnData<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallSetReturnData<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallSetReturnData<'a, 'b> {
     fn call(
         &mut self,
         addr: u64,
@@ -2571,8 +2632,14 @@ impl<'a> SyscallObject<BpfError> for SyscallSetReturnData<'a> {
                 .map_err(|_| SyscallError::InvokeContextBorrowFailed),
             result
         );
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
 
-        let budget = invoke_context.get_bpf_compute_budget();
+        let budget = invoke_context.get_compute_budget();
 
         question_mark!(
             invoke_context
@@ -2586,37 +2653,35 @@ impl<'a> SyscallObject<BpfError> for SyscallSetReturnData<'a> {
             return;
         }
 
-        if len == 0 {
-            invoke_context.set_return_data(None);
+        let return_data = if len == 0 {
+            Vec::new()
         } else {
-            let return_data = question_mark!(
-                translate_slice::<u8>(memory_mapping, addr, len, self.loader_id, true),
+            question_mark!(
+                translate_slice::<u8>(memory_mapping, addr, len, &loader_id),
                 result
-            );
-
-            let program_id = *question_mark!(
-                invoke_context
-                    .get_caller()
-                    .map_err(SyscallError::InstructionError),
-                result
-            );
-
-            invoke_context.set_return_data(Some((program_id, return_data.to_vec())));
-        }
+            )
+            .to_vec()
+        };
+        let program_id = question_mark!(
+            invoke_context
+                .get_caller()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
+        invoke_context.return_data = (*program_id, return_data);
 
         *result = Ok(0);
     }
 }
 
-pub struct SyscallGetReturnData<'a> {
-    invoke_context: Rc<RefCell<&'a mut dyn InvokeContext>>,
-    loader_id: &'a Pubkey,
+pub struct SyscallGetReturnData<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallGetReturnData<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallGetReturnData<'a, 'b> {
     fn call(
         &mut self,
         return_data_addr: u64,
-        len: u64,
+        mut length: u64,
         program_id_addr: u64,
         _arg4: u64,
         _arg5: u64,
@@ -2629,8 +2694,14 @@ impl<'a> SyscallObject<BpfError> for SyscallGetReturnData<'a> {
                 .map_err(|_| SyscallError::InvokeContextBorrowFailed),
             result
         );
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
 
-        let budget = invoke_context.get_bpf_compute_budget();
+        let budget = invoke_context.get_compute_budget();
 
         question_mark!(
             invoke_context
@@ -2639,58 +2710,41 @@ impl<'a> SyscallObject<BpfError> for SyscallGetReturnData<'a> {
             result
         );
 
-        if let Some((program_id, return_data)) = invoke_context.get_return_data() {
-            if len != 0 {
-                let length = min(return_data.len() as u64, len);
+        let (program_id, return_data) = &invoke_context.return_data;
+        length = length.min(return_data.len() as u64);
+        if length != 0 {
+            question_mark!(
+                invoke_context
+                    .get_compute_meter()
+                    .consume((length + size_of::<Pubkey>() as u64) / budget.cpi_bytes_per_unit),
+                result
+            );
 
-                question_mark!(
-                    invoke_context
-                        .get_compute_meter()
-                        .consume((length + size_of::<Pubkey>() as u64) / budget.cpi_bytes_per_unit),
-                    result
-                );
+            let return_data_result = question_mark!(
+                translate_slice_mut::<u8>(memory_mapping, return_data_addr, length, &loader_id),
+                result
+            );
 
-                let return_data_result = question_mark!(
-                    translate_slice_mut::<u8>(
-                        memory_mapping,
-                        return_data_addr,
-                        length,
-                        self.loader_id,
-                        true,
-                    ),
-                    result
-                );
+            return_data_result.copy_from_slice(&return_data[..length as usize]);
 
-                return_data_result.copy_from_slice(&return_data[..length as usize]);
+            let program_id_result = question_mark!(
+                translate_slice_mut::<Pubkey>(memory_mapping, program_id_addr, 1, &loader_id),
+                result
+            );
 
-                let program_id_result = question_mark!(
-                    translate_slice_mut::<Pubkey>(
-                        memory_mapping,
-                        program_id_addr,
-                        1,
-                        self.loader_id,
-                        true,
-                    ),
-                    result
-                );
-
-                program_id_result[0] = *program_id;
-            }
-
-            // Return the actual length, rather the length returned
-            *result = Ok(return_data.len() as u64);
-        } else {
-            *result = Ok(0);
+            program_id_result[0] = *program_id;
         }
+
+        // Return the actual length, rather the length returned
+        *result = Ok(return_data.len() as u64);
     }
 }
 
 // Log data handling
-pub struct SyscallLogData<'a> {
-    invoke_context: Rc<RefCell<&'a mut dyn InvokeContext>>,
-    loader_id: &'a Pubkey,
+pub struct SyscallLogData<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
 }
-impl<'a> SyscallObject<BpfError> for SyscallLogData<'a> {
+impl<'a, 'b> SyscallObject<BpfError> for SyscallLogData<'a, 'b> {
     fn call(
         &mut self,
         addr: u64,
@@ -2707,8 +2761,14 @@ impl<'a> SyscallObject<BpfError> for SyscallLogData<'a> {
                 .map_err(|_| SyscallError::InvokeContextBorrowFailed),
             result
         );
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
 
-        let budget = invoke_context.get_bpf_compute_budget();
+        let budget = invoke_context.get_compute_budget();
 
         question_mark!(
             invoke_context
@@ -2718,7 +2778,7 @@ impl<'a> SyscallObject<BpfError> for SyscallLogData<'a> {
         );
 
         let untranslated_fields = question_mark!(
-            translate_slice::<&[u8]>(memory_mapping, addr, len, self.loader_id, true),
+            translate_slice::<&[u8]>(memory_mapping, addr, len, &loader_id),
             result
         );
 
@@ -2747,35 +2807,173 @@ impl<'a> SyscallObject<BpfError> for SyscallLogData<'a> {
                     memory_mapping,
                     untranslated_field.as_ptr() as *const _ as u64,
                     untranslated_field.len() as u64,
-                    self.loader_id,
-                    true
+                    &loader_id,
                 ),
                 result
             ));
         }
 
-        let logger = invoke_context.get_logger();
+        let log_collector = invoke_context.get_log_collector();
 
-        stable_log::program_data(&logger, &fields);
+        stable_log::program_data(&log_collector, &fields);
 
         *result = Ok(0);
     }
 }
 
+pub struct SyscallGetProcessedSiblingInstruction<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
+}
+impl<'a, 'b> SyscallObject<BpfError> for SyscallGetProcessedSiblingInstruction<'a, 'b> {
+    fn call(
+        &mut self,
+        index: u64,
+        meta_addr: u64,
+        program_id_addr: u64,
+        data_addr: u64,
+        accounts_addr: u64,
+        memory_mapping: &MemoryMapping,
+        result: &mut Result<u64, EbpfError<BpfError>>,
+    ) {
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+        let loader_id = question_mark!(
+            invoke_context
+                .get_loader()
+                .map_err(SyscallError::InstructionError),
+            result
+        );
+
+        let budget = invoke_context.get_compute_budget();
+        question_mark!(
+            invoke_context
+                .get_compute_meter()
+                .consume(budget.syscall_base_cost),
+            result
+        );
+
+        let stack_height = invoke_context.get_stack_height();
+        let instruction_trace = invoke_context.get_instruction_trace();
+        let instruction = if stack_height == TRANSACTION_LEVEL_STACK_HEIGHT {
+            // pick one of the top-level instructions
+            instruction_trace
+                .len()
+                .checked_sub(2)
+                .and_then(|result| result.checked_sub(index as usize))
+                .and_then(|index| instruction_trace.get(index))
+                .and_then(|instruction_recorder| instruction_recorder.get(0))
+        } else {
+            // Walk the last list of inner instructions
+            instruction_trace
+                .last()
+                .and_then(|inners| inners.find(stack_height, index as usize))
+        };
+
+        if let Some(instruction) = instruction {
+            let ProcessedSiblingInstruction {
+                data_len,
+                accounts_len,
+            } = question_mark!(
+                translate_type_mut::<ProcessedSiblingInstruction>(
+                    memory_mapping,
+                    meta_addr,
+                    &loader_id
+                ),
+                result
+            );
+
+            if *data_len == instruction.data.len() && *accounts_len == instruction.accounts.len() {
+                let program_id = question_mark!(
+                    translate_type_mut::<Pubkey>(memory_mapping, program_id_addr, &loader_id),
+                    result
+                );
+                let data = question_mark!(
+                    translate_slice_mut::<u8>(
+                        memory_mapping,
+                        data_addr,
+                        *data_len as u64,
+                        &loader_id,
+                    ),
+                    result
+                );
+                let accounts = question_mark!(
+                    translate_slice_mut::<AccountMeta>(
+                        memory_mapping,
+                        accounts_addr,
+                        *accounts_len as u64,
+                        &loader_id,
+                    ),
+                    result
+                );
+
+                *program_id = instruction.program_id;
+                data.clone_from_slice(instruction.data.as_slice());
+                accounts.clone_from_slice(instruction.accounts.as_slice());
+            }
+            *data_len = instruction.data.len();
+            *accounts_len = instruction.accounts.len();
+            *result = Ok(true as u64);
+            return;
+        }
+        *result = Ok(false as u64);
+    }
+}
+
+pub struct SyscallGetStackHeight<'a, 'b> {
+    invoke_context: Rc<RefCell<&'a mut InvokeContext<'b>>>,
+}
+impl<'a, 'b> SyscallObject<BpfError> for SyscallGetStackHeight<'a, 'b> {
+    fn call(
+        &mut self,
+        _arg1: u64,
+        _arg2: u64,
+        _arg3: u64,
+        _arg4: u64,
+        _arg5: u64,
+        _memory_mapping: &MemoryMapping,
+        result: &mut Result<u64, EbpfError<BpfError>>,
+    ) {
+        let invoke_context = question_mark!(
+            self.invoke_context
+                .try_borrow()
+                .map_err(|_| SyscallError::InvokeContextBorrowFailed),
+            result
+        );
+
+        let budget = invoke_context.get_compute_budget();
+        question_mark!(
+            invoke_context
+                .get_compute_meter()
+                .consume(budget.syscall_base_cost),
+            result
+        );
+
+        *result = Ok(invoke_context.get_stack_height() as u64);
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[allow(deprecated)]
+    use safecoin_sdk::sysvar::fees::Fees;
     use {
         super::*,
+        safecoin_program_runtime::{invoke_context::InvokeContext, sysvar_cache::SysvarCache},
         solana_rbpf::{
             ebpf::HOST_ALIGN, memory_region::MemoryRegion, user_error::UserError, vm::Config,
         },
         safecoin_sdk::{
+            account::AccountSharedData,
             bpf_loader,
             fee_calculator::FeeCalculator,
             hash::hashv,
-            process_instruction::{MockComputeMeter, MockInvokeContext, MockLogger},
+            sysvar::{clock::Clock, epoch_schedule::EpochSchedule, rent::Rent},
         },
-        std::str::FromStr,
+        std::{borrow::Cow, str::FromStr},
     };
 
     macro_rules! assert_access_violation {
@@ -2860,8 +3058,7 @@ mod tests {
         )
         .unwrap();
         let translated_pubkey =
-            translate_type::<Pubkey>(&memory_mapping, 0x100000000, &bpf_loader::id(), true)
-                .unwrap();
+            translate_type::<Pubkey>(&memory_mapping, 0x100000000, &bpf_loader::id()).unwrap();
         assert_eq!(pubkey, *translated_pubkey);
 
         // Instruction
@@ -2886,17 +3083,12 @@ mod tests {
         )
         .unwrap();
         let translated_instruction =
-            translate_type::<Instruction>(&memory_mapping, 0x100000000, &bpf_loader::id(), true)
-                .unwrap();
+            translate_type::<Instruction>(&memory_mapping, 0x100000000, &bpf_loader::id()).unwrap();
         assert_eq!(instruction, *translated_instruction);
         memory_mapping.resize_region::<BpfError>(1, 1).unwrap();
-        assert!(translate_type::<Instruction>(
-            &memory_mapping,
-            0x100000000,
-            &bpf_loader::id(),
-            true
-        )
-        .is_err());
+        assert!(
+            translate_type::<Instruction>(&memory_mapping, 0x100000000, &bpf_loader::id()).is_err()
+        );
     }
 
     #[test]
@@ -2921,14 +3113,9 @@ mod tests {
             &config,
         )
         .unwrap();
-        let translated_data = translate_slice::<u8>(
-            &memory_mapping,
-            data.as_ptr() as u64,
-            0,
-            &bpf_loader::id(),
-            true,
-        )
-        .unwrap();
+        let translated_data =
+            translate_slice::<u8>(&memory_mapping, data.as_ptr() as u64, 0, &bpf_loader::id())
+                .unwrap();
         assert_eq!(data, translated_data);
         assert_eq!(0, translated_data.len());
 
@@ -2954,7 +3141,6 @@ mod tests {
             0x100000000,
             data.len() as u64,
             &bpf_loader::id(),
-            true,
         )
         .unwrap();
         assert_eq!(data, translated_data);
@@ -2965,7 +3151,6 @@ mod tests {
             data.as_ptr() as u64,
             u64::MAX,
             &bpf_loader::id(),
-            true,
         )
         .is_err());
 
@@ -2974,7 +3159,6 @@ mod tests {
             0x100000000 - 1,
             data.len() as u64,
             &bpf_loader::id(),
-            true,
         )
         .is_err());
 
@@ -3000,20 +3184,15 @@ mod tests {
             0x100000000,
             data.len() as u64,
             &bpf_loader::id(),
-            true,
         )
         .unwrap();
         assert_eq!(data, translated_data);
         data[0] = 10;
         assert_eq!(data, translated_data);
-        assert!(translate_slice::<u64>(
-            &memory_mapping,
-            0x100000000,
-            u64::MAX,
-            &bpf_loader::id(),
-            true,
-        )
-        .is_err());
+        assert!(
+            translate_slice::<u64>(&memory_mapping, 0x100000000, u64::MAX, &bpf_loader::id())
+                .is_err()
+        );
 
         // Pubkeys
         let mut data = vec![safecoin_sdk::pubkey::new_rand(); 5];
@@ -3037,7 +3216,6 @@ mod tests {
             0x100000000,
             data.len() as u64,
             &bpf_loader::id(),
-            true,
         )
         .unwrap();
         assert_eq!(data, translated_data);
@@ -3071,7 +3249,6 @@ mod tests {
                 0x100000000,
                 string.len() as u64,
                 &bpf_loader::id(),
-                true,
                 &mut |string: &str| {
                     assert_eq!(string, "Gaggablaghblagh!");
                     Ok(42)
@@ -3104,6 +3281,21 @@ mod tests {
     #[test]
     #[should_panic(expected = "UserError(SyscallError(Panic(\"Gaggablaghblagh!\", 42, 84)))")]
     fn test_syscall_sol_panic() {
+        let program_id = Pubkey::new_unique();
+        let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
+        let accounts = [(program_id, program_account)];
+        let message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bytes(program_id, &[], vec![])],
+            None,
+        ));
+        let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+        invoke_context
+            .push(&message, &message.instructions()[0], &[0], &[])
+            .unwrap();
+        let mut syscall_panic = SyscallPanic {
+            invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
+        };
+
         let string = "Gaggablaghblagh!";
         let addr = string.as_ptr() as *const _ as u64;
         let config = Config::default();
@@ -3122,15 +3314,12 @@ mod tests {
         )
         .unwrap();
 
-        let compute_meter: Rc<RefCell<dyn ComputeMeter>> =
-            Rc::new(RefCell::new(MockComputeMeter {
-                remaining: string.len() as u64 - 1,
-            }));
-        let mut syscall_panic = SyscallPanic {
-            compute_meter,
-            loader_id: &bpf_loader::id(),
-            enforce_aligned_host_addrs: true,
-        };
+        syscall_panic
+            .invoke_context
+            .borrow_mut()
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(string.len() as u64 - 1);
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
         syscall_panic.call(
             0x100000000,
@@ -3148,15 +3337,12 @@ mod tests {
             result
         );
 
-        let compute_meter: Rc<RefCell<dyn ComputeMeter>> =
-            Rc::new(RefCell::new(MockComputeMeter {
-                remaining: string.len() as u64,
-            }));
-        let mut syscall_panic = SyscallPanic {
-            compute_meter,
-            loader_id: &bpf_loader::id(),
-            enforce_aligned_host_addrs: true,
-        };
+        syscall_panic
+            .invoke_context
+            .borrow_mut()
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(string.len() as u64);
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
         syscall_panic.call(
             0x100000000,
@@ -3172,20 +3358,23 @@ mod tests {
 
     #[test]
     fn test_syscall_sol_log() {
+        let program_id = Pubkey::new_unique();
+        let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
+        let accounts = [(program_id, program_account)];
+        let message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bytes(program_id, &[], vec![])],
+            None,
+        ));
+        let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+        invoke_context
+            .push(&message, &message.instructions()[0], &[0], &[])
+            .unwrap();
+        let mut syscall_sol_log = SyscallLog {
+            invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
+        };
+
         let string = "Gaggablaghblagh!";
         let addr = string.as_ptr() as *const _ as u64;
-
-        let compute_meter: Rc<RefCell<dyn ComputeMeter>> =
-            Rc::new(RefCell::new(MockComputeMeter { remaining: 1000000 }));
-        let log = Rc::new(RefCell::new(vec![]));
-        let logger: Rc<RefCell<dyn Logger>> =
-            Rc::new(RefCell::new(MockLogger { log: log.clone() }));
-        let mut syscall_sol_log = SyscallLog {
-            compute_meter,
-            logger,
-            loader_id: &bpf_loader::id(),
-            enforce_aligned_host_addrs: true,
-        };
         let config = Config::default();
         let memory_mapping = MemoryMapping::new::<UserError>(
             vec![
@@ -3202,20 +3391,12 @@ mod tests {
         )
         .unwrap();
 
-        let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_log.call(
-            0x100000000,
-            string.len() as u64,
-            0,
-            0,
-            0,
-            &memory_mapping,
-            &mut result,
-        );
-        result.unwrap();
-        assert_eq!(log.borrow().len(), 1);
-        assert_eq!(log.borrow()[0], "Program log: Gaggablaghblagh!");
-
+        syscall_sol_log
+            .invoke_context
+            .borrow_mut()
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(400 - 1);
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
         syscall_sol_log.call(
             0x100000001, // AccessViolation
@@ -3238,28 +3419,7 @@ mod tests {
             &mut result,
         );
         assert_access_violation!(result, 0x100000000, string.len() as u64 * 2);
-        let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_log.call(
-            0x100000000,
-            string.len() as u64,
-            0,
-            0,
-            0,
-            &memory_mapping,
-            &mut result,
-        );
 
-        let compute_meter: Rc<RefCell<dyn ComputeMeter>> =
-            Rc::new(RefCell::new(MockComputeMeter {
-                remaining: (string.len() as u64 * 2) - 1,
-            }));
-        let logger: Rc<RefCell<dyn Logger>> = Rc::new(RefCell::new(MockLogger { log }));
-        let mut syscall_sol_log = SyscallLog {
-            compute_meter,
-            logger,
-            loader_id: &bpf_loader::id(),
-            enforce_aligned_host_addrs: true,
-        };
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
         syscall_sol_log.call(
             0x100000000,
@@ -3287,50 +3447,81 @@ mod tests {
             ))),
             result
         );
+
+        assert_eq!(
+            syscall_sol_log
+                .invoke_context
+                .borrow()
+                .get_log_collector()
+                .unwrap()
+                .borrow()
+                .get_recorded_content(),
+            &["Program log: Gaggablaghblagh!".to_string()]
+        );
     }
 
     #[test]
     fn test_syscall_sol_log_u64() {
-        let compute_meter: Rc<RefCell<dyn ComputeMeter>> =
-            Rc::new(RefCell::new(MockComputeMeter {
-                remaining: std::u64::MAX,
-            }));
-        let log = Rc::new(RefCell::new(vec![]));
-        let logger: Rc<RefCell<dyn Logger>> =
-            Rc::new(RefCell::new(MockLogger { log: log.clone() }));
+        let program_id = Pubkey::new_unique();
+        let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
+        let accounts = [(program_id, program_account)];
+        let message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bytes(program_id, &[], vec![])],
+            None,
+        ));
+        let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+        invoke_context
+            .push(&message, &message.instructions()[0], &[0], &[])
+            .unwrap();
+        let cost = invoke_context.get_compute_budget().log_64_units;
         let mut syscall_sol_log_u64 = SyscallLogU64 {
-            cost: 0,
-            compute_meter,
-            logger,
+            invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
         };
+
+        syscall_sol_log_u64
+            .invoke_context
+            .borrow_mut()
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(cost);
         let config = Config::default();
         let memory_mapping = MemoryMapping::new::<UserError>(vec![], &config).unwrap();
-
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
         syscall_sol_log_u64.call(1, 2, 3, 4, 5, &memory_mapping, &mut result);
         result.unwrap();
 
-        assert_eq!(log.borrow().len(), 1);
-        assert_eq!(log.borrow()[0], "Program log: 0x1, 0x2, 0x3, 0x4, 0x5");
+        assert_eq!(
+            syscall_sol_log_u64
+                .invoke_context
+                .borrow()
+                .get_log_collector()
+                .unwrap()
+                .borrow()
+                .get_recorded_content(),
+            &["Program log: 0x1, 0x2, 0x3, 0x4, 0x5".to_string()]
+        );
     }
 
     #[test]
     fn test_syscall_sol_pubkey() {
+        let program_id = Pubkey::new_unique();
+        let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
+        let accounts = [(program_id, program_account)];
+        let message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bytes(program_id, &[], vec![])],
+            None,
+        ));
+        let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+        invoke_context
+            .push(&message, &message.instructions()[0], &[0], &[])
+            .unwrap();
+        let cost = invoke_context.get_compute_budget().log_pubkey_units;
+        let mut syscall_sol_pubkey = SyscallLogPubkey {
+            invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
+        };
+
         let pubkey = Pubkey::from_str("BNwVU7MhnDnGEQGAqpJ1dGKVtaYw4SvxbTvoACcdENd2").unwrap();
         let addr = &pubkey.as_ref()[0] as *const _ as u64;
-
-        let compute_meter: Rc<RefCell<dyn ComputeMeter>> =
-            Rc::new(RefCell::new(MockComputeMeter { remaining: 2 }));
-        let log = Rc::new(RefCell::new(vec![]));
-        let logger: Rc<RefCell<dyn Logger>> =
-            Rc::new(RefCell::new(MockLogger { log: log.clone() }));
-        let mut syscall_sol_pubkey = SyscallLogPubkey {
-            cost: 1,
-            compute_meter,
-            logger,
-            loader_id: &bpf_loader::id(),
-            enforce_aligned_host_addrs: true,
-        };
         let config = Config::default();
         let memory_mapping = MemoryMapping::new::<UserError>(
             vec![
@@ -3348,14 +3539,6 @@ mod tests {
         .unwrap();
 
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_pubkey.call(0x100000000, 0, 0, 0, 0, &memory_mapping, &mut result);
-        result.unwrap();
-        assert_eq!(log.borrow().len(), 1);
-        assert_eq!(
-            log.borrow()[0],
-            "Program log: BNwVU7MhnDnGEQGAqpJ1dGKVtaYw4SvxbTvoACcdENd2"
-        );
-        let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
         syscall_sol_pubkey.call(
             0x100000001, // AccessViolation
             32,
@@ -3366,6 +3549,13 @@ mod tests {
             &mut result,
         );
         assert_access_violation!(result, 0x100000001, 32);
+
+        syscall_sol_pubkey
+            .invoke_context
+            .borrow_mut()
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(1);
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
         syscall_sol_pubkey.call(100, 32, 0, 0, 0, &memory_mapping, &mut result);
         assert_eq!(
@@ -3373,6 +3563,27 @@ mod tests {
                 SyscallError::InstructionError(InstructionError::ComputationalBudgetExceeded)
             ))),
             result
+        );
+
+        syscall_sol_pubkey
+            .invoke_context
+            .borrow_mut()
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(cost);
+        let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
+        syscall_sol_pubkey.call(0x100000000, 0, 0, 0, 0, &memory_mapping, &mut result);
+        result.unwrap();
+
+        assert_eq!(
+            syscall_sol_pubkey
+                .invoke_context
+                .borrow()
+                .get_log_collector()
+                .unwrap()
+                .borrow()
+                .get_recorded_content(),
+            &["Program log: BNwVU7MhnDnGEQGAqpJ1dGKVtaYw4SvxbTvoACcdENd2".to_string()]
         );
     }
 
@@ -3504,6 +3715,15 @@ mod tests {
 
     #[test]
     fn test_syscall_sha256() {
+        let config = Config::default();
+        let program_id = Pubkey::new_unique();
+        let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader_deprecated::id());
+        let accounts = [(program_id, program_account)];
+        let message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bytes(program_id, &[], vec![])],
+            None,
+        ));
+
         let bytes1 = "Gaggablaghblagh!";
         let bytes2 = "flurbos";
 
@@ -3520,7 +3740,6 @@ mod tests {
         let ro_len = bytes_to_hash.len() as u64;
         let ro_va = 0x100000000;
         let rw_va = 0x200000000;
-        let config = Config::default();
         let memory_mapping = MemoryMapping::new::<UserError>(
             vec![
                 MemoryRegion::default(),
@@ -3556,16 +3775,26 @@ mod tests {
             &config,
         )
         .unwrap();
-        let compute_meter: Rc<RefCell<dyn ComputeMeter>> =
-            Rc::new(RefCell::new(MockComputeMeter {
-                remaining: (bytes1.len() + bytes2.len()) as u64,
-            }));
+
+        let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+        invoke_context
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(
+                (invoke_context.get_compute_budget().sha256_base_cost
+                    + invoke_context.get_compute_budget().mem_op_base_cost.max(
+                        invoke_context
+                            .get_compute_budget()
+                            .sha256_byte_cost
+                            .saturating_mul((bytes1.len() + bytes2.len()) as u64 / 2),
+                    ))
+                    * 4,
+            );
+        invoke_context
+            .push(&message, &message.instructions()[0], &[0], &[])
+            .unwrap();
         let mut syscall = SyscallSha256 {
-            sha256_base_cost: 0,
-            sha256_byte_cost: 2,
-            compute_meter,
-            loader_id: &bpf_loader_deprecated::id(),
-            enforce_aligned_host_addrs: true,
+            invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
         };
 
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
@@ -3620,6 +3849,14 @@ mod tests {
     #[test]
     fn test_syscall_get_sysvar() {
         let config = Config::default();
+        let program_id = Pubkey::new_unique();
+        let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
+        let accounts = [(program_id, program_account)];
+        let message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bytes(program_id, &[], vec![])],
+            None,
+        ));
+
         // Test clock sysvar
         {
             let got_clock = Clock::default();
@@ -3647,19 +3884,20 @@ mod tests {
                 leader_schedule_epoch: 4,
                 unix_timestamp: 5,
             };
-            let mut invoke_context = MockInvokeContext::new(vec![]);
-            let mut data = vec![];
-            bincode::serialize_into(&mut data, &src_clock).unwrap();
-            invoke_context
-                .sysvars
-                .push((sysvar::clock::id(), Some(Rc::new(data))));
 
+            let mut sysvar_cache = SysvarCache::default();
+            sysvar_cache.set_clock(src_clock.clone());
+
+            let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+            invoke_context.sysvar_cache = Cow::Owned(sysvar_cache);
+            invoke_context
+                .push(&message, &message.instructions()[0], &[0], &[])
+                .unwrap();
             let mut syscall = SyscallGetClockSysvar {
                 invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
-                loader_id: &bpf_loader::id(),
             };
-            let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
 
+            let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
             syscall.call(got_clock_va, 0, 0, 0, 0, &memory_mapping, &mut result);
             result.unwrap();
             assert_eq!(got_clock, src_clock);
@@ -3692,19 +3930,20 @@ mod tests {
                 first_normal_epoch: 3,
                 first_normal_slot: 4,
             };
-            let mut invoke_context = MockInvokeContext::new(vec![]);
-            let mut data = vec![];
-            bincode::serialize_into(&mut data, &src_epochschedule).unwrap();
-            invoke_context
-                .sysvars
-                .push((sysvar::epoch_schedule::id(), Some(Rc::new(data))));
 
+            let mut sysvar_cache = SysvarCache::default();
+            sysvar_cache.set_epoch_schedule(src_epochschedule);
+
+            let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+            invoke_context.sysvar_cache = Cow::Owned(sysvar_cache);
+            invoke_context
+                .push(&message, &message.instructions()[0], &[0], &[])
+                .unwrap();
             let mut syscall = SyscallGetEpochScheduleSysvar {
                 invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
-                loader_id: &bpf_loader::id(),
             };
-            let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
 
+            let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
             syscall.call(
                 got_epochschedule_va,
                 0,
@@ -3719,6 +3958,7 @@ mod tests {
         }
 
         // Test fees sysvar
+        #[allow(deprecated)]
         {
             let got_fees = Fees::default();
             let got_fees_va = 0x100000000;
@@ -3743,19 +3983,20 @@ mod tests {
                     lamports_per_signature: 1,
                 },
             };
-            let mut invoke_context = MockInvokeContext::new(vec![]);
-            let mut data = vec![];
-            bincode::serialize_into(&mut data, &src_fees).unwrap();
-            invoke_context
-                .sysvars
-                .push((sysvar::fees::id(), Some(Rc::new(data))));
 
+            let mut sysvar_cache = SysvarCache::default();
+            sysvar_cache.set_fees(src_fees.clone());
+
+            let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+            invoke_context.sysvar_cache = Cow::Owned(sysvar_cache);
+            invoke_context
+                .push(&message, &message.instructions()[0], &[0], &[])
+                .unwrap();
             let mut syscall = SyscallGetFeesSysvar {
                 invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
-                loader_id: &bpf_loader::id(),
             };
-            let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
 
+            let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
             syscall.call(got_fees_va, 0, 0, 0, 0, &memory_mapping, &mut result);
             result.unwrap();
             assert_eq!(got_fees, src_fees);
@@ -3786,19 +4027,20 @@ mod tests {
                 exemption_threshold: 2.0,
                 burn_percent: 3,
             };
-            let mut invoke_context = MockInvokeContext::new(vec![]);
-            let mut data = vec![];
-            bincode::serialize_into(&mut data, &src_rent).unwrap();
-            invoke_context
-                .sysvars
-                .push((sysvar::rent::id(), Some(Rc::new(data))));
 
+            let mut sysvar_cache = SysvarCache::default();
+            sysvar_cache.set_rent(src_rent);
+
+            let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+            invoke_context.sysvar_cache = Cow::Owned(sysvar_cache);
+            invoke_context
+                .push(&message, &message.instructions()[0], &[0], &[])
+                .unwrap();
             let mut syscall = SyscallGetRentSysvar {
                 invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
-                loader_id: &bpf_loader::id(),
             };
-            let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
 
+            let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
             syscall.call(got_rent_va, 0, 0, 0, 0, &memory_mapping, &mut result);
             result.unwrap();
             assert_eq!(got_rent, src_rent);
@@ -3807,13 +4049,13 @@ mod tests {
 
     #[test]
     fn test_overlapping() {
-        assert!(!check_overlapping(10, 7, 3));
-        assert!(check_overlapping(10, 8, 3));
-        assert!(check_overlapping(10, 9, 3));
-        assert!(check_overlapping(10, 10, 3));
-        assert!(check_overlapping(10, 11, 3));
-        assert!(check_overlapping(10, 12, 3));
-        assert!(!check_overlapping(10, 13, 3));
+        assert!(!check_overlapping_do_not_use(10, 7, 3));
+        assert!(check_overlapping_do_not_use(10, 8, 3));
+        assert!(check_overlapping_do_not_use(10, 9, 3));
+        assert!(check_overlapping_do_not_use(10, 10, 3));
+        assert!(check_overlapping_do_not_use(10, 11, 3));
+        assert!(check_overlapping_do_not_use(10, 12, 3));
+        assert!(!check_overlapping_do_not_use(10, 13, 3));
     }
 
     fn call_program_address_common(
@@ -3895,60 +4137,61 @@ mod tests {
     }
 
     fn create_program_address(
+        invoke_context: &mut InvokeContext,
         seeds: &[&[u8]],
-        program_id: &Pubkey,
-        remaining: u64,
+        address: &Pubkey,
     ) -> Result<Pubkey, EbpfError<BpfError>> {
-        let compute_meter: Rc<RefCell<dyn ComputeMeter>> =
-            Rc::new(RefCell::new(MockComputeMeter { remaining }));
         let mut syscall = SyscallCreateProgramAddress {
-            cost: 1,
-            compute_meter: compute_meter.clone(),
-            loader_id: &bpf_loader::id(),
-            enforce_aligned_host_addrs: true,
-            allow_native_ids: true,
-            check_seed_length: true,
+            invoke_context: Rc::new(RefCell::new(invoke_context)),
         };
-        let (address, _) = call_program_address_common(seeds, program_id, &mut syscall)?;
+        let (address, _) = call_program_address_common(seeds, address, &mut syscall)?;
         Ok(address)
     }
 
     fn try_find_program_address(
+        invoke_context: &mut InvokeContext,
         seeds: &[&[u8]],
-        program_id: &Pubkey,
-        remaining: u64,
+        address: &Pubkey,
     ) -> Result<(Pubkey, u8), EbpfError<BpfError>> {
-        let compute_meter: Rc<RefCell<dyn ComputeMeter>> =
-            Rc::new(RefCell::new(MockComputeMeter { remaining }));
         let mut syscall = SyscallTryFindProgramAddress {
-            cost: 1,
-            compute_meter: compute_meter.clone(),
-            loader_id: &bpf_loader::id(),
-            enforce_aligned_host_addrs: true,
-            allow_native_ids: true,
-            check_seed_length: true,
+            invoke_context: Rc::new(RefCell::new(invoke_context)),
         };
-        call_program_address_common(seeds, program_id, &mut syscall)
+        call_program_address_common(seeds, address, &mut syscall)
     }
 
     #[test]
     fn test_create_program_address() {
         // These tests duplicate the direct tests in safecoin_program::pubkey
 
-        let program_id = Pubkey::from_str("BPFLoaderUpgradeab1e11111111111111111111111").unwrap();
+        let program_id = Pubkey::new_unique();
+        let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
+        let accounts = [(program_id, program_account)];
+        let message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bytes(program_id, &[], vec![])],
+            None,
+        ));
+        let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+        invoke_context
+            .push(&message, &message.instructions()[0], &[0], &[])
+            .unwrap();
+        let address = bpf_loader_upgradeable::id();
 
         let exceeded_seed = &[127; MAX_SEED_LEN + 1];
-        let result = create_program_address(&[exceeded_seed], &program_id, 1);
+        let result = create_program_address(&mut invoke_context, &[exceeded_seed], &address);
         assert_eq!(
             result,
             Err(SyscallError::BadSeeds(PubkeyError::MaxSeedLengthExceeded).into())
         );
         assert_eq!(
-            create_program_address(&[b"short_seed", exceeded_seed], &program_id, 1),
+            create_program_address(
+                &mut invoke_context,
+                &[b"short_seed", exceeded_seed],
+                &address,
+            ),
             Err(SyscallError::BadSeeds(PubkeyError::MaxSeedLengthExceeded).into())
         );
         let max_seed = &[0; MAX_SEED_LEN];
-        assert!(create_program_address(&[max_seed], &program_id, 1).is_ok());
+        assert!(create_program_address(&mut invoke_context, &[max_seed], &address).is_ok());
         let exceeded_seeds: &[&[u8]] = &[
             &[1],
             &[2],
@@ -3967,7 +4210,7 @@ mod tests {
             &[15],
             &[16],
         ];
-        assert!(create_program_address(exceeded_seeds, &program_id, 1).is_ok());
+        assert!(create_program_address(&mut invoke_context, exceeded_seeds, &address).is_ok());
         let max_seeds: &[&[u8]] = &[
             &[1],
             &[2],
@@ -3988,75 +4231,122 @@ mod tests {
             &[17],
         ];
         assert_eq!(
-            create_program_address(max_seeds, &program_id, 1),
+            create_program_address(&mut invoke_context, max_seeds, &address),
             Err(SyscallError::BadSeeds(PubkeyError::MaxSeedLengthExceeded).into())
         );
         assert_eq!(
-            create_program_address(&[b"", &[1]], &program_id, 0),
-            Err(
-                SyscallError::InstructionError(InstructionError::ComputationalBudgetExceeded)
-                    .into()
-            )
-        );
-        assert_eq!(
-            create_program_address(&[b"", &[1]], &program_id, 1),
+            create_program_address(&mut invoke_context, &[b"", &[1]], &address),
             Ok("BwqrghZA2htAcqq8dzP1WDAhTXYTYWj7CHxF5j7TDBAe"
                 .parse()
                 .unwrap())
         );
         assert_eq!(
-            create_program_address(&["☉".as_ref(), &[0]], &program_id, 1),
+            create_program_address(&mut invoke_context, &["☉".as_ref(), &[0]], &address),
             Ok("13yWmRpaTR4r5nAktwLqMpRNr28tnVUZw26rTvPSSB19"
                 .parse()
                 .unwrap())
         );
         assert_eq!(
-            create_program_address(&[b"Talking", b"Squirrels"], &program_id, 1),
+            create_program_address(&mut invoke_context, &[b"Talking", b"Squirrels"], &address),
             Ok("2fnQrngrQT4SeLcdToJAD96phoEjNL2man2kfRLCASVk"
                 .parse()
                 .unwrap())
         );
         let public_key = Pubkey::from_str("SeedPubey1111111111111111111111111111111111").unwrap();
         assert_eq!(
-            create_program_address(&[public_key.as_ref(), &[1]], &program_id, 1),
+            create_program_address(&mut invoke_context, &[public_key.as_ref(), &[1]], &address),
             Ok("976ymqVnfE32QFe6NfGDctSvVa36LWnvYxhU6G2232YL"
                 .parse()
                 .unwrap())
         );
         assert_ne!(
-            create_program_address(&[b"Talking", b"Squirrels"], &program_id, 1).unwrap(),
-            create_program_address(&[b"Talking"], &program_id, 1).unwrap(),
+            create_program_address(&mut invoke_context, &[b"Talking", b"Squirrels"], &address)
+                .unwrap(),
+            create_program_address(&mut invoke_context, &[b"Talking"], &address).unwrap(),
         );
-    }
-
-    #[test]
-    fn test_find_program_address() {
-        for _ in 0..1_000 {
-            let program_id = Pubkey::new_unique();
-            let (address, bump_seed) =
-                try_find_program_address(&[b"Lil'", b"Bits"], &program_id, 100).unwrap();
-            assert_eq!(
-                address,
-                create_program_address(&[b"Lil'", b"Bits", &[bump_seed]], &program_id, 1).unwrap()
-            );
-        }
-
-        let program_id = Pubkey::from_str("BPFLoaderUpgradeab1e11111111111111111111111").unwrap();
-        let max_tries = 256; // one per seed
-        let seeds: &[&[u8]] = &[b""];
-        let (_, bump_seed) = try_find_program_address(seeds, &program_id, max_tries).unwrap();
-        let remaining = 256 - bump_seed as u64;
-        let _ = try_find_program_address(seeds, &program_id, remaining).unwrap();
+        invoke_context
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(0);
         assert_eq!(
-            try_find_program_address(seeds, &program_id, remaining - 1),
+            create_program_address(&mut invoke_context, &[b"", &[1]], &address),
             Err(
                 SyscallError::InstructionError(InstructionError::ComputationalBudgetExceeded)
                     .into()
             )
         );
-        let exceeded_seed = &[127; MAX_SEED_LEN + 1];
+    }
+
+    #[test]
+    fn test_find_program_address() {
+        let program_id = Pubkey::new_unique();
+        let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
+        let accounts = [(program_id, program_account)];
+        let message = SanitizedMessage::Legacy(Message::new(
+            &[Instruction::new_with_bytes(program_id, &[], vec![])],
+            None,
+        ));
+        let mut invoke_context = InvokeContext::new_mock(&accounts, &[]);
+        invoke_context
+            .push(&message, &message.instructions()[0], &[0], &[])
+            .unwrap();
+        let cost = invoke_context
+            .get_compute_budget()
+            .create_program_address_units;
+        let address = bpf_loader_upgradeable::id();
+        let max_tries = 256; // one per seed
+
+        for _ in 0..1_000 {
+            let address = Pubkey::new_unique();
+            invoke_context
+                .get_compute_meter()
+                .borrow_mut()
+                .mock_set_remaining(cost * max_tries);
+            let (found_address, bump_seed) =
+                try_find_program_address(&mut invoke_context, &[b"Lil'", b"Bits"], &address)
+                    .unwrap();
+            assert_eq!(
+                found_address,
+                create_program_address(
+                    &mut invoke_context,
+                    &[b"Lil'", b"Bits", &[bump_seed]],
+                    &address,
+                )
+                .unwrap()
+            );
+        }
+
+        let seeds: &[&[u8]] = &[b""];
+        invoke_context
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(cost * max_tries);
+        let (_, bump_seed) =
+            try_find_program_address(&mut invoke_context, seeds, &address).unwrap();
+        invoke_context
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(cost * (max_tries - bump_seed as u64));
+        try_find_program_address(&mut invoke_context, seeds, &address).unwrap();
+        invoke_context
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(cost * (max_tries - bump_seed as u64 - 1));
         assert_eq!(
-            try_find_program_address(&[exceeded_seed], &program_id, max_tries - 1),
+            try_find_program_address(&mut invoke_context, seeds, &address),
+            Err(
+                SyscallError::InstructionError(InstructionError::ComputationalBudgetExceeded)
+                    .into()
+            )
+        );
+
+        let exceeded_seed = &[127; MAX_SEED_LEN + 1];
+        invoke_context
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(cost * (max_tries - 1));
+        assert_eq!(
+            try_find_program_address(&mut invoke_context, &[exceeded_seed], &address),
             Err(SyscallError::BadSeeds(PubkeyError::MaxSeedLengthExceeded).into())
         );
         let exceeded_seeds: &[&[u8]] = &[
@@ -4078,8 +4368,12 @@ mod tests {
             &[16],
             &[17],
         ];
+        invoke_context
+            .get_compute_meter()
+            .borrow_mut()
+            .mock_set_remaining(cost * (max_tries - 1));
         assert_eq!(
-            try_find_program_address(exceeded_seeds, &program_id, max_tries - 1),
+            try_find_program_address(&mut invoke_context, exceeded_seeds, &address),
             Err(SyscallError::BadSeeds(PubkeyError::MaxSeedLengthExceeded).into())
         );
     }

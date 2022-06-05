@@ -122,7 +122,7 @@ https://github.com/fair-exchange/safecoin/blob/b6bfed64cb159ee67bb6bdbaefc7f833b
             // Number of signatures processed in this block
             &signature_count_buf,
             // Last PoH hash in this block
-            self.last_blockhash().as_ref(),
+            self.latest_blockhash().as_ref(),
         ]);
 ```
 

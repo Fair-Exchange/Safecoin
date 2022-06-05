@@ -22,7 +22,7 @@ fn new_test_crds_value<R: Rng>(rng: &mut R) -> VersionedCrdsValue {
     let mut crds = Crds::default();
     crds.insert(value, timestamp(), GossipRoute::LocalMessage)
         .unwrap();
-    crds.get(&label).cloned().unwrap()
+    crds.get::<&VersionedCrdsValue>(&label).cloned().unwrap()
 }
 
 fn bench_crds_shards_find(bencher: &mut Bencher, num_values: usize, mask_bits: u32) {

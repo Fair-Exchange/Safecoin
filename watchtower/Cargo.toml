@@ -1,9 +1,9 @@
 [package]
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-edition = "2018"
+edition = "2021"
 name = "safecoin-watchtower"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.8.12"
+version = "1.9.29"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -11,17 +11,17 @@ documentation = "https://docs.rs/safecoin-watchtower"
 
 [dependencies]
 clap = "2.33.1"
-log = "0.4.11"
+log = "0.4.14"
 humantime = "2.0.1"
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.8.12" }
-safecoin-cli-config = { path = "../cli-config", version = "=1.8.12" }
-safecoin-cli-output = { path = "../cli-output", version = "=1.8.12" }
-safecoin-client = { path = "../client", version = "=1.8.12" }
-safecoin-logger = { path = "../logger", version = "=1.8.12" }
-safecoin-metrics = { path = "../metrics", version = "=1.8.12" }
-safecoin-notifier = { path = "../notifier", version = "=1.8.12" }
-safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
-safecoin-version = { path = "../version", version = "=1.8.12" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.9.29" }
+safecoin-cli-config = { path = "../cli-config", version = "=1.9.29" }
+safecoin-cli-output = { path = "../cli-output", version = "=1.9.29" }
+safecoin-client = { path = "../client", version = "=1.9.29" }
+safecoin-logger = { path = "../logger", version = "=1.9.29" }
+safecoin-metrics = { path = "../metrics", version = "=1.9.29" }
+safecoin-notifier = { path = "../notifier", version = "=1.9.29" }
+safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
+safecoin-version = { path = "../version", version = "=1.9.29" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

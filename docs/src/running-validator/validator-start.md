@@ -272,7 +272,7 @@ Read more about [creating and managing a vote account](vote-accounts.md).
 If you know and respect other validator operators, you can specify this on the command line with the `--known-validator <PUBKEY>`
 argument to `safecoin-validator`. You can specify multiple ones by repeating the argument `--known-validator <PUBKEY1> --known-validator <PUBKEY2>`.
 This has two effects, one is when the validator is booting with `--only-known-rpc`, it will only ask that set of
-known nodes for downloading genesis and snapshot data. Another is that in combination with the `--halt-on-known-validator-hash-mismatch` option,
+known nodes for downloading genesis and snapshot data. Another is that in combination with the `--halt-on-known-validators-accounts-hash-mismatch` option,
 it will monitor the merkle root hash of the entire accounts state of other known nodes on gossip and if the hashes produce any mismatch,
 the validator will halt the node to prevent the validator from voting or processing potentially incorrect state values. At the moment, the slot that
 the validator publishes the hash on is tied to the snapshot interval. For the feature to be effective, all validators in the known
@@ -321,8 +321,8 @@ If your validator is connected, its public key and IP address will appear in the
 
 By default the validator will dynamically select available network ports in the
 8000-10000 range, and may be overridden with `--dynamic-port-range`. For
-example, `safecoin-validator --dynamic-port-range 11000-11010 ...` will restrict
-the validator to ports 11000-11010.
+example, `safecoin-validator --dynamic-port-range 11000-11020 ...` will restrict
+the validator to ports 11000-11020.
 
 ### Limiting ledger size to conserve disk space
 
@@ -441,15 +441,6 @@ it.
 Once your validator is operating normally, you can reduce the time it takes to
 restart your validator by adding the `--no-port-check` flag to your
 `safecoin-validator` command-line.
-
-### Disable snapshot compression to reduce CPU usage
-
-If you are not serving snapshots to other validators, snapshot compression can
-be disabled to reduce CPU load at the expense of slightly more disk usage for
-local snapshot storage.
-
-Add the `--snapshot-compression none` argument to your `safecoin-validator`
-command-line arguments and restart the validator.
 
 ### Using a ramdisk with spill-over into swap for the accounts database to reduce SSD wear
 

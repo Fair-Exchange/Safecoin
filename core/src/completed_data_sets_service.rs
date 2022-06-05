@@ -1,9 +1,7 @@
 use {
     crossbeam_channel::{Receiver, RecvTimeoutError, Sender},
-    solana_ledger::{
-        blockstore::{Blockstore, CompletedDataSetInfo},
-        entry::Entry,
-    },
+    solana_entry::entry::Entry,
+    solana_ledger::blockstore::{Blockstore, CompletedDataSetInfo},
     solana_rpc::{max_slots::MaxSlots, rpc_subscriptions::RpcSubscriptions},
     safecoin_sdk::signature::Signature,
     std::{

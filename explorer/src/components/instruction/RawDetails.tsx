@@ -1,23 +1,23 @@
 import React from "react";
 import { TransactionInstruction } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
+import { HexData } from "components/common/HexData";
 
 export function RawDetails({ ix }: { ix: TransactionInstruction }) {
-  const data = ix.data.toString("hex");
   return (
     <>
       {ix.keys.map(({ pubkey, isSigner, isWritable }, keyIndex) => (
         <tr key={keyIndex}>
           <td>
-            <div className="mr-2 d-md-inline">Account #{keyIndex + 1}</div>
-            {!isWritable && (
-              <span className="badge badge-soft-info mr-1">Readonly</span>
+            <div className="me-2 d-md-inline">Account #{keyIndex + 1}</div>
+            {isWritable && (
+              <span className="badge bg-info-soft me-1">Writable</span>
             )}
             {isSigner && (
-              <span className="badge badge-soft-info mr-1">Signer</span>
+              <span className="badge bg-info-soft me-1">Signer</span>
             )}
           </td>
-          <td className="text-lg-right">
+          <td className="text-lg-end">
             <Address pubkey={pubkey} alignRight link />
           </td>
         </tr>
@@ -27,8 +27,8 @@ export function RawDetails({ ix }: { ix: TransactionInstruction }) {
         <td>
           Instruction Data <span className="text-muted">(Hex)</span>
         </td>
-        <td className="text-lg-right">
-          <pre className="d-inline-block text-left mb-0 data-wrap">{data}</pre>
+        <td className="text-lg-end">
+          <HexData raw={ix.data} />
         </td>
       </tr>
     </>

@@ -1,5 +1,5 @@
 import React from "react";
-import { lamportsToSafeString } from "utils";
+import { SafeBalance } from "utils";
 import { BlockResponse, PublicKey } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 
@@ -49,11 +49,15 @@ export function BlockRewardsCard({ block }: { block: BlockResponse }) {
                     <Address pubkey={new PublicKey(reward.pubkey)} link />
                   </td>
                   <td>{reward.rewardType}</td>
-                  <td>{lamportsToSafeString(reward.lamports)}</td>
                   <td>
-                    {reward.postBalance
-                      ? lamportsToSafeString(reward.postBalance)
-                      : "-"}
+                    <SafeBalance lamports={reward.lamports} />
+                  </td>
+                  <td>
+                    {reward.postBalance ? (
+                      <SafeBalance lamports={reward.postBalance} />
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td>{percentChange ? percentChange + "%" : "-"}</td>
                 </tr>

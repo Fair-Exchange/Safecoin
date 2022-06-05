@@ -12,7 +12,7 @@ use {
     solana_metrics::inc_new_counter_debug,
     solana_perf::{
         cuda_runtime::PinnedVec,
-        packet::{limited_deserialize, Packet, PacketBatch},
+        packet::{Packet, PacketBatch},
         perf_libs,
         recycler_cache::RecyclerCache,
         sigverify::{self, count_packets_in_batches, TxOffset},
@@ -50,15 +50,12 @@ pub fn verify_shred_cpu(packet: &Packet, slot_leaders: &HashMap<u64, [u8; 32]>) 
     let slot_start = sig_end + size_of::<ShredType>();
     let slot_end = slot_start + size_of::<u64>();
     let msg_start = sig_end;
-    if packet.meta.discard {
+    if packet.meta.discard() {
         return Some(0);
     }
     trace!("slot start and end {} {}", slot_start, slot_end);
-    if packet.meta.size < slot_end {
-        return Some(0);
-    }
-    let slot: u64 = limited_deserialize(&packet.data[slot_start..slot_end]).ok()?;
-    let msg_end = if packet.meta.repair {
+    let slot: u64 = packet.deserialize_slice(slot_start..slot_end).ok()?;
+    let msg_end = if packet.meta.repair() {
         packet.meta.size.saturating_sub(SIZE_OF_NONCE)
     } else {
         packet.meta.size
@@ -117,16 +114,17 @@ fn slot_key_data_for_gpu<
                     .packets
                     .iter()
                     .map(|packet| {
-                        let slot_start = size_of::<Signature>() + size_of::<ShredType>();
-                        let slot_end = slot_start + size_of::<u64>();
-                        if packet.meta.size < slot_end || packet.meta.discard {
-                            return std::u64::MAX;
+                        if packet.meta.discard() {
+                            return Slot::MAX;
                         }
-                        let slot: Option<u64> =
-                            limited_deserialize(&packet.data[slot_start..slot_end]).ok();
+
+                        let slot_start = size_of::<Signature>() + size_of::<ShredType>();
+                        let slot_end = slot_start + size_of::<Slot>();
+                        let slot: Option<Slot> =
+                            packet.deserialize_slice(slot_start..slot_end).ok();
                         match slot {
                             Some(slot) if slot_keys.get(&slot).is_some() => slot,
-                            _ => std::u64::MAX,
+                            _ => Slot::MAX,
                         }
                     })
                     .collect()
@@ -204,7 +202,7 @@ fn shred_gpu_offsets(
             let sig_start = pubkeys_end;
             let sig_end = sig_start + size_of::<Signature>();
             let msg_start = sig_end;
-            let msg_end = if packet.meta.repair {
+            let msg_end = if packet.meta.repair() {
                 sig_start + packet.meta.size.saturating_sub(SIZE_OF_NONCE)
             } else {
                 sig_start + packet.meta.size
@@ -329,7 +327,7 @@ pub fn sign_shreds_cpu(keypair: &Keypair, batches: &mut [PacketBatch]) {
         batches.par_iter_mut().for_each(|batch| {
             batch.packets[..]
                 .par_iter_mut()
-                .for_each(|mut p| sign_shred_cpu(keypair, &mut p));
+                .for_each(|p| sign_shred_cpu(keypair, p));
         });
     });
     inc_new_counter_debug!("ed25519_shred_verify_cpu", packet_count);

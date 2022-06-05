@@ -1,9 +1,6 @@
 //! A command-line executable for generating the chain's genesis config.
 #![allow(clippy::integer_arithmetic)]
 
-#[macro_use]
-extern crate solana_exchange_program;
-
 use {
     clap::{crate_description, crate_name, value_t, value_t_or_exit, App, Arg, ArgMatches},
     safecoin_clap_utils::{
@@ -14,10 +11,9 @@ use {
             is_pubkey_or_keypair, is_rfc3339_datetime, is_slot, is_valid_percentage,
         },
     },
+    solana_entry::poh::compute_hashes_per_tick,
     safecoin_genesis::{genesis_accounts::add_genesis_accounts, Base64Account},
-    solana_ledger::{
-        blockstore::create_new_ledger, blockstore_db::AccessType, poh::compute_hashes_per_tick,
-    },
+    solana_ledger::{blockstore::create_new_ledger, blockstore_db::AccessType},
     solana_runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
     safecoin_sdk::{
         account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
@@ -496,14 +492,8 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         matches.is_present("enable_warmup_epochs"),
     );
 
-    let native_instruction_processors = if cluster_type == ClusterType::Development {
-        vec![solana_exchange_program!()]
-    } else {
-        vec![]
-    };
-
     let mut genesis_config = GenesisConfig {
-        native_instruction_processors,
+        native_instruction_processors: vec![],
         ticks_per_slot,
         poh_config,
         fee_rate_governor,

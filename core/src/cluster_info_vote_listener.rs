@@ -32,6 +32,7 @@ use {
         bank_forks::BankForks,
         commitment::VOTE_THRESHOLD_SIZE,
         epoch_stakes::EpochStakes,
+        vote_parser,
         vote_sender_types::{ReplayVoteReceiver, ReplayedVote},
     },
     safecoin_sdk::{
@@ -42,7 +43,7 @@ use {
         slot_hashes,
         transaction::Transaction,
     },
-    solana_vote_program::{self, vote_state::Vote, vote_transaction},
+    solana_vote_program::vote_state::Vote,
     std::{
         collections::{HashMap, HashSet},
         iter::repeat,
@@ -102,12 +103,6 @@ pub struct VoteTracker {
 }
 
 impl VoteTracker {
-    pub(crate) fn new(root_bank: &Bank) -> Self {
-        let vote_tracker = VoteTracker::default();
-        vote_tracker.progress_with_new_root_bank(root_bank);
-        vote_tracker
-    }
-
     fn get_or_insert_slot_tracker(&self, slot: Slot) -> Arc<RwLock<SlotVoteTracker>> {
         if let Some(slot_vote_tracker) = self.slot_vote_trackers.read().unwrap().get(&slot) {
             return slot_vote_tracker.clone();
@@ -299,7 +294,11 @@ impl ClusterInfoVoteListener {
         let mut packet_batches = packet::to_packet_batches(&votes, 1);
 
         // Votes should already be filtered by this point.
-        sigverify::ed25519_verify_cpu(&mut packet_batches, /*reject_non_vote=*/ false);
+        sigverify::ed25519_verify_cpu(
+            &mut packet_batches,
+            /*reject_non_vote=*/ false,
+            votes.len(),
+        );
         let root_bank = bank_forks.read().unwrap().root_bank();
         let epoch_schedule = root_bank.epoch_schedule();
         votes
@@ -308,10 +307,10 @@ impl ClusterInfoVoteListener {
             .filter(|(_, packet_batch)| {
                 // to_packet_batches() above splits into 1 packet long batches
                 assert_eq!(packet_batch.packets.len(), 1);
-                !packet_batch.packets[0].meta.discard
+                !packet_batch.packets[0].meta.discard()
             })
             .filter_map(|(tx, packet_batch)| {
-                let (vote_account_key, vote, _) = vote_transaction::parse_vote_transaction(&tx)?;
+                let (vote_account_key, vote, _) = vote_parser::parse_vote_transaction(&tx)?;
                 let slot = vote.last_voted_slot()?;
                 let epoch = epoch_schedule.get_epoch(slot);
                 let authorized_voter = root_bank
@@ -370,7 +369,8 @@ impl ClusterInfoVoteListener {
                 // Always set this to avoid taking the poh lock too often
                 time_since_lock = Instant::now();
                 // We will take this lock at most once every `BANK_SEND_VOTES_LOOP_SLEEP_MS`
-                if let Some(current_working_bank) = poh_recorder.lock().unwrap().bank() {
+                let current_working_bank = poh_recorder.lock().unwrap().bank();
+                if let Some(current_working_bank) = current_working_bank {
                     Self::check_for_leader_bank_and_send_votes(
                         &mut bank_vote_sender_state_option,
                         current_working_bank,
@@ -538,17 +538,14 @@ impl ClusterInfoVoteListener {
         let mut sel = Select::new();
         sel.recv(gossip_vote_txs_receiver);
         sel.recv(replay_votes_receiver);
-        let mut remaining_wait_time = 200;
-        loop {
-            if remaining_wait_time == 0 {
-                break;
-            }
+        let mut remaining_wait_time = Duration::from_millis(200);
+        while remaining_wait_time > Duration::ZERO {
             let start = Instant::now();
             // Wait for one of the receivers to be ready. `ready_timeout`
             // will return if channels either have something, or are
             // disconnected. `ready_timeout` can wake up spuriously,
             // hence the loop
-            let _ = sel.ready_timeout(Duration::from_millis(remaining_wait_time))?;
+            let _ = sel.ready_timeout(remaining_wait_time)?;
 
             // Should not early return from this point onwards until `process_votes()`
             // returns below to avoid missing any potential `optimistic_confirmed_slots`
@@ -566,10 +563,8 @@ impl ClusterInfoVoteListener {
                     bank_notification_sender,
                     cluster_confirmed_slot_sender,
                 ));
-            } else {
-                remaining_wait_time = remaining_wait_time
-                    .saturating_sub(std::cmp::max(start.elapsed().as_millis() as u64, 1));
             }
+            remaining_wait_time = remaining_wait_time.saturating_sub(start.elapsed());
         }
         Ok(vec![])
     }
@@ -683,7 +678,7 @@ impl ClusterInfoVoteListener {
         }
 
         if is_new_vote {
-            subscriptions.notify_vote(&vote);
+            subscriptions.notify_vote(*vote_pubkey, &vote);
             let _ = verified_vote_sender.send((*vote_pubkey, vote.slots));
         }
     }
@@ -705,7 +700,7 @@ impl ClusterInfoVoteListener {
         // Process votes from gossip and ReplayStage
         let votes = gossip_vote_txs
             .iter()
-            .filter_map(vote_transaction::parse_vote_transaction)
+            .filter_map(vote_parser::parse_vote_transaction)
             .zip(repeat(/*is_gossip:*/ true))
             .chain(replayed_votes.into_iter().zip(repeat(/*is_gossip:*/ false)));
         for ((vote_pubkey, vote, _), is_gossip) in votes {
@@ -823,8 +818,12 @@ mod tests {
             pubkey::Pubkey,
             signature::{Keypair, Signature, Signer},
         },
-        solana_vote_program::vote_state::Vote,
-        std::{collections::BTreeSet, iter::repeat_with, sync::Arc},
+        solana_vote_program::{vote_state::Vote, vote_transaction},
+        std::{
+            collections::BTreeSet,
+            iter::repeat_with,
+            sync::{atomic::AtomicU64, Arc},
+        },
     };
 
     #[test]
@@ -926,7 +925,7 @@ mod tests {
                 vec![stake_per_validator; validator_voting_keypairs.len()],
             );
 
-        let bank0 = Bank::new(&genesis_config);
+        let bank0 = Bank::new_for_tests(&genesis_config);
         // Votes for slots less than the provided root bank's slot should not be processed
         let bank3 = Arc::new(Bank::new_from_parent(
             &Arc::new(bank0),
@@ -1040,7 +1039,7 @@ mod tests {
                 &validator_voting_keypairs,
                 vec![stake_per_validator; validator_voting_keypairs.len()],
             );
-        let bank0 = Bank::new(&genesis_config);
+        let bank0 = Bank::new_for_tests(&genesis_config);
 
         let gossip_vote_slots = vec![1, 2];
         let replay_vote_slots = vec![3, 4];
@@ -1175,7 +1174,7 @@ mod tests {
                 &validator_voting_keypairs,
                 vec![stake_per_validator; validator_voting_keypairs.len()],
             );
-        let bank0 = Bank::new(&genesis_config);
+        let bank0 = Bank::new_for_tests(&genesis_config);
 
         // Send some votes to process
         let (votes_txs_sender, votes_txs_receiver) = unbounded();
@@ -1360,15 +1359,17 @@ mod tests {
                 &validator_keypairs,
                 vec![100; validator_keypairs.len()],
             );
-        let bank = Bank::new(&genesis_config);
+        let bank = Bank::new_for_tests(&genesis_config);
         let exit = Arc::new(AtomicBool::new(false));
         let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
-        let bank = bank_forks.read().unwrap().get(0).unwrap().clone();
-        let vote_tracker = VoteTracker::new(&bank);
+        let bank = bank_forks.read().unwrap().get(0).unwrap();
+        let vote_tracker = VoteTracker::default();
         let optimistically_confirmed_bank =
             OptimisticallyConfirmedBank::locked_from_bank_forks_root(&bank_forks);
+        let max_complete_transaction_status_slot = Arc::new(AtomicU64::default());
         let subscriptions = Arc::new(RpcSubscriptions::new_for_tests(
             &exit,
+            max_complete_transaction_status_slot,
             bank_forks,
             Arc::new(RwLock::new(BlockCommitmentCache::default())),
             optimistically_confirmed_bank,
@@ -1468,15 +1469,17 @@ mod tests {
                 &validator_voting_keypairs,
                 vec![100; validator_voting_keypairs.len()],
             );
-        let bank = Bank::new(&genesis_config);
-        let vote_tracker = VoteTracker::new(&bank);
+        let bank = Bank::new_for_tests(&genesis_config);
+        let vote_tracker = VoteTracker::default();
         let exit = Arc::new(AtomicBool::new(false));
         let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
-        let bank = bank_forks.read().unwrap().get(0).unwrap().clone();
+        let bank = bank_forks.read().unwrap().get(0).unwrap();
         let optimistically_confirmed_bank =
             OptimisticallyConfirmedBank::locked_from_bank_forks_root(&bank_forks);
+        let max_complete_transaction_status_slot = Arc::new(AtomicU64::default());
         let subscriptions = Arc::new(RpcSubscriptions::new_for_tests(
             &exit,
+            max_complete_transaction_status_slot,
             bank_forks,
             Arc::new(RwLock::new(BlockCommitmentCache::default())),
             optimistically_confirmed_bank,
@@ -1494,7 +1497,7 @@ mod tests {
     fn test_verify_votes_empty() {
         solana_logger::setup();
         let GenesisConfigInfo { genesis_config, .. } = create_genesis_config(10_000);
-        let bank = Bank::new(&genesis_config);
+        let bank = Bank::new_for_tests(&genesis_config);
         let bank_forks = RwLock::new(BankForks::new(bank));
         let votes = vec![];
         let (vote_txs, packets) = ClusterInfoVoteListener::verify_votes(votes, &bank_forks);
@@ -1539,7 +1542,7 @@ mod tests {
                 &voting_keypairs,
                 vec![100; voting_keypairs.len()], // stakes
             );
-        let bank = Bank::new(&genesis_config);
+        let bank = Bank::new_for_tests(&genesis_config);
         let bank_forks = RwLock::new(BankForks::new(bank));
         let vote_tx = test_vote_tx(voting_keypairs.first(), hash);
         let votes = vec![vote_tx];
@@ -1564,7 +1567,7 @@ mod tests {
                 &voting_keypairs,
                 vec![100; voting_keypairs.len()], // stakes
             );
-        let bank = Bank::new(&genesis_config);
+        let bank = Bank::new_for_tests(&genesis_config);
         let bank_forks = RwLock::new(BankForks::new(bank));
         let vote_tx = test_vote_tx(voting_keypairs.first(), hash);
         let mut bad_vote = vote_tx.clone();
@@ -1599,7 +1602,7 @@ mod tests {
     #[test]
     fn test_check_for_leader_bank_and_send_votes() {
         let GenesisConfigInfo { genesis_config, .. } = create_genesis_config(1000);
-        let current_leader_bank = Arc::new(Bank::new(&genesis_config));
+        let current_leader_bank = Arc::new(Bank::new_for_tests(&genesis_config));
         let mut bank_vote_sender_state_option: Option<BankVoteSenderState> = None;
         let verified_vote_packets = VerifiedVotePackets::default();
         let (verified_packets_sender, _verified_packets_receiver) = unbounded();

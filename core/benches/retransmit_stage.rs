@@ -6,12 +6,12 @@ extern crate test;
 use {
     log::*,
     solana_core::retransmit_stage::retransmitter,
+    solana_entry::entry::Entry,
     safecoin_gossip::{
         cluster_info::{ClusterInfo, Node},
         contact_info::ContactInfo,
     },
     solana_ledger::{
-        entry::Entry,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
         leader_schedule_cache::LeaderScheduleCache,
         shred::Shredder,
@@ -73,7 +73,7 @@ fn bench_retransmitter(bencher: &mut Bencher) {
     let cluster_info = Arc::new(cluster_info);
 
     let GenesisConfigInfo { genesis_config, .. } = create_genesis_config(100_000);
-    let bank0 = Bank::new(&genesis_config);
+    let bank0 = Bank::new_for_benches(&genesis_config);
     let bank_forks = BankForks::new(bank0);
     let bank = bank_forks.working_bank();
     let bank_forks = Arc::new(RwLock::new(bank_forks));
@@ -96,11 +96,15 @@ fn bench_retransmitter(bencher: &mut Bencher) {
         })
         .collect();
 
-    let keypair = Arc::new(Keypair::new());
+    let keypair = Keypair::new();
     let slot = 0;
     let parent = 0;
-    let shredder = Shredder::new(slot, parent, keypair, 0, 0).unwrap();
-    let mut data_shreds = shredder.entries_to_shreds(&entries, true, 0).0;
+    let shredder = Shredder::new(slot, parent, 0, 0).unwrap();
+    let (mut data_shreds, _) = shredder.entries_to_shreds(
+        &keypair, &entries, true, // is_last_in_slot
+        0,    // next_shred_index
+        0,    // next_code_index
+    );
 
     let num_packets = data_shreds.len();
 

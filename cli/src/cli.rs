@@ -83,7 +83,6 @@ pub enum CliCommand {
         filter: RpcTransactionLogsFilter,
     },
     Ping {
-        lamports: u64,
         interval: Duration,
         count: Option<u64>,
         timeout: Duration,
@@ -162,6 +161,7 @@ pub enum CliCommand {
         address: Option<SignerIndex>,
         use_deprecated_loader: bool,
         allow_excessive_balance: bool,
+        skip_fee_check: bool,
     },
     Program(ProgramCliCommand),
     // Stake Commands
@@ -321,6 +321,13 @@ pub enum CliCommand {
         blockhash_query: BlockhashQuery,
         nonce_account: Option<Pubkey>,
         nonce_authority: SignerIndex,
+        memo: Option<String>,
+        fee_payer: SignerIndex,
+    },
+    CloseVoteAccount {
+        vote_account_pubkey: Pubkey,
+        destination_account_pubkey: Pubkey,
+        withdraw_authority: SignerIndex,
         memo: Option<String>,
         fee_payer: SignerIndex,
     },
@@ -737,6 +744,7 @@ pub fn parse_command(
                 signers.push(signer);
                 1
             });
+            let skip_fee_check = matches.is_present("skip_fee_check");
 
             Ok(CliCommandInfo {
                 command: CliCommand::Deploy {
@@ -744,6 +752,7 @@ pub fn parse_command(
                     address,
                     use_deprecated_loader: matches.is_present("use_deprecated_loader"),
                     allow_excessive_balance: matches.is_present("allow_excessive_balance"),
+                    skip_fee_check,
                 },
                 signers,
             })
@@ -843,6 +852,9 @@ pub fn parse_command(
         ("vote-account", Some(matches)) => parse_vote_get_account_command(matches, wallet_manager),
         ("withdraw-from-vote-account", Some(matches)) => {
             parse_withdraw_from_vote_account(matches, default_signer, wallet_manager)
+        }
+        ("close-vote-account", Some(matches)) => {
+            parse_close_vote_account(matches, default_signer, wallet_manager)
         }
         // Wallet Commands
         ("account", Some(matches)) => parse_account(matches, wallet_manager),
@@ -963,7 +975,6 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
         CliCommand::LiveSlots => process_live_slots(config),
         CliCommand::Logs { filter } => process_logs(config, filter),
         CliCommand::Ping {
-            lamports,
             interval,
             count,
             timeout,
@@ -972,7 +983,6 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
         } => process_ping(
             &rpc_client,
             config,
-            *lamports,
             interval,
             count,
             timeout,
@@ -1119,6 +1129,7 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             address,
             use_deprecated_loader,
             allow_excessive_balance,
+            skip_fee_check,
         } => process_deploy(
             rpc_client,
             config,
@@ -1126,6 +1137,7 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             *address,
             *use_deprecated_loader,
             *allow_excessive_balance,
+            *skip_fee_check,
         ),
         CliCommand::Program(program_subcommand) => {
             process_program_subcommand(rpc_client, config, program_subcommand)
@@ -1467,6 +1479,21 @@ pub fn process_command(config: &CliConfig) -> ProcessResult {
             memo.as_ref(),
             *fee_payer,
         ),
+        CliCommand::CloseVoteAccount {
+            vote_account_pubkey,
+            withdraw_authority,
+            destination_account_pubkey,
+            memo,
+            fee_payer,
+        } => process_close_vote_account(
+            &rpc_client,
+            config,
+            vote_account_pubkey,
+            *withdraw_authority,
+            destination_account_pubkey,
+            memo.as_ref(),
+            *fee_payer,
+        ),
         CliCommand::VoteAuthorize {
             vote_account_pubkey,
             new_authorized_pubkey,
@@ -1617,7 +1644,7 @@ pub fn request_and_confirm_airdrop(
     to_pubkey: &Pubkey,
     lamports: u64,
 ) -> ClientResult<Signature> {
-    let (recent_blockhash, _fee_calculator) = rpc_client.get_recent_blockhash()?;
+    let recent_blockhash = rpc_client.get_latest_blockhash()?;
     let signature =
         rpc_client.request_airdrop_with_blockhash(to_pubkey, lamports, &recent_blockhash)?;
     rpc_client.confirm_transaction_with_spinner(
@@ -1942,6 +1969,7 @@ mod tests {
                     address: None,
                     use_deprecated_loader: false,
                     allow_excessive_balance: false,
+                    skip_fee_check: false,
                 },
                 signers: vec![read_keypair_file(&keypair_file).unwrap().into()],
             }
@@ -1964,6 +1992,7 @@ mod tests {
                     address: Some(1),
                     use_deprecated_loader: false,
                     allow_excessive_balance: false,
+                    skip_fee_check: false,
                 },
                 signers: vec![
                     read_keypair_file(&keypair_file).unwrap().into(),
@@ -2357,6 +2386,7 @@ mod tests {
             address: None,
             use_deprecated_loader: false,
             allow_excessive_balance: false,
+            skip_fee_check: false,
         };
         config.output_format = OutputFormat::JsonCompact;
         let result = process_command(&config);
@@ -2377,6 +2407,7 @@ mod tests {
             address: None,
             use_deprecated_loader: false,
             allow_excessive_balance: false,
+            skip_fee_check: false,
         };
         assert!(process_command(&config).is_err());
     }

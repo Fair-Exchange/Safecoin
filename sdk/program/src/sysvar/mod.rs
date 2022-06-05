@@ -1,6 +1,9 @@
 //! named accounts for synthesized data accounts for bank state, etc.
 //!
-use crate::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
+use {
+    crate::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey},
+    lazy_static::lazy_static,
+};
 
 pub mod clock;
 pub mod epoch_schedule;
@@ -13,17 +16,25 @@ pub mod slot_hashes;
 pub mod slot_history;
 pub mod stake_history;
 
+lazy_static! {
+    pub static ref ALL_IDS: Vec<Pubkey> = vec![
+        clock::id(),
+        epoch_schedule::id(),
+        #[allow(deprecated)]
+        fees::id(),
+        #[allow(deprecated)]
+        recent_blockhashes::id(),
+        rent::id(),
+        rewards::id(),
+        slot_hashes::id(),
+        slot_history::id(),
+        stake_history::id(),
+        instructions::id(),
+    ];
+}
+
 pub fn is_sysvar_id(id: &Pubkey) -> bool {
-    clock::check_id(id)
-        || epoch_schedule::check_id(id)
-        || fees::check_id(id)
-        || recent_blockhashes::check_id(id)
-        || rent::check_id(id)
-        || rewards::check_id(id)
-        || slot_hashes::check_id(id)
-        || slot_history::check_id(id)
-        || stake_history::check_id(id)
-        || instructions::check_id(id)
+    ALL_IDS.iter().any(|key| key == id)
 }
 
 #[macro_export]
@@ -44,9 +55,32 @@ macro_rules! declare_sysvar_id(
         #[cfg(test)]
         #[test]
         fn test_sysvar_id() {
-            if !$crate::sysvar::is_sysvar_id(&id()) {
-                panic!("sysvar::is_sysvar_id() doesn't know about {}", $name);
+            assert!($crate::sysvar::is_sysvar_id(&id()), "sysvar::is_sysvar_id() doesn't know about {}", $name);
+        }
+    )
+);
+
+#[macro_export]
+macro_rules! declare_deprecated_sysvar_id(
+    ($name:expr, $type:ty) => (
+        $crate::declare_deprecated_id!($name);
+
+        impl $crate::sysvar::SysvarId for $type {
+            fn id() -> $crate::pubkey::Pubkey {
+                #[allow(deprecated)]
+                id()
             }
+
+            fn check_id(pubkey: &$crate::pubkey::Pubkey) -> bool {
+                #[allow(deprecated)]
+                check_id(pubkey)
+            }
+        }
+
+        #[cfg(test)]
+        #[test]
+        fn test_sysvar_id() {
+            assert!($crate::sysvar::is_sysvar_id(&id()), "sysvar::is_sysvar_id() doesn't know about {}", $name);
         }
     )
 );

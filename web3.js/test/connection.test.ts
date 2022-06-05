@@ -1,5 +1,4 @@
 import bs58 from 'bs58';
-import invariant from 'assert';
 import {Buffer} from 'buffer';
 import {Token, u64} from '@safecoin/safe-token';
 import {expect, use} from 'chai';
@@ -9,6 +8,7 @@ import {
   Account,
   Authorized,
   Connection,
+  EpochSchedule,
   SystemProgram,
   Transaction,
   LAMPORTS_PER_SAFE,
@@ -17,14 +17,15 @@ import {
   StakeProgram,
   sendAndConfirmTransaction,
   Keypair,
+  Message,
 } from '../src';
+import invariant from '../src/util/assert';
 import {DEFAULT_TICKS_PER_SLOT, NUM_TICKS_PER_SECOND} from '../src/timing';
 import {MOCK_PORT, url} from './url';
 import {
   BLOCKHASH_CACHE_TIMEOUT_MS,
   Commitment,
   EpochInfo,
-  EpochSchedule,
   InflationGovernor,
   SlotInfo,
 } from '../src/connection';
@@ -132,6 +133,35 @@ describe('Connection', () => {
     });
   }
 
+  it('should attribute middleware fatals to the middleware', async () => {
+    let connection = new Connection(url, {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      fetchMiddleware: (_url, _options, _fetch) => {
+        throw new Error('This middleware experienced a fatal error');
+      },
+    });
+    const error = await expect(connection.getVersion()).to.be.rejectedWith(
+      'This middleware experienced a fatal error',
+    );
+    expect(error)
+      .to.be.an.instanceOf(Error)
+      .and.to.have.property('stack')
+      .that.include('fetchMiddleware');
+  });
+
+  it('should not attribute fetch errors to the middleware', async () => {
+    let connection = new Connection(url, {
+      fetchMiddleware: (url, _options, fetch) => {
+        fetch(url, 'An `Object` was expected here; this is a `TypeError`.');
+      },
+    });
+    const error = await expect(connection.getVersion()).to.be.rejected;
+    expect(error)
+      .to.be.an.instanceOf(Error)
+      .and.to.have.property('stack')
+      .that.does.not.include('fetchMiddleware');
+  });
+
   it('get account info - not found', async () => {
     const account = Keypair.generate();
 
@@ -153,6 +183,76 @@ describe('Connection', () => {
 
     expect((await connection.getParsedAccountInfo(account.publicKey)).value).to
       .be.null;
+  });
+
+  it('get multiple accounts info', async () => {
+    const account1 = Keypair.generate();
+    const account2 = Keypair.generate();
+
+    {
+      await helpers.airdrop({
+        connection,
+        address: account1.publicKey,
+        amount: LAMPORTS_PER_SAFE,
+      });
+
+      await helpers.airdrop({
+        connection,
+        address: account2.publicKey,
+        amount: LAMPORTS_PER_SAFE,
+      });
+    }
+
+    const value = [
+      {
+        owner: '11111111111111111111111111111111',
+        lamports: LAMPORTS_PER_SAFE,
+        data: ['', 'base64'],
+        executable: false,
+        rentEpoch: 0,
+      },
+      {
+        owner: '11111111111111111111111111111111',
+        lamports: LAMPORTS_PER_SAFE,
+        data: ['', 'base64'],
+        executable: false,
+        rentEpoch: 0,
+      },
+    ];
+
+    await mockRpcResponse({
+      method: 'getMultipleAccounts',
+      params: [
+        [account1.publicKey.toBase58(), account2.publicKey.toBase58()],
+        {encoding: 'base64'},
+      ],
+      value: value,
+      withContext: true,
+    });
+
+    const res = await connection.getMultipleAccountsInfo(
+      [account1.publicKey, account2.publicKey],
+      'confirmed',
+    );
+
+    const expectedValue = [
+      {
+        owner: new PublicKey('11111111111111111111111111111111'),
+        lamports: LAMPORTS_PER_SAFE,
+        data: Buffer.from([]),
+        executable: false,
+        rentEpoch: 0,
+      },
+      {
+        owner: new PublicKey('11111111111111111111111111111111'),
+        lamports: LAMPORTS_PER_SAFE,
+        data: Buffer.from([]),
+        executable: false,
+        rentEpoch: 0,
+      },
+    ];
+
+    expect(res).to.eql(expectedValue);
   });
 
   it('get program accounts', async () => {
@@ -816,7 +916,7 @@ describe('Connection', () => {
         total: 1000000,
         circulating: 100000,
         nonCirculating: 900000,
-        nonCirculatingAccounts: [Keypair.generate().publicKey.toBase58()],
+        nonCirculatingAccounts: [],
       },
       withContext: true,
     });
@@ -1008,6 +1108,112 @@ describe('Connection', () => {
       expect(confirmedSignatures2[0].slot).to.eq(slot);
       expect(confirmedSignatures2[0].err).to.be.null;
       expect(confirmedSignatures2[0].memo).to.be.null;
+    }
+  });
+
+  it('get signatures for address', async () => {
+    const connection = new Connection(url);
+
+    await mockRpcResponse({
+      method: 'getSlot',
+      params: [],
+      value: 1,
+    });
+
+    while ((await connection.getSlot()) <= 0) {
+      continue;
+    }
+
+    await mockRpcResponse({
+      method: 'getConfirmedBlock',
+      params: [1],
+      value: {
+        blockTime: 1614281964,
+        blockhash: '57zQNBZBEiHsCZFqsaY6h176ioXy5MsSLmcvHkEyaLGy',
+        previousBlockhash: 'H5nJ91eGag3B5ZSRHZ7zG5ZwXJ6ywCt2hyR8xCsV7xMo',
+        parentSlot: 0,
+        transactions: [
+          {
+            meta: {
+              fee: 10000,
+              postBalances: [499260347380, 15298080, 1, 1, 1],
+              preBalances: [499260357380, 15298080, 1, 1, 1],
+              status: {Ok: null},
+              err: null,
+            },
+            transaction: {
+              message: {
+                accountKeys: [
+                  'va12u4o9DipLEB2z4fuoHszroq1U9NcAB9aooFDPJSf',
+                  '57zQNBZBEiHsCZFqsaY6h176ioXy5MsSLmcvHkEyaLGy',
+                  'SysvarS1otHashes111111111111111111111111111',
+                  'SysvarC1ock11111111111111111111111111111111',
+                  'Vote111111111111111111111111111111111111111',
+                ],
+                header: {
+                  numReadonlySignedAccounts: 0,
+                  numReadonlyUnsignedAccounts: 3,
+                  numRequiredSignatures: 2,
+                },
+                instructions: [
+                  {
+                    accounts: [1, 2, 3],
+                    data: '37u9WtQpcm6ULa3VtWDFAWoQc1hUvybPrA3dtx99tgHvvcE7pKRZjuGmn7VX2tC3JmYDYGG7',
+                    programIdIndex: 4,
+                  },
+                ],
+                recentBlockhash: 'GeyAFFRY3WGpmam2hbgrKw4rbU2RKzfVLm5QLSeZwTZE',
+              },
+              signatures: [
+                'w2Zeq8YkpyB463DttvfzARD7k9ZxGEwbsEw4boEK7jDp3pfoxZbTdLFSsEPhzXhpCcjGi2kHtHFobgX49MMhbWt',
+                '4oCEqwGrMdBeMxpzuWiukCYqSfV4DsSKXSiVVCh1iJ6pS772X7y219JZP3mgqBz5PhsvprpKyhzChjYc3VSBQXzG',
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    // Find a block that has a transaction, usually Block 1
+    let slot = 0;
+    let address: PublicKey | undefined;
+    let expectedSignature: string | undefined;
+    while (!address || !expectedSignature) {
+      slot++;
+      const block = await connection.getConfirmedBlock(slot);
+      if (block.transactions.length > 0) {
+        const {signature, publicKey} =
+          block.transactions[0].transaction.signatures[0];
+        if (signature) {
+          address = publicKey;
+          expectedSignature = bs58.encode(signature);
+        }
+      }
+    }
+
+    // getSignaturesForAddress tests...
+    await mockRpcResponse({
+      method: 'getSignaturesForAddress',
+      params: [address.toBase58(), {limit: 1}],
+      value: [
+        {
+          signature: expectedSignature,
+          slot,
+          err: null,
+          memo: null,
+        },
+      ],
+    });
+
+    const signatures = await connection.getSignaturesForAddress(address, {
+      limit: 1,
+    });
+    expect(signatures).to.have.length(1);
+    if (mockServer) {
+      expect(signatures[0].signature).to.eq(expectedSignature);
+      expect(signatures[0].slot).to.eq(slot);
+      expect(signatures[0].err).to.be.null;
+      expect(signatures[0].memo).to.be.null;
     }
   });
 
@@ -1901,6 +2107,54 @@ describe('Connection', () => {
     );
   });
 
+  it('get blocks between two slots', async () => {
+    await mockRpcResponse({
+      method: 'getConfirmedBlocks',
+      params: [0, 10],
+      value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    });
+
+    await mockRpcResponse({
+      method: 'getSlot',
+      params: [],
+      value: 10,
+    });
+
+    const latestSlot = await connection.getSlot();
+    const blocks = await connection.getBlocks(0, latestSlot);
+    expect(blocks).to.have.length(latestSlot);
+    expect(blocks).to.contain(1);
+    expect(blocks).to.contain(latestSlot);
+  });
+
+  it('get blocks from starting slot', async () => {
+    await mockRpcResponse({
+      method: 'getConfirmedBlocks',
+      params: [0],
+      value: [
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+        21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
+        39, 40, 41, 42,
+      ],
+    });
+
+    await mockRpcResponse({
+      method: 'getSlot',
+      params: [],
+      value: 20,
+    });
+
+    while ((await connection.getSlot()) <= 0) {
+      continue;
+    }
+
+    const blocks = await connection.getBlocks(0);
+    const latestSlot = await connection.getSlot();
+    expect(blocks).to.have.lengthOf.greaterThanOrEqual(latestSlot);
+    expect(blocks).to.contain(1);
+    expect(blocks).to.contain(latestSlot);
+  });
+
   it('get confirmed block signatures', async () => {
     await mockRpcResponse({
       method: 'getSlot',
@@ -2064,7 +2318,7 @@ describe('Connection', () => {
   it('get supply', async () => {
     await mockRpcResponse({
       method: 'getSupply',
-      params: [],
+      params: [{commitment: 'finalized'}],
       value: {
         total: 1000,
         circulating: 100,
@@ -2074,11 +2328,36 @@ describe('Connection', () => {
       withContext: true,
     });
 
-    const supply = (await connection.getSupply()).value;
+    const supply = (await connection.getSupply('finalized')).value;
     expect(supply.total).to.be.greaterThan(0);
     expect(supply.circulating).to.be.greaterThan(0);
     expect(supply.nonCirculating).to.be.at.least(0);
     expect(supply.nonCirculatingAccounts.length).to.be.at.least(0);
+  });
+
+  it('get supply without accounts', async () => {
+    await mockRpcResponse({
+      method: 'getSupply',
+      params: [{commitment: 'finalized'}],
+      value: {
+        total: 1000,
+        circulating: 100,
+        nonCirculating: 900,
+        nonCirculatingAccounts: [],
+      },
+      withContext: true,
+    });
+
+    const supply = (
+      await connection.getSupply({
+        commitment: 'finalized',
+        excludeNonCirculatingAccountsList: true,
+      })
+    ).value;
+    expect(supply.total).to.be.greaterThan(0);
+    expect(supply.circulating).to.be.greaterThan(0);
+    expect(supply.nonCirculating).to.be.at.least(0);
+    expect(supply.nonCirculatingAccounts.length).to.eq(0);
   });
 
   it('get performance samples', async () => {
@@ -2257,8 +2536,8 @@ describe('Connection', () => {
         ).value;
         if (accountInfo) {
           const data = accountInfo.data;
-          if (data instanceof Buffer) {
-            expect(data instanceof Buffer).to.eq(false);
+          if (Buffer.isBuffer(data)) {
+            expect(Buffer.isBuffer(data)).to.eq(false);
           } else {
             expect(data.program).to.eq('safe-token');
             expect(data.parsed).to.be.ok;
@@ -2273,8 +2552,8 @@ describe('Connection', () => {
         tokenAccounts.forEach(({account}) => {
           expect(account.owner).to.eql(TOKEN_PROGRAM_ID);
           const data = account.data;
-          if (data instanceof Buffer) {
-            expect(data instanceof Buffer).to.eq(false);
+          if (Buffer.isBuffer(data)) {
+            expect(Buffer.isBuffer(data)).to.eq(false);
           } else {
             expect(data.parsed).to.be.ok;
             expect(data.program).to.eq('safe-token');
@@ -2291,8 +2570,8 @@ describe('Connection', () => {
         tokenAccounts.forEach(({account}) => {
           expect(account.owner).to.eql(TOKEN_PROGRAM_ID);
           const data = account.data;
-          if (data instanceof Buffer) {
-            expect(data instanceof Buffer).to.eq(false);
+          if (Buffer.isBuffer(data)) {
+            expect(Buffer.isBuffer(data)).to.eq(false);
           } else {
             expect(data.parsed).to.be.ok;
             expect(data.program).to.eq('safe-token');
@@ -2492,6 +2771,17 @@ describe('Connection', () => {
     expect(version['safecoin-core']).to.be.ok;
   });
 
+  it('getGenesisHash', async () => {
+    await mockRpcResponse({
+      method: 'getGenesisHash',
+      params: [],
+      value: 'GH7ome3EiwEr7tu9JuTh2dpYWBJK3z69Xm1ZE3MEE6JC',
+    });
+
+    const genesisHash = await connection.getGenesisHash();
+    expect(genesisHash).not.to.be.empty;
+  });
+
   it('request airdrop', async () => {
     const account = Keypair.generate();
 
@@ -2631,6 +2921,65 @@ describe('Connection', () => {
   });
 
   if (process.env.TEST_LIVE) {
+    it('simulate transaction with message', async () => {
+      connection._commitment = 'confirmed';
+
+      const account1 = Keypair.generate();
+      const account2 = Keypair.generate();
+
+      await helpers.airdrop({
+        connection,
+        address: account1.publicKey,
+        amount: LAMPORTS_PER_SAFE,
+      });
+
+      await helpers.airdrop({
+        connection,
+        address: account2.publicKey,
+        amount: LAMPORTS_PER_SAFE,
+      });
+
+      const recentBlockhash = await (
+        await helpers.recentBlockhash({connection})
+      ).blockhash;
+      const message = new Message({
+        accountKeys: [
+          account1.publicKey.toString(),
+          account2.publicKey.toString(),
+          'MEMDqRW2fYAU19mcFnoDVoqG4Br4t7TdyWjjv38P6Nc',
+        ],
+        header: {
+          numReadonlySignedAccounts: 1,
+          numReadonlyUnsignedAccounts: 2,
+          numRequiredSignatures: 1,
+        },
+        instructions: [
+          {
+            accounts: [0, 1],
+            data: bs58.encode(Buffer.alloc(5).fill(9)),
+            programIdIndex: 2,
+          },
+        ],
+        recentBlockhash,
+      });
+
+      const results1 = await connection.simulateTransaction(
+        message,
+        [account1],
+        true,
+      );
+
+      expect(results1.value.accounts).lengthOf(2);
+
+      const results2 = await connection.simulateTransaction(
+        message,
+        [account1],
+        [account1.publicKey],
+      );
+
+      expect(results2.value.accounts).lengthOf(1);
+    }).timeout(10000);
+
     it('transaction', async () => {
       connection._commitment = 'confirmed';
 

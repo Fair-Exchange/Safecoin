@@ -4,20 +4,19 @@
 //! * own mining pools
 
 #[deprecated(
-    since = "1.7.2",
+    since = "1.8.0",
     note = "Please use `safecoin_sdk::stake::state` or `safecoin_program::stake::state` instead"
 )]
 pub use safecoin_sdk::stake::state::*;
 use {
+    safecoin_program_runtime::{ic_msg, invoke_context::InvokeContext},
     safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount, WritableAccount},
         account_utils::{State, StateMut},
         clock::{Clock, Epoch},
         feature_set::stake_merge_with_unmatched_credits_observed,
-        ic_msg,
         instruction::{checked_add, InstructionError},
         keyed_account::KeyedAccount,
-        process_instruction::InvokeContext,
         pubkey::Pubkey,
         rent::{Rent, ACCOUNT_STORAGE_OVERHEAD},
         stake::{
@@ -33,6 +32,9 @@ use {
 
 #[derive(Debug)]
 pub enum SkippedReason {
+    DisabledInflation,
+    JustActivated,
+    TooEarlyUnfairSplit,
     ZeroPoints,
     ZeroPointValue,
     ZeroReward,
@@ -215,16 +217,18 @@ fn calculate_stake_points_and_credits(
     stake_history: Option<&StakeHistory>,
     inflation_point_calc_tracer: Option<impl Fn(&InflationPointCalculationEvent)>,
 ) -> (u128, u64) {
+    let credits_in_stake = stake.credits_observed;
+    let credits_in_vote = new_vote_state.credits();
     // if there is no newer credits since observed, return no point
-    if new_vote_state.credits() <= stake.credits_observed {
+    if credits_in_vote <= credits_in_stake {
         if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer.as_ref() {
             inflation_point_calc_tracer(&SkippedReason::ZeroCreditsAndReturnCurrent.into());
         }
-        return (0, stake.credits_observed);
+        return (0, credits_in_stake);
     }
 
     let mut points = 0;
-    let mut new_credits_observed = stake.credits_observed;
+    let mut new_credits_observed = credits_in_stake;
 
     for (epoch, final_epoch_credits, initial_epoch_credits) in
         new_vote_state.epoch_credits().iter().copied()
@@ -233,10 +237,10 @@ fn calculate_stake_points_and_credits(
 
         // figure out how much this stake has seen that
         //   for which the vote account has a record
-        let earned_credits = if stake.credits_observed < initial_epoch_credits {
+        let earned_credits = if credits_in_stake < initial_epoch_credits {
             // the staker observed the entire epoch
             final_epoch_credits - initial_epoch_credits
-        } else if stake.credits_observed < final_epoch_credits {
+        } else if credits_in_stake < final_epoch_credits {
             // the staker registered sometime during the epoch, partial credit
             final_epoch_credits - new_credits_observed
         } else {
@@ -279,8 +283,11 @@ fn calculate_stake_rewards(
     vote_state: &VoteState,
     stake_history: Option<&StakeHistory>,
     inflation_point_calc_tracer: Option<impl Fn(&InflationPointCalculationEvent)>,
-    fix_activating_credits_observed: bool,
+    _fix_activating_credits_observed: bool, // this unused flag will soon be justified by an upcoming feature pr
 ) -> Option<(u64, u64, u64)> {
+    // ensure to run to trigger (optional) inflation_point_calc_tracer
+    // this awkward flag variable will soon be justified by an upcoming feature pr
+    let mut forced_credits_update_with_skipped_reward = false;
     let (points, credits_observed) = calculate_stake_points_and_credits(
         stake,
         vote_state,
@@ -290,20 +297,31 @@ fn calculate_stake_rewards(
 
     // Drive credits_observed forward unconditionally when rewards are disabled
     // or when this is the stake's activation epoch
-    if point_value.rewards == 0
-        || (fix_activating_credits_observed && stake.delegation.activation_epoch == rewarded_epoch)
-    {
+    if point_value.rewards == 0 {
+        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer.as_ref() {
+            inflation_point_calc_tracer(&SkippedReason::DisabledInflation.into());
+        }
+        forced_credits_update_with_skipped_reward = true;
+    } else if stake.delegation.activation_epoch == rewarded_epoch {
+        // not assert!()-ed; but points should be zero
+        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer.as_ref() {
+            inflation_point_calc_tracer(&SkippedReason::JustActivated.into());
+        }
+        forced_credits_update_with_skipped_reward = true;
+    }
+
+    if forced_credits_update_with_skipped_reward {
         return Some((0, 0, credits_observed));
     }
 
     if points == 0 {
-        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer {
+        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer.as_ref() {
             inflation_point_calc_tracer(&SkippedReason::ZeroPoints.into());
         }
         return None;
     }
     if point_value.points == 0 {
-        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer {
+        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer.as_ref() {
             inflation_point_calc_tracer(&SkippedReason::ZeroPointValue.into());
         }
         return None;
@@ -319,13 +337,13 @@ fn calculate_stake_rewards(
 
     // don't bother trying to split if fractional lamports got truncated
     if rewards == 0 {
-        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer {
+        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer.as_ref() {
             inflation_point_calc_tracer(&SkippedReason::ZeroReward.into());
         }
         return None;
     }
     let (voter_rewards, staker_rewards, is_split) = vote_state.commission_split(rewards);
-    if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer {
+    if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer.as_ref() {
         inflation_point_calc_tracer(&InflationPointCalculationEvent::SplitRewards(
             rewards,
             voter_rewards,
@@ -338,6 +356,9 @@ fn calculate_stake_rewards(
         // don't collect if we lose a whole lamport somewhere
         //  is_split means there should be tokens on both sides,
         //  uncool to move credits_observed if one side didn't get paid
+        if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer.as_ref() {
+            inflation_point_calc_tracer(&SkippedReason::TooEarlyUnfairSplit.into());
+        }
         return None;
     }
 
@@ -395,7 +416,7 @@ pub trait StakeAccount {
     ) -> Result<(), InstructionError>;
     fn merge(
         &self,
-        invoke_context: &dyn InvokeContext,
+        invoke_context: &InvokeContext,
         source_stake: &KeyedAccount,
         clock: &Clock,
         stake_history: &StakeHistory,
@@ -701,7 +722,7 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
 
     fn merge(
         &self,
-        invoke_context: &dyn InvokeContext,
+        invoke_context: &InvokeContext,
         source_account: &KeyedAccount,
         clock: &Clock,
         stake_history: &StakeHistory,
@@ -865,7 +886,7 @@ impl MergeKind {
     }
 
     fn get_if_mergeable(
-        invoke_context: &dyn InvokeContext,
+        invoke_context: &InvokeContext,
         stake_keyed_account: &KeyedAccount,
         clock: &Clock,
         stake_history: &StakeHistory,
@@ -897,7 +918,7 @@ impl MergeKind {
     }
 
     fn metas_can_merge(
-        invoke_context: &dyn InvokeContext,
+        invoke_context: &InvokeContext,
         stake: &Meta,
         source: &Meta,
         clock: Option<&Clock>,
@@ -926,7 +947,7 @@ impl MergeKind {
     }
 
     fn active_delegations_can_merge(
-        invoke_context: &dyn InvokeContext,
+        invoke_context: &InvokeContext,
         stake: &Delegation,
         source: &Delegation,
     ) -> Result<(), InstructionError> {
@@ -946,7 +967,7 @@ impl MergeKind {
 
     // Remove this when the `stake_merge_with_unmatched_credits_observed` feature is removed
     fn active_stakes_can_merge(
-        invoke_context: &dyn InvokeContext,
+        invoke_context: &InvokeContext,
         stake: &Stake,
         source: &Stake,
     ) -> Result<(), InstructionError> {
@@ -969,7 +990,7 @@ impl MergeKind {
 
     fn merge(
         self,
-        invoke_context: &dyn InvokeContext,
+        invoke_context: &InvokeContext,
         source: Self,
         clock: Option<&Clock>,
     ) -> Result<Option<StakeState>, InstructionError> {
@@ -978,7 +999,8 @@ impl MergeKind {
             .zip(source.active_stake())
             .map(|(stake, source)| {
                 if invoke_context
-                    .is_feature_active(&stake_merge_with_unmatched_credits_observed::id())
+                    .feature_set
+                    .is_active(&stake_merge_with_unmatched_credits_observed::id())
                 {
                     Self::active_delegations_can_merge(
                         invoke_context,
@@ -1033,12 +1055,15 @@ impl MergeKind {
 }
 
 fn merge_delegation_stake_and_credits_observed(
-    invoke_context: &dyn InvokeContext,
+    invoke_context: &InvokeContext,
     stake: &mut Stake,
     absorbed_lamports: u64,
     absorbed_credits_observed: u64,
 ) -> Result<(), InstructionError> {
-    if invoke_context.is_feature_active(&stake_merge_with_unmatched_credits_observed::id()) {
+    if invoke_context
+        .feature_set
+        .is_active(&stake_merge_with_unmatched_credits_observed::id())
+    {
         stake.credits_observed =
             stake_weighted_credits_observed(stake, absorbed_lamports, absorbed_credits_observed)
                 .ok_or(InstructionError::ArithmeticOverflow)?;
@@ -1298,11 +1323,11 @@ mod tests {
     use {
         super::*,
         proptest::prelude::*,
+        safecoin_program_runtime::invoke_context::InvokeContext,
         safecoin_sdk::{
             account::{AccountSharedData, WritableAccount},
             clock::UnixTimestamp,
             native_token,
-            process_instruction::MockInvokeContext,
             pubkey::Pubkey,
             system_program,
         },
@@ -2148,7 +2173,7 @@ mod tests {
         }
 
         for epoch in 0..=stake.deactivation_epoch + 1 {
-            let history = stake_history.get(&epoch).unwrap();
+            let history = stake_history.get(epoch).unwrap();
             let other_activations: u64 = other_activations[..=epoch as usize].iter().sum();
             let expected_stake = history.effective - base_stake - other_activations;
             let (expected_activating, expected_deactivating) = if epoch < stake.deactivation_epoch {
@@ -2472,7 +2497,7 @@ mod tests {
             Err(InstructionError::InvalidAccountData)
         );
 
-        // initalize the stake
+        // initialize the stake
         let custodian = safecoin_sdk::pubkey::new_rand();
         stake_keyed_account
             .initialize(
@@ -2730,11 +2755,7 @@ mod tests {
         // Lockup expired: custodian cannot change it
         assert_eq!(
             stake_keyed_account.set_lockup(
-                &LockupArgs {
-                    unix_timestamp: Some(3),
-                    epoch: None,
-                    custodian: None,
-                },
+                &LockupArgs::default(),
                 &vec![custodian].into_iter().collect(),
                 Some(&Clock {
                     unix_timestamp: UnixTimestamp::MAX,
@@ -2748,11 +2769,7 @@ mod tests {
         // Lockup expired: authorized withdrawer can change it
         assert_eq!(
             stake_keyed_account.set_lockup(
-                &LockupArgs {
-                    unix_timestamp: Some(3),
-                    epoch: None,
-                    custodian: None,
-                },
+                &LockupArgs::default(),
                 &vec![stake_pubkey].into_iter().collect(),
                 Some(&Clock {
                     unix_timestamp: UnixTimestamp::MAX,
@@ -2761,6 +2778,34 @@ mod tests {
                 })
             ),
             Ok(())
+        );
+
+        // Change authorized withdrawer
+        let new_withdraw_authority = safecoin_sdk::pubkey::new_rand();
+        assert_eq!(
+            stake_keyed_account.authorize(
+                &vec![stake_pubkey].into_iter().collect(),
+                &new_withdraw_authority,
+                StakeAuthorize::Withdrawer,
+                false,
+                &Clock::default(),
+                None
+            ),
+            Ok(())
+        );
+
+        // Previous authorized withdrawer cannot change the lockup anymore
+        assert_eq!(
+            stake_keyed_account.set_lockup(
+                &LockupArgs::default(),
+                &vec![stake_pubkey].into_iter().collect(),
+                Some(&Clock {
+                    unix_timestamp: UnixTimestamp::MAX,
+                    epoch: Epoch::MAX,
+                    ..Clock::default()
+                })
+            ),
+            Err(InstructionError::MissingRequiredSignature)
         );
     }
 
@@ -4975,13 +5020,13 @@ mod tests {
 
     #[test]
     fn test_merge() {
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let stake_pubkey = safecoin_sdk::pubkey::new_rand();
         let source_stake_pubkey = safecoin_sdk::pubkey::new_rand();
         let authorized_pubkey = safecoin_sdk::pubkey::new_rand();
         let stake_lamports = 42;
 
         let signers = vec![authorized_pubkey].into_iter().collect();
-        let invoke_context = MockInvokeContext::new(vec![]);
 
         for state in &[
             StakeState::Initialized(Meta::auto(&authorized_pubkey)),
@@ -5085,7 +5130,7 @@ mod tests {
 
     #[test]
     fn test_merge_self_fails() {
-        let invoke_context = MockInvokeContext::new(vec![]);
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let stake_address = Pubkey::new_unique();
         let authority_pubkey = Pubkey::new_unique();
         let signers = HashSet::from_iter(vec![authority_pubkey]);
@@ -5130,6 +5175,7 @@ mod tests {
 
     #[test]
     fn test_merge_incorrect_authorized_staker() {
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let stake_pubkey = safecoin_sdk::pubkey::new_rand();
         let source_stake_pubkey = safecoin_sdk::pubkey::new_rand();
         let authorized_pubkey = safecoin_sdk::pubkey::new_rand();
@@ -5138,7 +5184,6 @@ mod tests {
 
         let signers = vec![authorized_pubkey].into_iter().collect();
         let wrong_signers = vec![wrong_authorized_pubkey].into_iter().collect();
-        let invoke_context = MockInvokeContext::new(vec![]);
 
         for state in &[
             StakeState::Initialized(Meta::auto(&authorized_pubkey)),
@@ -5199,12 +5244,12 @@ mod tests {
 
     #[test]
     fn test_merge_invalid_account_data() {
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let stake_pubkey = safecoin_sdk::pubkey::new_rand();
         let source_stake_pubkey = safecoin_sdk::pubkey::new_rand();
         let authorized_pubkey = safecoin_sdk::pubkey::new_rand();
         let stake_lamports = 42;
         let signers = vec![authorized_pubkey].into_iter().collect();
-        let invoke_context = MockInvokeContext::new(vec![]);
 
         for state in &[
             StakeState::Uninitialized,
@@ -5249,6 +5294,7 @@ mod tests {
 
     #[test]
     fn test_merge_fake_stake_source() {
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let stake_pubkey = safecoin_sdk::pubkey::new_rand();
         let source_stake_pubkey = safecoin_sdk::pubkey::new_rand();
         let authorized_pubkey = safecoin_sdk::pubkey::new_rand();
@@ -5274,7 +5320,6 @@ mod tests {
         .expect("source_stake_account");
         let source_stake_keyed_account =
             KeyedAccount::new(&source_stake_pubkey, true, &source_stake_account);
-        let invoke_context = MockInvokeContext::new(vec![]);
 
         assert_eq!(
             stake_keyed_account.merge(
@@ -5291,6 +5336,7 @@ mod tests {
 
     #[test]
     fn test_merge_active_stake() {
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let base_lamports = 4242424242;
         let stake_address = Pubkey::new_unique();
         let source_address = Pubkey::new_unique();
@@ -5344,7 +5390,6 @@ mod tests {
 
         let mut clock = Clock::default();
         let mut stake_history = StakeHistory::default();
-        let invoke_context = MockInvokeContext::new(vec![]);
 
         clock.epoch = 0;
         let mut effective = base_lamports;
@@ -5360,7 +5405,7 @@ mod tests {
         );
 
         fn try_merge(
-            invoke_context: &dyn InvokeContext,
+            invoke_context: &InvokeContext,
             stake_account: &KeyedAccount,
             source_account: &KeyedAccount,
             clock: &Clock,
@@ -5913,6 +5958,7 @@ mod tests {
 
     #[test]
     fn test_things_can_merge() {
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let good_stake = Stake {
             credits_observed: 4242,
             delegation: Delegation {
@@ -5922,7 +5968,6 @@ mod tests {
                 ..Delegation::default()
             },
         };
-        let invoke_context = MockInvokeContext::new(vec![]);
 
         let identical = good_stake;
         assert!(
@@ -6011,7 +6056,7 @@ mod tests {
 
     #[test]
     fn test_metas_can_merge_pre_v4() {
-        let invoke_context = MockInvokeContext::new(vec![]);
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         // Identical Metas can merge
         assert!(MergeKind::metas_can_merge(
             &invoke_context,
@@ -6097,7 +6142,7 @@ mod tests {
 
     #[test]
     fn test_metas_can_merge_v4() {
-        let invoke_context = MockInvokeContext::new(vec![]);
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         // Identical Metas can merge
         assert!(MergeKind::metas_can_merge(
             &invoke_context,
@@ -6243,6 +6288,7 @@ mod tests {
 
     #[test]
     fn test_merge_kind_get_if_mergeable() {
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let authority_pubkey = Pubkey::new_unique();
         let initial_lamports = 4242424242;
         let rent = Rent::default();
@@ -6263,7 +6309,6 @@ mod tests {
         let stake_keyed_account = KeyedAccount::new(&authority_pubkey, true, &stake_account);
         let mut clock = Clock::default();
         let mut stake_history = StakeHistory::default();
-        let invoke_context = MockInvokeContext::new(vec![]);
 
         // Uninitialized state fails
         assert_eq!(
@@ -6475,6 +6520,7 @@ mod tests {
 
     #[test]
     fn test_merge_kind_merge() {
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let lamports = 424242;
         let meta = Meta {
             rent_exempt_reserve: 42,
@@ -6490,7 +6536,6 @@ mod tests {
         let inactive = MergeKind::Inactive(Meta::default(), lamports);
         let activation_epoch = MergeKind::ActivationEpoch(meta, stake);
         let fully_active = MergeKind::FullyActive(meta, stake);
-        let invoke_context = MockInvokeContext::new(vec![]);
 
         assert_eq!(
             inactive
@@ -6553,6 +6598,7 @@ mod tests {
 
     #[test]
     fn test_active_stake_merge() {
+        let invoke_context = InvokeContext::new_mock(&[], &[]);
         let delegation_a = 4_242_424_242u64;
         let delegation_b = 6_200_000_000u64;
         let credits_a = 124_521_000u64;
@@ -6575,8 +6621,6 @@ mod tests {
             },
             credits_observed: credits_a,
         };
-
-        let invoke_context = MockInvokeContext::new(vec![]);
 
         // activating stake merge, match credits observed
         let activation_epoch_a = MergeKind::ActivationEpoch(meta, stake_a);
@@ -6682,7 +6726,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             new_stake.credits_observed,
-            (credits_a * delegation + credits_b * delegation) / (delegation * 2)
+            (credits_a * delegation + credits_b * delegation) / (delegation + delegation)
         );
         assert_eq!(new_stake.delegation.stake, delegation * 2);
     }

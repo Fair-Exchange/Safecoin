@@ -8,14 +8,15 @@ use {
     rayon::prelude::*,
     safecoin_client::thin_client::create_client,
     solana_core::consensus::VOTE_THRESHOLD_DEPTH,
+    solana_entry::entry::{Entry, EntrySlice},
     safecoin_gossip::{
-        cluster_info::VALIDATOR_PORT_RANGE, contact_info::ContactInfo,
+        cluster_info::{self, VALIDATOR_PORT_RANGE},
+        contact_info::ContactInfo,
+        crds_value::{self, CrdsData, CrdsValue},
+        gossip_error::GossipError,
         gossip_service::discover_cluster,
     },
-    solana_ledger::{
-        blockstore::Blockstore,
-        entry::{Entry, EntrySlice},
-    },
+    solana_ledger::blockstore::Blockstore,
     safecoin_sdk::{
         client::SyncClient,
         clock::{self, Slot, NUM_CONSECUTIVE_LEADER_SLOTS},
@@ -27,12 +28,14 @@ use {
         pubkey::Pubkey,
         signature::{Keypair, Signature, Signer},
         system_transaction,
-        timing::duration_as_ms,
+        timing::{duration_as_ms, timestamp},
         transport::TransportError,
     },
     solana_streamer::socket::SocketAddrSpace,
+    solana_vote_program::vote_transaction,
     std::{
         collections::{HashMap, HashSet},
+        net::SocketAddr,
         path::Path,
         sync::{Arc, RwLock},
         thread::sleep,
@@ -65,8 +68,8 @@ pub fn spend_and_verify_all_nodes<S: ::std::hash::BuildHasher + Sync + Send>(
             )
             .expect("balance in source");
         assert!(bal > 0);
-        let (blockhash, _fee_calculator, _last_valid_slot) = client
-            .get_recent_blockhash_with_commitment(CommitmentConfig::confirmed())
+        let (blockhash, _) = client
+            .get_latest_blockhash_with_commitment(CommitmentConfig::confirmed())
             .unwrap();
         let mut transaction =
             system_transaction::transfer(funding_keypair, &random_keypair.pubkey(), 1, blockhash);
@@ -114,8 +117,8 @@ pub fn send_many_transactions(
             )
             .expect("balance in source");
         assert!(bal > 0);
-        let (blockhash, _fee_calculator, _last_valid_slot) = client
-            .get_recent_blockhash_with_commitment(CommitmentConfig::processed())
+        let (blockhash, _) = client
+            .get_latest_blockhash_with_commitment(CommitmentConfig::processed())
             .unwrap();
         let transfer_amount = thread_rng().gen_range(1, max_tokens_per_transfer);
 
@@ -240,8 +243,8 @@ pub fn kill_entry_and_spend_and_verify_rest(
             }
 
             let random_keypair = Keypair::new();
-            let (blockhash, _fee_calculator, _last_valid_slot) = client
-                .get_recent_blockhash_with_commitment(CommitmentConfig::processed())
+            let (blockhash, _) = client
+                .get_latest_blockhash_with_commitment(CommitmentConfig::processed())
                 .unwrap();
             let mut transaction = system_transaction::transfer(
                 funding_keypair,
@@ -413,4 +416,37 @@ fn verify_slot_ticks(
         assert_eq!(num_ticks, expected_num_ticks);
     }
     entries.last().unwrap().hash
+}
+
+pub fn submit_vote_to_cluster_gossip(
+    node_keypair: &Keypair,
+    vote_keypair: &Keypair,
+    vote_slot: Slot,
+    vote_hash: Hash,
+    blockhash: Hash,
+    gossip_addr: SocketAddr,
+    socket_addr_space: &SocketAddrSpace,
+) -> Result<(), GossipError> {
+    let vote_tx = vote_transaction::new_vote_transaction(
+        vec![vote_slot],
+        vote_hash,
+        blockhash,
+        node_keypair,
+        vote_keypair,
+        vote_keypair,
+        None,
+    );
+
+    cluster_info::push_messages_to_peer(
+        vec![CrdsValue::new_signed(
+            CrdsData::Vote(
+                0,
+                crds_value::Vote::new(node_keypair.pubkey(), vote_tx, timestamp()).unwrap(),
+            ),
+            node_keypair,
+        )],
+        node_keypair.pubkey(),
+        gossip_addr,
+        socket_addr_space,
+    )
 }

@@ -6,7 +6,7 @@
 
 # Safecoin Program
 
-Use the Safecoin Program Crate to write on-chain programs in Rust.  If writing client-side applications, use the [Safecoin SDK Crate](https://crates.io/crates/safecoin-program) instead.
+Use the Safecoin Program Crate to write on-chain programs in Rust.  If writing client-side applications, use the [Safecoin SDK Crate](https://crates.io/crates/safecoin-sdk) instead.
 
 More information about Safecoin is available in the [Safecoin documentation](https://docs.solana.com/).
 

@@ -333,7 +333,7 @@ pub fn check_nonce_account(
 ) -> Result<(), CliError> {
     match state_from_account(nonce_account)? {
         State::Initialized(ref data) => {
-            if &data.blockhash != nonce_hash {
+            if &data.blockhash() != nonce_hash {
                 Err(Error::InvalidHash.into())
             } else if nonce_authority != &data.authority {
                 Err(Error::InvalidAuthority.into())
@@ -353,7 +353,7 @@ pub fn process_authorize_nonce_account(
     memo: Option<&String>,
     new_authority: &Pubkey,
 ) -> ProcessResult {
-    let (recent_blockhash, fee_calculator) = rpc_client.get_recent_blockhash()?;
+    let latest_blockhash = rpc_client.get_latest_blockhash()?;
 
     let nonce_authority = config.signers[nonce_authority];
     let ixs = vec![authorize_nonce_account(
@@ -364,12 +364,11 @@ pub fn process_authorize_nonce_account(
     .with_memo(memo);
     let message = Message::new(&ixs, Some(&config.signers[0].pubkey()));
     let mut tx = Transaction::new_unsigned(message);
-    tx.try_sign(&config.signers, recent_blockhash)?;
+    tx.try_sign(&config.signers, latest_blockhash)?;
 
     check_account_for_fee_with_commitment(
         rpc_client,
         &config.signers[0].pubkey(),
-        &fee_calculator,
         &tx.message,
         config.commitment,
     )?;
@@ -436,13 +435,13 @@ pub fn process_create_nonce_account(
         Message::new(&ixs, Some(&config.signers[0].pubkey()))
     };
 
-    let (recent_blockhash, fee_calculator) = rpc_client.get_recent_blockhash()?;
+    let latest_blockhash = rpc_client.get_latest_blockhash()?;
 
     let (message, lamports) = resolve_spend_tx_and_check_account_balance(
         rpc_client,
         false,
         amount,
-        &fee_calculator,
+        &latest_blockhash,
         &config.signers[0].pubkey(),
         build_message,
         config.commitment,
@@ -470,7 +469,7 @@ pub fn process_create_nonce_account(
     }
 
     let mut tx = Transaction::new_unsigned(message);
-    tx.try_sign(&config.signers, recent_blockhash)?;
+    tx.try_sign(&config.signers, latest_blockhash)?;
     let merge_errors =
         get_feature_is_active(rpc_client, &merge_nonce_error_into_system_error::id())?;
     let result = rpc_client.send_and_confirm_transaction_with_spinner(&tx);
@@ -512,11 +511,12 @@ pub fn process_get_nonce(
     config: &CliConfig,
     nonce_account_pubkey: &Pubkey,
 ) -> ProcessResult {
+    #[allow(clippy::redundant_closure)]
     match get_account_with_commitment(rpc_client, nonce_account_pubkey, config.commitment)
         .and_then(|ref a| state_from_account(a))?
     {
         State::Uninitialized => Ok("Nonce account is uninitialized".to_string()),
-        State::Initialized(ref data) => Ok(format!("{:?}", data.blockhash)),
+        State::Initialized(ref data) => Ok(format!("{:?}", data.blockhash())),
     }
 }
 
@@ -546,14 +546,13 @@ pub fn process_new_nonce(
         &nonce_authority.pubkey(),
     )]
     .with_memo(memo);
-    let (recent_blockhash, fee_calculator) = rpc_client.get_recent_blockhash()?;
+    let latest_blockhash = rpc_client.get_latest_blockhash()?;
     let message = Message::new(&ixs, Some(&config.signers[0].pubkey()));
     let mut tx = Transaction::new_unsigned(message);
-    tx.try_sign(&config.signers, recent_blockhash)?;
+    tx.try_sign(&config.signers, latest_blockhash)?;
     check_account_for_fee_with_commitment(
         rpc_client,
         &config.signers[0].pubkey(),
-        &fee_calculator,
         &tx.message,
         config.commitment,
     )?;
@@ -591,7 +590,7 @@ pub fn process_show_nonce_account(
             ..CliNonceAccount::default()
         };
         if let Some(data) = data {
-            nonce_account.nonce = Some(data.blockhash.to_string());
+            nonce_account.nonce = Some(data.blockhash().to_string());
             nonce_account.lamports_per_signature = Some(data.fee_calculator.lamports_per_signature);
             nonce_account.authority = Some(data.authority.to_string());
         }
@@ -613,7 +612,7 @@ pub fn process_withdraw_from_nonce_account(
     destination_account_pubkey: &Pubkey,
     lamports: u64,
 ) -> ProcessResult {
-    let (recent_blockhash, fee_calculator) = rpc_client.get_recent_blockhash()?;
+    let latest_blockhash = rpc_client.get_latest_blockhash()?;
 
     let nonce_authority = config.signers[nonce_authority];
     let ixs = vec![withdraw_nonce_account(
@@ -625,11 +624,10 @@ pub fn process_withdraw_from_nonce_account(
     .with_memo(memo);
     let message = Message::new(&ixs, Some(&config.signers[0].pubkey()));
     let mut tx = Transaction::new_unsigned(message);
-    tx.try_sign(&config.signers, recent_blockhash)?;
+    tx.try_sign(&config.signers, latest_blockhash)?;
     check_account_for_fee_with_commitment(
         rpc_client,
         &config.signers[0].pubkey(),
-        &fee_calculator,
         &tx.message,
         config.commitment,
     )?;
@@ -658,9 +656,12 @@ mod tests {
         safecoin_sdk::{
             account::Account,
             account_utils::StateMut,
-            fee_calculator::FeeCalculator,
             hash::hash,
-            nonce::{self, state::Versions, State},
+            nonce::{
+                self,
+                state::{DurableNonce, Versions},
+                State,
+            },
             nonce_account,
             signature::{read_keypair_file, write_keypair, Keypair, Signer},
             system_program,
@@ -920,13 +921,15 @@ mod tests {
 
     #[test]
     fn test_check_nonce_account() {
-        let blockhash = Hash::default();
+        let durable_nonce =
+            DurableNonce::from_blockhash(&Hash::default(), /*separate_domains:*/ true);
+        let blockhash = *durable_nonce.as_hash();
         let nonce_pubkey = safecoin_sdk::pubkey::new_rand();
-        let data = Versions::new_current(State::Initialized(nonce::state::Data {
-            authority: nonce_pubkey,
-            blockhash,
-            fee_calculator: FeeCalculator::default(),
-        }));
+        let data = Versions::new_current(State::Initialized(nonce::state::Data::new(
+            nonce_pubkey,
+            durable_nonce,
+            0,
+        )));
         let valid = Account::new_data(1, &data, &system_program::ID);
         assert!(check_nonce_account(&valid.unwrap(), &nonce_pubkey, &blockhash).is_ok());
 
@@ -944,11 +947,13 @@ mod tests {
             assert_eq!(err, Error::InvalidAccountData,);
         }
 
-        let data = Versions::new_current(State::Initialized(nonce::state::Data {
-            authority: nonce_pubkey,
-            blockhash: hash(b"invalid"),
-            fee_calculator: FeeCalculator::default(),
-        }));
+        let invalid_durable_nonce =
+            DurableNonce::from_blockhash(&hash(b"invalid"), /*separate_domains:*/ true);
+        let data = Versions::new_current(State::Initialized(nonce::state::Data::new(
+            nonce_pubkey,
+            invalid_durable_nonce,
+            0,
+        )));
         let invalid_hash = Account::new_data(1, &data, &system_program::ID);
         if let CliError::InvalidNonce(err) =
             check_nonce_account(&invalid_hash.unwrap(), &nonce_pubkey, &blockhash).unwrap_err()
@@ -956,11 +961,11 @@ mod tests {
             assert_eq!(err, Error::InvalidHash,);
         }
 
-        let data = Versions::new_current(State::Initialized(nonce::state::Data {
-            authority: safecoin_sdk::pubkey::new_rand(),
-            blockhash,
-            fee_calculator: FeeCalculator::default(),
-        }));
+        let data = Versions::new_current(State::Initialized(nonce::state::Data::new(
+            safecoin_sdk::pubkey::new_rand(),
+            durable_nonce,
+            0,
+        )));
         let invalid_authority = Account::new_data(1, &data, &system_program::ID);
         if let CliError::InvalidNonce(err) =
             check_nonce_account(&invalid_authority.unwrap(), &nonce_pubkey, &blockhash).unwrap_err()
@@ -1001,11 +1006,9 @@ mod tests {
         let mut nonce_account = nonce_account::create_account(1).into_inner();
         assert_eq!(state_from_account(&nonce_account), Ok(State::Uninitialized));
 
-        let data = nonce::state::Data {
-            authority: Pubkey::new(&[1u8; 32]),
-            blockhash: Hash::new(&[42u8; 32]),
-            fee_calculator: FeeCalculator::new(42),
-        };
+        let durable_nonce =
+            DurableNonce::from_blockhash(&Hash::new(&[42u8; 32]), /*separate_domains:*/ true);
+        let data = nonce::state::Data::new(Pubkey::new(&[1u8; 32]), durable_nonce, 42);
         nonce_account
             .set_state(&Versions::new_current(State::Initialized(data.clone())))
             .unwrap();
@@ -1034,11 +1037,9 @@ mod tests {
             Err(Error::InvalidStateForOperation)
         );
 
-        let data = nonce::state::Data {
-            authority: Pubkey::new(&[1u8; 32]),
-            blockhash: Hash::new(&[42u8; 32]),
-            fee_calculator: FeeCalculator::new(42),
-        };
+        let durable_nonce =
+            DurableNonce::from_blockhash(&Hash::new(&[42u8; 32]), /*separate_domains:*/ true);
+        let data = nonce::state::Data::new(Pubkey::new(&[1u8; 32]), durable_nonce, 42);
         nonce_account
             .set_state(&Versions::new_current(State::Initialized(data.clone())))
             .unwrap();

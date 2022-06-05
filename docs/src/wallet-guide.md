@@ -49,13 +49,9 @@ you first will need to create a wallet.**
 
 ## Supported Wallets
 
-Safecoin supports several types of wallets in the Safecoin native
-command-line app as well as wallets from third-parties.
-
-For the majority of users, we recommend using one of the
-[app wallets](wallet-guide/apps.md) or a browser-based
-[web wallet](wallet-guide/web-wallets.md), which will provide a more familiar
-user experience rather than needing to learn command line tools.
+Several browser and mobile app based wallets support Safecoin. Find the right one
+for you on the [Safecoin Ecosystem](https://solana.com/ecosystem/explore?categories=wallet)
+page.
 
 For advanced users or developers, the [command-line wallets](wallet-guide/cli.md)
 may be more appropriate, as new features on the Safecoin blockchain will always be

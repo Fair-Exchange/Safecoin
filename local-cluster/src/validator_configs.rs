@@ -14,7 +14,8 @@ pub fn safe_clone_config(config: &ValidatorConfig) -> ValidatorConfig {
         account_paths: config.account_paths.clone(),
         account_shrink_paths: config.account_shrink_paths.clone(),
         rpc_config: config.rpc_config.clone(),
-        accountsdb_plugin_config_files: config.accountsdb_plugin_config_files.clone(),
+        accountsdb_repl_service_config: config.accountsdb_repl_service_config.clone(),
+        geyser_plugin_config_files: config.geyser_plugin_config_files.clone(),
         rpc_addrs: config.rpc_addrs,
         pubsub_config: config.pubsub_config.clone(),
         snapshot_config: config.snapshot_config.clone(),
@@ -31,7 +32,6 @@ pub fn safe_clone_config(config: &ValidatorConfig) -> ValidatorConfig {
         halt_on_known_validators_accounts_hash_mismatch: config
             .halt_on_known_validators_accounts_hash_mismatch,
         accounts_hash_fault_injection_slots: config.accounts_hash_fault_injection_slots,
-        frozen_accounts: config.frozen_accounts.clone(),
         no_rocksdb_compaction: config.no_rocksdb_compaction,
         rocksdb_compaction_interval: config.rocksdb_compaction_interval,
         rocksdb_max_compaction_jitter: config.rocksdb_max_compaction_jitter,
@@ -40,7 +40,7 @@ pub fn safe_clone_config(config: &ValidatorConfig) -> ValidatorConfig {
         wal_recovery_mode: config.wal_recovery_mode.clone(),
         poh_verify: config.poh_verify,
         require_tower: config.require_tower,
-        tower_path: config.tower_path.clone(),
+        tower_storage: config.tower_storage.clone(),
         debug_keys: config.debug_keys.clone(),
         contact_debug_interval: config.contact_debug_interval,
         contact_save_interval: config.contact_save_interval,
@@ -60,6 +60,8 @@ pub fn safe_clone_config(config: &ValidatorConfig) -> ValidatorConfig {
         poh_hashes_per_batch: config.poh_hashes_per_batch,
         no_wait_for_vote_to_start_leader: config.no_wait_for_vote_to_start_leader,
         accounts_shrink_ratio: config.accounts_shrink_ratio,
+        accounts_db_config: config.accounts_db_config.clone(),
+        wait_to_vote_slot: config.wait_to_vote_slot,
     }
 }
 

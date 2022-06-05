@@ -2,7 +2,6 @@ use {
     crate::{
         account::{AccountSharedData, ReadableAccount},
         account_utils::StateMut,
-        fee_calculator::FeeCalculator,
         hash::Hash,
         nonce::{state::Versions, State},
     },
@@ -21,22 +20,23 @@ pub fn create_account(lamports: u64) -> RefCell<AccountSharedData> {
     )
 }
 
+// TODO: Consider changing argument from Hash to DurableNonce.
 pub fn verify_nonce_account(acc: &AccountSharedData, hash: &Hash) -> bool {
     if acc.owner() != &crate::system_program::id() {
         return false;
     }
     match StateMut::<Versions>::state(acc).map(|v| v.convert_to_current()) {
-        Ok(State::Initialized(ref data)) => *hash == data.blockhash,
+        Ok(State::Initialized(ref data)) => hash == &data.blockhash(),
         _ => false,
     }
 }
 
-pub fn fee_calculator_of(account: &AccountSharedData) -> Option<FeeCalculator> {
+pub fn lamports_per_signature_of(account: &AccountSharedData) -> Option<u64> {
     let state = StateMut::<Versions>::state(account)
         .ok()?
         .convert_to_current();
     match state {
-        State::Initialized(data) => Some(data.fee_calculator),
+        State::Initialized(data) => Some(data.fee_calculator.lamports_per_signature),
         _ => None,
     }
 }

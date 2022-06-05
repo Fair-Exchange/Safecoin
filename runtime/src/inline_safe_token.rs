@@ -1,4 +1,6 @@
-// Partial SPL Token declarations inlined to avoid an external dependency on the safe-token crate
+/// Partial SPL Token declarations inlined to avoid an external dependency on the safe-token crate
+use safecoin_sdk::pubkey::{Pubkey, PUBKEY_BYTES};
+
 safecoin_sdk::declare_id!("ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN");
 
 pub(crate) mod new_token_program {
@@ -19,14 +21,53 @@ pub(crate) mod new_token_program {
 */
 pub const SAFE_TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
 pub const SAFE_TOKEN_ACCOUNT_OWNER_OFFSET: usize = 32;
+const SAFE_TOKEN_ACCOUNT_LENGTH: usize = 165;
 
-pub mod state {
-    const LEN: usize = 165;
-    pub struct Account;
-    impl Account {
-        pub fn get_packed_len() -> usize {
-            LEN
+pub(crate) trait GenericTokenAccount {
+    fn valid_account_data(account_data: &[u8]) -> bool;
+
+    // Call after account length has already been verified
+    fn unpack_account_owner_unchecked(account_data: &[u8]) -> &Pubkey {
+        Self::unpack_pubkey_unchecked(account_data, SAFE_TOKEN_ACCOUNT_OWNER_OFFSET)
+    }
+
+    // Call after account length has already been verified
+    fn unpack_account_mint_unchecked(account_data: &[u8]) -> &Pubkey {
+        Self::unpack_pubkey_unchecked(account_data, SAFE_TOKEN_ACCOUNT_MINT_OFFSET)
+    }
+
+    // Call after account length has already been verified
+    fn unpack_pubkey_unchecked(account_data: &[u8], offset: usize) -> &Pubkey {
+        bytemuck::from_bytes(&account_data[offset..offset + PUBKEY_BYTES])
+    }
+
+    fn unpack_account_owner(account_data: &[u8]) -> Option<&Pubkey> {
+        if Self::valid_account_data(account_data) {
+            Some(Self::unpack_account_owner_unchecked(account_data))
+        } else {
+            None
         }
+    }
+
+    fn unpack_account_mint(account_data: &[u8]) -> Option<&Pubkey> {
+        if Self::valid_account_data(account_data) {
+            Some(Self::unpack_account_mint_unchecked(account_data))
+        } else {
+            None
+        }
+    }
+}
+
+pub struct Account;
+impl Account {
+    pub fn get_packed_len() -> usize {
+        SAFE_TOKEN_ACCOUNT_LENGTH
+    }
+}
+
+impl GenericTokenAccount for Account {
+    fn valid_account_data(account_data: &[u8]) -> bool {
+        account_data.len() == SAFE_TOKEN_ACCOUNT_LENGTH
     }
 }
 

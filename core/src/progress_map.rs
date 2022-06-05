@@ -16,10 +16,10 @@ use {
 
 type VotedSlot = Slot;
 type ExpirationSlot = Slot;
-pub(crate) type LockoutIntervals = BTreeMap<ExpirationSlot, Vec<(VotedSlot, Pubkey)>>;
+pub type LockoutIntervals = BTreeMap<ExpirationSlot, Vec<(VotedSlot, Pubkey)>>;
 
 #[derive(Default)]
-pub(crate) struct ReplaySlotStats(ConfirmationTiming);
+pub struct ReplaySlotStats(ConfirmationTiming);
 impl std::ops::Deref for ReplaySlotStats {
     type Target = ConfirmationTiming;
     fn deref(&self) -> &Self::Target {
@@ -81,43 +81,131 @@ impl ReplaySlotStats {
                 i64
             ),
             (
-                "serialize_us",
+                "execute_details_serialize_us",
                 self.execute_timings.details.serialize_us,
                 i64
             ),
             (
-                "create_vm_us",
+                "execute_details_create_vm_us",
                 self.execute_timings.details.create_vm_us,
                 i64
             ),
             (
-                "execute_inner_us",
+                "execute_details_execute_inner_us",
                 self.execute_timings.details.execute_us,
                 i64
             ),
             (
-                "deserialize_us",
+                "execute_details_deserialize_us",
                 self.execute_timings.details.deserialize_us,
                 i64
             ),
             (
-                "changed_account_count",
+                "execute_details_get_or_create_executor_us",
+                self.execute_timings.details.get_or_create_executor_us,
+                i64
+            ),
+            (
+                "execute_details_changed_account_count",
                 self.execute_timings.details.changed_account_count,
                 i64
             ),
             (
-                "total_account_count",
+                "execute_details_total_account_count",
                 self.execute_timings.details.total_account_count,
                 i64
             ),
             (
-                "total_data_size",
+                "execute_details_total_data_size",
                 self.execute_timings.details.total_data_size,
                 i64
             ),
             (
-                "data_size_changed",
+                "execute_details_data_size_changed",
                 self.execute_timings.details.data_size_changed,
+                i64
+            ),
+            (
+                "execute_details_create_executor_register_syscalls_us",
+                self.execute_timings
+                    .details
+                    .create_executor_register_syscalls_us,
+                i64
+            ),
+            (
+                "execute_details_create_executor_load_elf_us",
+                self.execute_timings.details.create_executor_load_elf_us,
+                i64
+            ),
+            (
+                "execute_details_create_executor_verify_code_us",
+                self.execute_timings.details.create_executor_verify_code_us,
+                i64
+            ),
+            (
+                "execute_details_create_executor_jit_compile_us",
+                self.execute_timings.details.create_executor_jit_compile_us,
+                i64
+            ),
+            (
+                "execute_accessories_feature_set_clone_us",
+                self.execute_timings
+                    .execute_accessories
+                    .feature_set_clone_us,
+                i64
+            ),
+            (
+                "execute_accessories_compute_budget_process_transaction_us",
+                self.execute_timings
+                    .execute_accessories
+                    .compute_budget_process_transaction_us,
+                i64
+            ),
+            (
+                "execute_accessories_get_executors_us",
+                self.execute_timings.execute_accessories.get_executors_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_message_us",
+                self.execute_timings.execute_accessories.process_message_us,
+                i64
+            ),
+            (
+                "execute_accessories_update_executors_us",
+                self.execute_timings.execute_accessories.update_executors_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_instructions_total_us",
+                self.execute_timings
+                    .execute_accessories
+                    .process_instructions
+                    .total_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_instructions_verify_caller_us",
+                self.execute_timings
+                    .execute_accessories
+                    .process_instructions
+                    .verify_caller_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_instructions_process_executable_chain_us",
+                self.execute_timings
+                    .execute_accessories
+                    .process_instructions
+                    .process_executable_chain_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_instructions_verify_callee_us",
+                self.execute_timings
+                    .execute_accessories
+                    .process_instructions
+                    .verify_callee_us,
                 i64
             ),
         );
@@ -144,7 +232,7 @@ impl ReplaySlotStats {
             );
 
         for (pubkey, time) in per_pubkey_timings.iter().take(5) {
-            datapoint_info!(
+            datapoint_trace!(
                 "per_program_timings",
                 ("slot", slot as i64, i64),
                 ("pubkey", pubkey.to_string(), String),
@@ -167,13 +255,13 @@ impl ReplaySlotStats {
             ("accumulated_units", total_units, i64),
             ("count", total_count, i64),
             ("errored_units", total_errored_units, i64),
-            ("count", total_errored_count, i64)
+            ("errored_count", total_errored_count, i64)
         );
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct ValidatorStakeInfo {
+pub struct ValidatorStakeInfo {
     pub validator_vote_pubkey: Pubkey,
     pub stake: u64,
     pub total_epoch_stake: u64,
@@ -199,18 +287,18 @@ impl ValidatorStakeInfo {
     }
 }
 
-pub(crate) struct ForkProgress {
-    pub(crate) is_dead: bool,
-    pub(crate) fork_stats: ForkStats,
-    pub(crate) propagated_stats: PropagatedStats,
-    pub(crate) replay_stats: ReplaySlotStats,
-    pub(crate) replay_progress: ConfirmationProgress,
+pub struct ForkProgress {
+    pub is_dead: bool,
+    pub fork_stats: ForkStats,
+    pub propagated_stats: PropagatedStats,
+    pub replay_stats: ReplaySlotStats,
+    pub replay_progress: ConfirmationProgress,
     // Note `num_blocks_on_fork` and `num_dropped_blocks_on_fork` only
     // count new blocks replayed since last restart, which won't include
     // blocks already existing in the ledger/before snapshot at start,
     // so these stats do not span all of time
-    pub(crate) num_blocks_on_fork: u64,
-    pub(crate) num_dropped_blocks_on_fork: u64,
+    pub num_blocks_on_fork: u64,
+    pub num_dropped_blocks_on_fork: u64,
 }
 
 impl ForkProgress {
@@ -245,6 +333,7 @@ impl ForkProgress {
                 )
             })
             .unwrap_or((false, 0, HashSet::new(), false, 0));
+
         Self {
             is_dead: false,
             fork_stats: ForkStats::default(),
@@ -266,17 +355,17 @@ impl ForkProgress {
 
     pub fn new_from_bank(
         bank: &Bank,
-        my_pubkey: &Pubkey,
-        voting_pubkey: &Pubkey,
+        validator_identity: &Pubkey,
+        validator_vote_pubkey: &Pubkey,
         prev_leader_slot: Option<Slot>,
         num_blocks_on_fork: u64,
         num_dropped_blocks_on_fork: u64,
     ) -> Self {
         let validator_stake_info = {
-            if bank.collector_id() == my_pubkey {
+            if bank.collector_id() == validator_identity {
                 Some(ValidatorStakeInfo::new(
-                    *voting_pubkey,
-                    bank.epoch_vote_account_stake(voting_pubkey),
+                    *validator_vote_pubkey,
+                    bank.epoch_vote_account_stake(validator_vote_pubkey),
                     bank.total_epoch_stake(),
                 ))
             } else {
@@ -284,46 +373,51 @@ impl ForkProgress {
             }
         };
 
-        Self::new(
+        let mut new_progress = Self::new(
             bank.last_blockhash(),
             prev_leader_slot,
             validator_stake_info,
             num_blocks_on_fork,
             num_dropped_blocks_on_fork,
-        )
+        );
+
+        if bank.is_frozen() {
+            new_progress.fork_stats.bank_hash = Some(bank.hash());
+        }
+        new_progress
     }
 }
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct ForkStats {
-    pub(crate) weight: u128,
-    pub(crate) fork_weight: u128,
-    pub(crate) total_stake: Stake,
-    pub(crate) block_height: u64,
-    pub(crate) has_voted: bool,
-    pub(crate) is_recent: bool,
-    pub(crate) is_empty: bool,
-    pub(crate) vote_threshold: bool,
-    pub(crate) is_locked_out: bool,
-    pub(crate) voted_stakes: VotedStakes,
-    pub(crate) is_supermajority_confirmed: bool,
-    pub(crate) computed: bool,
-    pub(crate) lockout_intervals: LockoutIntervals,
-    pub(crate) bank_hash: Option<Hash>,
-    pub(crate) my_latest_landed_vote: Option<Slot>,
+pub struct ForkStats {
+    pub weight: u128,
+    pub fork_weight: u128,
+    pub total_stake: Stake,
+    pub block_height: u64,
+    pub has_voted: bool,
+    pub is_recent: bool,
+    pub is_empty: bool,
+    pub vote_threshold: bool,
+    pub is_locked_out: bool,
+    pub voted_stakes: VotedStakes,
+    pub is_supermajority_confirmed: bool,
+    pub computed: bool,
+    pub lockout_intervals: LockoutIntervals,
+    pub bank_hash: Option<Hash>,
+    pub my_latest_landed_vote: Option<Slot>,
 }
 
 #[derive(Clone, Default)]
-pub(crate) struct PropagatedStats {
-    pub(crate) propagated_validators: HashSet<Pubkey>,
-    pub(crate) propagated_node_ids: HashSet<Pubkey>,
-    pub(crate) propagated_validators_stake: u64,
-    pub(crate) is_propagated: bool,
-    pub(crate) is_leader_slot: bool,
-    pub(crate) prev_leader_slot: Option<Slot>,
-    pub(crate) slot_vote_tracker: Option<Arc<RwLock<SlotVoteTracker>>>,
-    pub(crate) cluster_slot_pubkeys: Option<Arc<RwLock<SlotPubkeys>>>,
-    pub(crate) total_epoch_stake: u64,
+pub struct PropagatedStats {
+    pub propagated_validators: HashSet<Pubkey>,
+    pub propagated_node_ids: HashSet<Pubkey>,
+    pub propagated_validators_stake: u64,
+    pub is_propagated: bool,
+    pub is_leader_slot: bool,
+    pub prev_leader_slot: Option<Slot>,
+    pub slot_vote_tracker: Option<Arc<RwLock<SlotVoteTracker>>>,
+    pub cluster_slot_pubkeys: Option<Arc<RwLock<SlotPubkeys>>>,
+    pub total_epoch_stake: u64,
 }
 
 impl PropagatedStats {
@@ -368,7 +462,7 @@ impl PropagatedStats {
 }
 
 #[derive(Default)]
-pub(crate) struct ProgressMap {
+pub struct ProgressMap {
     progress_map: HashMap<Slot, ForkProgress>,
 }
 

@@ -10,7 +10,7 @@ use {
     solana_runtime::{
         accounts::{create_test_accounts, AccountAddressFilter, Accounts},
         accounts_db::AccountShrinkThreshold,
-        accounts_index::AccountSecondaryIndexes,
+        accounts_index::{AccountSecondaryIndexes, ScanConfig},
         ancestors::Ancestors,
         bank::*,
     },
@@ -44,27 +44,17 @@ fn deposit_many(bank: &Bank, pubkeys: &mut Vec<Pubkey>, num: usize) -> Result<()
 }
 
 #[bench]
-fn bench_has_duplicates(bencher: &mut Bencher) {
-    bencher.iter(|| {
-        let data = test::black_box([1, 2, 3]);
-        assert!(!Accounts::has_duplicates(&data));
-    })
-}
-
-#[bench]
 fn test_accounts_create(bencher: &mut Bencher) {
     let (genesis_config, _) = create_genesis_config(10_000);
-    let bank0 = Bank::new_with_paths(
+    let bank0 = Bank::new_with_paths_for_benches(
         &genesis_config,
         vec![PathBuf::from("bench_a0")],
-        &[],
         None,
         None,
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
         false,
-        None,
     );
     bencher.iter(|| {
         let mut pubkeys: Vec<Pubkey> = vec![];
@@ -76,17 +66,15 @@ fn test_accounts_create(bencher: &mut Bencher) {
 fn test_accounts_squash(bencher: &mut Bencher) {
     let (mut genesis_config, _) = create_genesis_config(100_000);
     genesis_config.rent.burn_percent = 100; // Avoid triggering an assert in Bank::distribute_rent_to_validators()
-    let mut prev_bank = Arc::new(Bank::new_with_paths(
+    let mut prev_bank = Arc::new(Bank::new_with_paths_for_benches(
         &genesis_config,
         vec![PathBuf::from("bench_a1")],
-        &[],
         None,
         None,
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
         false,
-        None,
     ));
     let mut pubkeys: Vec<Pubkey> = vec![];
     deposit_many(&prev_bank, &mut pubkeys, 250_000).unwrap();
@@ -107,13 +95,12 @@ fn test_accounts_squash(bencher: &mut Bencher) {
 
 #[bench]
 fn test_accounts_hash_bank_hash(bencher: &mut Bencher) {
-    let accounts = Accounts::new_with_config(
+    let accounts = Accounts::new_with_config_for_benches(
         vec![PathBuf::from("bench_accounts_hash_internal")],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
-        None,
     );
     let mut pubkeys: Vec<Pubkey> = vec![];
     let num_accounts = 60_000;
@@ -135,13 +122,12 @@ fn test_accounts_hash_bank_hash(bencher: &mut Bencher) {
 #[bench]
 fn test_update_accounts_hash(bencher: &mut Bencher) {
     solana_logger::setup();
-    let accounts = Accounts::new_with_config(
+    let accounts = Accounts::new_with_config_for_benches(
         vec![PathBuf::from("update_accounts_hash")],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
-        None,
     );
     let mut pubkeys: Vec<Pubkey> = vec![];
     create_test_accounts(&accounts, &mut pubkeys, 50_000, 0);
@@ -154,13 +140,12 @@ fn test_update_accounts_hash(bencher: &mut Bencher) {
 #[bench]
 fn test_accounts_delta_hash(bencher: &mut Bencher) {
     solana_logger::setup();
-    let accounts = Accounts::new_with_config(
+    let accounts = Accounts::new_with_config_for_benches(
         vec![PathBuf::from("accounts_delta_hash")],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
-        None,
     );
     let mut pubkeys: Vec<Pubkey> = vec![];
     create_test_accounts(&accounts, &mut pubkeys, 100_000, 0);
@@ -172,13 +157,12 @@ fn test_accounts_delta_hash(bencher: &mut Bencher) {
 #[bench]
 fn bench_delete_dependencies(bencher: &mut Bencher) {
     solana_logger::setup();
-    let accounts = Accounts::new_with_config(
+    let accounts = Accounts::new_with_config_for_benches(
         vec![PathBuf::from("accounts_delete_deps")],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
-        None,
     );
     let mut old_pubkey = Pubkey::default();
     let zero_account = AccountSharedData::new(0, 0, AccountSharedData::default().owner());
@@ -192,7 +176,7 @@ fn bench_delete_dependencies(bencher: &mut Bencher) {
         accounts.add_root(i);
     }
     bencher.iter(|| {
-        accounts.accounts_db.clean_accounts(None, false);
+        accounts.accounts_db.clean_accounts(None, false, None);
     });
 }
 
@@ -204,7 +188,7 @@ fn store_accounts_with_possible_contention<F: 'static>(
     F: Fn(&Accounts, &[Pubkey]) + Send + Copy,
 {
     let num_readers = 5;
-    let accounts = Arc::new(Accounts::new_with_config(
+    let accounts = Arc::new(Accounts::new_with_config_for_benches(
         vec![
             PathBuf::from(std::env::var("FARF_DIR").unwrap_or_else(|_| "farf".to_string()))
                 .join(bench_name),
@@ -213,7 +197,6 @@ fn store_accounts_with_possible_contention<F: 'static>(
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
-        None,
     ));
     let num_keys = 1000;
     let slot = 0;
@@ -284,6 +267,7 @@ fn bench_concurrent_scan_write(bencher: &mut Bencher) {
                     &Ancestors::default(),
                     0,
                     AccountSharedData::default().owner(),
+                    &ScanConfig::default(),
                 )
                 .unwrap(),
         );
@@ -341,7 +325,7 @@ fn bench_rwlock_hashmap_single_reader_with_n_writers(bencher: &mut Bencher) {
 }
 
 fn setup_bench_dashmap_iter() -> (Arc<Accounts>, DashMap<Pubkey, (AccountSharedData, Hash)>) {
-    let accounts = Arc::new(Accounts::new_with_config(
+    let accounts = Arc::new(Accounts::new_with_config_for_benches(
         vec![
             PathBuf::from(std::env::var("FARF_DIR").unwrap_or_else(|_| "farf".to_string()))
                 .join("bench_dashmap_par_iter"),
@@ -350,7 +334,6 @@ fn setup_bench_dashmap_iter() -> (Arc<Accounts>, DashMap<Pubkey, (AccountSharedD
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
-        None,
     ));
 
     let dashmap = DashMap::new();
@@ -400,13 +383,12 @@ fn bench_dashmap_iter(bencher: &mut Bencher) {
 
 #[bench]
 fn bench_load_largest_accounts(b: &mut Bencher) {
-    let accounts = Accounts::new_with_config(
+    let accounts = Accounts::new_with_config_for_benches(
         Vec::new(),
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
         false,
         AccountShrinkThreshold::default(),
-        None,
     );
     let mut rng = rand::thread_rng();
     for _ in 0..10_000 {

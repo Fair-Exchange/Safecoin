@@ -152,7 +152,7 @@ impl ContactInfo {
         let rpc = SocketAddr::new(bind_addr.ip(), rpc_port::DEFAULT_RPC_PORT);
         let rpc_pubsub = SocketAddr::new(bind_addr.ip(), rpc_port::DEFAULT_RPC_PUBSUB_PORT);
         let serve_repair = next_port(bind_addr, 6);
-        let tpu_vote = next_port(&bind_addr, 7);
+        let tpu_vote = next_port(bind_addr, 7);
         Self {
             id: *pubkey,
             gossip,

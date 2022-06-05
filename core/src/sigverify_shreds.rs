@@ -41,7 +41,11 @@ impl ShredSigVerifier {
 }
 
 impl SigVerifier for ShredSigVerifier {
-    fn verify_batches(&self, mut batches: Vec<PacketBatch>) -> Vec<PacketBatch> {
+    fn verify_batches(
+        &self,
+        mut batches: Vec<PacketBatch>,
+        _valid_packets: usize,
+    ) -> Vec<PacketBatch> {
         let r_bank = self.bank_forks.read().unwrap().working_bank();
         let slots: HashSet<u64> = Self::read_slots(&batches);
         let mut leader_slots: HashMap<u64, [u8; 32]> = slots
@@ -120,8 +124,9 @@ pub mod tests {
     fn test_sigverify_shreds_verify_batches() {
         let leader_keypair = Arc::new(Keypair::new());
         let leader_pubkey = leader_keypair.pubkey();
-        let bank =
-            Bank::new(&create_genesis_config_with_leader(100, &leader_pubkey, 10).genesis_config);
+        let bank = Bank::new_for_tests(
+            &create_genesis_config_with_leader(100, &leader_pubkey, 10).genesis_config,
+        );
         let cache = Arc::new(LeaderScheduleCache::new_from_bank(&bank));
         let bf = Arc::new(RwLock::new(BankForks::new(bank)));
         let verifier = ShredSigVerifier::new(bf, cache);
@@ -160,8 +165,9 @@ pub mod tests {
         batches[0].packets[1].data[0..shred.payload.len()].copy_from_slice(&shred.payload);
         batches[0].packets[1].meta.size = shred.payload.len();
 
-        let rv = verifier.verify_batches(batches);
-        assert!(!rv[0].packets[0].meta.discard);
-        assert!(rv[0].packets[1].meta.discard);
+        let num_packets = solana_perf::sigverify::count_packets_in_batches(&batches);
+        let rv = verifier.verify_batches(batches, num_packets);
+        assert!(!rv[0].packets[0].meta.discard());
+        assert!(rv[0].packets[1].meta.discard());
     }
 }

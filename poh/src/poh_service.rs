@@ -4,7 +4,7 @@ use {
     crate::poh_recorder::{PohRecorder, Record},
     crossbeam_channel::Receiver,
     log::*,
-    solana_ledger::poh::Poh,
+    solana_entry::poh::Poh,
     safecoin_measure::measure::Measure,
     safecoin_sdk::poh_config::PohConfig,
     std::{
@@ -43,6 +43,7 @@ struct PohTiming {
     total_tick_time_ns: u64,
     last_metric: Instant,
     total_record_time_us: u64,
+    total_send_record_result_us: u64,
 }
 
 impl PohTiming {
@@ -56,6 +57,7 @@ impl PohTiming {
             total_tick_time_ns: 0,
             last_metric: Instant::now(),
             total_record_time_us: 0,
+            total_send_record_result_us: 0,
         }
     }
     fn report(&mut self, ticks_per_slot: u64) {
@@ -72,6 +74,11 @@ impl PohTiming {
                 ("total_lock_time_us", self.total_lock_time_ns / 1000, i64),
                 ("total_hash_time_us", self.total_hash_time_ns / 1000, i64),
                 ("total_record_time_us", self.total_record_time_us, i64),
+                (
+                    "total_send_record_result_us",
+                    self.total_send_record_result_us,
+                    i64
+                ),
             );
             self.total_sleep_us = 0;
             self.num_ticks = 0;
@@ -81,6 +88,7 @@ impl PohTiming {
             self.total_hash_time_ns = 0;
             self.last_metric = Instant::now();
             self.total_record_time_us = 0;
+            self.total_send_record_result_us = 0;
         }
     }
 }
@@ -239,7 +247,10 @@ impl PohService {
                         record.mixin,
                         std::mem::take(&mut record.transactions),
                     );
-                    let _ = record.sender.send(res); // what do we do on failure here? Ignore for now.
+                    // what do we do on failure here? Ignore for now.
+                    let (_send_res, send_record_result_time) =
+                        Measure::this(|_| record.sender.send(res), (), "send_record_result");
+                    timing.total_send_record_result_us += send_record_result_time.as_us();
                     timing.num_hashes += 1; // note: may have also ticked inside record
 
                     let new_record_result = record_receiver.try_recv();
@@ -357,7 +368,6 @@ impl PohService {
 mod tests {
     use {
         super::*,
-        crate::poh_recorder::WorkingBank,
         rand::{thread_rng, Rng},
         solana_ledger::{
             blockstore::Blockstore,
@@ -368,7 +378,9 @@ mod tests {
         safecoin_measure::measure::Measure,
         solana_perf::test_tx::test_tx,
         solana_runtime::bank::Bank,
-        safecoin_sdk::{clock, hash::hash, pubkey::Pubkey, timing},
+        safecoin_sdk::{
+            clock, hash::hash, pubkey::Pubkey, timing, transaction::VersionedTransaction,
+        },
         std::time::Duration,
     };
 
@@ -377,7 +389,7 @@ mod tests {
     fn test_poh_service() {
         solana_logger::setup();
         let GenesisConfigInfo { genesis_config, .. } = create_genesis_config(2);
-        let bank = Arc::new(Bank::new_no_wallclock_throttle(&genesis_config));
+        let bank = Arc::new(Bank::new_no_wallclock_throttle_for_tests(&genesis_config));
         let prev_hash = bank.last_blockhash();
         let ledger_path = get_tmp_ledger_path!();
         {
@@ -394,27 +406,24 @@ mod tests {
             });
             let exit = Arc::new(AtomicBool::new(false));
 
+            let ticks_per_slot = bank.ticks_per_slot();
+            let leader_schedule_cache = Arc::new(LeaderScheduleCache::new_from_bank(&bank));
+            let blockstore = Arc::new(blockstore);
             let (poh_recorder, entry_receiver, record_receiver) = PohRecorder::new(
                 bank.tick_height(),
                 prev_hash,
-                bank.slot(),
+                bank.clone(),
                 Some((4, 4)),
-                bank.ticks_per_slot(),
+                ticks_per_slot,
                 &Pubkey::default(),
-                &Arc::new(blockstore),
-                &Arc::new(LeaderScheduleCache::new_from_bank(&bank)),
+                &blockstore,
+                &leader_schedule_cache,
                 &poh_config,
                 exit.clone(),
             );
             let poh_recorder = Arc::new(Mutex::new(poh_recorder));
-            let start = Arc::new(Instant::now());
-            let working_bank = WorkingBank {
-                bank: bank.clone(),
-                start,
-                min_tick_height: bank.tick_height(),
-                max_tick_height: std::u64::MAX,
-            };
             let ticks_per_slot = bank.ticks_per_slot();
+            let bank_slot = bank.slot();
 
             // specify RUN_TIME to run in a benchmark-like mode
             // to calibrate batch size
@@ -434,12 +443,12 @@ mod tests {
                         let mut total_us = 0;
                         let mut total_times = 0;
                         let h1 = hash(b"hello world!");
-                        let tx = test_tx();
+                        let tx = VersionedTransaction::from(test_tx());
                         loop {
                             // send some data
                             let mut time = Measure::start("record");
                             let _ = poh_recorder.lock().unwrap().record(
-                                bank.slot(),
+                                bank_slot,
                                 h1,
                                 vec![tx.clone()],
                             );
@@ -476,7 +485,7 @@ mod tests {
                 hashes_per_batch,
                 record_receiver,
             );
-            poh_recorder.lock().unwrap().set_working_bank(working_bank);
+            poh_recorder.lock().unwrap().set_bank(&bank);
 
             // get some events
             let mut hashes = 0;

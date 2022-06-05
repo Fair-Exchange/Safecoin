@@ -1,63 +1,64 @@
 [package]
 name = "solana-rpc"
-version = "1.8.12"
+version = "1.9.29"
 description = "Safecoin RPC"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/solana-rpc"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 base64 = "0.12.3"
-bincode = "1.3.1"
-bs58 = "0.3.1"
-crossbeam-channel = "0.4"
+bincode = "1.3.3"
+bs58 = "0.4.0"
+crossbeam-channel = "0.5"
 dashmap = "4.0.2"
-itertools = "0.9.0"
+itertools = "0.10.1"
 jsonrpc-core = "18.0.0"
 jsonrpc-core-client = { version = "18.0.0", features = ["ipc", "ws"] }
 jsonrpc-derive = "18.0.0"
 jsonrpc-http-server = "18.0.0"
 jsonrpc-pubsub = "18.0.0"
 jsonrpc-ws-server = "18.0.0"
-libc = "0.2.81"
-log = "0.4.11"
+libc = "0.2.108"
+log = "0.4.14"
 rayon = "1.5.1"
-regex = "1.3.9"
-serde = "1.0.122"
+regex = "1.5.4"
+serde = "1.0.130"
 serde_derive = "1.0.103"
-serde_json = "1.0.56"
-soketto = "0.6"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.8.12" }
-safecoin-client = { path = "../client", version = "=1.8.12" }
-safecoin-faucet = { path = "../faucet", version = "=1.8.12" }
-safecoin-gossip = { path = "../gossip", version = "=1.8.12" }
-safecoin-ledger = { path = "../ledger", version = "=1.8.12" }
-safecoin-measure = { path = "../measure", version = "=1.8.12" }
-safecoin-metrics = { path = "../metrics", version = "=1.8.12" }
-safecoin-perf = { path = "../perf", version = "=1.8.12" }
-solana-poh = { path = "../poh", version = "=1.8.12" }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.8.12" }
-safecoin-runtime = { path = "../runtime", version = "=1.8.12" }
-safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
-safecoin-streamer = { path = "../streamer", version = "=1.8.12" }
-safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.8.12" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.8.12" }
-safecoin-version = { path = "../version", version = "=1.8.12" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.8.12" }
-safe-token = { version = "=3.2.2", features = ["no-entrypoint"] }
+serde_json = "1.0.72"
+soketto = "0.7"
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.9.29" }
+safecoin-client = { path = "../client", version = "=1.9.29" }
+solana-entry = { path = "../entry", version = "=1.9.29" }
+safecoin-faucet = { path = "../faucet", version = "=1.9.29" }
+safecoin-gossip = { path = "../gossip", version = "=1.9.29" }
+safecoin-ledger = { path = "../ledger", version = "=1.9.29" }
+safecoin-measure = { path = "../measure", version = "=1.9.29" }
+safecoin-metrics = { path = "../metrics", version = "=1.9.29" }
+safecoin-perf = { path = "../perf", version = "=1.9.29" }
+solana-poh = { path = "../poh", version = "=1.9.29" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
+safecoin-runtime = { path = "../runtime", version = "=1.9.29" }
+safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
+solana-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
+safecoin-streamer = { path = "../streamer", version = "=1.9.29" }
+safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.9.29" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.9.29" }
+safecoin-version = { path = "../version", version = "=1.9.29" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.9.29" }
+safe-token = { path = "../../safecoin-program-library/token/program", version = "=3.2.0", features = ["no-entrypoint"] }
 stream-cancel = "0.8.1"
 thiserror = "1.0"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "~1.14.1", features = ["full"] }
 tokio-util = { version = "0.6", features = ["codec", "compat"] }
 
 [dev-dependencies]
-serial_test = "0.4.0"
-safecoin-logger = { path = "../logger", version = "=1.8.12" }
-safecoin-net-utils = { path = "../net-utils", version = "=1.8.12" }
-safecoin-stake-program = { path = "../programs/stake", version = "=1.8.12" }
+serial_test = "0.5.1"
+safecoin-net-utils = { path = "../net-utils", version = "=1.9.29" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.9.29" }
 symlink = "0.1.0"
 
 [lib]

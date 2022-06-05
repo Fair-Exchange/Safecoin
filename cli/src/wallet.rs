@@ -462,18 +462,27 @@ pub fn process_show_account(
 
     let mut account_string = config.output_format.formatted_string(&cli_account);
 
-    if config.output_format == OutputFormat::Display
-        || config.output_format == OutputFormat::DisplayVerbose
-    {
-        if let Some(output_file) = output_file {
-            let mut f = File::create(output_file)?;
-            f.write_all(&data)?;
-            writeln!(&mut account_string)?;
-            writeln!(&mut account_string, "Wrote account data to {}", output_file)?;
-        } else if !data.is_empty() {
-            use pretty_hex::*;
-            writeln!(&mut account_string, "{:?}", data.hex_dump())?;
+    match config.output_format {
+        OutputFormat::Json | OutputFormat::JsonCompact => {
+            if let Some(output_file) = output_file {
+                let mut f = File::create(output_file)?;
+                f.write_all(account_string.as_bytes())?;
+                writeln!(&mut account_string)?;
+                writeln!(&mut account_string, "Wrote account to {}", output_file)?;
+            }
         }
+        OutputFormat::Display | OutputFormat::DisplayVerbose => {
+            if let Some(output_file) = output_file {
+                let mut f = File::create(output_file)?;
+                f.write_all(&data)?;
+                writeln!(&mut account_string)?;
+                writeln!(&mut account_string, "Wrote account data to {}", output_file)?;
+            } else if !data.is_empty() {
+                use pretty_hex::*;
+                writeln!(&mut account_string, "{:?}", data.hex_dump())?;
+            }
+        }
+        OutputFormat::DisplayQuiet => (),
     }
 
     Ok(account_string)
@@ -647,8 +656,7 @@ pub fn process_transfer(
     let from = config.signers[from];
     let mut from_pubkey = from.pubkey();
 
-    let (recent_blockhash, fee_calculator) =
-        blockhash_query.get_blockhash_and_fee_calculator(rpc_client, config.commitment)?;
+    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
 
     if !sign_only && !allow_unfunded_recipient {
         let recipient_balance = rpc_client
@@ -708,7 +716,7 @@ pub fn process_transfer(
         rpc_client,
         sign_only,
         amount,
-        &fee_calculator,
+        &recent_blockhash,
         &from_pubkey,
         &fee_payer.pubkey(),
         build_message,

@@ -139,7 +139,7 @@ fn format_account_mode(message: &Message, index: usize) -> String {
         } else {
             "-"
         },
-        if message.is_writable(index, /*demote_program_write_locks=*/ true) {
+        if message.is_writable(index) {
             "w" // comment for consistent rust fmt (no joking; lol)
         } else {
             "-"
@@ -200,7 +200,7 @@ pub fn write_transaction<W: io::Write>(
     }
     let mut fee_payer_index = None;
     for (account_index, account) in message.account_keys.iter().enumerate() {
-        if fee_payer_index.is_none() && message.is_non_loader_key(account, account_index) {
+        if fee_payer_index.is_none() && message.is_non_loader_key(account_index) {
             fee_payer_index = Some(account_index)
         }
         writeln!(
@@ -337,7 +337,7 @@ pub fn write_transaction<W: io::Write>(
                     let sign = if reward.lamports < 0 { "-" } else { "" };
                     writeln!(
                         w,
-                        "{}  {:<44}  {:^15}  {:<15}  {}",
+                        "{}  {:<44}  {:^15}  {}◎{:<14.9}  ◎{:<18.9}",
                         prefix,
                         reward.pubkey,
                         if let Some(reward_type) = reward.reward_type {
@@ -345,12 +345,9 @@ pub fn write_transaction<W: io::Write>(
                         } else {
                             "-".to_string()
                         },
-                        format!(
-                            "{}◎{:<14.9}",
-                            sign,
-                            lamports_to_sol(reward.lamports.abs() as u64)
-                        ),
-                        format!("◎{:<18.9}", lamports_to_sol(reward.post_balance),)
+                        sign,
+                        lamports_to_sol(reward.lamports.abs() as u64),
+                        lamports_to_sol(reward.post_balance)
                     )?;
                 }
             }

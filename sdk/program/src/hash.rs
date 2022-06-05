@@ -1,7 +1,7 @@
 //! The `hash` module provides functions for creating SHA-256 hashes.
 
 use {
-    crate::sanitize::Sanitize,
+    crate::{sanitize::Sanitize, wasm_bindgen},
     borsh::{BorshDeserialize, BorshSchema, BorshSerialize},
     sha2::{Digest, Sha256},
     std::{convert::TryFrom, fmt, mem, str::FromStr},
@@ -11,6 +11,8 @@ use {
 pub const HASH_BYTES: usize = 32;
 /// Maximum string length of a base58 encoded hash
 const MAX_BASE58_LEN: usize = 44;
+
+#[wasm_bindgen]
 #[derive(
     Serialize,
     Deserialize,
@@ -28,7 +30,7 @@ const MAX_BASE58_LEN: usize = 44;
     AbiExample,
 )]
 #[repr(transparent)]
-pub struct Hash(pub [u8; 32]);
+pub struct Hash(pub(crate) [u8; HASH_BYTES]);
 
 #[derive(Clone, Default)]
 pub struct Hasher {
@@ -97,21 +99,6 @@ impl FromStr for Hash {
     }
 }
 
-fn pop128(hunk: &[u8]) -> [u8; 16] {
-    let mut ret = [0u8; 16];
-
-    // I am sure there is a more elegant way to do this
-    // but this gets the job done.
-
-    for (i, &byte) in hunk.iter().enumerate() {
-        if i == ret.len() {
-            break;
-        }
-        ret[i] = byte;
-    }
-    ret
-}
-
 impl Hash {
     pub fn new(hash_slice: &[u8]) -> Self {
         Hash(<[u8; HASH_BYTES]>::try_from(hash_slice).unwrap())
@@ -123,25 +110,17 @@ impl Hash {
 
     /// unique Hash for tests and benchmarks.
     pub fn new_unique() -> Self {
-        use std::sync::atomic::{AtomicU64, Ordering};
+        use crate::atomic_u64::AtomicU64;
         static I: AtomicU64 = AtomicU64::new(1);
 
         let mut b = [0u8; HASH_BYTES];
-        let i = I.fetch_add(1, Ordering::Relaxed);
+        let i = I.fetch_add(1);
         b[0..8].copy_from_slice(&i.to_le_bytes());
         Self::new(&b)
     }
 
     pub fn to_bytes(self) -> [u8; HASH_BYTES] {
         self.0
-    }
-
-    pub fn to_u128(self) -> u128 {
-        let one_slice = pop128(&self.0);
-        let one = u128::from_le_bytes(one_slice);
-        let two_slice = pop128(&self.0[16..31]);
-        let two = u128::from_le_bytes(two_slice);
-        one ^ two
     }
 }
 
@@ -195,29 +174,6 @@ mod tests {
     }
 
     #[test]
-    fn test_to_128() {
-        let data1: [u8; 32] = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        ];
-        let hash_257 = Hash::new(&data1);
-        let foo = hash_257.to_u128();
-        assert!(foo == 257);
-        let data2: [u8; 32] = [
-            1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        ];
-        let goo = Hash::new(&data2).to_u128();
-        assert!(goo == 257);
-        let data3: [u8; 32] = [
-            1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        ];
-        let foogoo = Hash::new(&data3).to_u128();
-        assert!(foogoo == 0);
-    }
-
-    #[test]
     fn test_hash_fromstr() {
         let hash = hash(&[1u8]);
 
@@ -258,4 +214,3 @@ mod tests {
         );
     }
 }
-

@@ -119,7 +119,6 @@ fn initialize_from_snapshot(
     );
     let (bank0, _) = snapshot_utils::bank_from_snapshot_archives(
         &replica_config.account_paths,
-        &[],
         &snapshot_config.bank_snapshots_dir,
         &archive_info,
         None,
@@ -134,6 +133,7 @@ fn initialize_from_snapshot(
         false,
         process_options.verify_index,
         process_options.accounts_db_config,
+        None,
     )
     .unwrap();
 
@@ -146,7 +146,7 @@ fn initialize_from_snapshot(
         OptimisticallyConfirmedBank::locked_from_bank_forks_root(&bank_forks);
 
     let mut block_commitment_cache = BlockCommitmentCache::default();
-    block_commitment_cache.initialize_slots(bank0_slot);
+    block_commitment_cache.initialize_slots(bank0_slot, bank0_slot);
     let block_commitment_cache = Arc::new(RwLock::new(block_commitment_cache));
 
     ReplicaBankInfo {
@@ -191,6 +191,8 @@ fn start_client_rpc_services(
 
     let subscriptions = Arc::new(RpcSubscriptions::new(
         &exit,
+        max_complete_transaction_status_slot.clone(),
+        blockstore.clone(),
         bank_forks.clone(),
         block_commitment_cache.clone(),
         optimistically_confirmed_bank.clone(),

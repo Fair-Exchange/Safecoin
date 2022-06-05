@@ -6,12 +6,12 @@ use {
         rpc_config::RpcBlockProductionConfig,
         rpc_request::RpcRequest,
         rpc_response::{
-            Response, RpcAccountBalance, RpcBlockProduction, RpcBlockProductionRange,
+            Response, RpcAccountBalance, RpcBlockProduction, RpcBlockProductionRange, RpcBlockhash,
             RpcConfirmedTransactionStatusWithSignature, RpcContactInfo, RpcFees, RpcIdentity,
             RpcInflationGovernor, RpcInflationRate, RpcInflationReward, RpcKeyedAccount,
-            RpcPerfSample, RpcResponseContext, RpcSimulateTransactionResult, RpcStakeActivation,
-            RpcSupply, RpcVersionInfo, RpcVoteAccountInfo, RpcVoteAccountStatus,
-            StakeActivationState,
+            RpcPerfSample, RpcResponseContext, RpcSimulateTransactionResult, RpcSnapshotSlotInfo,
+            RpcStakeActivation, RpcSupply, RpcVersionInfo, RpcVoteAccountInfo,
+            RpcVoteAccountStatus, StakeActivationState,
         },
         rpc_sender::*,
     },
@@ -75,13 +75,13 @@ pub struct MockSender {
 ///    from [`RpcRequest`] to a JSON [`Value`] response, Any entries in this map
 ///    override the default behavior for the given request.
 impl MockSender {
-    pub fn new(url: String) -> Self {
+    pub fn new<U: ToString>(url: U) -> Self {
         Self::new_with_mocks(url, Mocks::default())
     }
 
-    pub fn new_with_mocks(url: String, mocks: Mocks) -> Self {
+    pub fn new_with_mocks<U: ToString>(url: U, mocks: Mocks) -> Self {
         Self {
-            url,
+            url: url.to_string(),
             mocks: RwLock::new(mocks),
         }
     }
@@ -146,8 +146,8 @@ impl RpcSender for MockSender {
                 value: serde_json::to_value(RpcFees {
                     blockhash: PUBKEY.to_string(),
                     fee_calculator: FeeCalculator::default(),
-                    last_valid_slot: 1234,
-                    last_valid_block_height: 1234,
+                    last_valid_slot: 42,
+                    last_valid_block_height: 42,
                 })
                 .unwrap(),
             })?,
@@ -231,6 +231,10 @@ impl RpcSender for MockSender {
             "getMaxShredInsertSlot" => json![0],
             "requestAirdrop" => Value::String(Signature::new(&[8; 64]).to_string()),
             "getSnapshotSlot" => Value::Number(Number::from(0)),
+            "getHighestSnapshotSlot" => json!(RpcSnapshotSlotInfo {
+                full: 100,
+                incremental: Some(110),
+            }),
             "getBlockHeight" => Value::Number(Number::from(1234)),
             "getSlotLeaders" => json!([PUBKEY]),
             "getBlockProduction" => {
@@ -328,6 +332,7 @@ impl RpcSender for MockSender {
                     err: None,
                     logs: None,
                     accounts: None,
+                    units_consumed: None,
                 },
             })?,
             "getMinimumBalanceForRentExemption" => json![20],
@@ -338,6 +343,17 @@ impl RpcSender for MockSender {
                     feature_set: Some(version.feature_set),
                 })
             }
+            "getLatestBlockhash" => serde_json::to_value(Response {
+                context: RpcResponseContext { slot: 1 },
+                value: RpcBlockhash {
+                    blockhash: PUBKEY.to_string(),
+                    last_valid_block_height: 1234,
+                },
+            })?,
+            "getFeeForMessage" => serde_json::to_value(Response {
+                context: RpcResponseContext { slot: 1 },
+                value: json!(Some(0)),
+            })?,
             "getClusterNodes" => serde_json::to_value(vec![RpcContactInfo {
                 pubkey: PUBKEY.to_string(),
                 gossip: Some(SocketAddr::from(([10, 239, 6, 48], 8328))),

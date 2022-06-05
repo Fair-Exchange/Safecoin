@@ -150,7 +150,7 @@ elif [[ -n $BUILDKITE ]]; then
   cat > release.solana.com-install <<EOF
 SAFECOIN_RELEASE=$CHANNEL_OR_TAG
 SAFECOIN_INSTALL_INIT_ARGS=$CHANNEL_OR_TAG
-SAFECOIN_DOWNLOAD_ROOT=http://release.solana.com
+SAFECOIN_DOWNLOAD_ROOT=https://release.solana.com
 EOF
   cat install/safecoin-install-init.sh >> release.solana.com-install
 

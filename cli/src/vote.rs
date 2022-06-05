@@ -24,7 +24,10 @@ use {
         return_signers_with_config, CliEpochVotingHistory, CliLockout, CliVoteAccount,
         ReturnSignersConfig,
     },
-    safecoin_client::{blockhash_query::BlockhashQuery, nonce_utils, rpc_client::RpcClient},
+    safecoin_client::{
+        blockhash_query::BlockhashQuery, nonce_utils, rpc_client::RpcClient,
+        rpc_config::RpcGetVoteAccountsConfig,
+    },
     safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
     safecoin_sdk::{
         account::Account, commitment_config::CommitmentConfig, message::Message,
@@ -372,6 +375,35 @@ impl VoteSubCommands for App<'_, '_> {
                 .arg(memo_arg()
             )
         )
+        .subcommand(
+            SubCommand::with_name("close-vote-account")
+                .about("Close a vote account and withdraw all funds remaining")
+                .arg(
+                    pubkey!(Arg::with_name("vote_account_pubkey")
+                        .index(1)
+                        .value_name("VOTE_ACCOUNT_ADDRESS")
+                        .required(true),
+                        "Vote account to be closed. "),
+                )
+                .arg(
+                    pubkey!(Arg::with_name("destination_account_pubkey")
+                        .index(2)
+                        .value_name("RECIPIENT_ADDRESS")
+                        .required(true),
+                        "The recipient of all withdrawn SAFE. "),
+                )
+                .arg(
+                    Arg::with_name("authorized_withdrawer")
+                        .long("authorized-withdrawer")
+                        .value_name("AUTHORIZED_KEYPAIR")
+                        .takes_value(true)
+                        .validator(is_valid_signer)
+                        .help("Authorized withdrawer [default: cli config keypair]"),
+                )
+                .arg(fee_payer_arg())
+                .arg(memo_arg()
+            )
+        )
     }
 }
 
@@ -666,6 +698,39 @@ pub fn parse_withdraw_from_vote_account(
     })
 }
 
+pub fn parse_close_vote_account(
+    matches: &ArgMatches<'_>,
+    default_signer: &DefaultSigner,
+    wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
+) -> Result<CliCommandInfo, CliError> {
+    let vote_account_pubkey =
+        pubkey_of_signer(matches, "vote_account_pubkey", wallet_manager)?.unwrap();
+    let destination_account_pubkey =
+        pubkey_of_signer(matches, "destination_account_pubkey", wallet_manager)?.unwrap();
+
+    let (withdraw_authority, withdraw_authority_pubkey) =
+        signer_of(matches, "authorized_withdrawer", wallet_manager)?;
+    let (fee_payer, fee_payer_pubkey) = signer_of(matches, FEE_PAYER_ARG.name, wallet_manager)?;
+
+    let signer_info = default_signer.generate_unique_signers(
+        vec![fee_payer, withdraw_authority],
+        matches,
+        wallet_manager,
+    )?;
+    let memo = matches.value_of(MEMO_ARG.name).map(String::from);
+
+    Ok(CliCommandInfo {
+        command: CliCommand::CloseVoteAccount {
+            vote_account_pubkey,
+            destination_account_pubkey,
+            withdraw_authority: signer_info.index_of(withdraw_authority_pubkey).unwrap(),
+            memo,
+            fee_payer: signer_info.index_of(fee_payer_pubkey).unwrap(),
+        },
+        signers: signer_info.signers,
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn process_create_vote_account(
     rpc_client: &RpcClient,
@@ -750,14 +815,13 @@ pub fn process_create_vote_account(
         }
     };
 
-    let (recent_blockhash, fee_calculator) =
-        blockhash_query.get_blockhash_and_fee_calculator(rpc_client, config.commitment)?;
+    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
 
     let (message, _) = resolve_spend_tx_and_check_account_balances(
         rpc_client,
         sign_only,
         amount,
-        &fee_calculator,
+        &recent_blockhash,
         &config.signers[0].pubkey(),
         &fee_payer.pubkey(),
         build_message,
@@ -884,8 +948,7 @@ pub fn process_vote_authorize(
     };
     let ixs = vec![vote_ix].with_memo(memo);
 
-    let (recent_blockhash, fee_calculator) =
-        blockhash_query.get_blockhash_and_fee_calculator(rpc_client, config.commitment)?;
+    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
 
     let nonce_authority = config.signers[nonce_authority];
     let fee_payer = config.signers[fee_payer];
@@ -924,7 +987,6 @@ pub fn process_vote_authorize(
         check_account_for_fee_with_commitment(
             rpc_client,
             &config.signers[0].pubkey(),
-            &fee_calculator,
             &tx.message,
             config.commitment,
         )?;
@@ -955,8 +1017,7 @@ pub fn process_vote_update_validator(
         (vote_account_pubkey, "vote_account_pubkey".to_string()),
         (&new_identity_pubkey, "new_identity_account".to_string()),
     )?;
-    let (recent_blockhash, fee_calculator) =
-        blockhash_query.get_blockhash_and_fee_calculator(rpc_client, config.commitment)?;
+    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
     let ixs = vec![vote_instruction::update_validator_identity(
         vote_account_pubkey,
         &authorized_withdrawer.pubkey(),
@@ -1000,7 +1061,6 @@ pub fn process_vote_update_validator(
         check_account_for_fee_with_commitment(
             rpc_client,
             &config.signers[0].pubkey(),
-            &fee_calculator,
             &tx.message,
             config.commitment,
         )?;
@@ -1025,8 +1085,7 @@ pub fn process_vote_update_commission(
     fee_payer: SignerIndex,
 ) -> ProcessResult {
     let authorized_withdrawer = config.signers[withdraw_authority];
-    let (recent_blockhash, fee_calculator) =
-        blockhash_query.get_blockhash_and_fee_calculator(rpc_client, config.commitment)?;
+    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
     let ixs = vec![vote_instruction::update_commission(
         vote_account_pubkey,
         &authorized_withdrawer.pubkey(),
@@ -1069,7 +1128,6 @@ pub fn process_vote_update_commission(
         check_account_for_fee_with_commitment(
             rpc_client,
             &config.signers[0].pubkey(),
-            &fee_calculator,
             &tx.message,
             config.commitment,
         )?;
@@ -1183,8 +1241,7 @@ pub fn process_withdraw_from_vote_account(
     fee_payer: SignerIndex,
 ) -> ProcessResult {
     let withdraw_authority = config.signers[withdraw_authority];
-    let (recent_blockhash, fee_calculator) =
-        blockhash_query.get_blockhash_and_fee_calculator(rpc_client, config.commitment)?;
+    let recent_blockhash = blockhash_query.get_blockhash(rpc_client, config.commitment)?;
 
     let fee_payer = config.signers[fee_payer];
     let nonce_authority = config.signers[nonce_authority];
@@ -1214,7 +1271,7 @@ pub fn process_withdraw_from_vote_account(
         rpc_client,
         sign_only,
         withdraw_amount,
-        &fee_calculator,
+        &recent_blockhash,
         vote_account_pubkey,
         &fee_payer.pubkey(),
         build_message,
@@ -1260,13 +1317,69 @@ pub fn process_withdraw_from_vote_account(
         check_account_for_fee_with_commitment(
             rpc_client,
             &tx.message.account_keys[0],
-            &fee_calculator,
             &tx.message,
             config.commitment,
         )?;
         let result = rpc_client.send_and_confirm_transaction_with_spinner(&tx);
         log_instruction_custom_error::<VoteError>(result, config)
     }
+}
+
+pub fn process_close_vote_account(
+    rpc_client: &RpcClient,
+    config: &CliConfig,
+    vote_account_pubkey: &Pubkey,
+    withdraw_authority: SignerIndex,
+    destination_account_pubkey: &Pubkey,
+    memo: Option<&String>,
+    fee_payer: SignerIndex,
+) -> ProcessResult {
+    let vote_account_status =
+        rpc_client.get_vote_accounts_with_config(RpcGetVoteAccountsConfig {
+            vote_pubkey: Some(vote_account_pubkey.to_string()),
+            ..RpcGetVoteAccountsConfig::default()
+        })?;
+
+    if let Some(vote_account) = vote_account_status
+        .current
+        .into_iter()
+        .chain(vote_account_status.delinquent.into_iter())
+        .next()
+    {
+        if vote_account.activated_stake != 0 {
+            return Err(format!(
+                "Cannot close a vote account with active stake: {}",
+                vote_account_pubkey
+            )
+            .into());
+        }
+    }
+
+    let latest_blockhash = rpc_client.get_latest_blockhash()?;
+    let withdraw_authority = config.signers[withdraw_authority];
+    let fee_payer = config.signers[fee_payer];
+
+    let current_balance = rpc_client.get_balance(vote_account_pubkey)?;
+
+    let ixs = vec![withdraw(
+        vote_account_pubkey,
+        &withdraw_authority.pubkey(),
+        current_balance,
+        destination_account_pubkey,
+    )]
+    .with_memo(memo);
+
+    let message = Message::new(&ixs, Some(&fee_payer.pubkey()));
+    let mut tx = Transaction::new_unsigned(message);
+    tx.try_sign(&config.signers, latest_blockhash)?;
+    check_account_for_fee_with_commitment(
+        rpc_client,
+        &tx.message.account_keys[0],
+        &tx.message,
+        config.commitment,
+    )?;
+    let result = rpc_client.send_and_confirm_transaction_with_spinner(&tx);
+    log_instruction_custom_error::<VoteError>(result, config)
 }
 
 #[cfg(test)]
@@ -2004,6 +2117,56 @@ mod tests {
                     fee_payer: 0,
                 },
                 signers: vec![Presigner::new(&withdraw_authority.pubkey(), &authorized_sig).into(),],
+            }
+        );
+
+        // Test CloseVoteAccount subcommand
+        let test_close_vote_account = test_commands.clone().get_matches_from(vec![
+            "test",
+            "close-vote-account",
+            &keypair_file,
+            &pubkey_string,
+        ]);
+        assert_eq!(
+            parse_command(&test_close_vote_account, &default_signer, &mut None).unwrap(),
+            CliCommandInfo {
+                command: CliCommand::CloseVoteAccount {
+                    vote_account_pubkey: read_keypair_file(&keypair_file).unwrap().pubkey(),
+                    destination_account_pubkey: pubkey,
+                    withdraw_authority: 0,
+                    memo: None,
+                    fee_payer: 0,
+                },
+                signers: vec![read_keypair_file(&default_keypair_file).unwrap().into()],
+            }
+        );
+
+        // Test CloseVoteAccount subcommand with authority
+        let withdraw_authority = Keypair::new();
+        let (withdraw_authority_file, mut tmp_file) = make_tmp_file();
+        write_keypair(&withdraw_authority, tmp_file.as_file_mut()).unwrap();
+        let test_close_vote_account = test_commands.clone().get_matches_from(vec![
+            "test",
+            "close-vote-account",
+            &keypair_file,
+            &pubkey_string,
+            "--authorized-withdrawer",
+            &withdraw_authority_file,
+        ]);
+        assert_eq!(
+            parse_command(&test_close_vote_account, &default_signer, &mut None).unwrap(),
+            CliCommandInfo {
+                command: CliCommand::CloseVoteAccount {
+                    vote_account_pubkey: read_keypair_file(&keypair_file).unwrap().pubkey(),
+                    destination_account_pubkey: pubkey,
+                    withdraw_authority: 1,
+                    memo: None,
+                    fee_payer: 0,
+                },
+                signers: vec![
+                    read_keypair_file(&default_keypair_file).unwrap().into(),
+                    read_keypair_file(&withdraw_authority_file).unwrap().into()
+                ],
             }
         );
     }

@@ -1,8 +1,11 @@
 use {
-    crate::{clock::Epoch, program_error::ProgramError, pubkey::Pubkey},
+    crate::{
+        clock::Epoch, debug_account_data::*, program_error::ProgramError,
+        program_memory::sol_memset, pubkey::Pubkey,
+    },
     std::{
         cell::{Ref, RefCell, RefMut},
-        cmp, fmt,
+        fmt,
         rc::Rc,
     },
 };
@@ -30,28 +33,19 @@ pub struct AccountInfo<'a> {
 
 impl<'a> fmt::Debug for AccountInfo<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let data_len = cmp::min(64, self.data_len());
-        let data_str = if data_len > 0 {
-            format!(
-                " data: {} ...",
-                hex::encode(self.data.borrow()[..data_len].to_vec())
-            )
-        } else {
-            "".to_string()
-        };
-        write!(
-            f,
-            "AccountInfo {{ key: {} owner: {} is_signer: {} is_writable: {} executable: {} rent_epoch: {} lamports: {} data.len: {} {} }}",
-            self.key,
-            self.owner,
-            self.is_signer,
-            self.is_writable,
-            self.executable,
-            self.rent_epoch,
-            self.lamports(),
-            self.data_len(),
-            data_str,
-        )
+        let mut f = f.debug_struct("AccountInfo");
+
+        f.field("key", &self.key)
+            .field("owner", &self.owner)
+            .field("is_signer", &self.is_signer)
+            .field("is_writable", &self.is_writable)
+            .field("executable", &self.executable)
+            .field("rent_epoch", &self.rent_epoch)
+            .field("lamports", &self.lamports())
+            .field("data.len", &self.data_len());
+        debug_account_data(&self.data.borrow(), &mut f);
+
+        f.finish_non_exhaustive()
     }
 }
 
@@ -114,6 +108,53 @@ impl<'a> AccountInfo<'a> {
         self.data
             .try_borrow_mut()
             .map_err(|_| ProgramError::AccountBorrowFailed)
+    }
+
+    /// Realloc the account's data and optionally zero-initialize the new
+    /// memory.
+    ///
+    /// Note:  Account data can be increased within a single call by up to
+    /// `safecoin_program::entrypoint::MAX_PERMITTED_DATA_INCREASE` bytes.
+    ///
+    /// Note: Memory used to grow is already zero-initialized upon program
+    /// entrypoint and re-zeroing it wastes compute units.  If within the same
+    /// call a program reallocs from larger to smaller and back to larger again
+    /// the new space could contain stale data.  Pass `true` for `zero_init` in
+    /// this case, otherwise compute units will be wasted re-zero-initializing.
+    pub fn realloc(&self, new_len: usize, zero_init: bool) -> Result<(), ProgramError> {
+        let orig_len = self.data_len();
+
+        // realloc
+        unsafe {
+            // First set new length in the serialized data
+            let ptr = self.try_borrow_mut_data()?.as_mut_ptr().offset(-8) as *mut u64;
+            *ptr = new_len as u64;
+
+            // Then set the new length in the local slice
+            let ptr = &mut *(((self.data.as_ptr() as *const u64).offset(1) as u64) as *mut u64);
+            *ptr = new_len as u64;
+        }
+
+        // zero-init if requested
+        if zero_init && new_len > orig_len {
+            sol_memset(
+                &mut self.try_borrow_mut_data()?[orig_len..],
+                0,
+                new_len.saturating_sub(orig_len),
+            );
+        }
+
+        Ok(())
+    }
+
+    pub fn assign(&self, new_owner: &Pubkey) {
+        // Set the non-mut owner field
+        unsafe {
+            std::ptr::write_volatile(
+                self.owner as *const Pubkey as *mut [u8; 32],
+                new_owner.to_bytes(),
+            );
+        }
     }
 
     pub fn new(
@@ -365,5 +406,91 @@ mod tests {
         let d = &mut [0u8];
         let info = AccountInfo::new(&k, false, false, l, d, &k, false, 0);
         assert_eq!(info.key, info.as_ref().key);
+    }
+
+    #[test]
+    fn test_account_info_debug_data() {
+        let key = Pubkey::new_unique();
+        let mut lamports = 42;
+        let mut data = vec![5; 80];
+        let data_str = format!("{:?}", Hex(&data[..MAX_DEBUG_ACCOUNT_DATA]));
+        let info = AccountInfo::new(&key, false, false, &mut lamports, &mut data, &key, false, 0);
+        assert_eq!(
+            format!("{:?}", info),
+            format!(
+                "AccountInfo {{ \
+                key: {}, \
+                owner: {}, \
+                is_signer: {}, \
+                is_writable: {}, \
+                executable: {}, \
+                rent_epoch: {}, \
+                lamports: {}, \
+                data.len: {}, \
+                data: {}, .. }}",
+                key,
+                key,
+                false,
+                false,
+                false,
+                0,
+                lamports,
+                data.len(),
+                data_str,
+            )
+        );
+
+        let mut data = vec![5; 40];
+        let data_str = format!("{:?}", Hex(&data));
+        let info = AccountInfo::new(&key, false, false, &mut lamports, &mut data, &key, false, 0);
+        assert_eq!(
+            format!("{:?}", info),
+            format!(
+                "AccountInfo {{ \
+                key: {}, \
+                owner: {}, \
+                is_signer: {}, \
+                is_writable: {}, \
+                executable: {}, \
+                rent_epoch: {}, \
+                lamports: {}, \
+                data.len: {}, \
+                data: {}, .. }}",
+                key,
+                key,
+                false,
+                false,
+                false,
+                0,
+                lamports,
+                data.len(),
+                data_str,
+            )
+        );
+
+        let mut data = vec![];
+        let info = AccountInfo::new(&key, false, false, &mut lamports, &mut data, &key, false, 0);
+        assert_eq!(
+            format!("{:?}", info),
+            format!(
+                "AccountInfo {{ \
+                key: {}, \
+                owner: {}, \
+                is_signer: {}, \
+                is_writable: {}, \
+                executable: {}, \
+                rent_epoch: {}, \
+                lamports: {}, \
+                data.len: {}, .. }}",
+                key,
+                key,
+                false,
+                false,
+                false,
+                0,
+                lamports,
+                data.len(),
+            )
+        );
     }
 }

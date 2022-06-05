@@ -8,7 +8,7 @@ use {
         pubkey_from_safe_token, real_number_string, real_number_string_trimmed, safe_token_pubkey,
     },
     safecoin_client::rpc_client::RpcClient,
-    safecoin_sdk::{instruction::Instruction, native_token::lamports_to_sol},
+    safecoin_sdk::{instruction::Instruction, message::Message, native_token::lamports_to_sol},
     safecoin_transaction_status::parse_token::safe_token_instruction,
     safe_associated_token_account::{create_associated_token_account, get_associated_token_address},
     safe_token::{
@@ -82,7 +82,7 @@ pub fn build_safe_token_instructions(
 }
 
 pub fn check_safe_token_balances(
-    num_signatures: usize,
+    messages: &[Message],
     allocations: &[Allocation],
     client: &RpcClient,
     args: &DistributeTokensArgs,
@@ -94,11 +94,13 @@ pub fn check_safe_token_balances(
         .expect("safe_token_args must be some");
     let allocation_amount: u64 = allocations.iter().map(|x| x.amount).sum();
 
-    let fee_calculator = client.get_recent_blockhash()?.1;
-    let fees = fee_calculator
-        .lamports_per_signature
-        .checked_mul(num_signatures as u64)
-        .unwrap();
+    let fees: u64 = messages
+        .iter()
+        .map(|message| client.get_fee_for_message(message))
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .iter()
+        .sum();
 
     let token_account_rent_exempt_balance =
         client.get_minimum_balance_for_rent_exemption(SafeTokenAccount::LEN)?;

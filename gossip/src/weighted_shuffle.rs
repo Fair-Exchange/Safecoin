@@ -9,65 +9,80 @@ use {
     },
     rand_chacha::ChaChaRng,
     std::{
+        borrow::Borrow,
         iter,
         ops::{AddAssign, Div, Sub, SubAssign},
     },
 };
-
-#[derive(Debug)]
-pub enum WeightedShuffleError<T> {
-    NegativeWeight(T),
-    SumOverflow,
-}
 
 /// Implements an iterator where indices are shuffled according to their
 /// weights:
 ///   - Returned indices are unique in the range [0, weights.len()).
 ///   - Higher weighted indices tend to appear earlier proportional to their
 ///     weight.
-///   - Zero weighted indices are excluded. Therefore the iterator may have
-///     count less than weights.len().
-pub struct WeightedShuffle<'a, R, T> {
-    arr: Vec<T>,    // Underlying array implementing binary indexed tree.
-    sum: T,         // Current sum of weights, excluding already selected indices.
-    rng: &'a mut R, // Random number generator.
+///   - Zero weighted indices are shuffled and appear only at the end, after
+///     non-zero weighted indices.
+#[derive(Clone)]
+pub struct WeightedShuffle<T> {
+    arr: Vec<T>,       // Underlying array implementing binary indexed tree.
+    sum: T,            // Current sum of weights, excluding already selected indices.
+    zeros: Vec<usize>, // Indices of zero weighted entries.
 }
 
 // The implementation uses binary indexed tree:
 // https://en.wikipedia.org/wiki/Fenwick_tree
 // to maintain cumulative sum of weights excluding already selected indices
 // over self.arr.
-impl<'a, R: Rng, T> WeightedShuffle<'a, R, T>
+impl<T> WeightedShuffle<T>
 where
     T: Copy + Default + PartialOrd + AddAssign + CheckedAdd,
 {
-    /// Returns error if:
-    ///   - any of the weights are negative.
-    ///   - sum of weights overflows.
-    pub fn new(rng: &'a mut R, weights: &[T]) -> Result<Self, WeightedShuffleError<T>> {
+    /// If weights are negative or overflow the total sum
+    /// they are treated as zero.
+    pub fn new(name: &'static str, weights: &[T]) -> Self {
         let size = weights.len() + 1;
         let zero = <T as Default>::default();
         let mut arr = vec![zero; size];
         let mut sum = zero;
+        let mut zeros = Vec::default();
+        let mut num_negative = 0;
+        let mut num_overflow = 0;
         for (mut k, &weight) in (1usize..).zip(weights) {
             #[allow(clippy::neg_cmp_op_on_partial_ord)]
             // weight < zero does not work for NaNs.
             if !(weight >= zero) {
-                return Err(WeightedShuffleError::NegativeWeight(weight));
+                zeros.push(k - 1);
+                num_negative += 1;
+                continue;
             }
-            sum = sum
-                .checked_add(&weight)
-                .ok_or(WeightedShuffleError::SumOverflow)?;
+            if weight == zero {
+                zeros.push(k - 1);
+                continue;
+            }
+            sum = match sum.checked_add(&weight) {
+                Some(val) => val,
+                None => {
+                    zeros.push(k - 1);
+                    num_overflow += 1;
+                    continue;
+                }
+            };
             while k < size {
                 arr[k] += weight;
                 k += k & k.wrapping_neg();
             }
         }
-        Ok(Self { arr, sum, rng })
+        if num_negative > 0 {
+            datapoint_error!("weighted-shuffle-negative", (name, num_negative, i64));
+        }
+        if num_overflow > 0 {
+            datapoint_error!("weighted-shuffle-overflow", (name, num_overflow, i64));
+        }
+        Self { arr, sum, zeros }
     }
 }
 
-impl<'a, R, T> WeightedShuffle<'a, R, T>
+impl<T> WeightedShuffle<T>
 where
     T: Copy + Default + PartialOrd + AddAssign + SubAssign + Sub<Output = T>,
 {
@@ -112,42 +127,77 @@ where
         debug_assert!(hi.1 > val);
         (hi.0, hi.1 - lo.1)
     }
+
+    pub fn remove_index(&mut self, index: usize) {
+        let zero = <T as Default>::default();
+        let weight = self.cumsum(index + 1) - self.cumsum(index);
+        if weight != zero {
+            self.remove(index + 1, weight);
+        } else if let Some(index) = self.zeros.iter().position(|ix| *ix == index) {
+            self.zeros.remove(index);
+        }
+    }
 }
 
-impl<'a, R: Rng, T> Iterator for WeightedShuffle<'a, R, T>
+impl<T> WeightedShuffle<T>
 where
     T: Copy + Default + PartialOrd + AddAssign + SampleUniform + SubAssign + Sub<Output = T>,
 {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    // Equivalent to weighted_shuffle.shuffle(&mut rng).next()
+    pub fn first<R: Rng>(&self, rng: &mut R) -> Option<usize> {
         let zero = <T as Default>::default();
-        #[allow(clippy::neg_cmp_op_on_partial_ord)]
-        // self.sum <= zero does not work for NaNs.
-        if !(self.sum > zero) {
+        if self.sum > zero {
+            let sample = <T as SampleUniform>::Sampler::sample_single(zero, self.sum, rng);
+            let (index, _weight) = WeightedShuffle::search(self, sample);
+            return Some(index - 1);
+        }
+        if self.zeros.is_empty() {
             return None;
         }
-        let sample = <T as SampleUniform>::Sampler::sample_single(zero, self.sum, &mut self.rng);
-        let (index, weight) = WeightedShuffle::search(self, sample);
-        self.remove(index, weight);
-        Some(index - 1)
+        let index = <usize as SampleUniform>::Sampler::sample_single(0usize, self.zeros.len(), rng);
+        self.zeros.get(index).copied()
+    }
+}
+
+impl<'a, T: 'a> WeightedShuffle<T>
+where
+    T: Copy + Default + PartialOrd + AddAssign + SampleUniform + SubAssign + Sub<Output = T>,
+{
+    pub fn shuffle<R: Rng>(mut self, rng: &'a mut R) -> impl Iterator<Item = usize> + 'a {
+        std::iter::from_fn(move || {
+            let zero = <T as Default>::default();
+            if self.sum > zero {
+                let sample = <T as SampleUniform>::Sampler::sample_single(zero, self.sum, rng);
+                let (index, weight) = WeightedShuffle::search(&self, sample);
+                self.remove(index, weight);
+                return Some(index - 1);
+            }
+            if self.zeros.is_empty() {
+                return None;
+            }
+            let index =
+                <usize as SampleUniform>::Sampler::sample_single(0usize, self.zeros.len(), rng);
+            Some(self.zeros.swap_remove(index))
+        })
     }
 }
 
 /// Returns a list of indexes shuffled based on the input weights
 /// Note - The sum of all weights must not exceed `u64::MAX`
-pub fn weighted_shuffle<T>(weights: &[T], seed: [u8; 32]) -> Vec<usize>
+pub fn weighted_shuffle<T, B, F>(weights: F, seed: [u8; 32]) -> Vec<usize>
 where
     T: Copy + PartialOrd + iter::Sum + Div<T, Output = T> + FromPrimitive + ToPrimitive,
+    B: Borrow<T>,
+    F: Iterator<Item = B> + Clone,
 {
-    let total_weight: T = weights.iter().copied().sum();
+    let total_weight: T = weights.clone().map(|x| *x.borrow()).sum();
     let mut rng = ChaChaRng::from_seed(seed);
     weights
-        .iter()
         .enumerate()
-        .map(|(i, v)| {
+        .map(|(i, weight)| {
+            let weight = weight.borrow();
             // This generates an "inverse" weight but it avoids floating point math
-            let x = (total_weight / *v)
+            let x = (total_weight / *weight)
                 .to_u64()
                 .expect("values > u64::max are not supported");
             (
@@ -202,11 +252,14 @@ mod tests {
         R: Rng,
     {
         let mut shuffle = Vec::with_capacity(weights.len());
-        loop {
-            let high: u64 = weights.iter().sum();
-            if high == 0 {
-                break shuffle;
-            }
+        let mut high: u64 = weights.iter().sum();
+        let mut zeros: Vec<_> = weights
+            .iter()
+            .enumerate()
+            .filter(|(_, w)| **w == 0)
+            .map(|(i, _)| i)
+            .collect();
+        while high != 0 {
             let sample = rng.gen_range(0, high);
             let index = weights
                 .iter()
@@ -217,15 +270,21 @@ mod tests {
                 .position(|acc| sample < acc)
                 .unwrap();
             shuffle.push(index);
+            high -= weights[index];
             weights[index] = 0;
         }
+        while !zeros.is_empty() {
+            let index = <usize as SampleUniform>::Sampler::sample_single(0usize, zeros.len(), rng);
+            shuffle.push(zeros.swap_remove(index));
+        }
+        shuffle
     }
 
     #[test]
     fn test_weighted_shuffle_iterator() {
         let mut test_set = [0; 6];
         let mut count = 0;
-        let shuffle = weighted_shuffle(&[50, 10, 2, 1, 1, 1], [0x5a; 32]);
+        let shuffle = weighted_shuffle(vec![50, 10, 2, 1, 1, 1].into_iter(), [0x5a; 32]);
         shuffle.into_iter().for_each(|x| {
             assert_eq!(test_set[x], 0);
             test_set[x] = 1;
@@ -240,7 +299,7 @@ mod tests {
         let mut test_weights = vec![0; 100];
         (0..100).for_each(|i| test_weights[i] = (i + 1) as u64);
         let mut count = 0;
-        let shuffle = weighted_shuffle(&test_weights, [0xa5; 32]);
+        let shuffle = weighted_shuffle(test_weights.into_iter(), [0xa5; 32]);
         shuffle.into_iter().for_each(|x| {
             assert_eq!(test_set[x], 0);
             test_set[x] = 1;
@@ -251,9 +310,9 @@ mod tests {
 
     #[test]
     fn test_weighted_shuffle_compare() {
-        let shuffle = weighted_shuffle(&[50, 10, 2, 1, 1, 1], [0x5a; 32]);
+        let shuffle = weighted_shuffle(vec![50, 10, 2, 1, 1, 1].into_iter(), [0x5a; 32]);
 
-        let shuffle1 = weighted_shuffle(&[50, 10, 2, 1, 1, 1], [0x5a; 32]);
+        let shuffle1 = weighted_shuffle(vec![50, 10, 2, 1, 1, 1].into_iter(), [0x5a; 32]);
         shuffle1
             .into_iter()
             .zip(shuffle.into_iter())
@@ -266,7 +325,7 @@ mod tests {
     fn test_weighted_shuffle_imbalanced() {
         let mut weights = vec![std::u32::MAX as u64; 3];
         weights.push(1);
-        let shuffle = weighted_shuffle(&weights, [0x5a; 32]);
+        let shuffle = weighted_shuffle(weights.iter().cloned(), [0x5a; 32]);
         shuffle.into_iter().for_each(|x| {
             if x == weights.len() - 1 {
                 assert_eq!(weights[x], 1);
@@ -287,41 +346,125 @@ mod tests {
         assert_eq!(best_index, 2);
     }
 
+    // Asserts that empty weights will return empty shuffle.
+    #[test]
+    fn test_weighted_shuffle_empty_weights() {
+        let weights = Vec::<u64>::new();
+        let mut rng = rand::thread_rng();
+        let shuffle = WeightedShuffle::new("", &weights);
+        assert!(shuffle.clone().shuffle(&mut rng).next().is_none());
+        assert!(shuffle.first(&mut rng).is_none());
+    }
+
+    // Asserts that zero weights will be shuffled.
+    #[test]
+    fn test_weighted_shuffle_zero_weights() {
+        let weights = vec![0u64; 5];
+        let seed = [37u8; 32];
+        let mut rng = ChaChaRng::from_seed(seed);
+        let shuffle = WeightedShuffle::new("", &weights);
+        assert_eq!(
+            shuffle.clone().shuffle(&mut rng).collect::<Vec<_>>(),
+            [1, 4, 2, 3, 0]
+        );
+        let mut rng = ChaChaRng::from_seed(seed);
+        assert_eq!(shuffle.first(&mut rng), Some(1));
+    }
+
     // Asserts that each index is selected proportional to its weight.
     #[test]
     fn test_weighted_shuffle_sanity() {
         let seed: Vec<_> = (1..).step_by(3).take(32).collect();
         let seed: [u8; 32] = seed.try_into().unwrap();
         let mut rng = ChaChaRng::from_seed(seed);
-        let weights = [1, 1000, 10, 100];
-        let mut counts = [0; 4];
+        let weights = [1, 0, 1000, 0, 0, 10, 100, 0];
+        let mut counts = [0; 8];
         for _ in 0..100000 {
-            let mut shuffle = WeightedShuffle::new(&mut rng, &weights).unwrap();
+            let mut shuffle = WeightedShuffle::new("", &weights).shuffle(&mut rng);
             counts[shuffle.next().unwrap()] += 1;
             let _ = shuffle.count(); // consume the rest.
         }
-        assert_eq!(counts, [101, 90113, 891, 8895]);
+        assert_eq!(counts, [95, 0, 90069, 0, 0, 908, 8928, 0]);
+        let mut counts = [0; 8];
+        for _ in 0..100000 {
+            let mut shuffle = WeightedShuffle::new("", &weights);
+            shuffle.remove_index(5);
+            shuffle.remove_index(3);
+            shuffle.remove_index(1);
+            let mut shuffle = shuffle.shuffle(&mut rng);
+            counts[shuffle.next().unwrap()] += 1;
+            let _ = shuffle.count(); // consume the rest.
+        }
+        assert_eq!(counts, [97, 0, 90862, 0, 0, 0, 9041, 0]);
+    }
+
+    #[test]
+    fn test_weighted_shuffle_negative_overflow() {
+        const SEED: [u8; 32] = [48u8; 32];
+        let weights = [19i64, 23, 7, 0, 0, 23, 3, 0, 5, 0, 19, 29];
+        let mut rng = ChaChaRng::from_seed(SEED);
+        let shuffle = WeightedShuffle::new("", &weights);
+        assert_eq!(
+            shuffle.shuffle(&mut rng).collect::<Vec<_>>(),
+            [8, 1, 5, 10, 11, 0, 2, 6, 9, 4, 3, 7]
+        );
+        // Negative weights and overflowing ones are treated as zero.
+        let weights = [19, 23, 7, -57, i64::MAX, 23, 3, i64::MAX, 5, -79, 19, 29];
+        let mut rng = ChaChaRng::from_seed(SEED);
+        let shuffle = WeightedShuffle::new("", &weights);
+        assert_eq!(
+            shuffle.shuffle(&mut rng).collect::<Vec<_>>(),
+            [8, 1, 5, 10, 11, 0, 2, 6, 9, 4, 3, 7]
+        );
     }
 
     #[test]
     fn test_weighted_shuffle_hard_coded() {
         let weights = [
-            78, 70, 38, 27, 21, 0, 82, 42, 21, 77, 77, 17, 4, 50, 96, 83, 33, 16, 72,
+            78, 70, 38, 27, 21, 0, 82, 42, 21, 77, 77, 0, 17, 4, 50, 96, 0, 83, 33, 16, 72,
         ];
         let seed = [48u8; 32];
         let mut rng = ChaChaRng::from_seed(seed);
-        let shuffle: Vec<_> = WeightedShuffle::new(&mut rng, &weights).unwrap().collect();
+        let mut shuffle = WeightedShuffle::new("", &weights);
         assert_eq!(
-            shuffle,
-            [2, 11, 16, 0, 13, 14, 15, 10, 1, 9, 7, 6, 12, 18, 4, 17, 3, 8]
+            shuffle.clone().shuffle(&mut rng).collect::<Vec<_>>(),
+            [2, 12, 18, 0, 14, 15, 17, 10, 1, 9, 7, 6, 13, 20, 4, 19, 3, 8, 11, 16, 5]
         );
+        let mut rng = ChaChaRng::from_seed(seed);
+        assert_eq!(shuffle.first(&mut rng), Some(2));
+        let mut rng = ChaChaRng::from_seed(seed);
+        shuffle.remove_index(11);
+        shuffle.remove_index(3);
+        shuffle.remove_index(15);
+        shuffle.remove_index(0);
+        assert_eq!(
+            shuffle.clone().shuffle(&mut rng).collect::<Vec<_>>(),
+            [4, 6, 1, 12, 19, 14, 17, 20, 2, 9, 10, 8, 7, 18, 13, 5, 16]
+        );
+        let mut rng = ChaChaRng::from_seed(seed);
+        assert_eq!(shuffle.first(&mut rng), Some(4));
         let seed = [37u8; 32];
         let mut rng = ChaChaRng::from_seed(seed);
-        let shuffle: Vec<_> = WeightedShuffle::new(&mut rng, &weights).unwrap().collect();
+        let mut shuffle = WeightedShuffle::new("", &weights);
         assert_eq!(
-            shuffle,
-            [17, 3, 14, 13, 6, 10, 15, 16, 9, 2, 4, 1, 0, 7, 8, 18, 11, 12]
+            shuffle.clone().shuffle(&mut rng).collect::<Vec<_>>(),
+            [19, 3, 15, 14, 6, 10, 17, 18, 9, 2, 4, 1, 0, 7, 8, 20, 12, 13, 16, 5, 11]
         );
+        let mut rng = ChaChaRng::from_seed(seed);
+        assert_eq!(shuffle.first(&mut rng), Some(19));
+        shuffle.remove_index(16);
+        shuffle.remove_index(8);
+        shuffle.remove_index(20);
+        shuffle.remove_index(5);
+        shuffle.remove_index(19);
+        shuffle.remove_index(4);
+        let mut rng = ChaChaRng::from_seed(seed);
+        assert_eq!(
+            shuffle.clone().shuffle(&mut rng).collect::<Vec<_>>(),
+            [17, 2, 9, 14, 6, 10, 12, 1, 15, 13, 7, 0, 18, 3, 11]
+        );
+        let mut rng = ChaChaRng::from_seed(seed);
+        assert_eq!(shuffle.first(&mut rng), Some(17));
     }
 
     #[test]
@@ -332,10 +475,14 @@ mod tests {
             let mut seed = [0u8; 32];
             rng.fill(&mut seed[..]);
             let mut rng = ChaChaRng::from_seed(seed);
-            let shuffle: Vec<_> = WeightedShuffle::new(&mut rng, &weights).unwrap().collect();
+            let shuffle = WeightedShuffle::new("", &weights);
+            let shuffle: Vec<_> = shuffle.shuffle(&mut rng).collect();
             let mut rng = ChaChaRng::from_seed(seed);
             let shuffle_slow = weighted_shuffle_slow(&mut rng, weights.clone());
-            assert_eq!(shuffle, shuffle_slow,);
+            assert_eq!(shuffle, shuffle_slow);
+            let mut rng = ChaChaRng::from_seed(seed);
+            let shuffle = WeightedShuffle::new("", &weights);
+            assert_eq!(shuffle.first(&mut rng), Some(shuffle_slow[0]));
         }
     }
 }

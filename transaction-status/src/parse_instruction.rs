@@ -10,7 +10,7 @@ use {
     },
     inflector::Inflector,
     serde_json::Value,
-    safecoin_account_decoder::parse_token::safe_token_id,
+    safecoin_account_decoder::parse_token::safe_token_ids,
     safecoin_sdk::{instruction::CompiledInstruction, pubkey::Pubkey, stake, system_program},
     std::{
         collections::HashMap,
@@ -27,7 +27,6 @@ lazy_static! {
     static ref MEMO_V3_PROGRAM_ID: Pubkey = safe_memo_id_v3();
     static ref STAKE_PROGRAM_ID: Pubkey = stake::program::id();
     static ref SYSTEM_PROGRAM_ID: Pubkey = system_program::id();
-    static ref TOKEN_PROGRAM_ID: Pubkey = safe_token_id();
     static ref VOTE_PROGRAM_ID: Pubkey = solana_vote_program::id();
     static ref PARSABLE_PROGRAM_IDS: HashMap<Pubkey, ParsableProgram> = {
         let mut m = HashMap::new();
@@ -37,7 +36,9 @@ lazy_static! {
         );
         m.insert(*MEMO_V1_PROGRAM_ID, ParsableProgram::SafeMemo);
         m.insert(*MEMO_V3_PROGRAM_ID, ParsableProgram::SafeMemo);
-        m.insert(*TOKEN_PROGRAM_ID, ParsableProgram::SafeToken);
+        for safe_token_id in safe_token_ids() {
+            m.insert(safe_token_id, ParsableProgram::SafeToken);
+        }
         m.insert(*BPF_LOADER_PROGRAM_ID, ParsableProgram::BpfLoader);
         m.insert(
             *BPF_UPGRADEABLE_LOADER_PROGRAM_ID,

@@ -24,7 +24,7 @@ import {
   Details,
   useFetchTransactionDetails,
   useTransactionDetailsCache,
-} from "providers/transactions/details";
+} from "providers/transactions/parsed";
 import { reportError } from "utils/sentry";
 import { intoTransactionInstruction, displayAddress } from "utils/tx";
 import {
@@ -51,6 +51,10 @@ import { useQuery } from "utils/url";
 import { TokenInfoMap } from "@safecoin/safe-token-registry";
 import { useTokenRegistry } from "providers/mints/token-registry";
 import { getTokenProgramInstructionName } from "utils/instruction";
+import {
+  isMangoInstruction,
+  parseMangoInstructionTitle,
+} from "components/instruction/mango/types";
 
 const TRUNCATE_TOKEN_LENGTH = 10;
 const ALL_TOKENS = "";
@@ -238,12 +242,12 @@ function TokenHistoryTable({ tokens }: { tokens: TokenInfoWithPubkey[] }) {
         >
           {fetching ? (
             <>
-              <span className="spinner-grow spinner-grow-sm mr-2"></span>
+              <span className="spinner-grow spinner-grow-sm me-2"></span>
               Loading
             </>
           ) : (
             <>
-              <span className="fe fe-refresh-cw mr-2"></span>
+              <span className="fe fe-refresh-cw me-2"></span>
               Refresh
             </>
           )}
@@ -285,7 +289,7 @@ function TokenHistoryTable({ tokens }: { tokens: TokenInfoWithPubkey[] }) {
           >
             {fetching ? (
               <>
-                <span className="spinner-grow spinner-grow-sm mr-2"></span>
+                <span className="spinner-grow spinner-grow-sm me-2"></span>
                 Loading
               </>
             ) : (
@@ -327,8 +331,8 @@ const FilterDropdown = ({ filter, toggle, show, tokens }: FilterProps) => {
   });
 
   return (
-    <div className="dropdown mr-2">
-      <small className="mr-2">Filter:</small>
+    <div className="dropdown me-2">
+      <small className="me-2">Filter:</small>
       <button
         className="btn btn-white btn-sm dropdown-toggle"
         type="button"
@@ -337,7 +341,7 @@ const FilterDropdown = ({ filter, toggle, show, tokens }: FilterProps) => {
         {filter === ALL_TOKENS ? "All Tokens" : nameLookup.get(filter)}
       </button>
       <div
-        className={`token-filter dropdown-menu-right dropdown-menu${
+        className={`token-filter dropdown-menu-end dropdown-menu${
           show ? " show" : ""
         }`}
       >
@@ -400,9 +404,7 @@ const TokenTransactionRow = React.memo(
           </td>
 
           <td>
-            <span className={`badge badge-soft-${statusClass}`}>
-              {statusText}
-            </span>
+            <span className={`badge bg-${statusClass}-soft`}>{statusText}</span>
           </td>
 
           <td>
@@ -410,7 +412,7 @@ const TokenTransactionRow = React.memo(
           </td>
 
           <td>
-            <span className="spinner-grow spinner-grow-sm mr-2"></span>
+            <span className="spinner-grow spinner-grow-sm me-2"></span>
             Loading
           </td>
 
@@ -502,6 +504,16 @@ const TokenTransactionRow = React.memo(
               reportError(error, { signature: tx.signature });
               return undefined;
             }
+          } else if (
+            transactionInstruction &&
+            isMangoInstruction(transactionInstruction)
+          ) {
+            try {
+              name = parseMangoInstructionTitle(transactionInstruction);
+            } catch (error) {
+              reportError(error, { signature: tx.signature });
+              return undefined;
+            }
           } else {
             if (
               ix.accounts.findIndex((account) =>
@@ -532,7 +544,7 @@ const TokenTransactionRow = React.memo(
               </td>
 
               <td>
-                <span className={`badge badge-soft-${statusClass}`}>
+                <span className={`badge bg-${statusClass}-soft`}>
                   {statusText}
                 </span>
               </td>
@@ -583,7 +595,7 @@ function InstructionDetails({
               e.preventDefault();
               setExpanded(!expanded);
             }}
-            className={`c-pointer fe mr-2 ${
+            className={`c-pointer fe me-2 ${
               expanded ? "fe-minus-square" : "fe-plus-square"
             }`}
           ></span>

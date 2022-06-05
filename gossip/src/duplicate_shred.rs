@@ -283,7 +283,8 @@ pub(crate) mod tests {
     use {
         super::*,
         rand::Rng,
-        solana_ledger::{entry::Entry, shred::Shredder},
+        solana_entry::entry::Entry,
+        solana_ledger::shred::Shredder,
         safecoin_sdk::{
             hash,
             signature::{Keypair, Signer},
@@ -318,6 +319,7 @@ pub(crate) mod tests {
         rng: &mut R,
         next_shred_index: u32,
         shredder: &Shredder,
+        keypair: &Keypair,
     ) -> Shred {
         let entries: Vec<_> = std::iter::repeat_with(|| {
             let tx = system_transaction::transfer(
@@ -334,10 +336,12 @@ pub(crate) mod tests {
         })
         .take(5)
         .collect();
-        let (mut data_shreds, _coding_shreds, _last_shred_index) = shredder.entries_to_shreds(
+        let (mut data_shreds, _coding_shreds) = shredder.entries_to_shreds(
+            keypair,
             &entries,
             true, // is_last_in_slot
             next_shred_index,
+            next_shred_index, // next_code_index
         );
         data_shreds.swap_remove(0)
     }
@@ -347,11 +351,10 @@ pub(crate) mod tests {
         let mut rng = rand::thread_rng();
         let leader = Arc::new(Keypair::new());
         let (slot, parent_slot, reference_tick, version) = (53084024, 53084023, 0, 0);
-        let shredder =
-            Shredder::new(slot, parent_slot, leader.clone(), reference_tick, version).unwrap();
+        let shredder = Shredder::new(slot, parent_slot, reference_tick, version).unwrap();
         let next_shred_index = rng.gen();
-        let shred1 = new_rand_shred(&mut rng, next_shred_index, &shredder);
-        let shred2 = new_rand_shred(&mut rng, next_shred_index, &shredder);
+        let shred1 = new_rand_shred(&mut rng, next_shred_index, &shredder, &leader);
+        let shred2 = new_rand_shred(&mut rng, next_shred_index, &shredder, &leader);
         let leader_schedule = |s| {
             if s == slot {
                 Some(leader.pubkey())

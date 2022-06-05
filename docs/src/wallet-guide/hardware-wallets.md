@@ -37,7 +37,7 @@ usb://<MANUFACTURER>[/<WALLET_ID>][?key=<DERIVATION_PATH>]
 
 `DERVIATION_PATH` is used to navigate to Safecoin keys within your hardware wallet.
 The path has the form `<ACCOUNT>[/<CHANGE>]`, where each `ACCOUNT` and `CHANGE`
-are positive integers.
+are nonnegative integers.
 
 For example, a fully qualified URL for a Ledger device might be:
 
@@ -45,7 +45,7 @@ For example, a fully qualified URL for a Ledger device might be:
 usb://ledger/BsNsvfXqQTtJnagwFWdBS7FBXgnsK8VZ5CmuznN85swK?key=0/0
 ```
 
-All derivation paths implicitly include the prefix `44'/19165'`, which indicates
+All derivation paths implicitly include the prefix `44'/501'`, which indicates
 the path follows the [BIP44 specifications](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)
 and that any derived keys are Safecoin keys (Coin type 501). The single quote
 indicates a "hardened" derivation. Because Safecoin uses Ed25519 keypairs, all

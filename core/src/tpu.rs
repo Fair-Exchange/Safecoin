@@ -13,7 +13,7 @@ use {
         sigverify::TransactionSigVerifier,
         sigverify_stage::SigVerifyStage,
     },
-    crossbeam_channel::unbounded,
+    crossbeam_channel::{self, bounded, unbounded, RecvTimeoutError},
     safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::{blockstore::Blockstore, blockstore_processor::TransactionStatusSender},
     solana_poh::poh_recorder::{PohRecorder, WorkingBankEntry},
@@ -26,6 +26,7 @@ use {
         cost_model::CostModel,
         vote_sender_types::{ReplayVoteReceiver, ReplayVoteSender},
     },
+    safecoin_sdk::signature::Keypair,
     std::{
         net::UdpSocket,
         sync::{
@@ -34,10 +35,14 @@ use {
             Arc, Mutex, RwLock,
         },
         thread,
+        time::Duration,
     },
 };
 
 pub const DEFAULT_TPU_COALESCE_MS: u64 = 5;
+
+/// Timeout interval when joining threads during TPU close
+const TPU_THREADS_JOIN_TIMEOUT_SECONDS: u64 = 10;
 
 pub struct Tpu {
     fetch_stage: FetchStage,
@@ -46,6 +51,7 @@ pub struct Tpu {
     banking_stage: BankingStage,
     cluster_info_vote_listener: ClusterInfoVoteListener,
     broadcast_stage: BroadcastStage,
+    tpu_quic_t: thread::JoinHandle<()>,
 }
 
 impl Tpu {
@@ -59,6 +65,7 @@ impl Tpu {
         tpu_forwards_sockets: Vec<UdpSocket>,
         tpu_vote_sockets: Vec<UdpSocket>,
         broadcast_sockets: Vec<UdpSocket>,
+        transactions_quic_socket: UdpSocket,
         subscriptions: &Arc<RpcSubscriptions>,
         transaction_status_sender: Option<TransactionStatusSender>,
         blockstore: &Arc<Blockstore>,
@@ -75,6 +82,7 @@ impl Tpu {
         tpu_coalesce_ms: u64,
         cluster_confirmed_slot_sender: GossipDuplicateConfirmedSlotsSender,
         cost_model: &Arc<RwLock<CostModel>>,
+        keypair: &Keypair,
     ) -> Self {
         let (packet_sender, packet_receiver) = channel();
         let (vote_packet_sender, vote_packet_receiver) = channel();
@@ -87,12 +95,22 @@ impl Tpu {
             &vote_packet_sender,
             poh_recorder,
             tpu_coalesce_ms,
+            Some(bank_forks.read().unwrap().get_vote_only_mode_signal()),
         );
         let (verified_sender, verified_receiver) = unbounded();
 
+        let tpu_quic_t = solana_streamer::quic::spawn_server(
+            transactions_quic_socket,
+            keypair,
+            cluster_info.my_contact_info().tpu.ip(),
+            packet_sender,
+            exit.clone(),
+        )
+        .unwrap();
+
         let sigverify_stage = {
             let verifier = TransactionSigVerifier::default();
-            SigVerifyStage::new(packet_receiver, verified_sender, verifier)
+            SigVerifyStage::new(packet_receiver, verified_sender, verifier, "tpu-verifier")
         };
 
         let (verified_tpu_vote_packets_sender, verified_tpu_vote_packets_receiver) = unbounded();
@@ -103,6 +121,7 @@ impl Tpu {
                 vote_packet_receiver,
                 verified_tpu_vote_packets_sender,
                 verifier,
+                "tpu-vote-verifier",
             )
         };
 
@@ -153,10 +172,27 @@ impl Tpu {
             banking_stage,
             cluster_info_vote_listener,
             broadcast_stage,
+            tpu_quic_t,
         }
     }
 
     pub fn join(self) -> thread::Result<()> {
+        // spawn a new thread to wait for tpu close
+        let (sender, receiver) = bounded(0);
+        let _ = thread::spawn(move || {
+            let _ = self.do_join();
+            sender.send(()).unwrap();
+        });
+
+        // exit can deadlock. put an upper-bound on how long we wait for it
+        let timeout = Duration::from_secs(TPU_THREADS_JOIN_TIMEOUT_SECONDS);
+        if let Err(RecvTimeoutError::Timeout) = receiver.recv_timeout(timeout) {
+            error!("timeout for closing tvu");
+        }
+        Ok(())
+    }
+
+    fn do_join(self) -> thread::Result<()> {
         let results = vec![
             self.fetch_stage.join(),
             self.sigverify_stage.join(),
@@ -164,6 +200,7 @@ impl Tpu {
             self.cluster_info_vote_listener.join(),
             self.banking_stage.join(),
         ];
+        self.tpu_quic_t.join()?;
         let broadcast_result = self.broadcast_stage.join();
         for result in results {
             result?;

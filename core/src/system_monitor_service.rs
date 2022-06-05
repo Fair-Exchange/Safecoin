@@ -1,16 +1,18 @@
-use safecoin_sdk::timing::AtomicInterval;
-use std::{
-    collections::HashMap,
-    io::BufRead,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    thread::{self, sleep, Builder, JoinHandle},
-    time::Duration,
-};
 #[cfg(target_os = "linux")]
 use std::{fs::File, io::BufReader, path::Path};
+use {
+    safecoin_sdk::timing::AtomicInterval,
+    std::{
+        collections::HashMap,
+        io::BufRead,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+        thread::{self, sleep, Builder, JoinHandle},
+        time::Duration,
+    },
+};
 
 const MS_PER_S: u64 = 1_000;
 const SAMPLE_INTERVAL_UDP_MS: u64 = 2 * MS_PER_S;
@@ -175,26 +177,32 @@ impl SystemMonitorService {
         );
     }
 
-    fn calc_percent(numerator: u64, denom: u64) -> f32 {
+    fn calc_percent(numerator: u64, denom: u64) -> f64 {
         if denom == 0 {
             0.0
         } else {
-            (numerator as f32 / denom as f32) * 100.0
+            (numerator as f64 / denom as f64) * 100.0
         }
     }
 
     fn report_mem_stats() {
         if let Ok(info) = sys_info::mem_info() {
+            // stats are returned in kb.
+            const KB: u64 = 1_024;
             datapoint_info!(
                 "memory-stats",
-                ("total", info.total, i64),
+                ("total", info.total * KB, i64),
                 ("swap_total", info.swap_total, i64),
                 (
                     "free_percent",
                     Self::calc_percent(info.free, info.total),
                     f64
                 ),
-                ("used_bytes", info.total.saturating_sub(info.avail), i64),
+                (
+                    "used_bytes",
+                    info.total.saturating_sub(info.avail) * KB,
+                    i64
+                ),
                 (
                     "avail_percent",
                     Self::calc_percent(info.avail, info.total),
@@ -229,7 +237,7 @@ impl SystemMonitorService {
                 break;
             }
 
-            if udp_timer.should_update(SAMPLE_INTERVAL_UDP_MS) && report_os_network_stats {
+            if report_os_network_stats && udp_timer.should_update(SAMPLE_INTERVAL_UDP_MS) {
                 SystemMonitorService::process_udp_stats(&mut udp_stats);
             }
 
@@ -272,5 +280,12 @@ UdpLite: 0 0 0 0 0 0 0 0" as &[u8];
         let mut mock_snmp = b"unexpected data" as &[u8];
         let stats = parse_udp_stats(&mut mock_snmp);
         assert!(stats.is_err());
+    }
+
+    #[test]
+    fn test_calc_percent() {
+        assert!(SystemMonitorService::calc_percent(99, 100) < 100.0);
+        let one_tb_as_kb = (1u64 << 40) >> 10;
+        assert!(SystemMonitorService::calc_percent(one_tb_as_kb - 1, one_tb_as_kb) < 100.0);
     }
 }

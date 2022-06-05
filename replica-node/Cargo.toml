@@ -1,0 +1,44 @@
+[package]
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+edition = "2021"
+name = "solana-replica-node"
+description = "Safecoin replication node"
+version = "1.9.29"
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-validator"
+
+[dependencies]
+clap = "2.33.1"
+crossbeam-channel = "0.5"
+log = "0.4.14"
+rand = "0.7.0"
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.9.29" }
+safecoin-download-utils = { path = "../download-utils", version = "=1.9.29" }
+safecoin-genesis-utils = { path = "../genesis-utils", version = "=1.9.29" }
+safecoin-gossip = { path = "../gossip", version = "=1.9.29" }
+safecoin-ledger = { path = "../ledger", version = "=1.9.29" }
+safecoin-logger = { path = "../logger", version = "=1.9.29" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.9.29" }
+solana-rpc = { path = "../rpc", version = "=1.9.29" }
+solana-replica-lib = { path = "../replica-lib", version = "=1.9.29" }
+safecoin-runtime = { path = "../runtime", version = "=1.9.29" }
+safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
+solana-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
+safecoin-streamer = { path = "../streamer", version = "=1.9.29" }
+safecoin-version = { path = "../version", version = "=1.9.29" }
+safecoin-validator = { path = "../validator", version = "=1.9.29" }
+
+[dev-dependencies]
+serial_test = "0.5.1"
+safecoin-core = { path = "../core", version = "=1.9.29" }
+solana-local-cluster = { path = "../local-cluster", version = "=1.9.29" }
+tempfile = "3.2.0"
+
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[build-dependencies]
+tonic-build = "0.7.0"

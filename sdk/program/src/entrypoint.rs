@@ -29,7 +29,7 @@ pub type ProcessInstruction =
 pub const SUCCESS: u64 = 0;
 
 /// Start address of the memory region used for program heap.
-pub const HEAP_START_ADDRESS: usize = 0x300000000;
+pub const HEAP_START_ADDRESS: u64 = 0x300000000;
 /// Length of the heap memory region used for program heap.
 pub const HEAP_LENGTH: usize = 32 * 1024;
 
@@ -155,7 +155,7 @@ macro_rules! custom_heap_default {
         #[cfg(all(not(feature = "custom-heap"), target_arch = "bpf"))]
         #[global_allocator]
         static A: $crate::entrypoint::BumpAllocator = $crate::entrypoint::BumpAllocator {
-            start: $crate::entrypoint::HEAP_START_ADDRESS,
+            start: $crate::entrypoint::HEAP_START_ADDRESS as usize,
             len: $crate::entrypoint::HEAP_LENGTH,
         };
     };
@@ -261,9 +261,9 @@ pub const BPF_ALIGN_OF_U128: usize = 8;
 /// The integer arithmetic in this method is safe when called on a buffer that was
 /// serialized by runtime. Use with buffers serialized otherwise is unsupported and
 /// done at one's own risk.
-#[allow(clippy::integer_arithmetic)]
 ///
 /// # Safety
+#[allow(clippy::integer_arithmetic)]
 #[allow(clippy::type_complexity)]
 pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a Pubkey, Vec<AccountInfo<'a>>, &'a [u8]) {
     let mut offset: usize = 0;

@@ -1,18 +1,27 @@
 use {
     crate::parse_instruction::parse_memo_data,
-    safecoin_sdk::{message::Message, pubkey::Pubkey},
+    safecoin_sdk::{
+        instruction::CompiledInstruction,
+        message::{Message, SanitizedMessage},
+        pubkey::Pubkey,
+    },
 };
 
 // A helper function to convert safe_memo::v1::id() as spl_sdk::pubkey::Pubkey to
 // safecoin_sdk::pubkey::Pubkey
 pub fn safe_memo_id_v1() -> Pubkey {
-    Pubkey::new_from_array(safe_memo::v1::id().to_bytes())
+    *MEMO_PROGRAM_ID_V1
 }
 
 // A helper function to convert safe_memo::id() as spl_sdk::pubkey::Pubkey to
 // safecoin_sdk::pubkey::Pubkey
 pub fn safe_memo_id_v3() -> Pubkey {
-    Pubkey::new_from_array(safe_memo::id().to_bytes())
+    *MEMO_PROGRAM_ID_V3
+}
+
+lazy_static! {
+    static ref MEMO_PROGRAM_ID_V1: Pubkey = Pubkey::new_from_array(safe_memo::v1::id().to_bytes());
+    static ref MEMO_PROGRAM_ID_V3: Pubkey = Pubkey::new_from_array(safe_memo::id().to_bytes());
 }
 
 pub fn extract_and_fmt_memos<T: ExtractMemos>(message: &T) -> Option<String> {
@@ -24,12 +33,10 @@ pub fn extract_and_fmt_memos<T: ExtractMemos>(message: &T) -> Option<String> {
     }
 }
 
-fn maybe_push_parsed_memo(memos: &mut Vec<String>, program_id: Pubkey, data: &[u8]) {
-    if program_id == safe_memo_id_v1() || program_id == safe_memo_id_v3() {
-        let memo_len = data.len();
-        let parsed_memo = parse_memo_data(data).unwrap_or_else(|_| "(unparseable)".to_string());
-        memos.push(format!("[{}] {}", memo_len, parsed_memo));
-    }
+fn extract_and_fmt_memo_data(data: &[u8]) -> String {
+    let memo_len = data.len();
+    let parsed_memo = parse_memo_data(data).unwrap_or_else(|_| "(unparseable)".to_string());
+    format!("[{}] {}", memo_len, parsed_memo)
 }
 
 pub trait ExtractMemos {
@@ -38,28 +45,56 @@ pub trait ExtractMemos {
 
 impl ExtractMemos for Message {
     fn extract_memos(&self) -> Vec<String> {
-        let mut memos = vec![];
-        if self.account_keys.contains(&safe_memo_id_v1())
-            || self.account_keys.contains(&safe_memo_id_v3())
-        {
-            for instruction in &self.instructions {
-                let program_id = self.account_keys[instruction.program_id_index as usize];
-                maybe_push_parsed_memo(&mut memos, program_id, &instruction.data);
-            }
-        }
-        memos
+        extract_memos_inner(self.account_keys.iter(), &self.instructions)
     }
+}
+
+impl ExtractMemos for SanitizedMessage {
+    fn extract_memos(&self) -> Vec<String> {
+        extract_memos_inner(self.account_keys_iter(), self.instructions())
+    }
+}
+
+enum KeyType<'a> {
+    MemoProgram,
+    OtherProgram,
+    Unknown(&'a Pubkey),
+}
+
+fn extract_memos_inner<'a>(
+    account_keys: impl Iterator<Item = &'a Pubkey>,
+    instructions: &[CompiledInstruction],
+) -> Vec<String> {
+    let mut account_keys: Vec<KeyType> = account_keys.map(KeyType::Unknown).collect();
+    instructions
+        .iter()
+        .filter_map(|ix| {
+            let index = ix.program_id_index as usize;
+            let key_type = account_keys.get(index)?;
+            let memo_data = match key_type {
+                KeyType::MemoProgram => Some(&ix.data),
+                KeyType::OtherProgram => None,
+                KeyType::Unknown(program_id) => {
+                    if **program_id == *MEMO_PROGRAM_ID_V1 || **program_id == *MEMO_PROGRAM_ID_V3 {
+                        account_keys[index] = KeyType::MemoProgram;
+                        Some(&ix.data)
+                    } else {
+                        account_keys[index] = KeyType::OtherProgram;
+                        None
+                    }
+                }
+            }?;
+            Some(extract_and_fmt_memo_data(memo_data))
+        })
+        .collect()
 }
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*,
-        safecoin_sdk::{hash::Hash, instruction::CompiledInstruction},
-    };
+    use super::*;
 
     #[test]
-    fn test_extract_memos() {
+    fn test_extract_memos_inner() {
         let fee_payer = Pubkey::new_unique();
         let another_program_id = Pubkey::new_unique();
         let memo0 = "Test memo";
@@ -85,19 +120,16 @@ mod test {
                 data: memo1.as_bytes().to_vec(),
             },
         ];
-        let message = Message::new_with_compiled_instructions(
-            1,
-            0,
-            3,
-            vec![
-                fee_payer,
-                safe_memo_id_v1(),
-                another_program_id,
-                safe_memo_id_v3(),
-            ],
-            Hash::default(),
-            memo_instructions,
+        let account_keys = vec![
+            fee_payer,
+            safe_memo_id_v1(),
+            another_program_id,
+            safe_memo_id_v3(),
+        ];
+
+        assert_eq!(
+            extract_memos_inner(account_keys.iter(), &memo_instructions),
+            expected_memos
         );
-        assert_eq!(message.extract_memos(), expected_memos);
     }
 }

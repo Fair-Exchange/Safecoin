@@ -53,26 +53,34 @@ const initialDashboardInfo: DashboardInfo = {
 };
 
 type SetActive = React.Dispatch<React.SetStateAction<boolean>>;
-const StatsProviderContext =
-  React.createContext<
-    | {
-        setActive: SetActive;
-        setTimedOut: Function;
-        retry: Function;
-        active: boolean;
-      }
-    | undefined
-  >(undefined);
+const StatsProviderContext = React.createContext<
+  | {
+      setActive: SetActive;
+      setTimedOut: Function;
+      retry: Function;
+      active: boolean;
+    }
+  | undefined
+>(undefined);
 
 type DashboardState = { info: DashboardInfo };
-const DashboardContext =
-  React.createContext<DashboardState | undefined>(undefined);
+const DashboardContext = React.createContext<DashboardState | undefined>(
+  undefined
+);
 
 type PerformanceState = { info: PerformanceInfo };
-const PerformanceContext =
-  React.createContext<PerformanceState | undefined>(undefined);
+const PerformanceContext = React.createContext<PerformanceState | undefined>(
+  undefined
+);
 
 type Props = { children: React.ReactNode };
+
+function getConnection(url: string): Connection | undefined {
+  try {
+    return new Connection(url);
+  } catch (error) {}
+}
+
 export function SafecoinClusterStatsProvider({ children }: Props) {
   const { cluster, url } = useCluster();
   const [active, setActive] = React.useState(false);
@@ -88,7 +96,10 @@ export function SafecoinClusterStatsProvider({ children }: Props) {
   React.useEffect(() => {
     if (!active || !url) return;
 
-    const connection = new Connection(url);
+    const connection = getConnection(url);
+
+    if (!connection) return;
+
     let lastSlot: number | null = null;
 
     const getPerformanceSamples = async () => {
@@ -115,14 +126,16 @@ export function SafecoinClusterStatsProvider({ children }: Props) {
         if (cluster !== Cluster.Custom) {
           reportError(error, { url });
         }
-        dispatchPerformanceInfo({
-          type: PerformanceInfoActionType.SetError,
-          data: error.toString(),
-        });
-        dispatchDashboardInfo({
-          type: DashboardInfoActionType.SetError,
-          data: error.toString(),
-        });
+        if (error instanceof Error) {
+          dispatchPerformanceInfo({
+            type: PerformanceInfoActionType.SetError,
+            data: error.toString(),
+          });
+          dispatchDashboardInfo({
+            type: DashboardInfoActionType.SetError,
+            data: error.toString(),
+          });
+        }
         setActive(false);
       }
     };
@@ -138,10 +151,12 @@ export function SafecoinClusterStatsProvider({ children }: Props) {
         if (cluster !== Cluster.Custom) {
           reportError(error, { url });
         }
-        dispatchPerformanceInfo({
-          type: PerformanceInfoActionType.SetError,
-          data: error.toString(),
-        });
+        if (error instanceof Error) {
+          dispatchPerformanceInfo({
+            type: PerformanceInfoActionType.SetError,
+            data: error.toString(),
+          });
+        }
         setActive(false);
       }
     };
@@ -158,10 +173,12 @@ export function SafecoinClusterStatsProvider({ children }: Props) {
         if (cluster !== Cluster.Custom) {
           reportError(error, { url });
         }
-        dispatchDashboardInfo({
-          type: DashboardInfoActionType.SetError,
-          data: error.toString(),
-        });
+        if (error instanceof Error) {
+          dispatchDashboardInfo({
+            type: DashboardInfoActionType.SetError,
+            data: error.toString(),
+          });
+        }
         setActive(false);
       }
     };

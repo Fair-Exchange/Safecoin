@@ -1,26 +1,25 @@
 [package]
 name = "safecoin-storage-proto"
-version = "1.8.12"
+version = "1.9.29"
 description = "Safecoin Storage Protobuf Definitions"
 authors = ["Solana Maintainers <maintainers@solana.com>"]
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/safecoin-storage-proto"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-bincode = "1.2.1"
-bs58 = "0.3.1"
-prost = "0.8.0"
-serde = "1.0.122"
-serde_derive = "1.0.103"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.8.12" }
-safecoin-sdk = { path = "../sdk", version = "=1.8.12" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.8.12" }
+bincode = "1.3.3"
+bs58 = "0.4.0"
+prost = "0.10.0"
+serde = "1.0.130"
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.9.29" }
+safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.9.29" }
 
 [dev-dependencies]
-enum-iterator = "0.6.0"
+enum-iterator = "0.7.0"
 
 [lib]
 crate-type = ["lib"]
@@ -30,4 +29,4 @@ name = "solana_storage_proto"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [build-dependencies]
-tonic-build = "0.5.0"
+tonic-build = "0.7.0"

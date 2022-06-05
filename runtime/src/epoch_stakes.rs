@@ -1,5 +1,5 @@
 use {
-    crate::{stakes::Stakes, vote_account::VoteAccount,commitment::VOTE_GROUP_COUNT,vote_group_gen::VoteGroupGenerator},
+    crate::{stakes::Stakes, vote_account::VoteAccount},
     serde::{Deserialize, Serialize},
     safecoin_sdk::{clock::Epoch, pubkey::Pubkey},
     std::{collections::HashMap, sync::Arc},
@@ -34,52 +34,6 @@ impl EpochStakes {
             epoch_authorized_voters: Arc::new(epoch_authorized_voters),
         }
     }
-
-    pub fn make_group_generator (&self) -> VoteGroupGenerator {
-        let group_size = 
-        if self.epoch_authorized_voters.len() < VOTE_GROUP_COUNT 
-            { self.epoch_authorized_voters.len()} 
-        else 
-            { VOTE_GROUP_COUNT }; 
-        VoteGroupGenerator::new(&self.epoch_authorized_voters,group_size) 
-    }
-
-     fn keys (map: &HashMap<Pubkey, Pubkey>) -> Vec<Pubkey> {
-        let collected: Vec<_> = map.into_iter().collect();
-        let mut temp_vec = Vec::new();
-        for x in collected {
-            let key = x.0;
-            let cloned: Pubkey = Pubkey::new_from_array(key.to_bytes());
-            temp_vec.push(cloned);
-        }
-        temp_vec
-    }
-     fn vals (map: &HashMap<Pubkey, Pubkey>) -> Vec<Pubkey> {
-        let collected: Vec<_> = map.into_iter().collect();
-        let mut temp_vec = Vec::new();
-        for x in collected {
-            let key = x.1;
-            let cloned: Pubkey = Pubkey::new_from_array(key.to_bytes());
-            temp_vec.push(cloned);
-        }
-        temp_vec
-    }
-    
-    pub fn dump_current_voters(&self) {
-         let eav = &self.epoch_authorized_voters;
-    
-        let coll = EpochStakes::keys(eav);
-       
-        log::trace!("current voters {:?}", coll);
-    }
-
-    pub fn dump_oughta_voters(&self) {
-        let eav = &self.epoch_authorized_voters;
-   
-       let coll = EpochStakes::vals(eav);
-      
-       log::trace!("oughta voters {:?}", coll);
-   }
 
     pub fn stakes(&self) -> &Stakes {
         &self.stakes

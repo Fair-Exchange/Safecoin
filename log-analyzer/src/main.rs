@@ -38,11 +38,9 @@ impl LogLine {
         format!(
             "Lost {}%, {}, ({} - {}), sender {}, receiver {}",
             ((v1 - v2) * 100 / v1),
-            Byte::from_bytes(v1 - v2)
-                .get_appropriate_unit(true)
-                .to_string(),
-            Byte::from_bytes(v1).get_appropriate_unit(true).to_string(),
-            Byte::from_bytes(v2).get_appropriate_unit(true).to_string(),
+            Byte::from_bytes(v1 - v2).get_appropriate_unit(true),
+            Byte::from_bytes(v1).get_appropriate_unit(true),
+            Byte::from_bytes(v2).get_appropriate_unit(true),
             a,
             b
         )
@@ -151,9 +149,10 @@ fn process_iftop_logs(matches: &ArgMatches) {
 
 fn analyze_logs(matches: &ArgMatches) {
     let dir_path = PathBuf::from(value_t_or_exit!(matches, "folder", String));
-    if !dir_path.is_dir() {
-        panic!("Need a folder that contains all log files");
-    }
+    assert!(
+        dir_path.is_dir(),
+        "Need a folder that contains all log files"
+    );
     let list_all_diffs = matches.is_present("all");
     let files = fs::read_dir(dir_path).expect("Failed to read log folder");
     let logs: Vec<_> = files

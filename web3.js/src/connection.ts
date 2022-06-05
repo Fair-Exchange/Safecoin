@@ -1,8 +1,7 @@
-import assert from 'assert';
 import bs58 from 'bs58';
 import {Buffer} from 'buffer';
-import {parse as urlParse, format as urlFormat} from 'url';
-import fetch, {Response} from 'node-fetch';
+import fetch from 'cross-fetch';
+import type {Response} from 'cross-fetch';
 import {
   type as pick,
   number,
@@ -27,15 +26,19 @@ import RpcClient from 'jayson/lib/client/browser';
 import {IWSRequestParams} from 'rpc-websockets/dist/lib/client';
 
 import {AgentManager} from './agent-manager';
+import {EpochSchedule} from './epoch-schedule';
+import {SendTransactionError} from './errors';
 import {NonceAccount} from './nonce-account';
 import {PublicKey} from './publickey';
 import {Signer} from './keypair';
 import {MS_PER_SLOT} from './timing';
 import {Transaction} from './transaction';
 import {Message} from './message';
+import assert from './util/assert';
 import {sleep} from './util/sleep';
 import {promiseTimeout} from './util/promise-timeout';
 import {toBuffer} from './util/to-buffer';
+import {makeWebsocketUrl} from './util/url';
 import type {Blockhash} from './blockhash';
 import type {FeeCalculator} from './fee-calculator';
 import type {TransactionSignature} from './transaction';
@@ -114,6 +117,21 @@ export type ConfirmOptions = {
  * Options for getConfirmedSignaturesForAddress2
  */
 export type ConfirmedSignaturesForAddress2Options = {
+  /**
+   * Start searching backwards from this transaction signature.
+   * @remark If not provided the search starts from the highest max confirmed block.
+   */
+  before?: TransactionSignature;
+  /** Search until this transaction signature is reached, if found before `limit`. */
+  until?: TransactionSignature;
+  /** Maximum transaction signatures to return (between 1 and 1,000, default: 1,000). */
+  limit?: number;
+};
+
+/**
+ * Options for getSignaturesForAddress
+ */
+export type SignaturesForAddressOptions = {
   /**
    * Start searching backwards from this transaction signature.
    * @remark If not provided the search starts from the highest max confirmed block.
@@ -248,6 +266,16 @@ export type GetLargestAccountsConfig = {
 };
 
 /**
+ * Configuration object for changing `getSupply` request behavior
+ */
+export type GetSupplyConfig = {
+  /** The level of commitment desired */
+  commitment?: Commitment;
+  /** Exclude non circulating accounts list from response */
+  excludeNonCirculatingAccountsList?: boolean;
+};
+
+/**
  * Configuration object for changing query behavior
  */
 export type SignatureStatusConfig = {
@@ -372,23 +400,6 @@ const GetEpochInfoResult = pick({
   transactionCount: optional(number()),
 });
 
-/**
- * Epoch schedule
- * (see https://docs.solana.com/terminology#epoch)
- */
-export type EpochSchedule = {
-  /** The maximum number of slots in each epoch */
-  slotsPerEpoch: number;
-  /** The number of slots before beginning of an epoch to calculate a leader schedule for that epoch */
-  leaderScheduleSlotOffset: number;
-  /** Indicates whether epochs start short and grow */
-  warmup: boolean;
-  /** The first epoch with `slotsPerEpoch` slots */
-  firstNormalEpoch: number;
-  /** The first slot of `firstNormalEpoch` */
-  firstNormalSlot: number;
-};
-
 const GetEpochScheduleResult = pick({
   slotsPerEpoch: number(),
   leaderScheduleSlotOffset: number(),
@@ -438,15 +449,44 @@ const VersionResult = pick({
   'feature-set': optional(number()),
 });
 
+export type SimulatedTransactionAccountInfo = {
+  /** `true` if this account's data contains a loaded program */
+  executable: boolean;
+  /** Identifier of the program that owns the account */
+  owner: string;
+  /** Number of lamports assigned to the account */
+  lamports: number;
+  /** Optional data assigned to the account */
+  data: string[];
+  /** Optional rent epoch info for account */
+  rentEpoch?: number;
+};
+
 export type SimulatedTransactionResponse = {
   err: TransactionError | string | null;
   logs: Array<string> | null;
+  accounts?: SimulatedTransactionAccountInfo[] | null;
+  unitsConsumed?: number;
 };
 
 const SimulatedTransactionResponseStruct = jsonRpcResultAndContext(
   pick({
     err: nullable(union([pick({}), string()])),
     logs: nullable(array(string())),
+    accounts: optional(
+      nullable(
+        array(
+          pick({
+            executable: boolean(),
+            owner: string(),
+            lamports: number(),
+            data: array(string()),
+            rentEpoch: optional(number()),
+          }),
+        ),
+      ),
+    ),
+    unitsConsumed: optional(number()),
   }),
 );
 
@@ -713,25 +753,31 @@ function createRpcClient(
   useHttps: boolean,
   httpHeaders?: HttpHeaders,
   fetchMiddleware?: FetchMiddleware,
+  disableRetryOnRateLimit?: boolean,
 ): RpcClient {
   let agentManager: AgentManager | undefined;
   if (!process.env.BROWSER) {
     agentManager = new AgentManager(useHttps);
   }
 
-  let fetchWithMiddleware: (url: string, options: any) => Promise<Response>;
+  let fetchWithMiddleware:
+    | ((url: string, options: any) => Promise<Response>)
+    | undefined;
 
   if (fetchMiddleware) {
-    fetchWithMiddleware = (url: string, options: any) => {
-      return new Promise<Response>((resolve, reject) => {
-        fetchMiddleware(url, options, async (url: string, options: any) => {
+    fetchWithMiddleware = async (url: string, options: any) => {
+      const modifiedFetchArgs = await new Promise<[string, any]>(
+        (resolve, reject) => {
           try {
-            resolve(await fetch(url, options));
+            fetchMiddleware(url, options, (modifiedUrl, modifiedOptions) =>
+              resolve([modifiedUrl, modifiedOptions]),
+            );
           } catch (error) {
             reject(error);
           }
-        });
-      });
+        },
+      );
+      return await fetch(...modifiedFetchArgs);
     };
   }
 
@@ -763,6 +809,9 @@ function createRpcClient(
         if (res.status !== 429 /* Too many requests */) {
           break;
         }
+        if (disableRetryOnRateLimit === true) {
+          break;
+        }
         too_many_requests_retries -= 1;
         if (too_many_requests_retries === 0) {
           break;
@@ -781,7 +830,7 @@ function createRpcClient(
         callback(new Error(`${res.status} ${res.statusText}: ${text}`));
       }
     } catch (err) {
-      callback(err);
+      if (err instanceof Error) callback(err);
     } finally {
       agentManager && agentManager.requestEnd();
     }
@@ -1060,6 +1109,21 @@ const StakeActivationResult = pick({
  */
 
 const GetConfirmedSignaturesForAddress2RpcResult = jsonRpcResult(
+  array(
+    pick({
+      signature: string(),
+      slot: number(),
+      err: TransactionErrorResult,
+      memo: nullable(string()),
+      blockTime: optional(nullable(number())),
+    }),
+  ),
+);
+
+/**
+ * Expected JSON RPC response for the "getSignaturesForAddress" message
+ */
+const GetSignaturesForAddressRpcResult = jsonRpcResult(
   array(
     pick({
       signature: string(),
@@ -1627,8 +1691,10 @@ export type GetProgramAccountsFilter = MemcmpFilter | DataSizeFilter;
 export type GetProgramAccountsConfig = {
   /** Optional commitment level */
   commitment?: Commitment;
-  /** Optional encoding for account data (default base64) */
-  encoding?: 'base64' | 'jsonParsed';
+  /** Optional encoding for account data (default base64)
+   * To use "jsonParsed" encoding, please refer to `getParsedProgramAccounts` in connection.ts
+   * */
+  encoding?: 'base64';
   /** Optional data slice to limit the returned account data */
   dataSlice?: DataSlice;
   /** Optional array of filters to apply to accounts */
@@ -1657,6 +1723,8 @@ export type AccountInfo<T> = {
   lamports: number;
   /** Optional data assigned to the account */
   data: T;
+  /** Optional rent epoch infor for account */
+  rentEpoch?: number;
 };
 
 /**
@@ -1706,6 +1774,7 @@ type ProgramAccountSubscriptionInfo = {
   callback: ProgramAccountChangeCallback;
   commitment?: Commitment;
   subscriptionId: SubscriptionId | null; // null when there's no current server subscription id
+  filters?: GetProgramAccountsFilter[];
 };
 
 /**
@@ -1908,7 +1977,7 @@ export type HttpHeaders = {[header: string]: string};
 export type FetchMiddleware = (
   url: string,
   options: any,
-  fetch: Function,
+  fetch: (modifiedUrl: string, modifiedOptions: any) => void,
 ) => void;
 
 /**
@@ -1917,10 +1986,16 @@ export type FetchMiddleware = (
 export type ConnectionConfig = {
   /** Optional commitment level */
   commitment?: Commitment;
+  /** Optional endpoint URL to the fullnode JSON RPC PubSub WebSocket Endpoint */
+  wsEndpoint?: string;
   /** Optional HTTP headers object */
   httpHeaders?: HttpHeaders;
   /** Optional fetch middleware callback */
   fetchMiddleware?: FetchMiddleware;
+  /** Optional Disable retring calls when server responds with HTTP 429 (Too Many Requests) */
+  disableRetryOnRateLimit?: boolean;
+  /** time to allow for the server to initially process a transaction (in milliseconds) */
+  confirmTransactionInitialTimeout?: number;
 };
 
 /**
@@ -1928,7 +2003,9 @@ export type ConnectionConfig = {
  */
 export class Connection {
   /** @internal */ _commitment?: Commitment;
+  /** @internal */ _confirmTransactionInitialTimeout?: number;
   /** @internal */ _rpcEndpoint: string;
+  /** @internal */ _rpcWsEndpoint: string;
   /** @internal */ _rpcClient: RpcClient;
   /** @internal */ _rpcRequest: RpcRequest;
   /** @internal */ _rpcBatchRequest: RpcBatchRequest;
@@ -1948,6 +2025,11 @@ export class Connection {
     lastFetch: number;
     simulatedSignatures: Array<string>;
     transactionSignatures: Array<string>;
+  } = {
+    recentBlockhash: null,
+    lastFetch: 0,
+    transactionSignatures: [],
+    simulatedSignatures: [],
   };
 
   /** @internal */ _accountChangeSubscriptionCounter: number = 0;
@@ -1995,50 +2077,39 @@ export class Connection {
     endpoint: string,
     commitmentOrConfig?: Commitment | ConnectionConfig,
   ) {
-    this._rpcEndpoint = endpoint;
-
-    let url = urlParse(endpoint);
+    let url = new URL(endpoint);
     const useHttps = url.protocol === 'https:';
 
+    let wsEndpoint;
     let httpHeaders;
     let fetchMiddleware;
+    let disableRetryOnRateLimit;
     if (commitmentOrConfig && typeof commitmentOrConfig === 'string') {
       this._commitment = commitmentOrConfig;
     } else if (commitmentOrConfig) {
       this._commitment = commitmentOrConfig.commitment;
+      this._confirmTransactionInitialTimeout =
+        commitmentOrConfig.confirmTransactionInitialTimeout;
+      wsEndpoint = commitmentOrConfig.wsEndpoint;
       httpHeaders = commitmentOrConfig.httpHeaders;
       fetchMiddleware = commitmentOrConfig.fetchMiddleware;
+      disableRetryOnRateLimit = commitmentOrConfig.disableRetryOnRateLimit;
     }
 
+    this._rpcEndpoint = endpoint;
+    this._rpcWsEndpoint = wsEndpoint || makeWebsocketUrl(endpoint);
+
     this._rpcClient = createRpcClient(
-      url.href,
+      url.toString(),
       useHttps,
       httpHeaders,
       fetchMiddleware,
+      disableRetryOnRateLimit,
     );
     this._rpcRequest = createRpcRequest(this._rpcClient);
     this._rpcBatchRequest = createRpcBatchRequest(this._rpcClient);
 
-    this._blockhashInfo = {
-      recentBlockhash: null,
-      lastFetch: 0,
-      transactionSignatures: [],
-      simulatedSignatures: [],
-    };
-
-    url.protocol = useHttps ? 'wss:' : 'ws:';
-    url.host = '';
-    // Only shift the port by +1 as a convention for ws(s) only if given endpoint
-    // is explictly specifying the endpoint port (HTTP-based RPC), assuming
-    // we're directly trying to connect to safecoin-validator's ws listening port.
-    // When the endpoint omits the port, we're connecting to the protocol
-    // default ports: http(80) or https(443) and it's assumed we're behind a reverse
-    // proxy which manages WebSocket upgrade and backend port redirection.
-    if (url.port !== null) {
-      url.port = String(Number(url.port) + 1);
-    }
-
-    this._rpcWebSocket = new RpcWebSocketClient(urlFormat(url), {
+    this._rpcWebSocket = new RpcWebSocketClient(this._rpcWsEndpoint, {
       autoconnect: false,
       max_reconnects: Infinity,
     });
@@ -2166,10 +2237,23 @@ export class Connection {
    * Fetch information about the current supply
    */
   async getSupply(
-    commitment?: Commitment,
+    config?: GetSupplyConfig | Commitment,
   ): Promise<RpcResponseAndContext<Supply>> {
-    const args = this._buildArgs([], commitment);
-    const unsafeRes = await this._rpcRequest('getSupply', args);
+    let configArg: GetSupplyConfig = {};
+    if (typeof config === 'string') {
+      configArg = {commitment: config};
+    } else if (config) {
+      configArg = {
+        ...config,
+        commitment: (config && config.commitment) || this.commitment,
+      };
+    } else {
+      configArg = {
+        commitment: this.commitment,
+      };
+    }
+
+    const unsafeRes = await this._rpcRequest('getSupply', [configArg]);
     const res = create(unsafeRes, GetSupplyRpcResult);
     if ('error' in res) {
       throw new Error('failed to get supply: ' + res.error.message);
@@ -2391,6 +2475,28 @@ export class Connection {
   }
 
   /**
+   * Fetch all the account info for multiple accounts specified by an array of public keys
+   */
+  async getMultipleAccountsInfo(
+    publicKeys: PublicKey[],
+    commitment?: Commitment,
+  ): Promise<(AccountInfo<Buffer> | null)[]> {
+    const keys = publicKeys.map(key => key.toBase58());
+    const args = this._buildArgs([keys], commitment, 'base64');
+    const unsafeRes = await this._rpcRequest('getMultipleAccounts', args);
+    const res = create(
+      unsafeRes,
+      jsonRpcResultAndContext(array(nullable(AccountInfoResult))),
+    );
+    if ('error' in res) {
+      throw new Error(
+        'failed to get info for accounts ' + keys + ': ' + res.error.message,
+      );
+    }
+    return res.result.value;
+  }
+
+  /**
    * Returns epoch activation information for a stake account that has been delegated
    */
   async getStakeActivation(
@@ -2556,14 +2662,14 @@ export class Connection {
       }
     });
 
-    let timeoutMs = 60 * 1000;
+    let timeoutMs = this._confirmTransactionInitialTimeout || 60 * 1000;
     switch (subscriptionCommitment) {
       case 'processed':
       case 'recent':
       case 'single':
       case 'confirmed':
       case 'singleGossip': {
-        timeoutMs = 30 * 1000;
+        timeoutMs = this._confirmTransactionInitialTimeout || 30 * 1000;
         break;
       }
       // exhaust enums to ensure full coverage
@@ -2716,13 +2822,11 @@ export class Connection {
    * @deprecated Deprecated since v1.2.8. Please use {@link getSupply} instead.
    */
   async getTotalSupply(commitment?: Commitment): Promise<number> {
-    const args = this._buildArgs([], commitment);
-    const unsafeRes = await this._rpcRequest('getSupply', args);
-    const res = create(unsafeRes, GetSupplyRpcResult);
-    if ('error' in res) {
-      throw new Error('failed to get total supply: ' + res.error.message);
-    }
-    return res.result.value.total;
+    const result = await this.getSupply({
+      commitment,
+      excludeNonCirculatingAccountsList: true,
+    });
+    return result.value.total;
   }
 
   /**
@@ -2786,7 +2890,14 @@ export class Connection {
     if ('error' in res) {
       throw new Error('failed to get epoch schedule: ' + res.error.message);
     }
-    return res.result;
+    const epochSchedule = res.result;
+    return new EpochSchedule(
+      epochSchedule.slotsPerEpoch,
+      epochSchedule.leaderScheduleSlotOffset,
+      epochSchedule.warmup,
+      epochSchedule.firstNormalEpoch,
+      epochSchedule.firstNormalSlot,
+    );
   }
 
   /**
@@ -2915,6 +3026,18 @@ export class Connection {
   }
 
   /**
+   * Fetch the genesis hash
+   */
+  async getGenesisHash(): Promise<string> {
+    const unsafeRes = await this._rpcRequest('getGenesisHash', []);
+    const res = create(unsafeRes, jsonRpcResult(string()));
+    if ('error' in res) {
+      throw new Error('failed to get genesis hash: ' + res.error.message);
+    }
+    return res.result;
+  }
+
+  /**
    * Fetch a processed block from the cluster.
    */
   async getBlock(
@@ -3008,6 +3131,26 @@ export class Connection {
         };
       }),
     };
+  }
+
+  /**
+   * Fetch confirmed blocks between two slots
+   */
+  async getBlocks(
+    startSlot: number,
+    endSlot?: number,
+    commitment?: Finality,
+  ): Promise<Array<number>> {
+    const args = this._buildArgsAtLeastConfirmed(
+      endSlot !== undefined ? [startSlot, endSlot] : [startSlot],
+      commitment,
+    );
+    const unsafeRes = await this._rpcRequest('getConfirmedBlocks', args);
+    const res = create(unsafeRes, jsonRpcResult(array(number())));
+    if ('error' in res) {
+      throw new Error('failed to get blocks: ' + res.error.message);
+    }
+    return res.result;
   }
 
   /**
@@ -3143,7 +3286,7 @@ export class Connection {
             block.signatures[block.signatures.length - 1].toString();
         }
       } catch (err) {
-        if (err.message.includes('skipped')) {
+        if (err instanceof Error && err.message.includes('skipped')) {
           continue;
         } else {
           throw err;
@@ -3165,7 +3308,7 @@ export class Connection {
             block.signatures[block.signatures.length - 1].toString();
         }
       } catch (err) {
-        if (err.message.includes('skipped')) {
+        if (err instanceof Error && err.message.includes('skipped')) {
           continue;
         } else {
           throw err;
@@ -3207,6 +3350,35 @@ export class Connection {
     if ('error' in res) {
       throw new Error(
         'failed to get confirmed signatures for address: ' + res.error.message,
+      );
+    }
+    return res.result;
+  }
+
+  /**
+   * Returns confirmed signatures for transactions involving an
+   * address backwards in time from the provided signature or most recent confirmed block
+   *
+   *
+   * @param address queried address
+   * @param options
+   */
+  async getSignaturesForAddress(
+    address: PublicKey,
+    options?: SignaturesForAddressOptions,
+    commitment?: Finality,
+  ): Promise<Array<ConfirmedSignatureInfo>> {
+    const args = this._buildArgsAtLeastConfirmed(
+      [address.toBase58()],
+      commitment,
+      undefined,
+      options,
+    );
+    const unsafeRes = await this._rpcRequest('getSignaturesForAddress', args);
+    const res = create(unsafeRes, GetSignaturesForAddressRpcResult);
+    if ('error' in res) {
+      throw new Error(
+        'failed to get signatures for address: ' + res.error.message,
       );
     }
     return res.result;
@@ -3255,15 +3427,26 @@ export class Connection {
   }
 
   /**
-   * Request an allocation of lamports to the specified account
+   * Request an allocation of lamports to the specified address
+   *
+   * ```typescript
+   * import { Connection, PublicKey, LAMPORTS_PER_SAFE } from "@safecoin/web3.js";
+   *
+   * (async () => {
+   *   const connection = new Connection("https://api.testnet.safecoin.org", "confirmed");
+   *   const myAddress = new PublicKey("2nr1bHFT86W9tGnyvmYW4vcHKsQB3sVQfnddasz4kExM");
+   *   const signature = await connection.requestAirdrop(myAddress, LAMPORTS_PER_SAFE);
+   *   await connection.confirmTransaction(signature);
+   * })();
+   * ```
    */
   async requestAirdrop(
     to: PublicKey,
-    amount: number,
+    lamports: number,
   ): Promise<TransactionSignature> {
     const unsafeRes = await this._rpcRequest('requestAirdrop', [
       to.toBase58(),
-      amount,
+      lamports,
     ]);
     const res = create(unsafeRes, RequestAirdropRpcResult);
     if ('error' in res) {
@@ -3329,9 +3512,17 @@ export class Connection {
    * Simulate a transaction
    */
   async simulateTransaction(
-    transaction: Transaction,
+    transactionOrMessage: Transaction | Message,
     signers?: Array<Signer>,
+    includeAccounts?: boolean | Array<PublicKey>,
   ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
+    let transaction;
+    if (transactionOrMessage instanceof Transaction) {
+      transaction = transactionOrMessage;
+    } else {
+      transaction = Transaction.populate(transactionOrMessage);
+    }
+
     if (transaction.nonceInfo && signers) {
       transaction.sign(...signers);
     } else {
@@ -3365,13 +3556,27 @@ export class Connection {
       }
     }
 
-    const signData = transaction.serializeMessage();
+    const message = transaction._compile();
+    const signData = message.serialize();
     const wireTransaction = transaction._serialize(signData);
     const encodedTransaction = wireTransaction.toString('base64');
     const config: any = {
       encoding: 'base64',
       commitment: this.commitment,
     };
+
+    if (includeAccounts) {
+      const addresses = (
+        Array.isArray(includeAccounts)
+          ? includeAccounts
+          : message.nonProgramIds()
+      ).map(key => key.toBase58());
+
+      config['accounts'] = {
+        encoding: 'base64',
+        addresses,
+      };
+    }
 
     if (signers) {
       config.sigVerify = true;
@@ -3381,7 +3586,19 @@ export class Connection {
     const unsafeRes = await this._rpcRequest('simulateTransaction', args);
     const res = create(unsafeRes, SimulatedTransactionResponseStruct);
     if ('error' in res) {
-      throw new Error('failed to simulate transaction: ' + res.error.message);
+      let logs;
+      if ('data' in res.error) {
+        logs = res.error.data.logs;
+        if (logs && Array.isArray(logs)) {
+          const traceIndent = '\n    ';
+          const logTrace = traceIndent + logs.join(traceIndent);
+          console.error(res.error.message, logTrace);
+        }
+      }
+      throw new SendTransactionError(
+        'failed to simulate transaction: ' + res.error.message,
+        logs,
+      );
     }
     return res.result;
   }
@@ -3465,15 +3682,19 @@ export class Connection {
     const unsafeRes = await this._rpcRequest('sendTransaction', args);
     const res = create(unsafeRes, SendTransactionRpcResult);
     if ('error' in res) {
+      let logs;
       if ('data' in res.error) {
-        const logs = res.error.data.logs;
+        logs = res.error.data.logs;
         if (logs && Array.isArray(logs)) {
           const traceIndent = '\n    ';
           const logTrace = traceIndent + logs.join(traceIndent);
           console.error(res.error.message, logTrace);
         }
       }
-      throw new Error('failed to send transaction: ' + res.error.message);
+      throw new SendTransactionError(
+        'failed to send transaction: ' + res.error.message,
+        logs,
+      );
     }
     return res.result;
   }
@@ -3537,7 +3758,13 @@ export class Connection {
           // eslint-disable-next-line require-atomic-updates
           sub.subscriptionId = null;
         }
-        console.error(`${rpcMethod} error for argument`, rpcArgs, err.message);
+        if (err instanceof Error) {
+          console.error(
+            `${rpcMethod} error for argument`,
+            rpcArgs,
+            err.message,
+          );
+        }
       }
     }
   }
@@ -3555,7 +3782,9 @@ export class Connection {
       try {
         await this._rpcWebSocket.call(rpcMethod, [unsubscribeId]);
       } catch (err) {
-        console.error(`${rpcMethod} error:`, err.message);
+        if (err instanceof Error) {
+          console.error(`${rpcMethod} error:`, err.message);
+        }
       }
     }
   }
@@ -3645,7 +3874,9 @@ export class Connection {
       this._subscribe(
         sub,
         'programSubscribe',
-        this._buildArgs([sub.programId], sub.commitment, 'base64'),
+        this._buildArgs([sub.programId], sub.commitment, 'base64', {
+          filters: sub.filters,
+        }),
       );
     }
 
@@ -3767,12 +3998,14 @@ export class Connection {
    * @param programId Public key of the program to monitor
    * @param callback Function to invoke whenever the account is changed
    * @param commitment Specify the commitment level account changes must reach before notification
+   * @param filters The program account filters to pass into the RPC method
    * @return subscription id
    */
   onProgramAccountChange(
     programId: PublicKey,
     callback: ProgramAccountChangeCallback,
     commitment?: Commitment,
+    filters?: GetProgramAccountsFilter[],
   ): number {
     const id = ++this._programAccountChangeSubscriptionCounter;
     this._programAccountChangeSubscriptions[id] = {
@@ -3780,6 +4013,7 @@ export class Connection {
       callback,
       commitment,
       subscriptionId: null,
+      filters,
     };
     this._updateSubscriptions();
     return id;

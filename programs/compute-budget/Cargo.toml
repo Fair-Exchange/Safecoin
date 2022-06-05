@@ -1,16 +1,17 @@
 [package]
 name = "safecoin-compute-budget-program"
 description = "Safecoin Compute Budget program"
-version = "1.8.12"
+version = "1.9.29"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/safecoin-compute-budget-program"
 repository = "https://github.com/fair-exchange/safecoin"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 license = "Apache-2.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-safecoin-sdk = { path = "../../sdk", version = "=1.8.12" }
+safecoin-program-runtime = { path = "../../program-runtime", version = "=1.9.29" }
+safecoin-sdk = { path = "../../sdk", version = "=1.9.29" }
 
 [lib]
 crate-type = ["lib"]

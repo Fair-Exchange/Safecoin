@@ -16,19 +16,6 @@ layout](https://doc.rust-lang.org/cargo/guide/project-layout.html):
 /Cargo.toml
 ```
 
-But must also include:
-
-```
-/Xargo.toml
-```
-
-Which must contain:
-
-```
-[target.bpfel-unknown-unknown.dependencies.std]
-features = []
-```
-
 Safecoin Rust programs may depend directly on each other in order to gain access
 to instruction helpers when making [cross-program invocations](developing/programming-model/calling-between-programs.md#cross-program-invocations).
 When doing so it's important to not pull in the dependent program's entrypoint
@@ -103,7 +90,7 @@ to send multiple transactions while keeping state for the duration of the test.
 
 For more information the [test in sysvar
 example](https://github.com/fair-exchange/safecoin-program-library/blob/master/examples/rust/sysvar/tests/functional.rs)
-shows how an instruction containing syavar account is sent and processed by the
+shows how an instruction containing sysvar account is sent and processed by the
 program.
 
 ## Program Entrypoint

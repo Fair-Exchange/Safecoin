@@ -56,6 +56,30 @@ pub fn parse_token(
                 info: value,
             })
         }
+
+        TokenInstruction::InitializeMint2 {
+            decimals,
+            mint_authority,
+            freeze_authority,
+        } => {
+            check_num_token_accounts(&instruction.accounts, 1)?;
+            let mut value = json!({
+                "mint": account_keys[instruction.accounts[0] as usize].to_string(),
+                "decimals": decimals,
+                "mintAuthority": mint_authority.to_string(),
+            });
+            let map = value.as_object_mut().unwrap();
+            if let COption::Some(freeze_authority) = freeze_authority {
+                map.insert(
+                    "freezeAuthority".to_string(),
+                    json!(freeze_authority.to_string()),
+                );
+            }
+            Ok(ParsedInstructionEnum {
+                instruction_type: "initializeMint2".to_string(),
+                info: value,
+            })
+        }
         TokenInstruction::InitializeAccount => {
             check_num_token_accounts(&instruction.accounts, 4)?;
             Ok(ParsedInstructionEnum {
@@ -80,6 +104,17 @@ pub fn parse_token(
                 }),
             })
         }
+	        TokenInstruction::InitializeAccount3 { owner } => {
+            check_num_token_accounts(&instruction.accounts, 2)?;
+            Ok(ParsedInstructionEnum {
+                instruction_type: "initializeAccount3".to_string(),
+                info: json!({
+                    "account": account_keys[instruction.accounts[0] as usize].to_string(),
+                    "mint": account_keys[instruction.accounts[1] as usize].to_string(),
+                    "owner": owner.to_string(),
+                }),
+            })
+        }
         TokenInstruction::InitializeMultisig { m } => {
             check_num_token_accounts(&instruction.accounts, 3)?;
             let mut signers: Vec<String> = vec![];
@@ -96,6 +131,21 @@ pub fn parse_token(
                 }),
             })
         }
+	        TokenInstruction::InitializeMultisig2 { m } => {
+            check_num_token_accounts(&instruction.accounts, 2)?;
+            let mut signers: Vec<String> = vec![];
+            for i in instruction.accounts[1..].iter() {
+                signers.push(account_keys[*i as usize].to_string());
+            }
+            Ok(ParsedInstructionEnum {
+                instruction_type: "initializeMultisig2".to_string(),
+                info: json!({
+                    "multisig": account_keys[instruction.accounts[0] as usize].to_string(),
+                    "signers": signers,
+                    "m": m,
+                }),
+            })
+        }
         TokenInstruction::Transfer { amount } => {
             check_num_token_accounts(&instruction.accounts, 3)?;
             let mut value = json!({
@@ -103,9 +153,9 @@ pub fn parse_token(
                 "destination": account_keys[instruction.accounts[1] as usize].to_string(),
                 "amount": amount.to_string(),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 2,
                 account_keys,
                 &instruction.accounts,
@@ -124,9 +174,9 @@ pub fn parse_token(
                 "delegate": account_keys[instruction.accounts[1] as usize].to_string(),
                 "amount": amount.to_string(),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 2,
                 account_keys,
                 &instruction.accounts,
@@ -143,9 +193,9 @@ pub fn parse_token(
             let mut value = json!({
                 "source": account_keys[instruction.accounts[0] as usize].to_string(),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 1,
                 account_keys,
                 &instruction.accounts,
@@ -174,9 +224,9 @@ pub fn parse_token(
                     COption::None => None,
                 },
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 1,
                 account_keys,
                 &instruction.accounts,
@@ -195,9 +245,9 @@ pub fn parse_token(
                 "account": account_keys[instruction.accounts[1] as usize].to_string(),
                 "amount": amount.to_string(),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 2,
                 account_keys,
                 &instruction.accounts,
@@ -216,9 +266,9 @@ pub fn parse_token(
                 "mint": account_keys[instruction.accounts[1] as usize].to_string(),
                 "amount": amount.to_string(),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 2,
                 account_keys,
                 &instruction.accounts,
@@ -236,9 +286,9 @@ pub fn parse_token(
                 "account": account_keys[instruction.accounts[0] as usize].to_string(),
                 "destination": account_keys[instruction.accounts[1] as usize].to_string(),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 2,
                 account_keys,
                 &instruction.accounts,
@@ -256,9 +306,9 @@ pub fn parse_token(
                 "account": account_keys[instruction.accounts[0] as usize].to_string(),
                 "mint": account_keys[instruction.accounts[1] as usize].to_string(),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 2,
                 account_keys,
                 &instruction.accounts,
@@ -276,9 +326,9 @@ pub fn parse_token(
                 "account": account_keys[instruction.accounts[0] as usize].to_string(),
                 "mint": account_keys[instruction.accounts[1] as usize].to_string(),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 2,
                 account_keys,
                 &instruction.accounts,
@@ -298,9 +348,9 @@ pub fn parse_token(
                 "destination": account_keys[instruction.accounts[2] as usize].to_string(),
                 "tokenAmount": token_amount_to_ui_amount(amount, decimals),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 3,
                 account_keys,
                 &instruction.accounts,
@@ -320,9 +370,9 @@ pub fn parse_token(
                 "delegate": account_keys[instruction.accounts[2] as usize].to_string(),
                 "tokenAmount": token_amount_to_ui_amount(amount, decimals),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 3,
                 account_keys,
                 &instruction.accounts,
@@ -341,9 +391,9 @@ pub fn parse_token(
                 "account": account_keys[instruction.accounts[1] as usize].to_string(),
                 "tokenAmount": token_amount_to_ui_amount(amount, decimals),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 2,
                 account_keys,
                 &instruction.accounts,
@@ -362,9 +412,9 @@ pub fn parse_token(
                 "mint": account_keys[instruction.accounts[1] as usize].to_string(),
                 "tokenAmount": token_amount_to_ui_amount(amount, decimals),
             });
-            let mut map = value.as_object_mut().unwrap();
+            let map = value.as_object_mut().unwrap();
             parse_signers(
-                &mut map,
+                map,
                 2,
                 account_keys,
                 &instruction.accounts,

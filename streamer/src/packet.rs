@@ -9,8 +9,7 @@ use {
 };
 pub use {
     solana_perf::packet::{
-        limited_deserialize, to_packet_batches, PacketBatch, PacketBatchRecycler, NUM_PACKETS,
-        PACKETS_PER_BATCH,
+        to_packet_batches, PacketBatch, PacketBatchRecycler, NUM_PACKETS, PACKETS_PER_BATCH,
     },
     safecoin_sdk::packet::{Meta, Packet, PACKET_DATA_SIZE},
 };
@@ -41,7 +40,7 @@ pub fn recv_from(batch: &mut PacketBatch, socket: &UdpSocket, max_wait_ms: u64) 
                 trace!("recv_from err {:?}", e);
                 return Err(e);
             }
-            Ok((_, npkts)) => {
+            Ok(npkts) => {
                 if i == 0 {
                     socket.set_nonblocking(true)?;
                 }
@@ -112,6 +111,10 @@ mod tests {
         }
         send_to(&batch, &send_socket, &SocketAddrSpace::Unspecified).unwrap();
 
+        batch
+            .packets
+            .iter_mut()
+            .for_each(|pkt| pkt.meta = Meta::default());
         let recvd = recv_from(&mut batch, &recv_socket, 1).unwrap();
 
         assert_eq!(recvd, batch.packets.len());

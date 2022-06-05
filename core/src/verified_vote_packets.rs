@@ -177,7 +177,7 @@ impl VerifiedVotePackets {
 mod tests {
     use {
         super::*,
-        crate::{consensus::test::VoteSimulator, result::Error},
+        crate::{result::Error, vote_simulator::VoteSimulator},
         crossbeam_channel::unbounded,
         solana_perf::packet::Packet,
         safecoin_sdk::slot_hashes::MAX_ENTRIES,
@@ -431,7 +431,7 @@ mod tests {
             let expected_len = validator_batch[0].packets.len();
             assert!(validator_batch
                 .iter()
-                .all(|p| p.packets.len() == expected_len));
+                .all(|batch| batch.packets.len() == expected_len));
         }
 
         // Should be empty now

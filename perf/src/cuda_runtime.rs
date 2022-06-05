@@ -31,12 +31,13 @@ fn pin<T>(_mem: &mut Vec<T>) {
         let err = unsafe {
             (api.cuda_host_register)(ptr as *mut c_void, size, /*flags=*/ 0)
         };
-        if err != CUDA_SUCCESS {
-            panic!(
-                "cudaHostRegister error: {} ptr: {:?} bytes: {}",
-                err, ptr, size,
-            );
-        }
+        assert!(
+            err == CUDA_SUCCESS,
+            "cudaHostRegister error: {} ptr: {:?} bytes: {}",
+            err,
+            ptr,
+            size
+        );
     }
 }
 
@@ -45,9 +46,12 @@ fn unpin<T>(_mem: *mut T) {
         use std::ffi::c_void;
 
         let err = unsafe { (api.cuda_host_unregister)(_mem as *mut c_void) };
-        if err != CUDA_SUCCESS {
-            panic!("cudaHostUnregister returned: {} ptr: {:?}", err, _mem);
-        }
+        assert!(
+            err == CUDA_SUCCESS,
+            "cudaHostUnregister returned: {} ptr: {:?}",
+            err,
+            _mem
+        );
     }
 }
 
@@ -247,6 +251,29 @@ impl<T: Clone + Default + Sized> PinnedVec<T> {
             self.prepare_realloc(self.x.len().saturating_add(other.len()));
         self.x.append(&mut other.x);
         self.check_ptr(old_ptr, old_capacity, "resize");
+    }
+
+    /// Forces the length of the vector to `new_len`.
+    ///
+    /// This is a low-level operation that maintains none of the normal
+    /// invariants of the type. Normally changing the length of a vector
+    /// is done using one of the safe operations instead, such as
+    /// [`truncate`], [`resize`], [`extend`], or [`clear`].
+    ///
+    /// [`truncate`]: Vec::truncate
+    /// [`resize`]: Vec::resize
+    /// [`extend`]: Extend::extend
+    /// [`clear`]: Vec::clear
+    ///
+    /// # Safety
+    ///
+    /// - `new_len` must be less than or equal to [`capacity()`].
+    /// - The elements at `old_len..new_len` must be initialized.
+    ///
+    /// [`capacity()`]: Vec::capacity
+    ///
+    pub unsafe fn set_len(&mut self, size: usize) {
+        self.x.set_len(size);
     }
 
     pub fn shuffle<R: Rng>(&mut self, rng: &mut R) {

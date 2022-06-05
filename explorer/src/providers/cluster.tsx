@@ -1,5 +1,10 @@
 import React from "react";
-import { clusterApiUrl, Connection } from "@safecoin/web3.js";
+import {
+  clusterApiUrl,
+  Connection,
+  EpochInfo,
+  EpochSchedule,
+} from "@safecoin/web3.js";
 import { useQuery } from "../utils/url";
 import { useHistory, useLocation } from "react-router-dom";
 import { reportError } from "utils/sentry";
@@ -69,19 +74,21 @@ export function clusterUrl(cluster: Cluster, customUrl: string): string {
 }
 
 export const DEFAULT_CLUSTER = Cluster.MainnetBeta;
+const DEFAULT_CUSTOM_URL = "http://localhost:8328";
 
+type Action = State;
 interface State {
   cluster: Cluster;
   customUrl: string;
-  firstAvailableBlock?: number;
+  clusterInfo?: ClusterInfo;
   status: ClusterStatus;
 }
 
-interface Action {
-  status: ClusterStatus;
-  cluster: Cluster;
-  customUrl: string;
-  firstAvailableBlock?: number;
+interface ClusterInfo {
+  firstAvailableBlock: number;
+  epochSchedule: EpochSchedule;
+  epochInfo: EpochInfo;
+  genesisHash: string;
 }
 
 type Dispatch = (action: Action) => void;
@@ -119,8 +126,9 @@ function parseQuery(query: URLSearchParams): Cluster {
 }
 
 type SetShowModal = React.Dispatch<React.SetStateAction<boolean>>;
-const ModalContext =
-  React.createContext<[boolean, SetShowModal] | undefined>(undefined);
+const ModalContext = React.createContext<[boolean, SetShowModal] | undefined>(
+  undefined
+);
 const StateContext = React.createContext<State | undefined>(undefined);
 const DispatchContext = React.createContext<Dispatch | undefined>(undefined);
 
@@ -128,7 +136,7 @@ type ClusterProviderProps = { children: React.ReactNode };
 export function ClusterProvider({ children }: ClusterProviderProps) {
   const [state, dispatch] = React.useReducer(clusterReducer, {
     cluster: DEFAULT_CLUSTER,
-    customUrl: "",
+    customUrl: DEFAULT_CUSTOM_URL,
     status: ClusterStatus.Connecting,
   });
   const [showModal, setShowModal] = React.useState(false);
@@ -189,12 +197,24 @@ async function updateCluster(
 
   try {
     const connection = new Connection(clusterUrl(cluster, customUrl));
-    const firstAvailableBlock = await connection.getFirstAvailableBlock();
+    const [firstAvailableBlock, epochSchedule, epochInfo, genesisHash] =
+      await Promise.all([
+        connection.getFirstAvailableBlock(),
+        connection.getEpochSchedule(),
+        connection.getEpochInfo(),
+        connection.getGenesisHash(),
+      ]);
+
     dispatch({
       status: ClusterStatus.Connected,
       cluster,
       customUrl,
-      firstAvailableBlock,
+      clusterInfo: {
+        firstAvailableBlock,
+        genesisHash,
+        epochSchedule,
+        epochInfo,
+      },
     });
   } catch (error) {
     if (cluster !== Cluster.Custom) {

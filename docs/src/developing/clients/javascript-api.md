@@ -147,7 +147,7 @@ sendAndConfirmTransaction(
 );
 ```
 
-The above code takes in a `TransactionInstruction` using `SystemProgram`, creates a `Transaction`, and sends it over the network. You use `Connection` in order to define with Safecoin network you are connecting to, namely `mainnet-beta`, `testnet`, or `devnet`.
+The above code takes in a `TransactionInstruction` using `SystemProgram`, creates a `Transaction`, and sends it over the network. You use `Connection` in order to define which Safecoin network you are connecting to, namely `mainnet-beta`, `testnet`, or `devnet`.
 
 ### Interacting with Custom Programs
 
