@@ -26,7 +26,7 @@ safecoin-runtime = { path = "../runtime", version = "=1.9.29" }
 safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
 safecoin-vote-program = { path = "../programs/vote", version = "=1.9.29" }
 safe-associated-token-account = { version = "=1.0.11", features = ["no-entrypoint"], path = "../../safecoin-program-library/associated-token-account/program" }
-safe-memo = { version = "=3.0.5", features = ["no-entrypoint"] }
+safe-memo = { path = "../../safecoin-program-library/memo/program", version = "=3.0.7", features = ["no-entrypoint"] }
 safe-token = { path = "../../safecoin-program-library/token/program", version = "=3.2.3", features = ["no-entrypoint"] }
 thiserror = "1.0"
 
