@@ -26,7 +26,7 @@ use {
         snapshot_config::SnapshotConfig, snapshot_package::SnapshotType, snapshot_utils,
     },
     safecoin_sdk::{clock::Slot, exit::Exit, genesis_config::GenesisConfig, hash::Hash},
-    solana_send_transaction_service::send_transaction_service,
+    safecoin_send_transaction_service::send_transaction_service,
     solana_streamer::socket::SocketAddrSpace,
     std::{
         fs,

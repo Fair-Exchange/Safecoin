@@ -89,7 +89,7 @@ use {
         signature::{Keypair, Signer},
         timing::timestamp,
     },
-    solana_send_transaction_service::send_transaction_service,
+    safecoin_send_transaction_service::send_transaction_service,
     solana_streamer::socket::SocketAddrSpace,
     solana_vote_program::vote_state::VoteState,
     std::{

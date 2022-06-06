@@ -62,7 +62,7 @@ use {
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     },
-    solana_send_transaction_service::send_transaction_service,
+    safecoin_send_transaction_service::send_transaction_service,
     solana_streamer::socket::SocketAddrSpace,
     safecoin_validator::{
         admin_rpc_service, bootstrap, dashboard::Dashboard, ledger_lockfile, lock_ledger,

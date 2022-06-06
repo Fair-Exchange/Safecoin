@@ -2,7 +2,7 @@ use {
     safecoin_gossip::cluster_info::ClusterInfo,
     solana_poh::poh_recorder::PohRecorder,
     safecoin_sdk::{clock::NUM_CONSECUTIVE_LEADER_SLOTS, pubkey::Pubkey},
-    solana_send_transaction_service::tpu_info::TpuInfo,
+    safecoin_send_transaction_service::tpu_info::TpuInfo,
     std::{
         collections::HashMap,
         net::SocketAddr,
