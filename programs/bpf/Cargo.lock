@@ -4035,7 +4035,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-bloom"
+name = "safecoin-bloom"
 version = "1.9.29"
 dependencies = [
  "bv",
@@ -4571,7 +4571,7 @@ dependencies = [
  "rustc_version 0.4.0",
  "serde",
  "serde_derive",
- "solana-bloom",
+ "safecoin-bloom",
  "safecoin-client",
  "solana-entry",
  "safecoin-frozen-abi 1.9.29",
@@ -4777,7 +4777,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_derive",
- "solana-bloom",
+ "safecoin-bloom",
  "safecoin-clap-utils",
  "safecoin-client",
  "solana-entry",
@@ -4935,7 +4935,7 @@ dependencies = [
  "rand 0.7.3",
  "rayon",
  "serde",
- "solana-bloom",
+ "safecoin-bloom",
  "safecoin-logger 1.9.29",
  "safecoin-metrics",
  "safecoin-rayon-threadlimit",
@@ -5213,7 +5213,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "safecoin-address-lookup-table-program",
- "solana-bloom",
+ "safecoin-bloom",
  "solana-bucket-map",
  "safecoin-compute-budget-program",
  "safecoin-config-program",

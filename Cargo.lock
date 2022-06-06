@@ -4383,7 +4383,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serial_test 0.5.1",
- "solana-bloom",
+ "safecoin-bloom",
  "solana-entry",
  "solana-geyser-plugin-manager",
  "solana-poh",
@@ -4560,7 +4560,7 @@ dependencies = [
  "serde_bytes",
  "serde_derive",
  "serial_test 0.5.1",
- "solana-bloom",
+ "safecoin-bloom",
  "solana-entry",
  "thiserror",
 ]
@@ -4833,7 +4833,7 @@ dependencies = [
  "safecoin-sdk",
  "safecoin-vote-program",
  "serde",
- "solana-bloom",
+ "safecoin-bloom",
 ]
 
 [[package]]
@@ -5017,7 +5017,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "safecoin-address-lookup-table-program",
- "solana-bloom",
+ "safecoin-bloom",
  "solana-bucket-map",
  "symlink",
  "tar",
@@ -5873,7 +5873,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-bloom"
+name = "safecoin-bloom"
 version = "1.9.29"
 dependencies = [
  "bv",

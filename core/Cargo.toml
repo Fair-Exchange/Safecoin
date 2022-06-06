@@ -37,7 +37,7 @@ rayon = "1.5.1"
 retain_mut = "=0.1.5"
 serde = "1.0.130"
 serde_derive = "1.0.103"
-solana-bloom = { path = "../bloom", version = "=1.9.29" }
+safecoin-bloom = { path = "../bloom", version = "=1.9.29" }
 safecoin-client = { path = "../client", version = "=1.9.29" }
 solana-entry = { path = "../entry", version = "=1.9.29" }
 solana-geyser-plugin-manager = { path = "../geyser-plugin-manager", version = "=1.9.29" }
