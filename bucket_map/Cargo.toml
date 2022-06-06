@@ -1,9 +1,9 @@
 [package]
-name = "solana-bucket-map"
+name = "safecoin-bucket-map"
 version = "1.9.29"
-description = "solana-bucket-map"
+description = "safecoin-bucket-map"
 homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/solana-bucket-map"
+documentation = "https://docs.rs/safecoin-bucket-map"
 readme = "../README.md"
 repository = "https://github.com/fair-exchange/safecoin"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]

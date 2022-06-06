@@ -45,7 +45,7 @@ safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.29" 
 safecoin-logger = { path = "../logger", version = "=1.9.29" }
 safecoin-measure = { path = "../measure", version = "=1.9.29" }
 safecoin-metrics = { path = "../metrics", version = "=1.9.29" }
-solana-bucket-map = { path = "../bucket_map", version = "=1.9.29" }
+safecoin-bucket-map = { path = "../bucket_map", version = "=1.9.29" }
 safecoin-program-runtime = { path = "../program-runtime", version = "=1.9.29" }
 safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
 safecoin-sdk = { path = "../sdk", version = "=1.9.29" }

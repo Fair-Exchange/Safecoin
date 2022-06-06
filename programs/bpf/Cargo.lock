@@ -4429,7 +4429,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-bucket-map"
+name = "safecoin-bucket-map"
 version = "1.9.29"
 dependencies = [
  "fs_extra",
@@ -5214,7 +5214,7 @@ dependencies = [
  "serde_derive",
  "safecoin-address-lookup-table-program",
  "safecoin-bloom",
- "solana-bucket-map",
+ "safecoin-bucket-map",
  "safecoin-compute-budget-program",
  "safecoin-config-program",
  "safecoin-frozen-abi 1.9.29",
