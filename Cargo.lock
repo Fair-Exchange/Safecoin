@@ -5016,7 +5016,7 @@ dependencies = [
  "safecoin-vote-program",
  "serde",
  "serde_derive",
- "solana-address-lookup-table-program",
+ "safecoin-address-lookup-table-program",
  "solana-bloom",
  "solana-bucket-map",
  "symlink",
@@ -5844,7 +5844,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-address-lookup-table-program"
+name = "safecoin-address-lookup-table-program"
 version = "1.9.29"
 dependencies = [
  "bincode",
@@ -5862,14 +5862,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-address-lookup-table-program-tests"
+name = "safecoin-address-lookup-table-program-tests"
 version = "1.9.29"
 dependencies = [
  "assert_matches",
  "bincode",
  "safecoin-program-test",
  "safecoin-sdk",
- "solana-address-lookup-table-program",
+ "safecoin-address-lookup-table-program",
 ]
 
 [[package]]

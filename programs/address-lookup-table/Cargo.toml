@@ -1,5 +1,5 @@
 [package]
-name = "solana-address-lookup-table-program"
+name = "safecoin-address-lookup-table-program"
 version = "1.9.29"
 description = "Safecoin address lookup table program"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
