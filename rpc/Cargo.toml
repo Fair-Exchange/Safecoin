@@ -43,7 +43,7 @@ solana-poh = { path = "../poh", version = "=1.9.29" }
 safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
 safecoin-runtime = { path = "../runtime", version = "=1.9.29" }
 safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
-solana-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
+safecoin-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
 safecoin-streamer = { path = "../streamer", version = "=1.9.29" }
 safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.9.29" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.9.29" }

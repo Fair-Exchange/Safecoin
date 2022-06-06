@@ -4121,7 +4121,7 @@ dependencies = [
  "safecoin-banks-interface",
  "safecoin-runtime",
  "safecoin-sdk",
- "solana-send-transaction-service",
+ "safecoin-send-transaction-service",
  "tarpc",
  "tokio",
  "tokio-serde",
@@ -4389,7 +4389,7 @@ dependencies = [
  "solana-poh",
  "solana-replica-lib",
  "solana-rpc",
- "solana-send-transaction-service",
+ "safecoin-send-transaction-service",
  "static_assertions",
  "sys-info",
  "systemstat",
@@ -5347,7 +5347,7 @@ dependencies = [
  "solana-poh",
  "solana-replica-lib",
  "solana-rpc",
- "solana-send-transaction-service",
+ "safecoin-send-transaction-service",
  "symlink",
  "sysctl",
  "tikv-jemallocator",
@@ -6101,7 +6101,7 @@ dependencies = [
  "solana-local-cluster",
  "solana-replica-lib",
  "solana-rpc",
- "solana-send-transaction-service",
+ "safecoin-send-transaction-service",
  "tempfile",
  "tonic-build 0.7.2",
 ]
@@ -6152,7 +6152,7 @@ dependencies = [
  "soketto",
  "solana-entry",
  "solana-poh",
- "solana-send-transaction-service",
+ "safecoin-send-transaction-service",
  "stream-cancel",
  "symlink",
  "thiserror",
@@ -6184,7 +6184,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-send-transaction-service"
+name = "safecoin-send-transaction-service"
 version = "1.9.29"
 dependencies = [
  "log 0.4.17",

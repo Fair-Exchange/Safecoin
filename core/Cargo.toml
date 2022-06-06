@@ -56,7 +56,7 @@ safecoin-runtime = { path = "../runtime", version = "=1.9.29" }
 safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
 safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.9.29" }
 safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.29" }
-solana-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
+safecoin-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
 safecoin-streamer = { path = "../streamer", version = "=1.9.29" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.9.29" }
 safecoin-version = { path = "../version", version = "=1.9.29" }

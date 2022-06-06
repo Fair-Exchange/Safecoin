@@ -1,11 +1,11 @@
 [package]
-name = "solana-send-transaction-service"
+name = "safecoin-send-transaction-service"
 version = "1.9.29"
 description = "Safecoin send transaction service"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
 homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/solana-send-transaction-service"
+documentation = "https://docs.rs/safecoin-send-transaction-service"
 license = "Apache-2.0"
 edition = "2021"
 

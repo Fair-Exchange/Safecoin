@@ -4027,7 +4027,7 @@ dependencies = [
  "safecoin-banks-interface",
  "safecoin-runtime",
  "safecoin-sdk",
- "solana-send-transaction-service",
+ "safecoin-send-transaction-service",
  "tarpc",
  "tokio",
  "tokio-serde",
@@ -4591,7 +4591,7 @@ dependencies = [
  "solana-rpc",
  "safecoin-runtime",
  "safecoin-sdk",
- "solana-send-transaction-service",
+ "safecoin-send-transaction-service",
  "safecoin-streamer",
  "safecoin-transaction-status",
  "safecoin-version",
@@ -5168,7 +5168,7 @@ dependencies = [
  "safecoin-rayon-threadlimit",
  "safecoin-runtime",
  "safecoin-sdk",
- "solana-send-transaction-service",
+ "safecoin-send-transaction-service",
  "safecoin-storage-bigtable",
  "safecoin-streamer",
  "safecoin-transaction-status",
@@ -5308,7 +5308,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-send-transaction-service"
+name = "safecoin-send-transaction-service"
 version = "1.9.29"
 dependencies = [
  "log 0.4.14",
@@ -5505,7 +5505,7 @@ dependencies = [
  "solana-rpc",
  "safecoin-runtime",
  "safecoin-sdk",
- "solana-send-transaction-service",
+ "safecoin-send-transaction-service",
  "safecoin-streamer",
  "safecoin-test-validator",
  "safecoin-version",

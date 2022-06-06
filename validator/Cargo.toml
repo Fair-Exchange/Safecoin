@@ -44,7 +44,7 @@ solana-replica-lib = { path = "../replica-lib", version = "=1.9.29" }
 solana-rpc = { path = "../rpc", version = "=1.9.29" }
 safecoin-runtime = { path = "../runtime", version = "=1.9.29" }
 safecoin-sdk = { path = "../sdk", version = "=1.9.29" }
-solana-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
+safecoin-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
 safecoin-streamer = { path = "../streamer", version = "=1.9.29" }
 safecoin-test-validator = { path = "../test-validator", version = "=1.9.29" }
 safecoin-version = { path = "../version", version = "=1.9.29" }
