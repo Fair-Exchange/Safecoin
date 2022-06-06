@@ -1,7 +1,7 @@
 /// Partial SPL Token declarations inlined to avoid an external dependency on the safe-token-2022 crate
 use crate::inline_safe_token::{self, GenericTokenAccount};
 
-safecoin_sdk::declare_id!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+safecoin_sdk::declare_id!("ZToGWcF1Qh9H7te1MmABiGsFUKvj5zXPQ2QnTqoHpHN");
 
 // `safe_token_program_2022::extension::AccountType::Account` ordinal value
 const ACCOUNTTYPE_ACCOUNT: u8 = 2;
