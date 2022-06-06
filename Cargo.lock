@@ -82,12 +82,6 @@ checksum = "a4c527152e37cf757a3f78aae5a06fbeefdb07ccc535c980a3208ee3060dd544"
 
 [[package]]
 name = "arrayvec"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
-
-[[package]]
-name = "arrayvec"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8da52d66c7071e2e3fa2a1e5c6d088fec47b593032b254f5e980de8ea54454d6"
@@ -348,27 +342,12 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "blake3"
-version = "0.3.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b64485778c4f16a6a5a9d335e80d449ac6c70cdd6a06d2af18a6f6f775a125b3"
-dependencies = [
- "arrayref",
- "arrayvec 0.5.2",
- "cc",
- "cfg-if 0.1.10",
- "constant_time_eq",
- "crypto-mac 0.8.0",
- "digest 0.9.0",
-]
-
-[[package]]
-name = "blake3"
 version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a08e53fc5a564bb15bfe6fae56bd71522205f1f91893f9c0116edad6496c183f"
 dependencies = [
  "arrayref",
- "arrayvec 0.7.2",
+ "arrayvec",
  "cc",
  "cfg-if 1.0.0",
  "constant_time_eq",
@@ -465,12 +444,6 @@ dependencies = [
  "quote 1.0.18",
  "syn 1.0.96",
 ]
-
-[[package]]
-name = "bs58"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "476e9cd489f9e121e02ffa6014a8ef220ecb15c05ed23fc34cca13925dc283fb"
 
 [[package]]
 name = "bs58"
@@ -1056,19 +1029,6 @@ dependencies = [
 
 [[package]]
 name = "curve25519-dalek"
-version = "2.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a9b85542f99a2dfa2a1b8e192662741c9859a846b296bef1c92ef9b58b5a216"
-dependencies = [
- "byteorder",
- "digest 0.8.1",
- "rand_core 0.5.1",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "curve25519-dalek"
 version = "3.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90f9d052967f590a76e62eb387bd0bbb1b000182c3cefe5364db6b7211651bc0"
@@ -1249,7 +1209,7 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c762bae6dcaf24c4c84667b8579785430908723d5c889f469d76a41d59cc7a9d"
 dependencies = [
- "curve25519-dalek 3.2.1",
+ "curve25519-dalek",
  "ed25519",
  "rand 0.7.3",
  "serde",
@@ -1335,19 +1295,6 @@ dependencies = [
  "quote 1.0.18",
  "rustc_version 0.4.0",
  "syn 1.0.96",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
-dependencies = [
- "atty",
- "humantime",
- "log 0.4.17",
- "regex",
- "termcolor",
 ]
 
 [[package]]
@@ -2139,15 +2086,6 @@ checksum = "879d54834c8c76457ef4293a689b2a8c59b076067ad77b15efafbb05f92a592b"
 
 [[package]]
 name = "itertools"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
@@ -2379,33 +2317,15 @@ checksum = "33a33a362ce288760ec6a508b94caaec573ae7d3bbbd91b87aa0bad4456839db"
 
 [[package]]
 name = "librocksdb-sys"
-version = "6.20.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c309a9d2470844aceb9a4a098cf5286154d20596868b75a6b36357d2bb9ca25d"
+version = "0.7.0+7.1.2"
+source = "git+https://github.com/rust-rocksdb/rust-rocksdb?branch=master#59434f93ed91e4252d8ff64bfd28b4f3203572a4"
 dependencies = [
  "bindgen",
+ "bzip2-sys",
  "cc",
  "glob",
  "libc",
-]
-
-[[package]]
-name = "libsecp256k1"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd1137239ab33b41aa9637a88a28249e5e70c40a42ccc92db7f12cc356c1fcd7"
-dependencies = [
- "arrayref",
- "base64 0.12.3",
- "digest 0.9.0",
- "hmac-drbg",
- "libsecp256k1-core",
- "libsecp256k1-gen-ecmult",
- "libsecp256k1-gen-genmult",
- "rand 0.7.3",
- "serde",
- "sha2",
- "typenum",
+ "libz-sys",
 ]
 
 [[package]]
@@ -2454,6 +2374,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67abfe149395e3aa1c48a2beb32b068e2334402df8181f818d3aee2b304c4f5d"
 dependencies = [
  "libsecp256k1-core",
+]
+
+[[package]]
+name = "libz-sys"
+version = "1.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9702761c3935f8cc2f101793272e202c72b99da8f4224a19ddcf1279a6450bbf"
+dependencies = [
+ "cc",
+ "pkg-config",
+ "vcpkg",
 ]
 
 [[package]]
@@ -2537,15 +2468,6 @@ name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
-
-[[package]]
-name = "memmap2"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9b70ca2a6103ac8b665dc150b142ef0e4e89df640c9e6cf295d189c3caebe5a"
-dependencies = [
- "libc",
-]
 
 [[package]]
 name = "memmap2"
@@ -3196,7 +3118,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5aab5be6e4732b473071984b3164dbbfb7a3674d30ea5ff44410b6bcd960c3c"
 dependencies = [
  "difflib",
- "itertools 0.10.3",
+ "itertools",
  "predicates-core",
 ]
 
@@ -3347,7 +3269,7 @@ checksum = "62941722fb675d463659e49c4f3fe1fe792ff24fe5bbaa9c08cd3b98a1c354f5"
 dependencies = [
  "bytes 1.1.0",
  "heck 0.3.3",
- "itertools 0.10.3",
+ "itertools",
  "lazy_static",
  "log 0.4.17",
  "multimap",
@@ -3369,7 +3291,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "cmake",
  "heck 0.4.0",
- "itertools 0.10.3",
+ "itertools",
  "lazy_static",
  "log 0.4.17",
  "multimap",
@@ -3388,7 +3310,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9cc1a3263e07e0bf68e96268f37665207b49560d98739662cdfaae215c720fe"
 dependencies = [
  "anyhow",
- "itertools 0.10.3",
+ "itertools",
  "proc-macro2 1.0.39",
  "quote 1.0.18",
  "syn 1.0.96",
@@ -3401,7 +3323,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b670f45da57fb8542ebdbb6105a925fe571b67f9e7ed9f47a06a84e72b4e7cc"
 dependencies = [
  "anyhow",
- "itertools 0.10.3",
+ "itertools",
  "proc-macro2 1.0.39",
  "quote 1.0.18",
  "syn 1.0.96",
@@ -3764,7 +3686,7 @@ version = "1.9.29"
 dependencies = [
  "clap 3.1.18",
  "safecoin-bpf-loader-program",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-program-runtime",
  "safecoin-sdk",
  "serde",
@@ -3930,9 +3852,8 @@ dependencies = [
 
 [[package]]
 name = "rocksdb"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a62eca5cacf2c8261128631bed9f045598d40bfbe4b29f5163f0f802f8f44a7"
+version = "0.18.0"
+source = "git+https://github.com/rust-rocksdb/rust-rocksdb?branch=master#59434f93ed91e4252d8ff64bfd28b4f3203572a4"
 dependencies = [
  "libc",
  "librocksdb-sys",
@@ -4086,16 +4007,14 @@ version = "1.0.11"
 dependencies = [
  "borsh",
  "safe-token",
- "safecoin-program 1.9.29",
+ "safecoin-program",
 ]
 
 [[package]]
 name = "safe-memo"
-version = "3.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4073602c729f3cc3f3638aa4a9a21b715ea5fdf308f3ac30704407cd21e23d6b"
+version = "3.0.7"
 dependencies = [
- "safecoin-program 1.8.12",
+ "safecoin-program",
 ]
 
 [[package]]
@@ -4106,7 +4025,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "num_enum",
- "safecoin-program 1.9.29",
+ "safecoin-program",
  "thiserror",
 ]
 
@@ -4117,7 +4036,7 @@ dependencies = [
  "Inflector",
  "base64 0.12.3",
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "bv",
  "lazy_static",
  "safe-token",
@@ -4138,7 +4057,7 @@ dependencies = [
  "clap 2.34.0",
  "log 0.4.17",
  "rayon",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-runtime",
  "safecoin-sdk",
@@ -4157,7 +4076,7 @@ dependencies = [
  "safecoin-core",
  "safecoin-gossip",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-perf",
  "safecoin-runtime",
@@ -4175,7 +4094,7 @@ dependencies = [
  "futures 0.3.21",
  "safecoin-banks-interface",
  "safecoin-banks-server",
- "safecoin-program 1.9.29",
+ "safecoin-program",
  "safecoin-runtime",
  "safecoin-sdk",
  "tarpc",
@@ -4215,7 +4134,7 @@ version = "1.9.29"
 dependencies = [
  "clap 2.34.0",
  "safecoin-clap-utils",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-net-utils",
  "safecoin-streamer",
  "safecoin-version",
@@ -4233,7 +4152,7 @@ dependencies = [
  "safecoin-faucet",
  "safecoin-genesis",
  "safecoin-gossip",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-metrics",
  "safecoin-net-utils",
@@ -4253,7 +4172,7 @@ version = "1.9.29"
 dependencies = [
  "bincode",
  "byteorder",
- "libsecp256k1 0.6.0",
+ "libsecp256k1",
  "log 0.4.17",
  "rand 0.7.3",
  "safecoin-measure",
@@ -4339,7 +4258,7 @@ dependencies = [
  "assert_matches",
  "base64 0.13.0",
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "clap 2.34.0",
  "indicatif",
  "jsonrpc-core",
@@ -4350,7 +4269,7 @@ dependencies = [
  "safecoin-account-decoder",
  "safecoin-clap-utils",
  "safecoin-faucet",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-net-utils",
  "safecoin-sdk",
@@ -4373,7 +4292,7 @@ version = "1.9.29"
 dependencies = [
  "safecoin-client",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-merkle-tree",
  "safecoin-metrics",
@@ -4405,7 +4324,7 @@ version = "1.9.29"
 dependencies = [
  "bincode",
  "chrono",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-program-runtime",
  "safecoin-sdk",
  "serde",
@@ -4419,14 +4338,14 @@ dependencies = [
  "ahash",
  "base64 0.12.3",
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "chrono",
  "crossbeam-channel",
  "dashmap",
  "etcd-client",
  "fs_extra",
  "histogram",
- "itertools 0.10.3",
+ "itertools",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -4442,11 +4361,11 @@ dependencies = [
  "retain_mut",
  "rustc_version 0.4.0",
  "safecoin-client",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
  "safecoin-gossip",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-metrics",
  "safecoin-net-utils",
@@ -4491,7 +4410,7 @@ dependencies = [
  "safecoin-client",
  "safecoin-core",
  "safecoin-gossip",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-net-utils",
  "safecoin-perf",
  "safecoin-sdk",
@@ -4533,7 +4452,7 @@ dependencies = [
  "safe-memo",
  "safecoin-clap-utils",
  "safecoin-cli-config",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-metrics",
  "safecoin-sdk",
  "safecoin-version",
@@ -4545,52 +4464,20 @@ dependencies = [
 
 [[package]]
 name = "safecoin-frozen-abi"
-version = "1.8.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a68086512d9ef7942cca018366a71757d858b5dffbf1eca58018990e1bf146ce"
-dependencies = [
- "bs58 0.3.1",
- "bv",
- "generic-array 0.14.5",
- "log 0.4.17",
- "memmap2 0.1.0",
- "rustc_version 0.2.3",
- "safecoin-frozen-abi-macro 1.8.12",
- "safecoin-logger 1.8.12",
- "serde",
- "serde_derive",
- "sha2",
- "thiserror",
-]
-
-[[package]]
-name = "safecoin-frozen-abi"
 version = "1.9.29"
 dependencies = [
- "bs58 0.4.0",
+ "bs58",
  "bv",
  "generic-array 0.14.5",
  "log 0.4.17",
- "memmap2 0.5.4",
+ "memmap2",
  "rustc_version 0.4.0",
- "safecoin-frozen-abi-macro 1.9.29",
- "safecoin-logger 1.9.29",
+ "safecoin-frozen-abi-macro",
+ "safecoin-logger",
  "serde",
  "serde_derive",
  "sha2",
  "thiserror",
-]
-
-[[package]]
-name = "safecoin-frozen-abi-macro"
-version = "1.8.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9b55d439c00de3b74f671d0a03cb22c6b192f36ff4886667d056aeda1a11760"
-dependencies = [
- "proc-macro2 1.0.39",
- "quote 1.0.18",
- "rustc_version 0.2.3",
- "syn 1.0.96",
 ]
 
 [[package]]
@@ -4612,7 +4499,7 @@ dependencies = [
  "safecoin-clap-utils",
  "safecoin-cli-config",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-runtime",
  "safecoin-sdk",
  "safecoin-stake-program",
@@ -4643,7 +4530,7 @@ dependencies = [
  "clap 2.34.0",
  "flate2",
  "indexmap",
- "itertools 0.10.3",
+ "itertools",
  "log 0.4.17",
  "lru",
  "matches",
@@ -4655,10 +4542,10 @@ dependencies = [
  "rustc_version 0.4.0",
  "safecoin-clap-utils",
  "safecoin-client",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-metrics",
  "safecoin-net-utils",
@@ -4697,7 +4584,7 @@ dependencies = [
  "safecoin-clap-utils",
  "safecoin-client",
  "safecoin-config-program",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-sdk",
  "safecoin-version",
  "semver 1.0.9",
@@ -4714,7 +4601,7 @@ dependencies = [
 name = "safecoin-keygen"
 version = "1.9.29"
 dependencies = [
- "bs58 0.4.0",
+ "bs58",
  "clap 2.34.0",
  "dirs-next",
  "num_cpus",
@@ -4738,7 +4625,7 @@ dependencies = [
  "crossbeam-channel",
  "fs_extra",
  "futures 0.3.21",
- "itertools 0.10.3",
+ "itertools",
  "lazy_static",
  "libc",
  "log 0.4.17",
@@ -4754,9 +4641,9 @@ dependencies = [
  "rustc_version 0.4.0",
  "safecoin-account-decoder",
  "safecoin-bpf-loader-program",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
- "safecoin-logger 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-metrics",
  "safecoin-perf",
@@ -4784,20 +4671,20 @@ name = "safecoin-ledger-tool"
 version = "1.9.29"
 dependencies = [
  "assert_cmd",
- "bs58 0.4.0",
+ "bs58",
  "bytecount",
  "clap 2.34.0",
  "csv",
  "dashmap",
  "histogram",
- "itertools 0.10.3",
+ "itertools",
  "log 0.4.17",
  "regex",
  "safecoin-clap-utils",
  "safecoin-cli-output",
  "safecoin-core",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-runtime",
  "safecoin-sdk",
@@ -4821,7 +4708,7 @@ version = "1.9.29"
 dependencies = [
  "byte-unit",
  "clap 2.34.0",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-version",
  "serde",
  "serde_json",
@@ -4829,20 +4716,9 @@ dependencies = [
 
 [[package]]
 name = "safecoin-logger"
-version = "1.8.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "008af7684ccec2ab71e8fb388b3d3c520c2d2fa94bb48d96e235b309899bccda"
-dependencies = [
- "env_logger 0.8.4",
- "lazy_static",
- "log 0.4.17",
-]
-
-[[package]]
-name = "safecoin-logger"
 version = "1.9.29"
 dependencies = [
- "env_logger 0.9.0",
+ "env_logger",
  "lazy_static",
  "log 0.4.17",
 ]
@@ -4861,7 +4737,7 @@ version = "1.9.29"
 dependencies = [
  "clap 2.34.0",
  "log 0.4.17",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-runtime",
  "safecoin-sdk",
@@ -4875,14 +4751,14 @@ dependencies = [
  "fast-math",
  "hex",
  "matches",
- "safecoin-program 1.9.29",
+ "safecoin-program",
 ]
 
 [[package]]
 name = "safecoin-metrics"
 version = "1.9.29"
 dependencies = [
- "env_logger 0.9.0",
+ "env_logger",
  "gethostname",
  "lazy_static",
  "log 0.4.17",
@@ -4899,7 +4775,7 @@ dependencies = [
  "clap 2.34.0",
  "rand 0.7.3",
  "safecoin-clap-utils",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "serde",
  "serde_json",
 ]
@@ -4913,7 +4789,7 @@ dependencies = [
  "log 0.4.17",
  "nix 0.23.1",
  "rand 0.7.3",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-sdk",
  "safecoin-version",
  "serde",
@@ -4940,7 +4816,7 @@ dependencies = [
  "bincode",
  "bv",
  "caps",
- "curve25519-dalek 3.2.1",
+ "curve25519-dalek",
  "dlopen",
  "dlopen_derive",
  "fnv",
@@ -4951,7 +4827,7 @@ dependencies = [
  "nix 0.23.1",
  "rand 0.7.3",
  "rayon",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-metrics",
  "safecoin-rayon-threadlimit",
  "safecoin-sdk",
@@ -4968,49 +4844,12 @@ dependencies = [
  "log 0.4.17",
  "rand 0.7.3",
  "rayon",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-perf",
  "safecoin-sdk",
  "safecoin-version",
  "solana-entry",
-]
-
-[[package]]
-name = "safecoin-program"
-version = "1.8.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f95a29b89e99ec8b066fc0ced3148bfb9da258425164209bd99819b17825eadb"
-dependencies = [
- "base64 0.13.0",
- "bincode",
- "blake3 0.3.8",
- "borsh",
- "borsh-derive",
- "bs58 0.3.1",
- "bv",
- "bytemuck",
- "curve25519-dalek 2.1.3",
- "hex",
- "itertools 0.9.0",
- "lazy_static",
- "libsecp256k1 0.5.0",
- "log 0.4.17",
- "num-derive",
- "num-traits",
- "rand 0.7.3",
- "rustc_version 0.2.3",
- "rustversion",
- "safecoin-frozen-abi 1.8.12",
- "safecoin-frozen-abi-macro 1.8.12",
- "safecoin-logger 1.8.12",
- "safecoin-sdk-macro 1.8.12",
- "serde",
- "serde_bytes",
- "serde_derive",
- "sha2",
- "sha3",
- "thiserror",
 ]
 
 [[package]]
@@ -5022,20 +4861,20 @@ dependencies = [
  "base64 0.13.0",
  "bincode",
  "bitflags",
- "blake3 1.3.1",
+ "blake3",
  "borsh",
  "borsh-derive",
- "bs58 0.4.0",
+ "bs58",
  "bv",
  "bytemuck",
  "console_error_panic_hook",
  "console_log",
- "curve25519-dalek 3.2.1",
+ "curve25519-dalek",
  "getrandom 0.1.16",
- "itertools 0.10.3",
+ "itertools",
  "js-sys",
  "lazy_static",
- "libsecp256k1 0.6.0",
+ "libsecp256k1",
  "log 0.4.17",
  "num-derive",
  "num-traits",
@@ -5043,10 +4882,10 @@ dependencies = [
  "rand 0.7.3",
  "rustc_version 0.4.0",
  "rustversion",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
- "safecoin-logger 1.9.29",
- "safecoin-sdk-macro 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
+ "safecoin-logger",
+ "safecoin-sdk-macro",
  "serde",
  "serde_bytes",
  "serde_derive",
@@ -5064,16 +4903,16 @@ version = "1.9.29"
 dependencies = [
  "base64 0.13.0",
  "bincode",
- "itertools 0.10.3",
+ "itertools",
  "libc",
  "libloading",
  "log 0.4.17",
  "num-derive",
  "num-traits",
  "rustc_version 0.4.0",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
- "safecoin-logger 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-sdk",
  "serde",
@@ -5093,7 +4932,7 @@ dependencies = [
  "safecoin-banks-client",
  "safecoin-banks-server",
  "safecoin-bpf-loader-program",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-program-runtime",
  "safecoin-runtime",
  "safecoin-sdk",
@@ -5137,7 +4976,7 @@ dependencies = [
  "arrayref",
  "assert_matches",
  "bincode",
- "blake3 1.3.1",
+ "blake3",
  "bv",
  "bytemuck",
  "byteorder",
@@ -5149,11 +4988,11 @@ dependencies = [
  "flate2",
  "fnv",
  "index_list",
- "itertools 0.10.3",
+ "itertools",
  "lazy_static",
- "libsecp256k1 0.6.0",
+ "libsecp256k1",
  "log 0.4.17",
- "memmap2 0.5.4",
+ "memmap2",
  "num-derive",
  "num-traits",
  "num_cpus",
@@ -5165,9 +5004,9 @@ dependencies = [
  "rustc_version 0.4.0",
  "safecoin-compute-budget-program",
  "safecoin-config-program",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
- "safecoin-logger 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-metrics",
  "safecoin-program-runtime",
@@ -5197,23 +5036,23 @@ dependencies = [
  "bincode",
  "bitflags",
  "borsh",
- "bs58 0.4.0",
+ "bs58",
  "bytemuck",
  "byteorder",
  "chrono",
- "curve25519-dalek 3.2.1",
+ "curve25519-dalek",
  "derivation-path",
  "digest 0.9.0",
  "ed25519-dalek",
  "ed25519-dalek-bip32",
  "generic-array 0.14.5",
  "hmac 0.11.0",
- "itertools 0.10.3",
+ "itertools",
  "js-sys",
  "lazy_static",
- "libsecp256k1 0.6.0",
+ "libsecp256k1",
  "log 0.4.17",
- "memmap2 0.5.4",
+ "memmap2",
  "num-derive",
  "num-traits",
  "pbkdf2 0.9.0",
@@ -5222,11 +5061,11 @@ dependencies = [
  "rand_chacha 0.2.2",
  "rustc_version 0.4.0",
  "rustversion",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
- "safecoin-logger 1.9.29",
- "safecoin-program 1.9.29",
- "safecoin-sdk-macro 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
+ "safecoin-logger",
+ "safecoin-program",
+ "safecoin-sdk-macro",
  "serde",
  "serde_bytes",
  "serde_derive",
@@ -5241,22 +5080,9 @@ dependencies = [
 
 [[package]]
 name = "safecoin-sdk-macro"
-version = "1.8.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c18bfdce479a4f423092c2196f6b9e6a6e72b4443f1a587a7083d956cdaa02a6"
-dependencies = [
- "bs58 0.3.1",
- "proc-macro2 1.0.39",
- "quote 1.0.18",
- "rustversion",
- "syn 1.0.96",
-]
-
-[[package]]
-name = "safecoin-sdk-macro"
 version = "1.9.29"
 dependencies = [
- "bs58 0.4.0",
+ "bs58",
  "proc-macro2 1.0.39",
  "quote 1.0.18",
  "rustversion",
@@ -5288,9 +5114,9 @@ dependencies = [
  "proptest",
  "rustc_version 0.4.0",
  "safecoin-config-program",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
- "safecoin-logger 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
+ "safecoin-logger",
  "safecoin-metrics",
  "safecoin-program-runtime",
  "safecoin-sdk",
@@ -5331,7 +5157,7 @@ name = "safecoin-storage-proto"
 version = "1.9.29"
 dependencies = [
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "enum-iterator",
  "prost 0.10.4",
  "safecoin-account-decoder",
@@ -5347,7 +5173,7 @@ version = "1.9.29"
 dependencies = [
  "clap 2.34.0",
  "log 0.4.17",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-runtime",
  "safecoin-version",
 ]
@@ -5359,7 +5185,7 @@ dependencies = [
  "crossbeam-channel",
  "futures-util",
  "histogram",
- "itertools 0.10.3",
+ "itertools",
  "libc",
  "log 0.4.17",
  "nix 0.23.1",
@@ -5369,7 +5195,7 @@ dependencies = [
  "rand 0.7.3",
  "rcgen",
  "rustls 0.20.6",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-metrics",
  "safecoin-perf",
  "safecoin-sdk",
@@ -5385,7 +5211,7 @@ dependencies = [
  "libc",
  "log 0.4.17",
  "nix 0.23.1",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-version",
  "sysctl",
  "unix_socket2",
@@ -5403,7 +5229,7 @@ dependencies = [
  "safecoin-core",
  "safecoin-gossip",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-net-utils",
  "safecoin-program-test",
  "safecoin-runtime",
@@ -5433,7 +5259,7 @@ dependencies = [
  "safecoin-clap-utils",
  "safecoin-cli-config",
  "safecoin-client",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-remote-wallet",
  "safecoin-sdk",
  "safecoin-streamer",
@@ -5452,7 +5278,7 @@ dependencies = [
  "Inflector",
  "base64 0.12.3",
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "lazy_static",
  "log 0.4.17",
  "safe-associated-token-account",
@@ -5506,7 +5332,7 @@ dependencies = [
  "safecoin-genesis-utils",
  "safecoin-gossip",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-metrics",
  "safecoin-net-utils",
  "safecoin-perf",
@@ -5533,8 +5359,8 @@ version = "1.9.29"
 dependencies = [
  "log 0.4.17",
  "rustc_version 0.4.0",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
  "safecoin-sdk",
  "serde",
  "serde_derive",
@@ -5549,9 +5375,9 @@ dependencies = [
  "num-derive",
  "num-traits",
  "rustc_version 0.4.0",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
- "safecoin-logger 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
+ "safecoin-logger",
  "safecoin-metrics",
  "safecoin-program-runtime",
  "safecoin-sdk",
@@ -5571,7 +5397,7 @@ dependencies = [
  "safecoin-cli-config",
  "safecoin-cli-output",
  "safecoin-client",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-metrics",
  "safecoin-notifier",
  "safecoin-sdk",
@@ -6005,7 +5831,7 @@ dependencies = [
  "safecoin-core",
  "safecoin-faucet",
  "safecoin-gossip",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-net-utils",
  "safecoin-runtime",
@@ -6027,8 +5853,8 @@ dependencies = [
  "num-derive",
  "num-traits",
  "rustc_version 0.4.0",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
  "safecoin-program-runtime",
  "safecoin-sdk",
  "serde",
@@ -6056,8 +5882,8 @@ dependencies = [
  "rand 0.7.3",
  "rayon",
  "rustc_version 0.4.0",
- "safecoin-frozen-abi 1.9.29",
- "safecoin-frozen-abi-macro 1.9.29",
+ "safecoin-frozen-abi",
+ "safecoin-frozen-abi-macro",
  "safecoin-sdk",
  "serde",
  "serde_derive",
@@ -6069,10 +5895,10 @@ version = "1.9.29"
 dependencies = [
  "fs_extra",
  "log 0.4.17",
- "memmap2 0.5.4",
+ "memmap2",
  "rand 0.7.3",
  "rayon",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-sdk",
  "tempfile",
@@ -6091,7 +5917,7 @@ name = "solana-cli"
 version = "1.9.29"
 dependencies = [
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "clap 2.34.0",
  "console",
  "const_format",
@@ -6111,7 +5937,7 @@ dependencies = [
  "safecoin-client",
  "safecoin-config-program",
  "safecoin-faucet",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-program-runtime",
  "safecoin-remote-wallet",
  "safecoin-sdk",
@@ -6141,7 +5967,7 @@ dependencies = [
  "matches",
  "rand 0.7.3",
  "rayon",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-merkle-tree",
  "safecoin-metrics",
@@ -6165,11 +5991,11 @@ dependencies = [
 name = "solana-geyser-plugin-manager"
 version = "1.9.29"
 dependencies = [
- "bs58 0.4.0",
+ "bs58",
  "crossbeam-channel",
  "libloading",
  "log 0.4.17",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-metrics",
  "safecoin-runtime",
@@ -6191,7 +6017,7 @@ dependencies = [
  "crossbeam-channel",
  "fs_extra",
  "gag",
- "itertools 0.10.3",
+ "itertools",
  "log 0.4.17",
  "rand 0.7.3",
  "rayon",
@@ -6201,7 +6027,7 @@ dependencies = [
  "safecoin-download-utils",
  "safecoin-gossip",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-runtime",
  "safecoin-sdk",
  "safecoin-stake-program",
@@ -6223,7 +6049,7 @@ dependencies = [
  "matches",
  "rand 0.7.3",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-metrics",
  "safecoin-perf",
@@ -6264,7 +6090,7 @@ dependencies = [
  "safecoin-genesis-utils",
  "safecoin-gossip",
  "safecoin-ledger",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-net-utils",
  "safecoin-runtime",
  "safecoin-sdk",
@@ -6286,10 +6112,10 @@ version = "1.9.29"
 dependencies = [
  "base64 0.12.3",
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "crossbeam-channel",
  "dashmap",
- "itertools 0.10.3",
+ "itertools",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -6339,14 +6165,14 @@ name = "solana-rpc-test"
 version = "1.9.29"
 dependencies = [
  "bincode",
- "bs58 0.4.0",
+ "bs58",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "log 0.4.17",
  "reqwest",
  "safecoin-account-decoder",
  "safecoin-client",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-sdk",
  "safecoin-streamer",
  "safecoin-test-validator",
@@ -6362,7 +6188,7 @@ name = "solana-send-transaction-service"
 version = "1.9.29"
 dependencies = [
  "log 0.4.17",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-metrics",
  "safecoin-runtime",
  "safecoin-sdk",
@@ -6382,7 +6208,7 @@ dependencies = [
  "safecoin-core",
  "safecoin-faucet",
  "safecoin-gossip",
- "safecoin-logger 1.9.29",
+ "safecoin-logger",
  "safecoin-measure",
  "safecoin-net-utils",
  "safecoin-runtime",
