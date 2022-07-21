@@ -1,0 +1,40 @@
+[package]
+name = "safecoin-net-utils"
+version = "1.10.32"
+description = "Safecoin Network Utilities"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-net-utils"
+edition = "2021"
+
+[dependencies]
+bincode = "1.3.3"
+clap = "2.33.1"
+crossbeam-channel = "0.5"
+log = "0.4.14"
+nix = "0.23.1"
+rand = "0.7.0"
+serde = "1.0.136"
+serde_derive = "1.0.103"
+socket2 = "0.4.4"
+safecoin-logger = { path = "../logger", version = "=1.10.32" }
+safecoin-sdk = { path = "../sdk", version = "=1.10.32" }
+safecoin-version = { path = "../version", version = "=1.10.32" }
+tokio = { version = "~1.14.1", features = ["full"] }
+url = "2.2.2"
+
+[lib]
+name = "solana_net_utils"
+
+[[bin]]
+name = "safecoin-ip-address"
+path = "src/bin/ip_address.rs"
+
+[[bin]]
+name = "safecoin-ip-address-server"
+path = "src/bin/ip_address_server.rs"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

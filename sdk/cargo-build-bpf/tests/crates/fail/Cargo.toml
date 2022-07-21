@@ -1,0 +1,18 @@
+[package]
+name = "fail"
+version = "1.10.32"
+description = "Safecoin BPF test program written in Rust"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+edition = "2021"
+publish = false
+
+[dependencies]
+safecoin-program = { path = "../../../../program", version = "=1.10.32" }
+
+[lib]
+crate-type = ["cdylib"]
+
+[workspace]
