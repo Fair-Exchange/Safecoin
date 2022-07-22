@@ -528,6 +528,7 @@ lazy_static! {
         (sign_repair_requests::id(), "sign repair requests #26834"),
         (return_none_for_zero_lamport_accounts::id(), "return none for zero lamport accounts #27800"),
         (increase_tx_account_lock_limit::id(), "increase tx account lock limit to 128 #27241"),
+	(efficient_consensus::id(), "More efficient consensus"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()
