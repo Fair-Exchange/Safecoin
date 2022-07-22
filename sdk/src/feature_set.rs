@@ -380,35 +380,35 @@ pub mod enable_durable_nonce {
 }
 
 pub mod executables_incur_cpi_data_cost {
-    safecoin_sdk::declare_id!("7GUcYgq4tVtaqNCKT3dho9r4665Qp5TxCZ27Qgjx3829");
+    safecoin_sdk::declare_id!("CL54RJ5iQE5Jk7VJaNegv98TY7tvLqivensTEUsEnhsS");
 }
 
 pub mod quick_bail_on_panic {
-    safecoin_sdk::declare_id!("DpJREPyuMZ5nDfU6H3WTqSqUFSXAfw8u7xqmWtEwJDcP");
+    safecoin_sdk::declare_id!("HLRgJbaGwAJbmL6Tsu8N9oGfLhsc7DopsvP4UPjzjyr3");
 }
 
 pub mod nonce_must_be_authorized {
-    safecoin_sdk::declare_id!("HxrEu1gXuH7iD3Puua1ohd5n4iUKJyFNtNxk9DVJkvgr");
+    safecoin_sdk::declare_id!("B9oxgU37tuCohjc322GiLiaD8c1LsZtJ7RwMjHWKKpVB");
 }
 
 pub mod nonce_must_be_advanceable {
-    safecoin_sdk::declare_id!("3u3Er5Vc2jVcwz4xr2GJeSAXT3fAj6ADHZ4BJMZiScFd");
+    safecoin_sdk::declare_id!("8qKM9RwaBzj6u8Ax9AHBBy6GEwNcrduY6UmDF7KPqt8G");
 }
 
 pub mod vote_authorize_with_seed {
-    safecoin_sdk::declare_id!("6tRxEYKuy2L5nnv5bgn7iT28MxUbYxp5h7F3Ncf1exrT");
+    safecoin_sdk::declare_id!("HeRuYxnBuFFAM9fd5FmaGSeBdHP4SEm1dR18rXUVJkyi");
 }
 
 pub mod cap_accounts_data_size_per_block {
-    safecoin_sdk::declare_id!("qywiJyZmqTKspFg2LeuUHqcA5nNvBgobqb9UprywS9N");
+    safecoin_sdk::declare_id!("FZpH2SfxGhFjmEWyzt6VY17ebJ7S9tcZ1D3XSpxF6qfj");
 }
 
 pub mod preserve_rent_epoch_for_rent_exempt_accounts {
-    safecoin_sdk::declare_id!("HH3MUYReL2BvqqA3oEcAa7txju5GY6G4nxJ51zvsEjEZ");
+    safecoin_sdk::declare_id!("8bxNk6MJqCQLeMrL2viWTKiSftGeUoie6KpEQD8dVzAd");
 }
 
 pub mod prevent_crediting_accounts_that_end_rent_paying {
-    safecoin_sdk::declare_id!("812kqX67odAp5NFwM8D2N24cku7WTm9CHUTFUXaDkWPn");
+    safecoin_sdk::declare_id!("2dtQ7jzJtQdAWZM8baLKLo9taHw2Hg7fMLb6wvBL3LhG");
 }
 
 lazy_static! {
