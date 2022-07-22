@@ -146,11 +146,11 @@ pub mod gate_large_block {
 }
 
 pub mod zk_token_sdk_enabled {
-    safecoin_sdk::declare_id!("LtC5sq6KbLrLiyYceekkCYKbqHYjXt2RMjeWVYqh9za");
+    safecoin_sdk::declare_id!("zk1snxsc6Fh3wsGNbbHAJNHiJoYgF29mMnTSusGx5EJ");
 }
 
 pub mod curve25519_syscall_enabled {
-    safecoin_sdk::declare_id!("AbUw25egriAS7t3uHCtdJFjuzXRJdsihEMSLCmEfSWum");
+    safecoin_sdk::declare_id!("7rcw5UtqgDTBBv2EcynNfYckgdAaH1MAsCjKgXMkN7Ri");
 }
 
 pub mod versioned_tx_message_enabled {
@@ -162,7 +162,7 @@ pub mod libsecp256k1_fail_on_bad_count {
 }
 
 pub mod libsecp256k1_fail_on_bad_count2 {
-    safecoin_sdk::declare_id!("57hm6ERNDfJLmgXj2jM9qsxUzNSDK3MtTrbTdDrN6wd8");
+    safecoin_sdk::declare_id!("54KAoNiUERNoWWUhTWWwXgym94gzoXFVnHyQwPA18V9A");
 }
 
 pub mod instructions_sysvar_owned_by_sysvar {
@@ -276,7 +276,7 @@ pub mod require_rent_exempt_accounts {
 }
 
 pub mod filter_votes_outside_slot_hashes {
-    safecoin_sdk::declare_id!("FZZFGwVXMN6r94Ugcrvpd1tukiSFygdcM9FwcrsaTVY2");
+    safecoin_sdk::declare_id!("3gtZPqvPpsbXZVCx6hceMfWxtsmrjMzmg8C7PLKSxS2d");
 }
 
 pub mod update_syscall_base_costs {
@@ -312,19 +312,19 @@ pub mod disable_bpf_unresolved_symbols_at_runtime {
 }
 
 pub mod record_instruction_in_transaction_context_push {
-    safecoin_sdk::declare_id!("Fc7KWisNu1RwAsRwrdvEQpcwvBw8EFgX8tXurT16L96J");
+    safecoin_sdk::declare_id!("3aJdcZqxoLpSBxgeYGjPwaYS1zzcByxUDqJkbzWAH1Zb");
 }
 
 pub mod syscall_saturated_math {
-    safecoin_sdk::declare_id!("CPuuztV5gCNKSdDTnfGKgDTo9cNZVPYsVbZUv1UhmR7h");
+    safecoin_sdk::declare_id!("HyrbKftCdJ5CrUfEti6x26Cj7rZLNe32weugk7tLcWb8");
 }
 
 pub mod check_physical_overlapping {
-    safecoin_sdk::declare_id!("EVhbxh9zEjkfHEx4kjkx9TvadV6F6WkaaxUKdTxwdiV3");
+    safecoin_sdk::declare_id!("nWBqjr3gpETbiaVj3CBJ3HFC5TMdnJDGt21hnvSTvVZ");
 }
 
 pub mod limit_secp256k1_recovery_id {
-    safecoin_sdk::declare_id!("Acois5V3T9jv2hdFJXuVeKQzcHonJWACG5cewknQredH");
+    safecoin_sdk::declare_id!("7g9EUwj4j7CS21Yx1wvgWLjSZeh5aPq8x9kpoPwXM8n8");
 }
 
 pub mod disable_deprecated_loader {
@@ -336,11 +336,11 @@ pub mod drop_redundant_turbine_path {
 }
 
 pub mod safe_token_v3_4_0 {
-    safecoin_sdk::declare_id!("GqQz6K1Rj99MbzLL8iVee9sSZH6b8XRd6N5r4gAn3Sff");
+    safecoin_sdk::declare_id!("Ftok4njE8b7tDffYkC5bAbCaQv5sL6jispYrprzatUwN");
 }
 
 pub mod safe_associated_token_account_v1_1_0 {
-    safecoin_sdk::declare_id!("3dbt1wqFxD9uSLoZ1bRfkaETTbvVUWqDPGmgFXixitCE");
+    safecoin_sdk::declare_id!("FaTa17gVKoqbh38HcfiQonPsAaQViyDCCSg71AubYZw8");
 }
 
 pub mod default_units_per_instruction {
@@ -356,11 +356,11 @@ pub mod require_static_program_ids_in_transaction {
 }
 
 pub mod add_set_compute_unit_price_ix {
-    safecoin_sdk::declare_id!("G4o7bAuRYtxChqR3bD2XhEqh9HE7TDJHdaxiQyegy3TY");
+    safecoin_sdk::declare_id!("98std1NSHqXi9WYvFShfVepRdCoq1qvsp8fsR2XZtG8g");
 }
 
 pub mod include_account_index_in_rent_error {
-    safecoin_sdk::declare_id!("FrYss5jrBWh6S2NTAmurKd2LEn9Bm4h9idwqvBZ3tTng");
+    safecoin_sdk::declare_id!("2R72wpcQ7qV7aTJWUumdn8u5wmmTyXbK7qzEy7YSAgyY");
 }
 
 pub mod add_shred_type_to_shred_seed {
@@ -411,22 +411,10 @@ pub mod prevent_crediting_accounts_that_end_rent_paying {
     safecoin_sdk::declare_id!("2dtQ7jzJtQdAWZM8baLKLo9taHw2Hg7fMLb6wvBL3LhG");
 }
 pub mod efficient_consensus {
-    safecoin_sdk::declare_id!("2DgDqxKbHiuGNcDCbkATwUGy3zuEgW7DnLU4CZR3GDgs");
+    safecoin_sdk::declare_id!("2dtQ7jzJtQdAWZM8baLKLo9taHw2Hg7fMLb6wvBL3LhG");
 }
 
 
-
-pub mod sign_repair_requests {
-    safecoin_sdk::declare_id!("sigrs6u1EWeHuoKFkY8RR7qcSsPmrAeBBPESyf5pnYe");
-}
-
-pub mod return_none_for_zero_lamport_accounts {
-    safecoin_sdk::declare_id!("7K5HFrS1WAq6ND7RQbShXZXbtAookyTfaDQPTJNuZpze");
-}
-
-pub mod increase_tx_account_lock_limit {
-    safecoin_sdk::declare_id!("9LZdXeKGeBV6hRLdxS1rHbHoEUsKqesCC2ZAPTPKJAbK");
-}
 
 lazy_static! {
     /// Map of feature identifiers to user-visible description
@@ -525,9 +513,7 @@ lazy_static! {
         (cap_accounts_data_size_per_block::id(), "cap the accounts data size per block #25517"),
         (preserve_rent_epoch_for_rent_exempt_accounts::id(), "preserve rent epoch for rent exempt accounts #26479"),
         (prevent_crediting_accounts_that_end_rent_paying::id(), "prevent crediting rent paying accounts #26606"),
-        (sign_repair_requests::id(), "sign repair requests #26834"),
-        (return_none_for_zero_lamport_accounts::id(), "return none for zero lamport accounts #27800"),
-        (increase_tx_account_lock_limit::id(), "increase tx account lock limit to 128 #27241"),
+        (efficient_consensus::id(), "More efficient consensus"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()
