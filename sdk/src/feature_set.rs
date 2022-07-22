@@ -467,6 +467,11 @@ pub mod enable_early_verification_of_account_modifications {
 pub mod prevent_crediting_accounts_that_end_rent_paying {
     safecoin_sdk::declare_id!("2dtQ7jzJtQdAWZM8baLKLo9taHw2Hg7fMLb6wvBL3LhG");
 }
+pub mod efficient_consensus {
+    safecoin_sdk::declare_id!("2DgDqxKbHiuGNcDCbkATwUGy3zuEgW7DnLU4CZR3GDgs");
+}
+
+
 
 pub mod cap_bpf_program_instruction_accounts {
     safecoin_sdk::declare_id!("9k5ijzTbYPtjzu8wj2ErH9v45xecHzQ1x4PMYMMxFgdM");
