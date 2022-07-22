@@ -26,7 +26,7 @@ safecoin-sdk = { path = "../sdk", version = "=1.10.32" }
 safecoin-streamer = { path = "../streamer", version = "=1.10.32" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.10.32" }
 safecoin-version = { path = "../version", version = "=1.10.32" }
-safe-token = { version = "=3.3.0", features = ["no-entrypoint"] }
+safe-token = { version = "=3.3.0", path = "../../safecoin-program-library/token/program", features = ["no-entrypoint"] }
 
 [dev-dependencies]
 safecoin-core = { path = "../core", version = "=1.10.32" }

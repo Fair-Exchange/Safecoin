@@ -4,11 +4,12 @@ use {
         commands::{get_fees_for_messages, Allocation, Error, FundingSource},
     },
     console::style,
+    std::str::FromStr,
     safecoin_account_decoder::parse_token::{
         pubkey_from_safe_token, real_number_string, real_number_string_trimmed, safe_token_pubkey,
     },
     safecoin_client::rpc_client::RpcClient,
-    safecoin_sdk::{instruction::Instruction, message::Message, native_token::lamports_to_sol},
+    safecoin_sdk::{instruction::Instruction, message::Message, native_token::lamports_to_sol, pubkey::Pubkey},
     safecoin_transaction_status::parse_token::safe_token_instruction,
     safe_associated_token_account::{
         get_associated_token_address, instruction::create_associated_token_account,
@@ -63,6 +64,7 @@ pub fn build_safe_token_instructions(
             &safe_token_pubkey(&args.fee_payer.pubkey()),
             &wallet_address,
             &safe_token_pubkey(&safe_token_args.mint),
+            &Pubkey::from_str("ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN").unwrap()
         );
         instructions.push(safe_token_instruction(
             create_associated_token_account_instruction,

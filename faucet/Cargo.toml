@@ -23,7 +23,7 @@ safecoin-logger = { path = "../logger", version = "=1.10.32" }
 safecoin-metrics = { path = "../metrics", version = "=1.10.32" }
 safecoin-sdk = { path = "../sdk", version = "=1.10.32" }
 safecoin-version = { path = "../version", version = "=1.10.32" }
-safe-memo = { version = "=3.0.5", features = ["no-entrypoint"] }
+safe-memo = { path = "../../safecoin-program-library/memo/program", version = "=3.0.7", features = ["no-entrypoint"] }
 thiserror = "1.0"
 tokio = { version = "~1.14.1", features = ["full"] }
 

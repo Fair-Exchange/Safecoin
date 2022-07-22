@@ -434,7 +434,8 @@ pub fn parse_token(
                 }),
             })
         }
-    }
+_ => todo!()
+}
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
