@@ -1,6 +1,6 @@
 pub use target_arch::*;
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 mod target_arch {
     use {
         crate::{encryption::elgamal::ElGamalCiphertext, zk_token_elgamal::pod},
@@ -89,7 +89,7 @@ mod target_arch {
     }
 }
 
-#[cfg(target_arch = "bpf")]
+#[cfg(target_os = "solana")]
 #[allow(unused_variables)]
 mod target_arch {
     use crate::{
@@ -221,28 +221,6 @@ mod target_arch {
 
 pub const OP_ADD: u64 = 0;
 pub const OP_SUB: u64 = 1;
-
-extern "C" {
-    pub fn sol_zk_token_elgamal_op(
-        op: u64,
-        ct_0: *const u8,
-        ct_1: *const u8,
-        ct_result: *mut u8,
-    ) -> u64;
-    pub fn sol_zk_token_elgamal_op_with_lo_hi(
-        op: u64,
-        ct_0: *const u8,
-        ct_1_lo: *const u8,
-        ct_1_hi: *const u8,
-        ct_result: *mut u8,
-    ) -> u64;
-    pub fn sol_zk_token_elgamal_op_with_scalar(
-        op: u64,
-        ct: *const u8,
-        scalar: u64,
-        ct_result: *mut u8,
-    ) -> u64;
-}
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,4 @@
-//! Provides information about the network's clock which is made up of ticks, slots, etc...
+//! Information about the network's clock, ticks, slots, etc.
 
 use {
     crate::{clone_zeroed, copy_field},
@@ -62,7 +62,7 @@ pub const MAX_HASH_AGE_IN_SECONDS: usize = 120;
 
 #[cfg(test)]
 static_assertions::const_assert_eq!(MAX_RECENT_BLOCKHASHES, 300);
-// Number of maximum recent blockhashes (one blockhash per slot)
+// Number of maximum recent blockhashes (one blockhash per non-skipped slot)
 pub const MAX_RECENT_BLOCKHASHES: usize =
     MAX_HASH_AGE_IN_SECONDS * DEFAULT_TICKS_PER_SECOND as usize / DEFAULT_TICKS_PER_SLOT as usize;
 
@@ -110,7 +110,7 @@ pub type UnixTimestamp = i64;
 ///  as the network progresses).
 ///
 #[repr(C)]
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
 pub struct Clock {
     /// the current network/bank Slot
     pub slot: Slot,

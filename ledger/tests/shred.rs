@@ -2,8 +2,8 @@
 use {
     solana_entry::entry::Entry,
     solana_ledger::shred::{
-        max_entries_per_n_shred, verify_test_data_shred, Shred, Shredder,
-        MAX_DATA_SHREDS_PER_FEC_BLOCK, SIZE_OF_DATA_SHRED_PAYLOAD,
+        max_entries_per_n_shred, verify_test_data_shred, ProcessShredsStats, Shred, Shredder,
+        DATA_SHREDS_PER_FEC_BLOCK, LEGACY_SHRED_DATA_CAPACITY,
     },
     safecoin_sdk::{
         clock::Slot,
@@ -26,7 +26,7 @@ fn test_multi_fec_block_coding() {
     let slot = 0x1234_5678_9abc_def0;
     let shredder = Shredder::new(slot, slot - 5, 0, 0).unwrap();
     let num_fec_sets = 100;
-    let num_data_shreds = (MAX_DATA_SHREDS_PER_FEC_BLOCK * num_fec_sets) as usize;
+    let num_data_shreds = DATA_SHREDS_PER_FEC_BLOCK * num_fec_sets;
     let keypair0 = Keypair::new();
     let keypair1 = Keypair::new();
     let tx0 = system_transaction::transfer(&keypair0, &keypair1.pubkey(), 1, Hash::default());
@@ -34,7 +34,7 @@ fn test_multi_fec_block_coding() {
     let num_entries = max_entries_per_n_shred(
         &entry,
         num_data_shreds as u64,
-        Some(SIZE_OF_DATA_SHRED_PAYLOAD),
+        Some(LEGACY_SHRED_DATA_CAPACITY),
     );
 
     let entries: Vec<_> = (0..num_entries)
@@ -49,9 +49,12 @@ fn test_multi_fec_block_coding() {
 
     let serialized_entries = bincode::serialize(&entries).unwrap();
     let (data_shreds, coding_shreds) = shredder.entries_to_shreds(
-        &keypair, &entries, true, // is_last_in_slot
+        &keypair,
+        &entries,
+        true, // is_last_in_slot
         0,    // next_shred_index
         0,    // next_code_index
+        &mut ProcessShredsStats::default(),
     );
     let next_index = data_shreds.last().unwrap().index() + 1;
     assert_eq!(next_index as usize, num_data_shreds);
@@ -64,8 +67,8 @@ fn test_multi_fec_block_coding() {
 
     let mut all_shreds = vec![];
     for i in 0..num_fec_sets {
-        let shred_start_index = (MAX_DATA_SHREDS_PER_FEC_BLOCK * i) as usize;
-        let end_index = shred_start_index + MAX_DATA_SHREDS_PER_FEC_BLOCK as usize - 1;
+        let shred_start_index = DATA_SHREDS_PER_FEC_BLOCK * i;
+        let end_index = shred_start_index + DATA_SHREDS_PER_FEC_BLOCK - 1;
         let fec_set_shreds = data_shreds[shred_start_index..=end_index]
             .iter()
             .cloned()
@@ -96,11 +99,7 @@ fn test_multi_fec_block_coding() {
             shred_info.insert(i * 2, recovered_shred);
         }
 
-        all_shreds.extend(
-            shred_info
-                .into_iter()
-                .take(MAX_DATA_SHREDS_PER_FEC_BLOCK as usize),
-        );
+        all_shreds.extend(shred_info.into_iter().take(DATA_SHREDS_PER_FEC_BLOCK));
     }
 
     let result = Shredder::deshred(&all_shreds[..]).unwrap();
@@ -119,8 +118,6 @@ fn test_multi_fec_block_different_size_coding() {
     // Test recovery
     for (fec_data_shreds, fec_coding_shreds) in fec_data.values().zip(fec_coding.values()) {
         let first_data_index = fec_data_shreds.first().unwrap().index() as usize;
-        let first_code_index = fec_coding_shreds.first().unwrap().index() as usize;
-        assert_eq!(first_data_index, first_code_index);
         let all_shreds: Vec<Shred> = fec_data_shreds
             .iter()
             .step_by(2)
@@ -163,7 +160,7 @@ fn sort_data_coding_into_fec_sets(
         assert!(!data_slot_and_index.contains(&key));
         data_slot_and_index.insert(key);
         let fec_entry = fec_data
-            .entry(shred.common_header.fec_set_index)
+            .entry(shred.fec_set_index())
             .or_insert_with(Vec::new);
         fec_entry.push(shred);
     }
@@ -174,7 +171,7 @@ fn sort_data_coding_into_fec_sets(
         assert!(!coding_slot_and_index.contains(&key));
         coding_slot_and_index.insert(key);
         let fec_entry = fec_coding
-            .entry(shred.common_header.fec_set_index)
+            .entry(shred.fec_set_index())
             .or_insert_with(Vec::new);
         fec_entry.push(shred);
     }
@@ -192,15 +189,15 @@ fn setup_different_sized_fec_blocks(
     let tx0 = system_transaction::transfer(&keypair0, &keypair1.pubkey(), 1, Hash::default());
     let entry = Entry::new(&Hash::default(), 1, vec![tx0]);
 
-    // Make enough entries for `MAX_DATA_SHREDS_PER_FEC_BLOCK + 2` shreds so one
-    // fec set will have `MAX_DATA_SHREDS_PER_FEC_BLOCK` shreds and the next
+    // Make enough entries for `DATA_SHREDS_PER_FEC_BLOCK + 2` shreds so one
+    // fec set will have `DATA_SHREDS_PER_FEC_BLOCK` shreds and the next
     // will have 2 shreds.
-    assert!(MAX_DATA_SHREDS_PER_FEC_BLOCK > 2);
-    let num_shreds_per_iter = MAX_DATA_SHREDS_PER_FEC_BLOCK as usize + 2;
+    assert!(DATA_SHREDS_PER_FEC_BLOCK > 2);
+    let num_shreds_per_iter = DATA_SHREDS_PER_FEC_BLOCK + 2;
     let num_entries = max_entries_per_n_shred(
         &entry,
         num_shreds_per_iter as u64,
-        Some(SIZE_OF_DATA_SHRED_PAYLOAD),
+        Some(LEGACY_SHRED_DATA_CAPACITY),
     );
     let entries: Vec<_> = (0..num_entries)
         .map(|_| {
@@ -213,7 +210,8 @@ fn setup_different_sized_fec_blocks(
         .collect();
 
     // Run the shredder twice, generate data and coding shreds
-    let mut next_index = 0;
+    let mut next_shred_index = 0;
+    let mut next_code_index = 0;
     let mut fec_data = BTreeMap::new();
     let mut fec_coding = BTreeMap::new();
     let mut data_slot_and_index = HashSet::new();
@@ -223,8 +221,12 @@ fn setup_different_sized_fec_blocks(
     for i in 0..2 {
         let is_last = i == 1;
         let (data_shreds, coding_shreds) = shredder.entries_to_shreds(
-            &keypair, &entries, is_last, next_index, // next_shred_index
-            next_index, // next_code_index
+            &keypair,
+            &entries,
+            is_last,
+            next_shred_index,
+            next_code_index,
+            &mut ProcessShredsStats::default(),
         );
         for shred in &data_shreds {
             if (shred.index() as usize) == total_num_data_shreds - 1 {
@@ -238,7 +240,8 @@ fn setup_different_sized_fec_blocks(
             }
         }
         assert_eq!(data_shreds.len(), num_shreds_per_iter as usize);
-        next_index = data_shreds.last().unwrap().index() + 1;
+        next_shred_index = data_shreds.last().unwrap().index() + 1;
+        next_code_index = coding_shreds.last().unwrap().index() + 1;
         sort_data_coding_into_fec_sets(
             data_shreds,
             coding_shreds,

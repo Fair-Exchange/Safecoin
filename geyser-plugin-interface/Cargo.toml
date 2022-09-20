@@ -3,17 +3,17 @@ authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2021"
 name = "solana-geyser-plugin-interface"
 description = "The Safecoin Geyser plugin interface."
-version = "1.10.34"
+version = "1.14.3"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/solana-geyser-plugin-interface"
 
 [dependencies]
-log = "0.4.11"
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.10.34" }
-thiserror = "1.0.30"
+log = "0.4.17"
+safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.14.3" }
+thiserror = "1.0.31"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

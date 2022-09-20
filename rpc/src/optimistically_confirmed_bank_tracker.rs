@@ -71,7 +71,7 @@ impl OptimisticallyConfirmedBankTracker {
         let mut last_notified_confirmed_slot: Slot = 0;
         let mut highest_confirmed_slot: Slot = 0;
         let thread_hdl = Builder::new()
-            .name("solana-optimistic-bank-tracker".to_string())
+            .name("solOpConfBnkTrk".to_string())
             .spawn(move || loop {
                 if exit_.load(Ordering::Relaxed) {
                     break;
@@ -120,16 +120,16 @@ impl OptimisticallyConfirmedBankTracker {
 
     fn notify_slot_status(
         bank_notification_subscribers: &Option<Arc<RwLock<Vec<BankNotificationSender>>>>,
-        notifcation: BankNotification,
+        notification: BankNotification,
     ) {
         if let Some(bank_notification_subscribers) = bank_notification_subscribers {
             for sender in bank_notification_subscribers.read().unwrap().iter() {
-                match sender.send(notifcation.clone()) {
+                match sender.send(notification.clone()) {
                     Ok(_) => {}
                     Err(err) => {
                         info!(
                             "Failed to send notification {:?}, error: {:?}",
-                            notifcation, err
+                            notification, err
                         );
                     }
                 }

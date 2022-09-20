@@ -9,7 +9,7 @@ import {
 } from "providers/stats/solanaClusterStats";
 import { abbreviatedNumber, lamportsToSafe, slotsToHumanString } from "utils";
 import { ClusterStatus, useCluster } from "providers/cluster";
-import { TpsCard } from "components/TpsCard";
+import { LiveTransactionStatsCard } from "components/LiveTransactionStatsCard";
 import { displayTimestampWithoutDate } from "utils/date";
 import { Status, useFetchSupply, useSupply } from "providers/supply";
 import { ErrorCard } from "components/common/ErrorCard";
@@ -18,7 +18,6 @@ import { useVoteAccounts } from "providers/accounts/vote-accounts";
 import { CoingeckoStatus, useCoinGecko } from "utils/coingecko";
 import { Epoch } from "components/common/Epoch";
 import { TimestampToggle } from "components/common/TimestampToggle";
-import { SafecoinPingCard } from "components/SafecoinPingCard";
 
 const CLUSTER_STATS_TIMEOUT = 5000;
 
@@ -36,8 +35,7 @@ export function ClusterStatsPage() {
         </div>
         <StatsCardBody />
       </div>
-      <TpsCard />
-      <SafecoinPingCard />
+      <LiveTransactionStatsCard />
     </div>
   );
 }
@@ -46,7 +44,7 @@ function StakingComponent() {
   const { status } = useCluster();
   const supply = useSupply();
   const fetchSupply = useFetchSupply();
-  const coinInfo = useCoinGecko("safe-coin-2");
+  const coinInfo = useCoinGecko("solana");
   const { fetchVoteAccounts, voteAccounts } = useVoteAccounts();
 
   function fetchData() {

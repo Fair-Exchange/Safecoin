@@ -48,7 +48,6 @@ safecoin-bench-tps)
   clientCommand="\
     safecoin-bench-tps \
       --entrypoint $entrypointIp:10015 \
-      --faucet $entrypointIp:9900 \
       --duration 7500 \
       --sustained \
       --threads $threadCount \

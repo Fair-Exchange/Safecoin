@@ -10,7 +10,7 @@ use {
             FullSnapshotHash, FullSnapshotHashes, IncrementalSnapshotHash,
             IncrementalSnapshotHashes, StartingSnapshotHashes,
         },
-        snapshot_package::{PendingSnapshotPackage, SnapshotType},
+        snapshot_package::{retain_max_n_elements, PendingSnapshotPackage, SnapshotType},
         snapshot_utils,
     },
     safecoin_sdk::{clock::Slot, hash::Hash},
@@ -49,7 +49,7 @@ impl SnapshotPackagerService {
         );
 
         let t_snapshot_packager = Builder::new()
-            .name("snapshot-packager".to_string())
+            .name("solSnapshotPkgr".to_string())
             .spawn(move || {
                 renice_this_thread(snapshot_config.packager_thread_niceness_adj).unwrap();
                 let mut snapshot_gossip_manager = if enable_gossip_push {
@@ -84,6 +84,8 @@ impl SnapshotPackagerService {
                     // last_full_snapshot_slot that requires this archive call to succeed.
                     snapshot_utils::archive_snapshot_package(
                         &snapshot_package,
+                        &snapshot_config.full_snapshot_archives_dir,
+                        &snapshot_config.incremental_snapshot_archives_dir,
                         snapshot_config.maximum_full_snapshot_archives_to_retain,
                         snapshot_config.maximum_incremental_snapshot_archives_to_retain,
                     )
@@ -164,9 +166,12 @@ impl SnapshotGossipManager {
         self.full_snapshot_hashes
             .hashes
             .push(full_snapshot_hash.hash);
-        while self.full_snapshot_hashes.hashes.len() > self.max_full_snapshot_hashes {
-            self.full_snapshot_hashes.hashes.remove(0);
-        }
+
+        retain_max_n_elements(
+            &mut self.full_snapshot_hashes.hashes,
+            self.max_full_snapshot_hashes,
+        );
+
         self.cluster_info
             .push_snapshot_hashes(self.full_snapshot_hashes.hashes.clone());
     }
@@ -188,9 +193,12 @@ impl SnapshotGossipManager {
         self.incremental_snapshot_hashes
             .hashes
             .push(incremental_snapshot_hash.hash);
-        while self.incremental_snapshot_hashes.hashes.len() > self.max_incremental_snapshot_hashes {
-            self.incremental_snapshot_hashes.hashes.remove(0);
-        }
+
+        retain_max_n_elements(
+            &mut self.incremental_snapshot_hashes.hashes,
+            self.max_incremental_snapshot_hashes,
+        );
+
         // Pushing incremental snapshot hashes to the cluster should never fail.  The only error
         // case is when the length of the hashes is too big, but we account for that with
         // `max_incremental_snapshot_hashes`.  If this call ever does error, it's a programmer bug!
@@ -259,8 +267,10 @@ mod tests {
     fn create_and_verify_snapshot(temp_dir: &Path) {
         let accounts_dir = temp_dir.join("accounts");
         let snapshots_dir = temp_dir.join("snapshots");
-        let snapshot_archives_dir = temp_dir.join("snapshots_output");
-        fs::create_dir_all(&snapshot_archives_dir).unwrap();
+        let full_snapshot_archives_dir = temp_dir.join("full_snapshot_archives");
+        let incremental_snapshot_archives_dir = temp_dir.join("incremental_snapshot_archives");
+        fs::create_dir_all(&full_snapshot_archives_dir).unwrap();
+        fs::create_dir_all(&incremental_snapshot_archives_dir).unwrap();
 
         fs::create_dir_all(&accounts_dir).unwrap();
         // Create some storage entries
@@ -302,7 +312,7 @@ mod tests {
         let hash = Hash::default();
         let archive_format = ArchiveFormat::TarBzip2;
         let output_tar_path = snapshot_utils::build_full_snapshot_archive_path(
-            snapshot_archives_dir,
+            &full_snapshot_archives_dir,
             slot,
             &hash,
             archive_format,
@@ -325,6 +335,8 @@ mod tests {
         // Make tarball from packageable snapshot
         snapshot_utils::archive_snapshot_package(
             &snapshot_package,
+            full_snapshot_archives_dir,
+            incremental_snapshot_archives_dir,
             snapshot_utils::DEFAULT_MAX_FULL_SNAPSHOT_ARCHIVES_TO_RETAIN,
             snapshot_utils::DEFAULT_MAX_INCREMENTAL_SNAPSHOT_ARCHIVES_TO_RETAIN,
         )
@@ -349,6 +361,7 @@ mod tests {
             snapshots_dir,
             accounts_dir,
             archive_format,
+            snapshot_utils::VerifyBank::Deterministic,
         );
     }
 }

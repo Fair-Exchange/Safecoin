@@ -1,5 +1,7 @@
+#![allow(clippy::to_string_in_format_args)]
 use {
     crate::{
+        cli_version::CliVersion,
         display::{
             build_balance_message, build_balance_message_with_config, format_labeled_address,
             unix_timestamp_to_string, writeln_name_value, writeln_transaction,
@@ -50,7 +52,7 @@ static CHECK_MARK: Emoji = Emoji("✅ ", "");
 static CROSS_MARK: Emoji = Emoji("❌ ", "");
 static WARNING: Emoji = Emoji("⚠️", "!");
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum OutputFormat {
     Display,
     Json,
@@ -249,6 +251,7 @@ pub struct CliSlotStatus {
 pub struct CliEpochInfo {
     #[serde(flatten)]
     pub epoch_info: EpochInfo,
+    pub epoch_completed_percent: f64,
     #[serde(skip)]
     pub average_slot_time_ms: u64,
     #[serde(skip)]
@@ -283,10 +286,7 @@ impl fmt::Display for CliEpochInfo {
         writeln_name_value(
             f,
             "Epoch Completed Percent:",
-            &format!(
-                "{:>3.3}%",
-                self.epoch_info.slot_index as f64 / self.epoch_info.slots_in_epoch as f64 * 100_f64
-            ),
+            &format!("{:>3.3}%", self.epoch_completed_percent),
         )?;
         let remaining_slots_in_epoch = self.epoch_info.slots_in_epoch - self.epoch_info.slot_index;
         writeln_name_value(
@@ -345,7 +345,7 @@ pub struct CliValidatorsStakeByVersion {
     pub delinquent_active_stake: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CliValidatorsSortOrder {
     Delinquent,
     Commission,
@@ -374,7 +374,7 @@ pub struct CliValidators {
     pub validators_reverse_sort: bool,
     #[serde(skip_serializing)]
     pub number_validators: bool,
-    pub stake_by_version: BTreeMap<String, CliValidatorsStakeByVersion>,
+    pub stake_by_version: BTreeMap<CliVersion, CliValidatorsStakeByVersion>,
     #[serde(skip_serializing)]
     pub use_lamports_unit: bool,
 }
@@ -423,7 +423,8 @@ impl fmt::Display for CliValidators {
                     "-   ".to_string()
                 },
                 validator.epoch_credits,
-                validator.version,
+                // convert to a string so that fill/alignment works correctly
+                validator.version.to_string(),
                 build_balance_message_with_config(
                     validator.activated_stake,
                     &BuildBalanceMessageConfig {
@@ -442,7 +443,7 @@ impl fmt::Display for CliValidators {
             0
         };
         let header = style(format!(
-            "{:padding$} {:<44}  {:<38}  {}  {}  {} {}  {}  {}    {}",
+            "{:padding$} {:<44}  {:<38}  {}  {}  {} {}  {}  {}  {:>22}",
             " ",
             "Identity",
             "Vote Account",
@@ -453,7 +454,7 @@ impl fmt::Display for CliValidators {
             "Credits",
             "Version",
             "Active Stake",
-            padding = padding + 1
+            padding = padding + 2
         ))
         .bold();
         writeln!(f, "{}", header)?;
@@ -498,16 +499,9 @@ impl fmt::Display for CliValidators {
             CliValidatorsSortOrder::Version => {
                 sorted_validators.sort_by(|a, b| {
                     use std::cmp::Ordering;
-                    let a_version = semver::Version::parse(a.version.as_str()).ok();
-                    let b_version = semver::Version::parse(b.version.as_str()).ok();
-                    match (a_version, b_version) {
-                        (None, None) => a.version.cmp(&b.version),
-                        (None, Some(_)) => Ordering::Less,
-                        (Some(_), None) => Ordering::Greater,
-                        (Some(va), Some(vb)) => match va.cmp(&vb) {
-                            Ordering::Equal => a.activated_stake.cmp(&b.activated_stake),
-                            ordering => ordering,
-                        },
+                    match a.version.cmp(&b.version) {
+                        Ordering::Equal => a.activated_stake.cmp(&b.activated_stake),
+                        ordering => ordering,
                     }
                 });
             }
@@ -530,7 +524,12 @@ impl fmt::Display for CliValidators {
 
         for (i, validator) in sorted_validators.iter().enumerate() {
             if padding > 0 {
-                write!(f, "{:padding$}", i + 1, padding = padding)?;
+                let num = if self.validators_reverse_sort {
+                    i + 1
+                } else {
+                    sorted_validators.len() - i
+                };
+                write!(f, "{:padding$} ", num, padding = padding)?;
             }
             write_vote_account(
                 f,
@@ -592,16 +591,17 @@ impl fmt::Display for CliValidators {
 
         writeln!(f)?;
         writeln!(f, "{}", style("Stake By Version:").bold())?;
-        for (version, info) in self.stake_by_version.iter() {
+        for (version, info) in self.stake_by_version.iter().rev() {
             writeln!(
                 f,
-                "{:<8} - {:4} current validators ({:>5.2}%){}",
-                version,
+                "{:<7} - {:4} current validators ({:>5.2}%){}",
+                // convert to a string so that fill/alignment works correctly
+                version.to_string(),
                 info.current_validators,
                 100. * info.current_active_stake as f64 / self.total_active_stake as f64,
                 if info.delinquent_validators > 0 {
                     format!(
-                        ", {:3} delinquent validators ({:>5.2}%)",
+                        " {:3} delinquent validators ({:>5.2}%)",
                         info.delinquent_validators,
                         100. * info.delinquent_active_stake as f64 / self.total_active_stake as f64
                     )
@@ -626,7 +626,7 @@ pub struct CliValidator {
     pub credits: u64,       // lifetime credits
     pub epoch_credits: u64, // credits earned in the current epoch
     pub activated_stake: u64,
-    pub version: String,
+    pub version: CliVersion,
     pub delinquent: bool,
     pub skip_rate: Option<f64>,
 }
@@ -635,7 +635,7 @@ impl CliValidator {
     pub fn new(
         vote_account: &RpcVoteAccountInfo,
         current_epoch: Epoch,
-        version: String,
+        version: CliVersion,
         skip_rate: Option<f64>,
         address_labels: &HashMap<String, String>,
     ) -> Self {
@@ -652,7 +652,7 @@ impl CliValidator {
     pub fn new_delinquent(
         vote_account: &RpcVoteAccountInfo,
         current_epoch: Epoch,
-        version: String,
+        version: CliVersion,
         skip_rate: Option<f64>,
         address_labels: &HashMap<String, String>,
     ) -> Self {
@@ -669,7 +669,7 @@ impl CliValidator {
     fn _new(
         vote_account: &RpcVoteAccountInfo,
         current_epoch: Epoch,
-        version: String,
+        version: CliVersion,
         skip_rate: Option<f64>,
         address_labels: &HashMap<String, String>,
         delinquent: bool,
@@ -1210,7 +1210,7 @@ impl fmt::Display for CliStakeState {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum CliStakeType {
     Stake,
     RewardsPool,
@@ -1607,7 +1607,7 @@ impl fmt::Display for CliInflation {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CliSignOnlyData {
     pub blockhash: String,
@@ -2317,7 +2317,7 @@ impl fmt::Display for CliBlock {
                     format!(
                         "{}◎{:<14.9}",
                         sign,
-                        lamports_to_sol(reward.lamports.abs() as u64)
+                        lamports_to_sol(reward.lamports.unsigned_abs())
                     ),
                     if reward.post_balance == 0 {
                         "          -                 -".to_string()
@@ -2342,7 +2342,7 @@ impl fmt::Display for CliBlock {
                 f,
                 "Total Rewards: {}◎{:<12.9}",
                 sign,
-                lamports_to_sol(total_rewards.abs() as u64)
+                lamports_to_sol(total_rewards.unsigned_abs())
             )?;
         }
         for (index, transaction_with_meta) in
@@ -2712,6 +2712,45 @@ impl fmt::Display for CliPingConfirmationStats {
 }
 impl QuietDisplay for CliPingConfirmationStats {}
 impl VerboseDisplay for CliPingConfirmationStats {}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CliBalance {
+    pub lamports: u64,
+    #[serde(skip)]
+    pub config: BuildBalanceMessageConfig,
+}
+
+impl QuietDisplay for CliBalance {
+    fn write_str(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        let config = BuildBalanceMessageConfig {
+            show_unit: false,
+            trim_trailing_zeros: true,
+            ..self.config
+        };
+        let balance_message = build_balance_message_with_config(self.lamports, &config);
+        write!(w, "{}", balance_message)
+    }
+}
+
+impl VerboseDisplay for CliBalance {
+    fn write_str(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        let config = BuildBalanceMessageConfig {
+            show_unit: true,
+            trim_trailing_zeros: false,
+            ..self.config
+        };
+        let balance_message = build_balance_message_with_config(self.lamports, &config);
+        write!(w, "{}", balance_message)
+    }
+}
+
+impl fmt::Display for CliBalance {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let balance_message = build_balance_message_with_config(self.lamports, &self.config);
+        write!(f, "{}", balance_message)
+    }
+}
 
 #[cfg(test)]
 mod tests {

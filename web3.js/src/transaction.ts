@@ -2,6 +2,10 @@ import nacl from 'tweetnacl';
 import bs58 from 'bs58';
 import {Buffer} from 'buffer';
 
+import {
+  PACKET_DATA_SIZE,
+  SIGNATURE_LENGTH_IN_BYTES,
+} from './transaction-constants';
 import {Connection} from './connection';
 import {Message} from './message';
 import {PublicKey} from './publickey';
@@ -17,23 +21,16 @@ import type {CompiledInstruction} from './message';
  */
 export type TransactionSignature = string;
 
+export const enum TransactionStatus {
+  BLOCKHEIGHT_EXCEEDED,
+  PROCESSED,
+  TIMED_OUT,
+}
+
 /**
  * Default (empty) signature
- *
- * Signatures are 64 bytes in length
  */
-const DEFAULT_SIGNATURE = Buffer.alloc(64).fill(0);
-
-/**
- * Maximum over-the-wire size of a Transaction
- *
- * 1280 is IPv6 minimum MTU
- * 40 bytes is the size of the IPv6 header
- * 8 bytes is the size of the fragment header
- */
-export const PACKET_DATA_SIZE = 1280 - 40 - 8;
-
-const SIGNATURE_LENGTH = 64;
+const DEFAULT_SIGNATURE = Buffer.alloc(SIGNATURE_LENGTH_IN_BYTES).fill(0);
 
 /**
  * Account metadata used to define instructions
@@ -67,6 +64,19 @@ export type SerializeConfig = {
 };
 
 /**
+ * @internal
+ */
+export interface TransactionInstructionJSON {
+  keys: {
+    pubkey: string;
+    isSigner: boolean;
+    isWritable: boolean;
+  }[];
+  programId: string;
+  data: number[];
+}
+
+/**
  * Transaction Instruction class
  */
 export class TransactionInstruction {
@@ -93,6 +103,21 @@ export class TransactionInstruction {
       this.data = opts.data;
     }
   }
+
+  /**
+   * @internal
+   */
+  toJSON(): TransactionInstructionJSON {
+    return {
+      keys: this.keys.map(({pubkey, isSigner, isWritable}) => ({
+        pubkey: pubkey.toJSON(),
+        isSigner,
+        isWritable,
+      })),
+      programId: this.programId.toJSON(),
+      data: [...this.data],
+    };
+  }
 }
 
 /**
@@ -105,17 +130,35 @@ export type SignaturePubkeyPair = {
 
 /**
  * List of Transaction object fields that may be initialized at construction
- *
  */
-export type TransactionCtorFields = {
-  /** A recent blockhash */
-  recentBlockhash?: Blockhash | null;
+export type TransactionCtorFields_DEPRECATED = {
   /** Optional nonce information used for offline nonce'd transactions */
   nonceInfo?: NonceInformation | null;
   /** The transaction fee payer */
   feePayer?: PublicKey | null;
   /** One or more signatures */
   signatures?: Array<SignaturePubkeyPair>;
+  /** A recent blockhash */
+  recentBlockhash?: Blockhash;
+};
+
+// For backward compatibility; an unfortunate consequence of being
+// forced to over-export types by the documentation generator.
+// See https://github.com/fair-exchange/safecoin/pull/25820
+export type TransactionCtorFields = TransactionCtorFields_DEPRECATED;
+
+/**
+ * List of Transaction object fields that may be initialized at construction
+ */
+export type TransactionBlockhashCtor = {
+  /** The transaction fee payer */
+  feePayer?: PublicKey | null;
+  /** One or more signatures */
+  signatures?: Array<SignaturePubkeyPair>;
+  /** A recent blockhash */
+  blockhash: Blockhash;
+  /** the last block chain can advance to before tx is declared expired */
+  lastValidBlockHeight: number;
 };
 
 /**
@@ -127,6 +170,20 @@ export type NonceInformation = {
   /** AdvanceNonceAccount Instruction */
   nonceInstruction: TransactionInstruction;
 };
+
+/**
+ * @internal
+ */
+export interface TransactionJSON {
+  recentBlockhash: string | null;
+  feePayer: string | null;
+  nonceInfo: {
+    nonce: string;
+    nonceInstruction: TransactionInstructionJSON;
+  } | null;
+  instructions: TransactionInstructionJSON[];
+  signers: string[];
+}
 
 /**
  * Transaction class
@@ -164,16 +221,83 @@ export class Transaction {
   recentBlockhash?: Blockhash;
 
   /**
+   * the last block chain can advance to before tx is declared expired
+   * */
+  lastValidBlockHeight?: number;
+
+  /**
    * Optional Nonce information. If populated, transaction will use a durable
    * Nonce hash instead of a recentBlockhash. Must be populated by the caller
    */
   nonceInfo?: NonceInformation;
 
   /**
+   * @internal
+   */
+  _message?: Message;
+
+  /**
+   * @internal
+   */
+  _json?: TransactionJSON;
+
+  // Construct a transaction with a blockhash and lastValidBlockHeight
+  constructor(opts?: TransactionBlockhashCtor);
+
+  /**
+   * @deprecated `TransactionCtorFields` has been deprecated and will be removed in a future version.
+   * Please supply a `TransactionBlockhashCtor` instead.
+   */
+  constructor(opts?: TransactionCtorFields_DEPRECATED);
+
+  /**
    * Construct an empty Transaction
    */
-  constructor(opts?: TransactionCtorFields) {
-    opts && Object.assign(this, opts);
+  constructor(
+    opts?: TransactionBlockhashCtor | TransactionCtorFields_DEPRECATED,
+  ) {
+    if (!opts) {
+      return;
+    }
+    if (opts.feePayer) {
+      this.feePayer = opts.feePayer;
+    }
+    if (opts.signatures) {
+      this.signatures = opts.signatures;
+    }
+    if (Object.prototype.hasOwnProperty.call(opts, 'lastValidBlockHeight')) {
+      const {blockhash, lastValidBlockHeight} =
+        opts as TransactionBlockhashCtor;
+      this.recentBlockhash = blockhash;
+      this.lastValidBlockHeight = lastValidBlockHeight;
+    } else {
+      const {recentBlockhash, nonceInfo} =
+        opts as TransactionCtorFields_DEPRECATED;
+      if (nonceInfo) {
+        this.nonceInfo = nonceInfo;
+      }
+      this.recentBlockhash = recentBlockhash;
+    }
+  }
+
+  /**
+   * @internal
+   */
+  toJSON(): TransactionJSON {
+    return {
+      recentBlockhash: this.recentBlockhash || null,
+      feePayer: this.feePayer ? this.feePayer.toJSON() : null,
+      nonceInfo: this.nonceInfo
+        ? {
+            nonce: this.nonceInfo.nonce,
+            nonceInstruction: this.nonceInfo.nonceInstruction.toJSON(),
+          }
+        : null,
+      instructions: this.instructions.map(instruction => instruction.toJSON()),
+      signers: this.signatures.map(({publicKey}) => {
+        return publicKey.toJSON();
+      }),
+    };
   }
 
   /**
@@ -204,17 +328,31 @@ export class Transaction {
    * Compile transaction data
    */
   compileMessage(): Message {
-    const {nonceInfo} = this;
-    if (nonceInfo && this.instructions[0] != nonceInfo.nonceInstruction) {
-      this.recentBlockhash = nonceInfo.nonce;
-      this.instructions.unshift(nonceInfo.nonceInstruction);
+    if (
+      this._message &&
+      JSON.stringify(this.toJSON()) === JSON.stringify(this._json)
+    ) {
+      return this._message;
     }
-    const {recentBlockhash} = this;
+
+    let recentBlockhash;
+    let instructions: TransactionInstruction[];
+    if (this.nonceInfo) {
+      recentBlockhash = this.nonceInfo.nonce;
+      if (this.instructions[0] != this.nonceInfo.nonceInstruction) {
+        instructions = [this.nonceInfo.nonceInstruction, ...this.instructions];
+      } else {
+        instructions = this.instructions;
+      }
+    } else {
+      recentBlockhash = this.recentBlockhash;
+      instructions = this.instructions;
+    }
     if (!recentBlockhash) {
       throw new Error('Transaction recentBlockhash required');
     }
 
-    if (this.instructions.length < 1) {
+    if (instructions.length < 1) {
       console.warn('No instructions provided');
     }
 
@@ -228,8 +366,8 @@ export class Transaction {
       throw new Error('Transaction fee payer required');
     }
 
-    for (let i = 0; i < this.instructions.length; i++) {
-      if (this.instructions[i].programId === undefined) {
+    for (let i = 0; i < instructions.length; i++) {
+      if (instructions[i].programId === undefined) {
         throw new Error(
           `Transaction instruction index ${i} has undefined program id`,
         );
@@ -238,7 +376,7 @@ export class Transaction {
 
     const programIds: string[] = [];
     const accountMetas: AccountMeta[] = [];
-    this.instructions.forEach(instruction => {
+    instructions.forEach(instruction => {
       instruction.keys.forEach(accountMeta => {
         accountMetas.push({...accountMeta});
       });
@@ -258,17 +396,6 @@ export class Transaction {
       });
     });
 
-    // Sort. Prioritizing first by signer, then by writable
-    accountMetas.sort(function (x, y) {
-      const pubkeySorting = x.pubkey
-        .toBase58()
-        .localeCompare(y.pubkey.toBase58());
-      const checkSigner = x.isSigner === y.isSigner ? 0 : x.isSigner ? -1 : 1;
-      const checkWritable =
-        x.isWritable === y.isWritable ? pubkeySorting : x.isWritable ? -1 : 1;
-      return checkSigner || checkWritable;
-    });
-
     // Cull duplicate account metas
     const uniqueMetas: AccountMeta[] = [];
     accountMetas.forEach(accountMeta => {
@@ -279,9 +406,25 @@ export class Transaction {
       if (uniqueIndex > -1) {
         uniqueMetas[uniqueIndex].isWritable =
           uniqueMetas[uniqueIndex].isWritable || accountMeta.isWritable;
+        uniqueMetas[uniqueIndex].isSigner =
+          uniqueMetas[uniqueIndex].isSigner || accountMeta.isSigner;
       } else {
         uniqueMetas.push(accountMeta);
       }
+    });
+
+    // Sort. Prioritizing first by signer, then by writable
+    uniqueMetas.sort(function (x, y) {
+      if (x.isSigner !== y.isSigner) {
+        // Signers always come before non-signers
+        return x.isSigner ? -1 : 1;
+      }
+      if (x.isWritable !== y.isWritable) {
+        // Writable accounts always come before read-only accounts
+        return x.isWritable ? -1 : 1;
+      }
+      // Otherwise, sort by pubkey, stringwise.
+      return x.pubkey.toBase58().localeCompare(y.pubkey.toBase58());
     });
 
     // Move fee payer to the front
@@ -343,7 +486,7 @@ export class Transaction {
     });
 
     const accountKeys = signedKeys.concat(unsignedKeys);
-    const instructions: CompiledInstruction[] = this.instructions.map(
+    const compiledInstructions: CompiledInstruction[] = instructions.map(
       instruction => {
         const {data, programId} = instruction;
         return {
@@ -356,7 +499,7 @@ export class Transaction {
       },
     );
 
-    instructions.forEach(instruction => {
+    compiledInstructions.forEach(instruction => {
       invariant(instruction.programIdIndex >= 0);
       instruction.accounts.forEach(keyIndex => invariant(keyIndex >= 0));
     });
@@ -369,7 +512,7 @@ export class Transaction {
       },
       accountKeys,
       recentBlockhash,
-      instructions,
+      instructions: compiledInstructions,
     });
   }
 
@@ -481,7 +624,6 @@ export class Transaction {
 
     const message = this._compile();
     this._partialSign(message, ...uniqueSigners);
-    this._verifySignatures(message.serialize(), true);
   }
 
   /**
@@ -666,8 +808,8 @@ export class Transaction {
     const signatureCount = shortvec.decodeLength(byteArray);
     let signatures = [];
     for (let i = 0; i < signatureCount; i++) {
-      const signature = byteArray.slice(0, SIGNATURE_LENGTH);
-      byteArray = byteArray.slice(SIGNATURE_LENGTH);
+      const signature = byteArray.slice(0, SIGNATURE_LENGTH_IN_BYTES);
+      byteArray = byteArray.slice(SIGNATURE_LENGTH_IN_BYTES);
       signatures.push(bs58.encode(Buffer.from(signature)));
     }
 
@@ -718,6 +860,9 @@ export class Transaction {
         }),
       );
     });
+
+    transaction._message = message;
+    transaction._json = transaction.toJSON();
 
     return transaction;
   }

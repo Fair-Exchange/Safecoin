@@ -1,14 +1,14 @@
 use {
     core::fmt,
     enum_iterator::IntoEnumIterator,
-    safecoin_sdk::{pubkey::Pubkey, saturating_add_assign},
+    safecoin_sdk::{clock::Slot, pubkey::Pubkey, saturating_add_assign},
     std::{
         collections::HashMap,
         ops::{Index, IndexMut},
     },
 };
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct ProgramTiming {
     pub accumulated_us: u64,
     pub accumulated_units: u64,
@@ -50,9 +50,10 @@ pub enum ExecuteTimingType {
     NumExecuteBatches,
     CollectLogsUs,
     TotalBatchesLen,
+    UpdateTransactionStatuses,
 }
 
-pub struct Metrics([u64; ExecuteTimingType::VARIANT_COUNT]);
+pub struct Metrics([u64; ExecuteTimingType::ITEM_COUNT]);
 
 impl Index<ExecuteTimingType> for Metrics {
     type Output = u64;
@@ -69,13 +70,259 @@ impl IndexMut<ExecuteTimingType> for Metrics {
 
 impl Default for Metrics {
     fn default() -> Self {
-        Metrics([0; ExecuteTimingType::VARIANT_COUNT])
+        Metrics([0; ExecuteTimingType::ITEM_COUNT])
     }
 }
 
 impl core::fmt::Debug for Metrics {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+// The auxiliary variable that must always be provided to eager_macro_rules! must use the
+// identifier `eager_1`. Macros declared with `eager_macro_rules!` can then be used inside
+// an eager! block.
+eager_macro_rules! { $eager_1
+    #[macro_export]
+    macro_rules! report_execute_timings {
+        ($self: expr) => {
+            (
+                "validate_transactions_us",
+                *$self
+                    .metrics
+                    .index(ExecuteTimingType::CheckUs),
+                i64
+            ),
+            (
+                "load_us",
+                *$self
+                    .metrics
+                    .index(ExecuteTimingType::LoadUs),
+                i64
+            ),
+            (
+                "execute_us",
+                *$self
+                    .metrics
+                    .index(ExecuteTimingType::ExecuteUs),
+                i64
+            ),
+            (
+                "collect_logs_us",
+                *$self
+                    .metrics
+                    .index(ExecuteTimingType::CollectLogsUs),
+                i64
+            ),
+            (
+                "store_us",
+                *$self
+
+                    .metrics
+                    .index(ExecuteTimingType::StoreUs),
+                i64
+            ),
+            (
+                "update_stakes_cache_us",
+                *$self
+
+                    .metrics
+                    .index(ExecuteTimingType::UpdateStakesCacheUs),
+                i64
+            ),
+            (
+                "total_batches_len",
+                *$self
+
+                    .metrics
+                    .index(ExecuteTimingType::TotalBatchesLen),
+                i64
+            ),
+            (
+                "num_execute_batches",
+                *$self
+
+                    .metrics
+                    .index(ExecuteTimingType::NumExecuteBatches),
+                i64
+            ),
+            (
+                "update_transaction_statuses",
+                *$self
+
+                    .metrics
+                    .index(ExecuteTimingType::UpdateTransactionStatuses),
+                i64
+            ),
+            (
+                "execute_details_serialize_us",
+                $self.details.serialize_us,
+                i64
+            ),
+            (
+                "execute_details_create_vm_us",
+                $self.details.create_vm_us,
+                i64
+            ),
+            (
+                "execute_details_execute_inner_us",
+                $self.details.execute_us,
+                i64
+            ),
+            (
+                "execute_details_deserialize_us",
+                $self.details.deserialize_us,
+                i64
+            ),
+            (
+                "execute_details_get_or_create_executor_us",
+                $self.details.get_or_create_executor_us,
+                i64
+            ),
+            (
+                "execute_details_changed_account_count",
+                $self.details.changed_account_count,
+                i64
+            ),
+            (
+                "execute_details_total_account_count",
+                $self.details.total_account_count,
+                i64
+            ),
+            (
+                "execute_details_total_data_size",
+                $self.details.total_data_size,
+                i64
+            ),
+            (
+                "execute_details_data_size_changed",
+                $self.details.data_size_changed,
+                i64
+            ),
+            (
+                "execute_details_create_executor_register_syscalls_us",
+                $self
+                    .details
+                    .create_executor_register_syscalls_us,
+                i64
+            ),
+            (
+                "execute_details_create_executor_load_elf_us",
+                $self.details.create_executor_load_elf_us,
+                i64
+            ),
+            (
+                "execute_details_create_executor_verify_code_us",
+                $self.details.create_executor_verify_code_us,
+                i64
+            ),
+            (
+                "execute_details_create_executor_jit_compile_us",
+                $self.details.create_executor_jit_compile_us,
+                i64
+            ),
+            (
+                "execute_accessories_feature_set_clone_us",
+                $self
+                    .execute_accessories
+                    .feature_set_clone_us,
+                i64
+            ),
+            (
+                "execute_accessories_compute_budget_process_transaction_us",
+                $self
+                    .execute_accessories
+                    .compute_budget_process_transaction_us,
+                i64
+            ),
+            (
+                "execute_accessories_get_executors_us",
+                $self.execute_accessories.get_executors_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_message_us",
+                $self.execute_accessories.process_message_us,
+                i64
+            ),
+            (
+                "execute_accessories_update_executors_us",
+                $self.execute_accessories.update_executors_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_instructions_total_us",
+                $self
+                    .execute_accessories
+                    .process_instructions
+                    .total_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_instructions_verify_caller_us",
+                $self
+                    .execute_accessories
+                    .process_instructions
+                    .verify_caller_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_instructions_process_executable_chain_us",
+                $self
+                    .execute_accessories
+                    .process_instructions
+                    .process_executable_chain_us,
+                i64
+            ),
+            (
+                "execute_accessories_process_instructions_verify_callee_us",
+                $self
+                    .execute_accessories
+                    .process_instructions
+                    .verify_callee_us,
+                i64
+            ),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ThreadExecuteTimings {
+    pub total_thread_us: u64,
+    pub total_transactions_executed: u64,
+    pub execute_timings: ExecuteTimings,
+}
+
+impl ThreadExecuteTimings {
+    pub fn report_stats(&self, slot: Slot) {
+        lazy! {
+            datapoint_info!(
+                "replay-slot-end-to-end-stats",
+                ("slot", slot as i64, i64),
+                ("total_thread_us", self.total_thread_us as i64, i64),
+                ("total_transactions_executed", self.total_transactions_executed as i64, i64),
+                // Everything inside the `eager!` block will be eagerly expanded before
+                // evaluation of the rest of the surrounding macro.
+                eager!{report_execute_timings!(self.execute_timings)}
+            );
+        };
+    }
+
+    pub fn accumulate(&mut self, other: &ThreadExecuteTimings) {
+        self.execute_timings.saturating_add_in_place(
+            ExecuteTimingType::TotalBatchesLen,
+            *other
+                .execute_timings
+                .metrics
+                .index(ExecuteTimingType::TotalBatchesLen),
+        );
+        self.execute_timings.accumulate(&other.execute_timings);
+        saturating_add_assign!(self.total_thread_us, other.total_thread_us);
+        saturating_add_assign!(
+            self.total_transactions_executed,
+            other.total_transactions_executed
+        );
     }
 }
 
@@ -100,10 +347,7 @@ impl ExecuteTimings {
         let idx = timing_type as usize;
         match self.metrics.0.get_mut(idx) {
             Some(elem) => *elem = elem.saturating_add(value_to_add),
-            None => debug_assert!(
-                idx < ExecuteTimingType::VARIANT_COUNT,
-                "Index out of bounds"
-            ),
+            None => debug_assert!(idx < ExecuteTimingType::ITEM_COUNT, "Index out of bounds"),
         }
     }
 }
@@ -156,7 +400,7 @@ impl ExecuteAccessoryTimings {
     }
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct ExecuteDetailsTimings {
     pub serialize_us: u64,
     pub create_vm_us: u64,

@@ -16,7 +16,9 @@ use {
         stake,
         transaction::{TransactionError, TransactionVersion, VersionedTransaction},
     },
-    safecoin_transaction_status::{Rewards, UiTransactionStatusMeta},
+    safecoin_transaction_status::{
+        Rewards, UiReturnDataEncoding, UiTransactionReturnData, UiTransactionStatusMeta,
+    },
     safe_memo::{id as safe_memo_id, v1::id as safe_memo_v1_id},
     std::{collections::HashMap, fmt, io},
 };
@@ -261,8 +263,14 @@ fn write_transaction<W: io::Write>(
         write_status(w, &transaction_status.status, prefix)?;
         write_fees(w, transaction_status.fee, prefix)?;
         write_balances(w, transaction_status, prefix)?;
-        write_log_messages(w, transaction_status.log_messages.as_ref(), prefix)?;
-        write_rewards(w, transaction_status.rewards.as_ref(), prefix)?;
+        write_compute_units_consumed(
+            w,
+            transaction_status.compute_units_consumed.clone().into(),
+            prefix,
+        )?;
+        write_log_messages(w, transaction_status.log_messages.as_ref().into(), prefix)?;
+        write_return_data(w, transaction_status.return_data.as_ref().into(), prefix)?;
+        write_rewards(w, transaction_status.rewards.as_ref().into(), prefix)?;
     } else {
         writeln!(w, "{}Status: Unavailable", prefix)?;
     }
@@ -368,7 +376,7 @@ fn write_signatures<W: io::Write>(
     Ok(())
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AccountKeyType<'a> {
     Known(&'a Pubkey),
     Unknown {
@@ -526,7 +534,7 @@ fn write_rewards<W: io::Write>(
                         "-".to_string()
                     },
                     sign,
-                    lamports_to_sol(reward.lamports.abs() as u64),
+                    lamports_to_sol(reward.lamports.unsigned_abs()),
                     lamports_to_sol(reward.post_balance)
                 )?;
             }
@@ -588,6 +596,45 @@ fn write_balances<W: io::Write>(
                 lamports_to_sol(*post)
             )?;
         }
+    }
+    Ok(())
+}
+
+fn write_return_data<W: io::Write>(
+    w: &mut W,
+    return_data: Option<&UiTransactionReturnData>,
+    prefix: &str,
+) -> io::Result<()> {
+    if let Some(return_data) = return_data {
+        let (data, encoding) = &return_data.data;
+        let raw_return_data = match encoding {
+            UiReturnDataEncoding::Base64 => base64::decode(data).map_err(|err| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("could not parse data as {:?}: {:?}", encoding, err),
+                )
+            })?,
+        };
+        if !raw_return_data.is_empty() {
+            use pretty_hex::*;
+            writeln!(
+                w,
+                "{}Return Data from Program {}:",
+                prefix, return_data.program_id
+            )?;
+            writeln!(w, "{}  {:?}", prefix, raw_return_data.hex_dump())?;
+        }
+    }
+    Ok(())
+}
+
+fn write_compute_units_consumed<W: io::Write>(
+    w: &mut W,
+    compute_units_consumed: Option<u64>,
+    prefix: &str,
+) -> io::Result<()> {
+    if let Some(cus) = compute_units_consumed {
+        writeln!(w, "{}Compute Units Consumed: {}", prefix, cus)?;
     }
     Ok(())
 }
@@ -688,6 +735,7 @@ mod test {
             pubkey::Pubkey,
             signature::{Keypair, Signer},
             transaction::Transaction,
+            transaction_context::TransactionReturnData,
         },
         safecoin_transaction_status::{Reward, RewardType, TransactionStatusMeta},
         std::io::BufWriter,
@@ -766,6 +814,11 @@ mod test {
                 commission: None,
             }]),
             loaded_addresses: LoadedAddresses::default(),
+            return_data: Some(TransactionReturnData {
+                program_id: Pubkey::new_from_array([2u8; 32]),
+                data: vec![1, 2, 3],
+            }),
+            compute_units_consumed: Some(1234u64),
         };
 
         let output = {
@@ -800,8 +853,12 @@ Status: Ok
   Fee: ◎0.000005
   Account 0 balance: ◎0.000005 -> ◎0
   Account 1 balance: ◎0.00001 -> ◎0.0000099
+Compute Units Consumed: 1234
 Log Messages:
   Test message
+Return Data from Program 8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR:
+  Length: 3 (0x3) bytes
+0000:   01 02 03                                             ...
 Rewards:
   Address                                            Type        Amount            New Balance         \0
   4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi        rent        -◎0.000000100     ◎0.000009900       \0
@@ -836,6 +893,11 @@ Rewards:
                 commission: None,
             }]),
             loaded_addresses,
+            return_data: Some(TransactionReturnData {
+                program_id: Pubkey::new_from_array([2u8; 32]),
+                data: vec![1, 2, 3],
+            }),
+            compute_units_consumed: Some(2345u64),
         };
 
         let output = {
@@ -879,8 +941,12 @@ Status: Ok
   Account 1 balance: ◎0.00001
   Account 2 balance: ◎0.000015 -> ◎0.0000149
   Account 3 balance: ◎0.00002
+Compute Units Consumed: 2345
 Log Messages:
   Test message
+Return Data from Program 8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR:
+  Length: 3 (0x3) bytes
+0000:   01 02 03                                             ...
 Rewards:
   Address                                            Type        Amount            New Balance         \0
   CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8        rent        -◎0.000000100     ◎0.000014900       \0

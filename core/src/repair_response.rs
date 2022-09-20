@@ -40,9 +40,13 @@ pub fn repair_response_packet_from_bytes(
     Some(packet)
 }
 
-pub fn nonce(packet: &Packet) -> Option<Nonce> {
-    let nonce_start = packet.meta.size.checked_sub(SIZE_OF_NONCE)?;
-    packet.deserialize_slice(nonce_start..).ok()
+pub(crate) fn nonce(packet: &Packet) -> Option<Nonce> {
+    // Nonces are attached to both repair and ancestor hashes responses.
+    let data = packet.data(..)?;
+    let offset = data.len().checked_sub(SIZE_OF_NONCE)?;
+    <[u8; SIZE_OF_NONCE]>::try_from(&data[offset..])
+        .map(Nonce::from_le_bytes)
+        .ok()
 }
 
 #[cfg(test)]
@@ -50,7 +54,7 @@ mod test {
     use {
         super::*,
         solana_ledger::{
-            shred::{Shred, Shredder},
+            shred::{Shred, ShredFlags},
             sigverify_shreds::verify_shred_cpu,
         },
         safecoin_sdk::{
@@ -69,20 +73,19 @@ mod test {
             slot,
             0xc0de,
             0xdead,
-            Some(&[1, 2, 3, 4]),
-            true,
-            true,
+            &[1, 2, 3, 4],
+            ShredFlags::LAST_SHRED_IN_SLOT,
             0,
             0,
             0xc0de,
         );
         assert_eq!(shred.slot(), slot);
         let keypair = Keypair::new();
-        Shredder::sign_shred(&keypair, &mut shred);
-        trace!("signature {}", shred.common_header.signature);
+        shred.sign(&keypair);
+        trace!("signature {}", shred.signature());
         let nonce = 9;
         let mut packet = repair_response_packet_from_bytes(
-            shred.payload,
+            shred.into_payload(),
             &SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080),
             nonce,
         )
@@ -93,20 +96,17 @@ mod test {
             .iter()
             .cloned()
             .collect();
-        let rv = verify_shred_cpu(&packet, &leader_slots);
-        assert_eq!(rv, Some(1));
+        assert!(verify_shred_cpu(&packet, &leader_slots));
 
         let wrong_keypair = Keypair::new();
         let leader_slots = [(slot, wrong_keypair.pubkey().to_bytes())]
             .iter()
             .cloned()
             .collect();
-        let rv = verify_shred_cpu(&packet, &leader_slots);
-        assert_eq!(rv, Some(0));
+        assert!(!verify_shred_cpu(&packet, &leader_slots));
 
         let leader_slots = HashMap::new();
-        let rv = verify_shred_cpu(&packet, &leader_slots);
-        assert_eq!(rv, None);
+        assert!(!verify_shred_cpu(&packet, &leader_slots));
     }
 
     #[test]

@@ -60,7 +60,7 @@ $ safecoin-install deploy http://example.com/path/to/solana-release.tar.bz2 upda
 $ safecoin-install init --pubkey 92DMonmBYXwEMHJ99c9ceRSpAmk9v6i3RdvDdXaVcrfj  # <-- pubkey is obtained from whoever is deploying the updates
 $ export PATH=~/.local/share/safecoin-install/bin:$PATH
 $ safecoin-keygen ...  # <-- runs the latest safecoin-keygen
-$ safecoin-install run safecoin-validator ...  # <-- runs a validator, restarting it as necesary when an update is applied
+$ safecoin-install run safecoin-validator ...  # <-- runs a validator, restarting it as necessary when an update is applied
 ```
 
 ## On-chain Update Manifest

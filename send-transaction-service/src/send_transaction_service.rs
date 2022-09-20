@@ -91,7 +91,7 @@ impl TransactionInfo {
     }
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 struct ProcessTransactionsResult {
     rooted: u64,
     expired: u64,
@@ -410,11 +410,15 @@ impl SendTransactionService {
             config
         );
         Builder::new()
-            .name("send-tx-receive".to_string())
+            .name("solStxReceive".to_string())
             .spawn(move || loop {
                 let recv_timeout_ms = config.batch_send_rate_ms;
                 let stats = &stats_report.stats;
-                match receiver.recv_timeout(Duration::from_millis(recv_timeout_ms)) {
+                let recv_result = receiver.recv_timeout(Duration::from_millis(recv_timeout_ms));
+                if exit.load(Ordering::Relaxed) {
+                    break;
+                }
+                match recv_result {
                     Err(RecvTimeoutError::Disconnected) => {
                         info!("Terminating send-transaction-service.");
                         exit.store(true, Ordering::Relaxed);
@@ -450,7 +454,7 @@ impl SendTransactionService {
                     stats
                         .sent_transactions
                         .fetch_add(transactions.len() as u64, Ordering::Relaxed);
-                    let _result = Self::send_transactions_in_batch(
+                    Self::send_transactions_in_batch(
                         &tpu_address,
                         &mut transactions,
                         leader_info_provider.lock().unwrap().get_leader_info(),
@@ -510,7 +514,7 @@ impl SendTransactionService {
             config
         );
         Builder::new()
-            .name("send-tx-retry".to_string())
+            .name("solStxRetry".to_string())
             .spawn(move || loop {
                 let retry_interval_ms = config.retry_rate_ms;
                 let stats = &stats_report.stats;
@@ -605,11 +609,8 @@ impl SendTransactionService {
                     .last_sent_time
                     .map(|last| now.duration_since(last) >= retry_rate)
                     .unwrap_or(false);
-                let verify_nonce_account = nonce_account::verify_nonce_account(
-                    &nonce_account,
-                    &durable_nonce,
-                    working_bank.separate_nonce_from_blockhash(),
-                );
+                let verify_nonce_account =
+                    nonce_account::verify_nonce_account(&nonce_account, &durable_nonce);
                 if verify_nonce_account.is_none() && signature_status.is_none() && expired {
                     info!("Dropping expired durable-nonce transaction: {}", signature);
                     result.expired += 1;
@@ -1094,16 +1095,10 @@ mod test {
             .unwrap();
 
         let nonce_address = Pubkey::new_unique();
-        let durable_nonce =
-            DurableNonce::from_blockhash(&Hash::new_unique(), /*separate_domains:*/ true);
-        let nonce_state = nonce::state::Versions::new(
-            nonce::State::Initialized(nonce::state::Data::new(
-                Pubkey::default(),
-                durable_nonce,
-                42,
-            )),
-            true, // separate_domains
-        );
+        let durable_nonce = DurableNonce::from_blockhash(&Hash::new_unique());
+        let nonce_state = nonce::state::Versions::new(nonce::State::Initialized(
+            nonce::state::Data::new(Pubkey::default(), durable_nonce, 42),
+        ));
         let nonce_account =
             AccountSharedData::new_data(43, &nonce_state, &system_program::id()).unwrap();
         root_bank.store_account(&nonce_address, &nonce_account);
@@ -1351,16 +1346,10 @@ mod test {
         for mut transaction in transactions.values_mut() {
             transaction.last_sent_time = Some(Instant::now().sub(Duration::from_millis(4000)));
         }
-        let new_durable_nonce =
-            DurableNonce::from_blockhash(&Hash::new_unique(), /*separate_domains:*/ true);
-        let new_nonce_state = nonce::state::Versions::new(
-            nonce::State::Initialized(nonce::state::Data::new(
-                Pubkey::default(),
-                new_durable_nonce,
-                42,
-            )),
-            true, // separate_domains
-        );
+        let new_durable_nonce = DurableNonce::from_blockhash(&Hash::new_unique());
+        let new_nonce_state = nonce::state::Versions::new(nonce::State::Initialized(
+            nonce::state::Data::new(Pubkey::default(), new_durable_nonce, 42),
+        ));
         let nonce_account =
             AccountSharedData::new_data(43, &new_nonce_state, &system_program::id()).unwrap();
         working_bank.store_account(&nonce_address, &nonce_account);

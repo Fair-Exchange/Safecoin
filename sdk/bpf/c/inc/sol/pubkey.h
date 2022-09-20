@@ -26,9 +26,16 @@ typedef struct {
  *
  * @param key The public key to print
  */
-void sol_log_pubkey(
-  const SafePubkey *pubkey
-);
+/* DO NOT MODIFY THIS GENERATED FILE. INSTEAD CHANGE sdk/bpf/c/inc/sol/inc/pubkey.inc AND RUN `cargo run --bin gen-headers` */
+#ifndef SAFE_SBFV2
+void sol_log_pubkey(const SafePubkey *);
+#else
+typedef void(*sol_log_pubkey_pointer_type)(const SafePubkey *);
+static void sol_log_pubkey(const SafePubkey * arg1) {
+  sol_log_pubkey_pointer_type sol_log_pubkey_pointer = (sol_log_pubkey_pointer_type) 2129692874;
+  sol_log_pubkey_pointer(arg1);
+}
+#endif
 
 /**
  * Compares two public keys
@@ -59,7 +66,7 @@ typedef struct {
  * sol_invoke_signed
  */
 typedef struct {
-  const SafeSignerSeed *addr; /** An arry of a signer's seeds */
+  const SafeSignerSeed *addr; /** An array of a signer's seeds */
   uint64_t len; /** Number of seeds */
 } SafeSignerSeeds;
 
@@ -71,12 +78,16 @@ typedef struct {
  * @param program_id Program id of the signer
  * @param program_address Program address created, filled on return
  */
-uint64_t sol_create_program_address(
-    const SafeSignerSeed *seeds,
-    int seeds_len,
-    const SafePubkey *program_id,
-    SafePubkey *program_address
-);
+/* DO NOT MODIFY THIS GENERATED FILE. INSTEAD CHANGE sdk/bpf/c/inc/sol/inc/pubkey.inc AND RUN `cargo run --bin gen-headers` */
+#ifndef SAFE_SBFV2
+uint64_t sol_create_program_address(const SafeSignerSeed *, int, const SafePubkey *, SafePubkey *);
+#else
+typedef uint64_t(*sol_create_program_address_pointer_type)(const SafeSignerSeed *, int, const SafePubkey *, SafePubkey *);
+static uint64_t sol_create_program_address(const SafeSignerSeed * arg1, int arg2, const SafePubkey * arg3, SafePubkey * arg4) {
+  sol_create_program_address_pointer_type sol_create_program_address_pointer = (sol_create_program_address_pointer_type) 2474062396;
+  return sol_create_program_address_pointer(arg1, arg2, arg3, arg4);
+}
+#endif
 
 /**
  * Try to find a program address and return corresponding bump seed
@@ -87,13 +98,16 @@ uint64_t sol_create_program_address(
  * @param program_address Program address created, filled on return
  * @param bump_seed Bump seed required to create a valid program address
  */
-uint64_t sol_try_find_program_address(
-    const SafeSignerSeed *seeds,
-    int seeds_len,
-    const SafePubkey *program_id,
-    SafePubkey *program_address,
-    uint8_t *bump_seed
-);
+/* DO NOT MODIFY THIS GENERATED FILE. INSTEAD CHANGE sdk/bpf/c/inc/sol/inc/pubkey.inc AND RUN `cargo run --bin gen-headers` */
+#ifndef SAFE_SBFV2
+uint64_t sol_try_find_program_address(const SafeSignerSeed *, int, const SafePubkey *, SafePubkey *, uint8_t *);
+#else
+typedef uint64_t(*sol_try_find_program_address_pointer_type)(const SafeSignerSeed *, int, const SafePubkey *, SafePubkey *, uint8_t *);
+static uint64_t sol_try_find_program_address(const SafeSignerSeed * arg1, int arg2, const SafePubkey * arg3, SafePubkey * arg4, uint8_t * arg5) {
+  sol_try_find_program_address_pointer_type sol_try_find_program_address_pointer = (sol_try_find_program_address_pointer_type) 1213221432;
+  return sol_try_find_program_address_pointer(arg1, arg2, arg3, arg4, arg5);
+}
+#endif
 
 #ifdef SAFE_TEST
 /**

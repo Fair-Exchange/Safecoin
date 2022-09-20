@@ -28,7 +28,7 @@ pub(crate) struct IpEchoServerMessage {
     udp_ports: [u16; MAX_PORT_COUNT_PER_MESSAGE], // Fixed size list of ports to avoid vec serde
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IpEchoServerResponse {
     // Public IP address of request echoed back to the node.
     pub(crate) address: IpAddr,
@@ -64,10 +64,12 @@ async fn process_connection(
     info!("connection from {:?}", peer_addr);
 
     let mut data = vec![0u8; ip_echo_server_request_length()];
-    let (mut reader, mut writer) = socket.split();
 
-    let _ = timeout(IO_TIMEOUT, reader.read_exact(&mut data)).await??;
-    drop(reader);
+    let mut writer = {
+        let (mut reader, writer) = socket.split();
+        let _ = timeout(IO_TIMEOUT, reader.read_exact(&mut data)).await??;
+        writer
+    };
 
     let request_header: String = data[0..HEADER_LENGTH].iter().map(|b| *b as char).collect();
     if request_header != "\0\0\0\0" {

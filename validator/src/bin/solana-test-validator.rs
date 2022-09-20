@@ -52,7 +52,7 @@ const DEFAULT_MAX_LEDGER_SHREDS: u64 = 10_000;
 
 const DEFAULT_FAUCET_SAFE: f64 = 1_000_000.;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 enum Output {
     None,
     Log,
@@ -193,26 +193,52 @@ fn main() {
         .arg(
             Arg::with_name("bpf_program")
                 .long("bpf-program")
-                .value_name("ADDRESS_OR_PATH BPF_PROGRAM.SO")
+                .value_names(&["ADDRESS_OR_KEYPAIR", "BPF_PROGRAM.SO"])
                 .takes_value(true)
                 .number_of_values(2)
                 .multiple(true)
                 .help(
                     "Add a BPF program to the genesis configuration. \
                        If the ledger already exists then this parameter is silently ignored. \
-                       First argument can be a public key or path to file that can be parsed as a keypair",
+                       First argument can be a pubkey string or path to a keypair",
                 ),
         )
         .arg(
             Arg::with_name("account")
                 .long("account")
-                .value_name("ADDRESS FILENAME.JSON")
+                .value_names(&["ADDRESS", "DUMP.JSON"])
                 .takes_value(true)
                 .number_of_values(2)
+                .allow_hyphen_values(true)
                 .multiple(true)
                 .help(
                     "Load an account from the provided JSON file (see `safecoin account --help` on how to dump \
                         an account to file). Files are searched for relatively to CWD and tests/fixtures. \
+                        If ADDRESS is omitted via the `-` placeholder, the one in the file will be used. \
+                        If the ledger already exists then this parameter is silently ignored",
+                ),
+        )
+        .arg(
+            Arg::with_name("account_dir")
+                .long("account-dir")
+                .value_name("DIRECTORY")
+                .validator(|value| {
+                    value
+                        .parse::<PathBuf>()
+                        .map_err(|err| format!("error parsing '{}': {}", value, err))
+                        .and_then(|path| {
+                            if path.exists() && path.is_dir() {
+                                Ok(())
+                            } else {
+                                Err(format!("path does not exist or is not a directory: {}", value))
+                            }
+                        })
+                })
+                .takes_value(true)
+                .multiple(true)
+                .help(
+                    "Load all the accounts from the JSON files found in the specified DIRECTORY \
+                        (see also the `--account` flag). \
                         If the ledger already exists then this parameter is silently ignored",
                 ),
         )
@@ -377,6 +403,23 @@ fn main() {
                 .multiple(true)
                 .help("deactivate this feature in genesis.")
         )
+        .arg(
+            Arg::with_name("compute_unit_limit")
+                .long("compute-unit-limit")
+                .alias("max-compute-units")
+                .value_name("COMPUTE_UNITS")
+                .validator(is_parsable::<u64>)
+                .takes_value(true)
+                .help("Override the runtime's compute unit limit per transaction")
+        )
+        .arg(
+            Arg::with_name("log_messages_bytes_limit")
+                .long("log-messages-bytes-limit")
+                .value_name("BYTES")
+                .validator(is_parsable::<usize>)
+                .takes_value(true)
+                .help("Maximum number of bytes written to the program log before truncation")
+        )
         .get_matches();
 
     let output = if matches.is_present("quiet") {
@@ -485,6 +528,7 @@ fn main() {
             exit(1);
         })
     });
+    let compute_unit_limit = value_t!(matches, "compute_unit_limit", u64).ok();
 
     let faucet_addr = Some(SocketAddr::new(
         IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
@@ -531,10 +575,14 @@ fn main() {
         for address_filename in values.chunks(2) {
             match address_filename {
                 [address, filename] => {
-                    let address = address.parse::<Pubkey>().unwrap_or_else(|err| {
-                        println!("Error: invalid address {}: {}", address, err);
-                        exit(1);
-                    });
+                    let address = if *address == "-" {
+                        None
+                    } else {
+                        Some(address.parse::<Pubkey>().unwrap_or_else(|err| {
+                            println!("Error: invalid address {}: {}", address, err);
+                            exit(1);
+                        }))
+                    };
 
                     accounts_to_load.push(AccountInfo { address, filename });
                 }
@@ -542,6 +590,11 @@ fn main() {
             }
         }
     }
+
+    let accounts_from_dirs: HashSet<_> = matches
+        .values_of("account_dir")
+        .unwrap_or_default()
+        .collect();
 
     let accounts_to_clone: HashSet<_> = pubkeys_of(&matches, "clone_account")
         .map(|v| v.into_iter().collect())
@@ -633,6 +686,7 @@ fn main() {
     genesis.max_ledger_shreds = value_of(&matches, "limit_ledger_size");
     genesis.max_genesis_archive_unpacked_size = Some(u64::MAX);
     genesis.accounts_db_caching_enabled = !matches.is_present("no_accounts_db_caching");
+    genesis.log_messages_bytes_limit = value_t!(matches, "log_messages_bytes_limit", usize).ok();
 
     let tower_storage = Arc::new(FileTowerStorage::new(ledger_path.clone()));
 
@@ -689,7 +743,7 @@ fn main() {
         )
         .rpc_config(JsonRpcConfig {
             enable_rpc_transaction_history: true,
-            enable_cpi_and_log_storage: true,
+            enable_extended_tx_metadata_storage: true,
             rpc_bigtable_config,
             faucet_addr,
             ..JsonRpcConfig::default_for_test()
@@ -702,6 +756,7 @@ fn main() {
         .rpc_port(rpc_port)
         .add_programs_with_path(&programs_to_load)
         .add_accounts_from_json_files(&accounts_to_load)
+        .add_accounts_from_directories(&accounts_from_dirs)
         .deactivate_features(&features_to_deactivate);
 
     if !accounts_to_clone.is_empty() {
@@ -765,6 +820,10 @@ fn main() {
                 .map(PathBuf::from)
                 .collect(),
         );
+    }
+
+    if let Some(compute_unit_limit) = compute_unit_limit {
+        genesis.compute_unit_limit(compute_unit_limit);
     }
 
     match genesis.start_with_mint_address(mint_address, socket_addr_space) {

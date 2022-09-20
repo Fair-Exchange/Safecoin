@@ -1,5 +1,5 @@
-//! A C representation of Rust's `std::option::Option` used across the FFI
-//! boundary for Safecoin program interfaces
+//! A C representation of Rust's `Option`, used across the FFI
+//! boundary for Safecoin program interfaces.
 //!
 //! This implementation mostly matches `std::option` except iterators since the iteration
 //! trait requires returning `std::option::Option`

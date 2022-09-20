@@ -1,8 +1,9 @@
 use {
     safecoin_client::{client_error::ClientError, tpu_client::TpuSenderError},
     safecoin_sdk::{
-        commitment_config::CommitmentConfig, epoch_info::EpochInfo, hash::Hash, message::Message,
-        pubkey::Pubkey, signature::Signature, transaction::Transaction, transport::TransportError,
+        account::Account, commitment_config::CommitmentConfig, epoch_info::EpochInfo, hash::Hash,
+        message::Message, pubkey::Pubkey, signature::Signature, transaction::Transaction,
+        transport::TransportError,
     },
     thiserror::Error,
 };
@@ -79,6 +80,9 @@ pub trait BenchTpsClient {
         lamports: u64,
         recent_blockhash: &Hash,
     ) -> Result<Signature>;
+
+    /// Returns all information associated with the account of the provided pubkey
+    fn get_account(&self, pubkey: &Pubkey) -> Result<Account>;
 }
 
 mod bank_client;

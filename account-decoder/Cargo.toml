@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-account-decoder"
-version = "1.10.34"
+version = "1.14.3"
 description = "Safecoin account decoder"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -16,16 +16,16 @@ bincode = "1.3.3"
 bs58 = "0.4.0"
 bv = "0.11.1"
 lazy_static = "1.4.0"
-serde = "1.0.136"
+serde = "1.0.138"
 serde_derive = "1.0.103"
-serde_json = "1.0.79"
-safecoin-config-program = { path = "../programs/config", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.10.34" }
-safe-token = { version = "=3.3.3",   features = ["no-entrypoint"] }
-safe-token-2022 = { version = "0.2.0",  features = ["no-entrypoint"] }
+serde_json = "1.0.81"
+safecoin-config-program = { path = "../programs/config", version = "=1.14.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.14.3" }
+safe-token = { version = "=3.5.0", features = ["no-entrypoint"] }
+safe-token-2022 = { version = "=0.4.2", features = ["no-entrypoint"] }
 thiserror = "1.0"
-zstd = "0.11.1"
+zstd = "0.11.2"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

@@ -1,18 +1,36 @@
-#![cfg(not(target_arch = "bpf"))]
+//! The discrete log implementation for the twisted ElGamal decryption.
+//!
+//! The implementation uses the baby-step giant-step method, which consists of a precomputation
+//! step and an online step. The precomputation step involves computing a hash table of a number
+//! of Ristretto points that is independent of a discrete log instance. The online phase computes
+//! the final discrete log solution using the discrete log instance and the pre-computed hash
+//! table. More details on the baby-step giant-step algorithm and the implementation can be found
+//! in the [spl documentation](https://spl.solana.com).
+//!
+//! The implementation is NOT intended to run in constant-time. There are some measures to prevent
+//! straightforward timing attacks. For instance, it does not short-circuit the search when a
+//! solution is found. However, the use of hashtables, batching, and threads make the
+//! implementation inherently not constant-time. This may theoretically allow an adversary to gain
+//! information on a discrete log solution depending on the execution time of the implementation.
+//!
+
+#![cfg(not(target_os = "solana"))]
 
 use {
-    curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identity},
+    crate::errors::ProofError,
+    curve25519_dalek::{
+        constants::RISTRETTO_BASEPOINT_POINT as G,
+        ristretto::RistrettoPoint,
+        scalar::Scalar,
+        traits::{Identity, IsIdentity},
+    },
+    itertools::Itertools,
     serde::{Deserialize, Serialize},
-    std::collections::HashMap,
+    std::{collections::HashMap, thread},
 };
 
-#[allow(dead_code)]
-const TWO15: u64 = 32768;
-#[allow(dead_code)]
-const TWO14: u64 = 16384; // 2^14
 const TWO16: u64 = 65536; // 2^16
-#[allow(dead_code)]
-const TWO18: u64 = 262144; // 2^18
+const TWO17: u64 = 131072; // 2^17
 
 /// Type that captures a discrete log challenge.
 ///
@@ -23,6 +41,15 @@ pub struct DiscreteLog {
     pub generator: RistrettoPoint,
     /// Target point for discrete log
     pub target: RistrettoPoint,
+    /// Number of threads used for discrete log computation
+    num_threads: usize,
+    /// Range bound for discrete log search derived from the max value to search for and
+    /// `num_threads`
+    range_bound: usize,
+    /// Ristretto point representing each step of the discrete log search
+    step_point: RistrettoPoint,
+    /// Ristretto point compression batch size
+    compression_batch_size: usize,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -33,16 +60,16 @@ pub struct DecodePrecomputation(HashMap<[u8; 32], u16>);
 fn decode_u32_precomputation(generator: RistrettoPoint) -> DecodePrecomputation {
     let mut hashmap = HashMap::new();
 
-    let two16_scalar = Scalar::from(TWO16);
+    let two17_scalar = Scalar::from(TWO17);
     let identity = RistrettoPoint::identity(); // 0 * G
-    let generator = two16_scalar * generator; // 2^16 * G
+    let generator = two17_scalar * generator; // 2^17 * G
 
-    // iterator for 2^12*0G , 2^12*1G, 2^12*2G, ...
-    let ristretto_iter = RistrettoIterator::new(identity, generator);
-    ristretto_iter.zip(0..TWO16).for_each(|(elem, x_hi)| {
-        let key = elem.compress().to_bytes();
+    // iterator for 2^17*0G , 2^17*1G, 2^17*2G, ...
+    let ristretto_iter = RistrettoIterator::new((identity, 0), (generator, 1));
+    for (point, x_hi) in ristretto_iter.take(TWO16 as usize) {
+        let key = point.compress().to_bytes();
         hashmap.insert(key, x_hi as u16);
-    });
+    }
 
     DecodePrecomputation(hashmap)
 }
@@ -58,26 +85,116 @@ lazy_static::lazy_static! {
 
 /// Safeves the discrete log instance using a 16/16 bit offline/online split
 impl DiscreteLog {
-    /// Safeves the discrete log problem under the assumption that the solution
-    /// is a 32-bit number.
-    pub(crate) fn decode_u32(self) -> Option<u64> {
-        self.decode_online(&DECODE_PRECOMPUTATION_FOR_G, TWO16)
+    /// Discrete log instance constructor.
+    ///
+    /// Default number of threads set to 1.
+    pub fn new(generator: RistrettoPoint, target: RistrettoPoint) -> Self {
+        Self {
+            generator,
+            target,
+            num_threads: 1,
+            range_bound: TWO16 as usize,
+            step_point: G,
+            compression_batch_size: 32,
+        }
     }
 
-    pub fn decode_online(self, hashmap: &DecodePrecomputation, solution_bound: u64) -> Option<u64> {
-        // iterator for 0G, -1G, -2G, ...
-        let ristretto_iter = RistrettoIterator::new(self.target, -self.generator);
+    /// Adjusts number of threads in a discrete log instance.
+    pub fn num_threads(&mut self, num_threads: usize) -> Result<(), ProofError> {
+        // number of threads must be a positive power-of-two integer
+        if num_threads == 0 || (num_threads & (num_threads - 1)) != 0 || num_threads > 65536 {
+            return Err(ProofError::DiscreteLogThreads);
+        }
 
+        self.num_threads = num_threads;
+        self.range_bound = (TWO16 as usize).checked_div(num_threads).unwrap();
+        self.step_point = Scalar::from(num_threads as u64) * G;
+
+        Ok(())
+    }
+
+    /// Adjusts inversion batch size in a discrete log instance.
+    pub fn set_compression_batch_size(
+        &mut self,
+        compression_batch_size: usize,
+    ) -> Result<(), ProofError> {
+        if compression_batch_size >= TWO16 as usize {
+            return Err(ProofError::DiscreteLogBatchSize);
+        }
+        self.compression_batch_size = compression_batch_size;
+
+        Ok(())
+    }
+
+    /// Safeves the discrete log problem under the assumption that the solution
+    /// is a 32-bit number.
+    pub fn decode_u32(self) -> Option<u64> {
+        let mut starting_point = self.target;
+        let handles = (0..self.num_threads)
+            .into_iter()
+            .map(|i| {
+                let ristretto_iterator = RistrettoIterator::new(
+                    (starting_point, i as u64),
+                    (-(&self.step_point), self.num_threads as u64),
+                );
+
+                let handle = thread::spawn(move || {
+                    Self::decode_range(
+                        ristretto_iterator,
+                        self.range_bound,
+                        self.compression_batch_size,
+                    )
+                    // Self::decode_range(ristretto_iterator, self.range_bound)
+                });
+
+                starting_point -= G;
+                handle
+            })
+            .collect::<Vec<_>>();
+
+        let mut solution = None;
+        for handle in handles {
+            let discrete_log = handle.join().unwrap();
+            if discrete_log.is_some() {
+                solution = discrete_log;
+            }
+        }
+        solution
+    }
+
+    fn decode_range(
+        ristretto_iterator: RistrettoIterator,
+        range_bound: usize,
+        compression_batch_size: usize,
+    ) -> Option<u64> {
+        let hashmap = &DECODE_PRECOMPUTATION_FOR_G;
         let mut decoded = None;
-        ristretto_iter
-            .zip(0..solution_bound)
-            .for_each(|(elem, x_lo)| {
-                let key = elem.compress().to_bytes();
+
+        for batch in &ristretto_iterator
+            .take(range_bound)
+            .chunks(compression_batch_size)
+        {
+            let (batch_points, batch_indices): (Vec<_>, Vec<_>) = batch
+                .filter(|(point, index)| {
+                    if point.is_identity() {
+                        decoded = Some(*index);
+                        return false;
+                    }
+                    true
+                })
+                .unzip();
+
+            let batch_compressed = RistrettoPoint::double_and_compress_batch(&batch_points);
+
+            for (point, x_lo) in batch_compressed.iter().zip(batch_indices.iter()) {
+                let key = point.to_bytes();
                 if hashmap.0.contains_key(&key) {
                     let x_hi = hashmap.0[&key];
-                    decoded = Some(x_lo + solution_bound * x_hi as u64);
+                    decoded = Some(x_lo + TWO16 * x_hi as u64);
                 }
-            });
+            }
+        }
+
         decoded
     }
 }
@@ -87,36 +204,35 @@ impl DiscreteLog {
 /// Given an initial point X and a stepping point P, the iterator iterates through
 /// X + 0*P, X + 1*P, X + 2*P, X + 3*P, ...
 struct RistrettoIterator {
-    pub curr: RistrettoPoint,
-    pub step: RistrettoPoint,
+    pub current: (RistrettoPoint, u64),
+    pub step: (RistrettoPoint, u64),
 }
 
 impl RistrettoIterator {
-    fn new(curr: RistrettoPoint, step: RistrettoPoint) -> Self {
-        RistrettoIterator { curr, step }
+    fn new(current: (RistrettoPoint, u64), step: (RistrettoPoint, u64)) -> Self {
+        RistrettoIterator { current, step }
     }
 }
 
 impl Iterator for RistrettoIterator {
-    type Item = RistrettoPoint;
+    type Item = (RistrettoPoint, u64);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let r = self.curr;
-        self.curr += self.step;
+        let r = self.current;
+        self.current = (self.current.0 + self.step.0, self.current.1 + self.step.1);
         Some(r)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT as G, std::time::Instant,
-    };
+    use {super::*, std::time::Instant};
 
     #[test]
     #[allow(non_snake_case)]
     fn test_serialize_decode_u32_precomputation_for_G() {
         let decode_u32_precomputation_for_G = decode_u32_precomputation(G);
+        // let decode_u32_precomputation_for_G = decode_u32_precomputation(G);
 
         if decode_u32_precomputation_for_G.0 != DECODE_PRECOMPUTATION_FOR_G.0 {
             use std::{fs::File, io::Write, path::PathBuf};
@@ -132,25 +248,82 @@ mod tests {
 
     #[test]
     fn test_decode_correctness() {
-        let amount: u64 = 65545;
+        // general case
+        let amount: u64 = 4294967295;
 
-        let instance = DiscreteLog {
-            generator: G,
-            target: Scalar::from(amount) * G,
-        };
+        let instance = DiscreteLog::new(G, Scalar::from(amount) * G);
 
         // Very informal measurements for now
-        let start_precomputation = Instant::now();
-        let precomputed_hashmap = decode_u32_precomputation(G);
-        let precomputation_secs = start_precomputation.elapsed().as_secs_f64();
+        let start_computation = Instant::now();
+        let decoded = instance.decode_u32();
+        let computation_secs = start_computation.elapsed().as_secs_f64();
 
-        let start_online = Instant::now();
-        let computed_amount = instance.decode_online(&precomputed_hashmap, TWO16).unwrap();
-        let online_secs = start_online.elapsed().as_secs_f64();
+        assert_eq!(amount, decoded.unwrap());
 
-        assert_eq!(amount, computed_amount);
+        println!(
+            "single thread discrete log computation secs: {:?} sec",
+            computation_secs
+        );
+    }
 
-        println!("16/16 Split precomputation: {:?} sec", precomputation_secs);
-        println!("16/16 Split online computation: {:?} sec", online_secs);
+    #[test]
+    fn test_decode_correctness_threaded() {
+        // general case
+        let amount: u64 = 55;
+
+        let mut instance = DiscreteLog::new(G, Scalar::from(amount) * G);
+        instance.num_threads(4).unwrap();
+
+        // Very informal measurements for now
+        let start_computation = Instant::now();
+        let decoded = instance.decode_u32();
+        let computation_secs = start_computation.elapsed().as_secs_f64();
+
+        assert_eq!(amount, decoded.unwrap());
+
+        println!(
+            "4 thread discrete log computation: {:?} sec",
+            computation_secs
+        );
+
+        // amount 0
+        let amount: u64 = 0;
+
+        let instance = DiscreteLog::new(G, Scalar::from(amount) * G);
+
+        let decoded = instance.decode_u32();
+        assert_eq!(amount, decoded.unwrap());
+
+        // amount 1
+        let amount: u64 = 1;
+
+        let instance = DiscreteLog::new(G, Scalar::from(amount) * G);
+
+        let decoded = instance.decode_u32();
+        assert_eq!(amount, decoded.unwrap());
+
+        // amount 2
+        let amount: u64 = 2;
+
+        let instance = DiscreteLog::new(G, Scalar::from(amount) * G);
+
+        let decoded = instance.decode_u32();
+        assert_eq!(amount, decoded.unwrap());
+
+        // amount 3
+        let amount: u64 = 3;
+
+        let instance = DiscreteLog::new(G, Scalar::from(amount) * G);
+
+        let decoded = instance.decode_u32();
+        assert_eq!(amount, decoded.unwrap());
+
+        // max amount
+        let amount: u64 = ((1_u64 << 32) - 1) as u64;
+
+        let instance = DiscreteLog::new(G, Scalar::from(amount) * G);
+
+        let decoded = instance.decode_u32();
+        assert_eq!(amount, decoded.unwrap());
     }
 }

@@ -11,12 +11,12 @@ use {
         assembler::assemble,
         elf::Executable,
         static_analysis::Analysis,
-        verifier::check,
-        vm::{Config, DynamicAnalysis},
+        verifier::RequisiteVerifier,
+        vm::{Config, DynamicAnalysis, VerifiedExecutable},
     },
     safecoin_sdk::{
         account::AccountSharedData, bpf_loader, instruction::AccountMeta, pubkey::Pubkey,
-        transaction_context::TransactionContext,
+        sysvar::rent::Rent, transaction_context::TransactionContext,
     },
     std::{
         fmt::{Debug, Formatter},
@@ -153,12 +153,6 @@ native machine code before execting it in the virtual machine.",
                 .long("profile"),
         )
         .arg(
-            Arg::new("verify")
-                .help("Run the verifier before execution or disassembly")
-                .short('v')
-                .long("verify"),
-        )
-        .arg(
             Arg::new("output_format")
                 .help("Return information in specified output format")
                 .long("output")
@@ -222,7 +216,12 @@ native machine code before execting it in the virtual machine.",
     let program_indices = [0, 1];
     let preparation =
         prepare_mock_invoke_context(transaction_accounts, instruction_accounts, &program_indices);
-    let mut transaction_context = TransactionContext::new(preparation.transaction_accounts, 1, 1);
+    let mut transaction_context = TransactionContext::new(
+        preparation.transaction_accounts,
+        Some(Rent::default()),
+        1,
+        1,
+    );
     let mut invoke_context = InvokeContext::new_mock(&mut transaction_context, &[]);
     invoke_context
         .push(
@@ -237,6 +236,7 @@ native machine code before execting it in the virtual machine.",
             .transaction_context
             .get_current_instruction_context()
             .unwrap(),
+        true, // should_cap_ix_accounts
     )
     .unwrap();
     let compute_meter = invoke_context.get_compute_meter();
@@ -249,31 +249,28 @@ native machine code before execting it in the virtual machine.",
     file.seek(SeekFrom::Start(0)).unwrap();
     let mut contents = Vec::new();
     file.read_to_end(&mut contents).unwrap();
-    let syscall_registry = register_syscalls(&mut invoke_context).unwrap();
-    let mut executable = if magic == [0x7f, 0x45, 0x4c, 0x46] {
-        Executable::<BpfError, ThisInstructionMeter>::from_elf(
-            &contents,
-            None,
-            config,
-            syscall_registry,
-        )
-        .map_err(|err| format!("Executable constructor failed: {:?}", err))
+    let syscall_registry = register_syscalls(&mut invoke_context, true).unwrap();
+    let executable = if magic == [0x7f, 0x45, 0x4c, 0x46] {
+        Executable::<BpfError, ThisInstructionMeter>::from_elf(&contents, config, syscall_registry)
+            .map_err(|err| format!("Executable constructor failed: {:?}", err))
     } else {
         assemble::<BpfError, ThisInstructionMeter>(
             std::str::from_utf8(contents.as_slice()).unwrap(),
-            None,
             config,
             syscall_registry,
         )
     }
     .unwrap();
 
-    if matches.is_present("verify") {
-        let text_bytes = executable.get_text_bytes().1;
-        check(text_bytes, &config).unwrap();
-    }
-    Executable::<BpfError, ThisInstructionMeter>::jit_compile(&mut executable).unwrap();
-    let mut analysis = LazyAnalysis::new(&executable);
+    let mut verified_executable =
+        VerifiedExecutable::<RequisiteVerifier, BpfError, ThisInstructionMeter>::from_executable(
+            executable,
+        )
+        .map_err(|err| format!("Executable verifier failed: {:?}", err))
+        .unwrap();
+
+    verified_executable.jit_compile().unwrap();
+    let mut analysis = LazyAnalysis::new(verified_executable.get_executable());
 
     match matches.value_of("use") {
         Some("cfg") => {
@@ -293,10 +290,10 @@ native machine code before execting it in the virtual machine.",
     }
 
     let mut vm = create_vm(
-        &executable,
+        &verified_executable,
         parameter_bytes.as_slice_mut(),
+        account_lengths,
         &mut invoke_context,
-        &account_lengths,
     )
     .unwrap();
     let start_time = Instant::now();
@@ -306,24 +303,6 @@ native machine code before execting it in the virtual machine.",
         vm.execute_program_jit(&mut instruction_meter)
     };
     let duration = Instant::now() - start_time;
-
-    let output = Output {
-        result: format!("{:?}", result),
-        instruction_count: vm.get_total_instruction_count(),
-        execution_time: duration,
-    };
-    match matches.value_of("output_format") {
-        Some("json") => {
-            println!("{}", serde_json::to_string_pretty(&output).unwrap());
-        }
-        Some("json-compact") => {
-            println!("{}", serde_json::to_string(&output).unwrap());
-        }
-        _ => {
-            println!("Program output:");
-            println!("{:?}", output);
-        }
-    }
 
     if matches.is_present("trace") {
         eprintln!("Trace is saved in trace.out");
@@ -342,6 +321,33 @@ native machine code before execting it in the virtual machine.",
             .visualize_graphically(&mut file, Some(&dynamic_analysis))
             .unwrap();
     }
+
+    let instruction_count = vm.get_total_instruction_count();
+    drop(vm);
+
+    let output = Output {
+        result: format!("{:?}", result),
+        instruction_count,
+        execution_time: duration,
+        log: invoke_context
+            .get_log_collector()
+            .unwrap()
+            .borrow()
+            .get_recorded_content()
+            .to_vec(),
+    };
+    match matches.value_of("output_format") {
+        Some("json") => {
+            println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        }
+        Some("json-compact") => {
+            println!("{}", serde_json::to_string(&output).unwrap());
+        }
+        _ => {
+            println!("Program output:");
+            println!("{:?}", output);
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -349,6 +355,7 @@ struct Output {
     result: String,
     instruction_count: u64,
     execution_time: Duration,
+    log: Vec<String>,
 }
 
 impl Debug for Output {
@@ -356,6 +363,9 @@ impl Debug for Output {
         writeln!(f, "Result: {}", self.result)?;
         writeln!(f, "Instruction Count: {}", self.instruction_count)?;
         writeln!(f, "Execution time: {} us", self.execution_time.as_micros())?;
+        for line in &self.log {
+            writeln!(f, "{}", line)?;
+        }
         Ok(())
     }
 }
@@ -380,6 +390,6 @@ impl<'a> LazyAnalysis<'a> {
             return analysis;
         }
         self.analysis
-            .insert(Analysis::from_executable(self.executable))
+            .insert(Analysis::from_executable(self.executable).unwrap())
     }
 }

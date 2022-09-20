@@ -9,24 +9,25 @@ use {
     log::*,
     solana_banks_client::start_client,
     safecoin_banks_server::banks_server::start_local_server,
+    solana_bpf_loader_program::serialization::serialize_parameters,
     safecoin_program_runtime::{
         compute_budget::ComputeBudget, ic_msg, invoke_context::ProcessInstructionWithContext,
         stable_log, timings::ExecuteTimings,
     },
     solana_runtime::{
-        bank::{Bank, CommitTransactionCounts},
+        bank::Bank,
         bank_forks::BankForks,
         builtins::Builtin,
         commitment::BlockCommitmentCache,
         genesis_utils::{create_genesis_config_with_leader_ex, GenesisConfigInfo},
     },
     safecoin_sdk::{
-        account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
+        account::{Account, AccountSharedData, ReadableAccount},
         account_info::AccountInfo,
         clock::Slot,
-        entrypoint::{ProgramResult, SUCCESS},
+        entrypoint::{deserialize, ProgramResult, SUCCESS},
         feature_set::FEATURE_NAMES,
-        fee_calculator::{FeeCalculator, FeeRateGovernor},
+        fee_calculator::{FeeCalculator, FeeRateGovernor, DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE},
         genesis_config::{ClusterType, GenesisConfig},
         hash::Hash,
         instruction::{Instruction, InstructionError},
@@ -41,13 +42,12 @@ use {
     solana_vote_program::vote_state::{VoteState, VoteStateVersions},
     std::{
         cell::RefCell,
-        collections::HashSet,
+        collections::{HashMap, HashSet},
         convert::TryFrom,
         fs::File,
         io::{self, Read},
         mem::transmute,
         path::{Path, PathBuf},
-        rc::Rc,
         sync::{
             atomic::{AtomicBool, Ordering},
             Arc, RwLock,
@@ -69,7 +69,7 @@ pub mod programs;
 extern crate solana_bpf_loader_program;
 
 /// Errors from the program test environment
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum ProgramTestError {
     /// The chosen warp slot is not in the future, so warp is not performed
     #[error("Warp slot not in the future")]
@@ -94,18 +94,17 @@ fn get_invoke_context<'a, 'b>() -> &'a mut InvokeContext<'b> {
 pub fn builtin_process_instruction(
     process_instruction: safecoin_sdk::entrypoint::ProcessInstruction,
     _first_instruction_account: usize,
-    input: &[u8],
     invoke_context: &mut InvokeContext,
 ) -> Result<(), InstructionError> {
     set_invoke_context(invoke_context);
 
     let transaction_context = &invoke_context.transaction_context;
     let instruction_context = transaction_context.get_current_instruction_context()?;
-    let indices_in_instruction = instruction_context.get_number_of_program_accounts()
-        ..instruction_context.get_number_of_accounts();
+    let instruction_data = instruction_context.get_instruction_data();
+    let instruction_account_indices = 0..instruction_context.get_number_of_instruction_accounts();
 
     let log_collector = invoke_context.get_log_collector();
-    let program_id = instruction_context.get_program_key(transaction_context)?;
+    let program_id = instruction_context.get_last_program_key(transaction_context)?;
     stable_log::program_invoke(
         &log_collector,
         program_id,
@@ -113,77 +112,58 @@ pub fn builtin_process_instruction(
     );
 
     // Copy indices_in_instruction into a HashSet to ensure there are no duplicates
-    let deduplicated_indices: HashSet<usize> = indices_in_instruction.clone().collect();
+    let deduplicated_indices: HashSet<usize> = instruction_account_indices.collect();
 
-    // Create copies of the accounts
-    let mut account_copies = deduplicated_indices
-        .iter()
-        .map(|index_in_instruction| {
-            let borrowed_account = instruction_context
-                .try_borrow_account(transaction_context, *index_in_instruction)?;
-            Ok((
-                *borrowed_account.get_key(),
-                *borrowed_account.get_owner(),
-                borrowed_account.get_lamports(),
-                borrowed_account.get_data().to_vec(),
-            ))
-        })
-        .collect::<Result<Vec<_>, InstructionError>>()?;
+    // Serialize entrypoint parameters with BPF ABI
+    let (mut parameter_bytes, _account_lengths) = serialize_parameters(
+        invoke_context.transaction_context,
+        invoke_context
+            .transaction_context
+            .get_current_instruction_context()?,
+        true,
+    )?;
 
-    // Create shared references to account_copies
-    let account_refs: Vec<_> = account_copies
-        .iter_mut()
-        .map(|(key, owner, lamports, data)| {
-            (
-                key,
-                owner,
-                Rc::new(RefCell::new(lamports)),
-                Rc::new(RefCell::new(data.as_mut())),
-            )
-        })
-        .collect();
-
-    // Create AccountInfos
-    let account_infos = indices_in_instruction
-        .map(|index_in_instruction| {
-            let account_copy_index = deduplicated_indices
-                .iter()
-                .position(|index| *index == index_in_instruction)
-                .unwrap();
-            let (key, owner, lamports, data) = &account_refs[account_copy_index];
-            let borrowed_account = instruction_context
-                .try_borrow_account(transaction_context, index_in_instruction)?;
-            Ok(AccountInfo {
-                key,
-                is_signer: borrowed_account.is_signer(),
-                is_writable: borrowed_account.is_writable(),
-                lamports: lamports.clone(),
-                data: data.clone(),
-                owner,
-                executable: borrowed_account.is_executable(),
-                rent_epoch: borrowed_account.get_rent_epoch(),
-            })
-        })
-        .collect::<Result<Vec<AccountInfo>, InstructionError>>()?;
+    // Deserialize data back into instruction params
+    let (program_id, account_infos, _input) =
+        unsafe { deserialize(&mut parameter_bytes.as_slice_mut()[0] as *mut u8) };
 
     // Execute the program
-    process_instruction(program_id, &account_infos, input).map_err(|err| {
+    process_instruction(program_id, &account_infos, instruction_data).map_err(|err| {
         let err = u64::from(err);
         stable_log::program_failure(&log_collector, program_id, &err.into());
         err
     })?;
     stable_log::program_success(&log_collector, program_id);
 
+    // Lookup table for AccountInfo
+    let account_info_map: HashMap<_, _> = account_infos.into_iter().map(|a| (a.key, a)).collect();
+
+    // Re-fetch the instruction context. The previous reference may have been
+    // invalidated due to the `set_invoke_context` in a CPI.
+    let transaction_context = &invoke_context.transaction_context;
+    let instruction_context = transaction_context.get_current_instruction_context()?;
+
     // Commit AccountInfo changes back into KeyedAccounts
-    for (index_in_instruction, (_key, _owner, lamports, data)) in deduplicated_indices
-        .into_iter()
-        .zip(account_copies.into_iter())
-    {
+    for i in deduplicated_indices.into_iter() {
         let mut borrowed_account =
-            instruction_context.try_borrow_account(transaction_context, index_in_instruction)?;
+            instruction_context.try_borrow_instruction_account(transaction_context, i)?;
         if borrowed_account.is_writable() {
-            borrowed_account.set_lamports(lamports);
-            borrowed_account.set_data(&data);
+            if let Some(account_info) = account_info_map.get(borrowed_account.get_key()) {
+                if borrowed_account.get_lamports() != account_info.lamports() {
+                    borrowed_account.set_lamports(account_info.lamports())?;
+                }
+
+                if borrowed_account
+                    .can_data_be_resized(account_info.data_len())
+                    .is_ok()
+                    && borrowed_account.can_data_be_changed().is_ok()
+                {
+                    borrowed_account.set_data(&account_info.data.borrow())?;
+                }
+                if borrowed_account.get_owner() != account_info.owner {
+                    borrowed_account.set_owner(account_info.owner.as_ref())?;
+                }
+            }
         }
     }
 
@@ -197,12 +177,10 @@ macro_rules! processor {
     ($process_instruction:expr) => {
         Some(
             |first_instruction_account: usize,
-             input: &[u8],
              invoke_context: &mut safecoin_program_test::InvokeContext| {
                 $crate::builtin_process_instruction(
                     $process_instruction,
                     first_instruction_account,
-                    input,
                     invoke_context,
                 )
             },
@@ -255,7 +233,7 @@ impl safecoin_sdk::program_stubs::SyscallStubs for SyscallStubs {
             .get_current_instruction_context()
             .unwrap();
         let caller = instruction_context
-            .get_program_key(transaction_context)
+            .get_last_program_key(transaction_context)
             .unwrap();
 
         stable_log::program_invoke(
@@ -268,15 +246,19 @@ impl safecoin_sdk::program_stubs::SyscallStubs for SyscallStubs {
             .iter()
             .map(|seeds| Pubkey::create_program_address(seeds, caller).unwrap())
             .collect::<Vec<_>>();
+
         let (instruction_accounts, program_indices) = invoke_context
             .prepare_instruction(instruction, &signers)
             .unwrap();
 
         // Copy caller's account_info modifications into invoke_context accounts
+        let transaction_context = &invoke_context.transaction_context;
+        let instruction_context = transaction_context
+            .get_current_instruction_context()
+            .unwrap();
         let mut account_indices = Vec::with_capacity(instruction_accounts.len());
         for instruction_account in instruction_accounts.iter() {
-            let account_key = invoke_context
-                .transaction_context
+            let account_key = transaction_context
                 .get_key_of_account_at_index(instruction_account.index_in_transaction)
                 .unwrap();
             let account_info_index = account_infos
@@ -285,19 +267,48 @@ impl safecoin_sdk::program_stubs::SyscallStubs for SyscallStubs {
                 .ok_or(InstructionError::MissingAccount)
                 .unwrap();
             let account_info = &account_infos[account_info_index];
-            let mut account = invoke_context
-                .transaction_context
+            let mut borrowed_account = instruction_context
+                .try_borrow_instruction_account(
+                    transaction_context,
+                    instruction_account.index_in_caller,
+                )
+                .unwrap();
+            if borrowed_account.get_lamports() != account_info.lamports() {
+                borrowed_account
+                    .set_lamports(account_info.lamports())
+                    .unwrap();
+            }
+            let account_info_data = account_info.try_borrow_data().unwrap();
+            // The redundant check helps to avoid the expensive data comparison if we can
+            match borrowed_account
+                .can_data_be_resized(account_info_data.len())
+                .and_then(|_| borrowed_account.can_data_be_changed())
+            {
+                Ok(()) => borrowed_account.set_data(&account_info_data).unwrap(),
+                Err(err) if borrowed_account.get_data() != *account_info_data => {
+                    panic!("{:?}", err);
+                }
+                _ => {}
+            }
+            if borrowed_account.is_executable() != account_info.executable {
+                borrowed_account
+                    .set_executable(account_info.executable)
+                    .unwrap();
+            }
+            // Change the owner at the end so that we are allowed to change the lamports and data before
+            if borrowed_account.get_owner() != account_info.owner {
+                borrowed_account
+                    .set_owner(account_info.owner.as_ref())
+                    .unwrap();
+            }
+            drop(borrowed_account);
+            let account = transaction_context
                 .get_account_at_index(instruction_account.index_in_transaction)
                 .unwrap()
-                .borrow_mut();
-            account.copy_into_owner_from_slice(account_info.owner.as_ref());
-            account.set_data_from_slice(&account_info.try_borrow_data().unwrap());
-            account.set_lamports(account_info.lamports());
-            account.set_executable(account_info.executable);
-            account.set_rent_epoch(account_info.rent_epoch);
+                .borrow();
+            assert_eq!(account.rent_epoch(), account_info.rent_epoch);
             if instruction_account.is_writable {
-                account_indices
-                    .push((instruction_account.index_in_transaction, account_info_index));
+                account_indices.push((instruction_account.index_in_caller, account_info_index));
             }
         }
 
@@ -313,32 +324,35 @@ impl safecoin_sdk::program_stubs::SyscallStubs for SyscallStubs {
             .map_err(|err| ProgramError::try_from(err).unwrap_or_else(|err| panic!("{}", err)))?;
 
         // Copy invoke_context accounts modifications into caller's account_info
-        for (index_in_transaction, account_info_index) in account_indices.into_iter() {
-            let account = invoke_context
-                .transaction_context
-                .get_account_at_index(index_in_transaction)
-                .unwrap()
-                .borrow_mut();
+        let transaction_context = &invoke_context.transaction_context;
+        let instruction_context = transaction_context
+            .get_current_instruction_context()
+            .unwrap();
+        for (index_in_caller, account_info_index) in account_indices.into_iter() {
+            let borrowed_account = instruction_context
+                .try_borrow_instruction_account(transaction_context, index_in_caller)
+                .unwrap();
             let account_info = &account_infos[account_info_index];
-            **account_info.try_borrow_mut_lamports().unwrap() = account.lamports();
-            let mut data = account_info.try_borrow_mut_data()?;
-            let new_data = account.data();
-            if account_info.owner != account.owner() {
+            **account_info.try_borrow_mut_lamports().unwrap() = borrowed_account.get_lamports();
+            if account_info.owner != borrowed_account.get_owner() {
                 // TODO Figure out a better way to allow the System Program to set the account owner
                 #[allow(clippy::transmute_ptr_to_ptr)]
                 #[allow(mutable_transmutes)]
                 let account_info_mut =
                     unsafe { transmute::<&Pubkey, &mut Pubkey>(account_info.owner) };
-                *account_info_mut = *account.owner();
+                *account_info_mut = *borrowed_account.get_owner();
             }
-            // TODO: Figure out how to allow the System Program to resize the account data
-            assert!(
-                data.len() == new_data.len(),
-                "Account data resizing not supported yet: {} -> {}. \
-                    Consider making this test conditional on `#[cfg(feature = \"test-bpf\")]`",
-                data.len(),
-                new_data.len()
-            );
+
+            let new_data = borrowed_account.get_data();
+            let new_len = new_data.len();
+
+            // Resize account_info data (grow-only)
+            if account_info.data_len() < new_len {
+                account_info.realloc(new_len, false)?;
+            }
+
+            // Clone the data
+            let mut data = account_info.try_borrow_mut_data()?;
             data.clone_from_slice(new_data);
         }
 
@@ -381,7 +395,7 @@ impl safecoin_sdk::program_stubs::SyscallStubs for SyscallStubs {
             .get_current_instruction_context()
             .unwrap();
         let caller = *instruction_context
-            .get_program_key(transaction_context)
+            .get_last_program_key(transaction_context)
             .unwrap();
         transaction_context
             .set_return_data(caller, data.to_vec())
@@ -403,6 +417,8 @@ fn default_shared_object_dirs() -> Vec<PathBuf> {
     let mut search_path = vec![];
     if let Ok(bpf_out_dir) = std::env::var("BPF_OUT_DIR") {
         search_path.push(PathBuf::from(bpf_out_dir));
+    } else if let Ok(bpf_out_dir) = std::env::var("SBF_OUT_DIR") {
+        search_path.push(PathBuf::from(bpf_out_dir));
     }
     search_path.push(PathBuf::from("tests/fixtures"));
     if let Ok(dir) = std::env::current_dir() {
@@ -421,46 +437,6 @@ pub fn read_file<P: AsRef<Path>>(path: P) -> Vec<u8> {
     file.read_to_end(&mut file_data)
         .unwrap_or_else(|err| panic!("Failed to read \"{}\": {}", path.display(), err));
     file_data
-}
-
-fn setup_fees(bank: Bank) -> Bank {
-    // Realistic fees part 1: Fake a single signature by calling
-    // `bank.commit_transactions()` so that the fee in the child bank will be
-    // initialized with a non-zero fee.
-    assert_eq!(bank.signature_count(), 0);
-    let (last_blockhash, lamports_per_signature) = bank.last_blockhash_and_lamports_per_signature();
-    bank.commit_transactions(
-        &[],     // transactions
-        &mut [], // loaded accounts
-        vec![],  // transaction execution results
-        last_blockhash,
-        lamports_per_signature,
-        CommitTransactionCounts {
-            committed_transactions_count: 0,
-            committed_with_failure_result_count: 0,
-            signature_count: 1,
-        },
-        &mut ExecuteTimings::default(),
-    );
-    assert_eq!(bank.signature_count(), 1);
-
-    // Advance beyond slot 0 for a slightly more realistic test environment
-    let bank = Arc::new(bank);
-    let bank = Bank::new_from_parent(&bank, bank.collector_id(), bank.slot() + 1);
-    debug!("Bank slot: {}", bank.slot());
-
-    // Realistic fees part 2: Tick until a new blockhash is produced to pick up the
-    // non-zero fees
-    let last_blockhash = bank.last_blockhash();
-    while last_blockhash == bank.last_blockhash() {
-        bank.register_tick(&Hash::new_unique());
-    }
-
-    // Make sure a fee is now required
-    let lamports_per_signature = bank.get_lamports_per_signature();
-    assert_ne!(lamports_per_signature, 0);
-
-    bank
 }
 
 pub struct ProgramTest {
@@ -492,7 +468,8 @@ impl Default for ProgramTest {
              solana_runtime::system_instruction_processor=trace,\
              safecoin_program_test=info",
         );
-        let prefer_bpf = std::env::var("BPF_OUT_DIR").is_ok();
+        let prefer_bpf =
+            std::env::var("BPF_OUT_DIR").is_ok() || std::env::var("SBF_OUT_DIR").is_ok();
 
         Self {
             accounts: vec![],
@@ -755,7 +732,11 @@ impl ProgramTest {
         }
 
         let rent = Rent::default();
-        let fee_rate_governor = FeeRateGovernor::default();
+        let fee_rate_governor = FeeRateGovernor {
+            // Initialize with a non-zero fee
+            lamports_per_signature: DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE / 2,
+            ..FeeRateGovernor::default()
+        };
         let bootstrap_validator_pubkey = Pubkey::new_unique();
         let bootstrap_validator_stake_lamports =
             rent.minimum_balance(VoteState::size_of()) + sol_to_lamports(1_000_000.0);
@@ -844,7 +825,14 @@ impl ProgramTest {
                 ..ComputeBudget::default()
             }));
         }
-        let bank = setup_fees(bank);
+        // Advance beyond slot 0 for a slightly more realistic test environment
+        let bank = {
+            let bank = Arc::new(bank);
+            bank.fill_bank_with_ticks_for_tests();
+            let bank = Bank::new_from_parent(&bank, bank.collector_id(), bank.slot() + 1);
+            debug!("Bank slot: {}", bank.slot());
+            bank
+        };
         let slot = bank.slot();
         let last_blockhash = bank.last_blockhash();
         let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
@@ -868,6 +856,7 @@ impl ProgramTest {
     pub async fn start(self) -> (BanksClient, Keypair, Hash) {
         let (bank_forks, block_commitment_cache, last_blockhash, gci) = self.setup_bank();
         let target_tick_duration = gci.genesis_config.poh_config.target_tick_duration;
+        let target_slot_duration = target_tick_duration * gci.genesis_config.ticks_per_slot as u32;
         let transport = start_local_server(
             bank_forks.clone(),
             block_commitment_cache.clone(),
@@ -883,12 +872,12 @@ impl ProgramTest {
         // test
         tokio::spawn(async move {
             loop {
+                tokio::time::sleep(target_slot_duration).await;
                 bank_forks
                     .read()
                     .unwrap()
                     .working_bank()
-                    .register_tick(&Hash::new_unique());
-                tokio::time::sleep(target_tick_duration).await;
+                    .register_recent_blockhash(&Hash::new_unique());
             }
         });
 
@@ -1025,6 +1014,8 @@ impl ProgramTestContext {
             .genesis_config
             .poh_config
             .target_tick_duration;
+        let target_slot_duration =
+            target_tick_duration * genesis_config_info.genesis_config.ticks_per_slot as u32;
         let exit = Arc::new(AtomicBool::new(false));
         let bank_task = DroppableTask(
             exit.clone(),
@@ -1033,12 +1024,12 @@ impl ProgramTestContext {
                     if exit.load(Ordering::Relaxed) {
                         break;
                     }
+                    tokio::time::sleep(target_slot_duration).await;
                     running_bank_forks
                         .read()
                         .unwrap()
                         .working_bank()
-                        .register_tick(&Hash::new_unique());
-                    tokio::time::sleep(target_tick_duration).await;
+                        .register_recent_blockhash(&Hash::new_unique());
                 }
             }),
         );
@@ -1073,7 +1064,7 @@ impl ProgramTestContext {
 
         let epoch = bank.epoch();
         for _ in 0..number_of_credits {
-            vote_state.increment_credits(epoch);
+            vote_state.increment_credits(epoch, 1);
         }
         let versioned = VoteStateVersions::new_current(vote_state);
         VoteState::to(&versioned, &mut vote_account).unwrap();
@@ -1109,12 +1100,9 @@ impl ProgramTestContext {
         let mut bank_forks = self.bank_forks.write().unwrap();
         let bank = bank_forks.working_bank();
 
-        // Force ticks until a new blockhash, otherwise retried transactions will have
+        // Fill ticks until a new blockhash is recorded, otherwise retried transactions will have
         // the same signature
-        let last_blockhash = bank.last_blockhash();
-        while last_blockhash == bank.last_blockhash() {
-            bank.register_tick(&Hash::new_unique());
-        }
+        bank.fill_bank_with_ticks_for_tests();
 
         // Ensure that we are actually progressing forward
         let working_slot = bank.slot();

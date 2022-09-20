@@ -8,7 +8,7 @@ here=$(dirname "$0")
 # shellcheck source=multinode-demo/common.sh
 source "$here"/common.sh
 
-stake_sol=1   # default number of SAFE to assign as stake (1 SAFE)
+stake_sol=10   # default number of SAFE to assign as stake (10 SAFE)
 url=http://127.0.0.1:8328   # default RPC url
 
 usage() {

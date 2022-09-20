@@ -1,6 +1,6 @@
 [package]
 name = "solana-bpf-rust-realloc-invoke"
-version = "1.10.34"
+version = "1.14.3"
 description = "Safecoin BPF test program written in Rust"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -14,8 +14,8 @@ default = ["program"]
 program = []
 
 [dependencies]
-safecoin-program = { path = "../../../../sdk/program", version = "=1.10.34" }
-solana-bpf-rust-realloc = { path = "../realloc", version = "=1.10.34", default-features = false }
+solana-bpf-rust-realloc = { path = "../realloc", version = "=1.14.3", default-features = false }
+safecoin-program = { path = "../../../../sdk/program", version = "=1.14.3" }
 
 [lib]
 crate-type = ["lib", "cdylib"]

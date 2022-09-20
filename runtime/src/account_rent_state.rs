@@ -9,7 +9,7 @@ use {
     },
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) enum RentState {
     /// account.lamports == 0
     Uninitialized,
@@ -39,7 +39,6 @@ impl RentState {
     pub(crate) fn transition_allowed_from(
         &self,
         pre_rent_state: &RentState,
-        do_support_realloc: bool,
         prevent_crediting_accounts_that_end_rent_paying: bool,
     ) -> bool {
         match self {
@@ -55,7 +54,7 @@ impl RentState {
                         lamports: pre_lamports,
                     } => {
                         // Cannot remain RentPaying if resized
-                        if do_support_realloc && post_data_size != pre_data_size {
+                        if post_data_size != pre_data_size {
                             false
                         } else if prevent_crediting_accounts_that_end_rent_paying {
                             // Cannot remain RentPaying if credited
@@ -90,7 +89,6 @@ pub(crate) fn check_rent_state(
     post_rent_state: Option<&RentState>,
     transaction_context: &TransactionContext,
     index: usize,
-    do_support_realloc: bool,
     include_account_index_in_err: bool,
     prevent_crediting_accounts_that_end_rent_paying: bool,
 ) -> Result<()> {
@@ -106,7 +104,6 @@ pub(crate) fn check_rent_state(
                 .get_account_at_index(index)
                 .expect(expect_msg)
                 .borrow(),
-            do_support_realloc,
             include_account_index_in_err.then(|| index),
             prevent_crediting_accounts_that_end_rent_paying,
         )?;
@@ -119,7 +116,6 @@ pub(crate) fn check_rent_state_with_account(
     post_rent_state: &RentState,
     address: &Pubkey,
     account_state: &AccountSharedData,
-    do_support_realloc: bool,
     account_index: Option<usize>,
     prevent_crediting_accounts_that_end_rent_paying: bool,
 ) -> Result<()> {
@@ -127,7 +123,6 @@ pub(crate) fn check_rent_state_with_account(
     if !safecoin_sdk::incinerator::check_id(address)
         && !post_rent_state.transition_allowed_from(
             pre_rent_state,
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying,
         )
     {
@@ -210,16 +205,13 @@ mod tests {
     }
 
     fn check_transition_allowed_from(prevent_crediting_accounts_that_end_rent_paying: bool) {
-        let do_support_realloc = true;
         let post_rent_state = RentState::Uninitialized;
         assert!(post_rent_state.transition_allowed_from(
             &RentState::Uninitialized,
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         assert!(post_rent_state.transition_allowed_from(
             &RentState::RentExempt,
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         assert!(post_rent_state.transition_allowed_from(
@@ -227,19 +219,16 @@ mod tests {
                 data_size: 0,
                 lamports: 1,
             },
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
 
         let post_rent_state = RentState::RentExempt;
         assert!(post_rent_state.transition_allowed_from(
             &RentState::Uninitialized,
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         assert!(post_rent_state.transition_allowed_from(
             &RentState::RentExempt,
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         assert!(post_rent_state.transition_allowed_from(
@@ -247,7 +236,6 @@ mod tests {
                 data_size: 0,
                 lamports: 1,
             },
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         let post_rent_state = RentState::RentPaying {
@@ -256,12 +244,10 @@ mod tests {
         };
         assert!(!post_rent_state.transition_allowed_from(
             &RentState::Uninitialized,
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         assert!(!post_rent_state.transition_allowed_from(
             &RentState::RentExempt,
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         assert!(!post_rent_state.transition_allowed_from(
@@ -269,7 +255,6 @@ mod tests {
                 data_size: 3,
                 lamports: 5
             },
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         assert!(!post_rent_state.transition_allowed_from(
@@ -277,7 +262,6 @@ mod tests {
                 data_size: 1,
                 lamports: 5
             },
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         // Transition is always allowed if there is no account data resize or
@@ -287,7 +271,6 @@ mod tests {
                 data_size: 2,
                 lamports: 5
             },
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         // Transition is always allowed if there is no account data resize and
@@ -297,7 +280,6 @@ mod tests {
                 data_size: 2,
                 lamports: 7
             },
-            do_support_realloc,
             prevent_crediting_accounts_that_end_rent_paying
         ));
         // Once the feature is activated, transition is not allowed if the
@@ -308,7 +290,6 @@ mod tests {
                     data_size: 2,
                     lamports: 3
                 },
-                do_support_realloc,
                 prevent_crediting_accounts_that_end_rent_paying
             ),
             !prevent_crediting_accounts_that_end_rent_paying

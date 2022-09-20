@@ -179,7 +179,7 @@ pub struct UiTokenAccount {
     pub extensions: Vec<UiExtension>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum UiAccountState {
     Uninitialized,
@@ -260,7 +260,7 @@ pub fn token_amount_to_ui_amount(amount: u64, decimals: u8) -> UiTokenAmount {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct UiMint {
     pub mint_authority: Option<String>,
@@ -272,7 +272,7 @@ pub struct UiMint {
     pub extensions: Vec<UiExtension>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct UiMultisig {
     pub num_required_signers: u8,
@@ -552,8 +552,10 @@ mod test {
         account_state.pack_base();
         account_state.init_account_type().unwrap();
 
-        account_state.init_extension::<ImmutableOwner>().unwrap();
-        let mut memo_transfer = account_state.init_extension::<MemoTransfer>().unwrap();
+        account_state
+            .init_extension::<ImmutableOwner>(true)
+            .unwrap();
+        let mut memo_transfer = account_state.init_extension::<MemoTransfer>(true).unwrap();
         memo_transfer.require_incoming_transfer_memos = true.into();
 
         assert!(parse_token(&account_data, None).is_err());
@@ -620,7 +622,9 @@ mod test {
         let mut mint_state =
             StateWithExtensionsMut::<Mint>::unpack_uninitialized(&mut mint_data).unwrap();
 
-        let mut mint_close_authority = mint_state.init_extension::<MintCloseAuthority>().unwrap();
+        let mut mint_close_authority = mint_state
+            .init_extension::<MintCloseAuthority>(true)
+            .unwrap();
         mint_close_authority.close_authority =
             OptionalNonZeroPubkey::try_from(Some(owner_pubkey)).unwrap();
 

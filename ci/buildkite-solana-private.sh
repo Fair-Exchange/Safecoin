@@ -103,7 +103,7 @@ command_step() {
     timeout_in_minutes: $3
     artifact_paths: "log-*.txt"
     agents:
-      - "queue=sol-private"
+      queue: "sol-private"
 EOF
 }
 
@@ -139,7 +139,7 @@ all_test_steps() {
              ^ci/test-coverage.sh \
              ^scripts/coverage.sh \
       ; then
-    command_step coverage ". ci/rust-version.sh; ci/docker-run.sh \$\$rust_nightly_docker_image ci/test-coverage.sh" 50
+    command_step coverage ". ci/rust-version.sh; ci/docker-run.sh \$\$rust_nightly_docker_image ci/test-coverage.sh" 80
     wait_step
   else
     annotate --style info --context test-coverage \
@@ -182,7 +182,7 @@ all_test_steps() {
     timeout_in_minutes: 35
     artifact_paths: "bpf-dumps.tar.bz2"
     agents:
-      - "queue=sol-private"
+      queue: "sol-private"
 EOF
   else
     annotate --style info \
@@ -209,7 +209,7 @@ EOF
     timeout_in_minutes: 35
     artifact_paths: "log-*.txt"
     agents:
-      - "queue=sol-private"
+      queue: "sol-private"
 EOF
   else
     annotate --style info \
@@ -234,9 +234,9 @@ EOF
     cat >> "$output_file" <<"EOF"
   - command: "scripts/build-downstream-projects.sh"
     name: "downstream-projects"
-    timeout_in_minutes: 45
+    timeout_in_minutes: 40
     agents:
-      - "queue=sol-private"
+      queue: "sol-private"
 EOF
   else
     annotate --style info \
@@ -264,7 +264,7 @@ EOF
              ^ci/test-coverage.sh \
              ^ci/test-bench.sh \
       ; then
-    command_step bench "ci/test-bench.sh" 45
+    command_step bench "ci/test-bench.sh" 40
   else
     annotate --style info --context test-bench \
       "Bench skipped as no .rs files were modified"
@@ -272,15 +272,19 @@ EOF
 
   command_step "local-cluster" \
     ". ci/rust-version.sh; ci/docker-run.sh \$\$rust_stable_docker_image ci/test-local-cluster.sh" \
-    50
+    40
 
   command_step "local-cluster-flakey" \
     ". ci/rust-version.sh; ci/docker-run.sh \$\$rust_stable_docker_image ci/test-local-cluster-flakey.sh" \
-    20
+    10
 
-  command_step "local-cluster-slow" \
-    ". ci/rust-version.sh; ci/docker-run.sh \$\$rust_stable_docker_image ci/test-local-cluster-slow.sh" \
-    50
+  command_step "local-cluster-slow-1" \
+    ". ci/rust-version.sh; ci/docker-run.sh \$\$rust_stable_docker_image ci/test-local-cluster-slow-1.sh" \
+    40
+
+  command_step "local-cluster-slow-2" \
+    ". ci/rust-version.sh; ci/docker-run.sh \$\$rust_stable_docker_image ci/test-local-cluster-slow-2.sh" \
+    40
 }
 
 pull_or_push_steps() {

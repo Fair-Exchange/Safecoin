@@ -1,12 +1,17 @@
+//! A type to hold data for the [`SlotHistory` sysvar][sv].
+//!
+//! [sv]: https://docs.solana.com/developing/runtime-facilities/sysvars#slothistory
+//!
+//! The sysvar ID is declared in [`sysvar::slot_history`].
+//!
+//! [`sysvar::slot_history`]: crate::slot_history
+
 #![allow(clippy::integer_arithmetic)]
-//!
-//! slot history
-//!
 pub use crate::clock::Slot;
 use bv::{BitVec, BitsMut};
 
 #[repr(C)]
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SlotHistory {
     pub bits: BitVec<u64>,
     pub next_slot: Slot,
@@ -36,7 +41,7 @@ impl std::fmt::Debug for SlotHistory {
 
 pub const MAX_ENTRIES: u64 = 1024 * 1024; // 1 million slots is about 5 days
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Check {
     Future,
     TooOld,

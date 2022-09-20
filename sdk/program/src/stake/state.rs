@@ -4,7 +4,6 @@ use {
         clock::{Clock, Epoch, UnixTimestamp},
         instruction::InstructionError,
         pubkey::Pubkey,
-        rent::Rent,
         stake::{
             config::Config,
             instruction::{LockupArgs, StakeError},
@@ -74,8 +73,9 @@ impl Default for StakeState {
 }
 
 impl StakeState {
-    pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
-        rent.minimum_balance(std::mem::size_of::<StakeState>())
+    /// The fixed number of bytes used to serialize each stake account
+    pub const fn size_of() -> usize {
+        200 // see test_size_of
     }
 
     pub fn stake(&self) -> Option<Stake> {
@@ -113,7 +113,7 @@ impl StakeState {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy, AbiExample)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, AbiExample)]
 pub enum StakeAuthorize {
     Staker,
     Withdrawer,
@@ -125,6 +125,7 @@ pub enum StakeAuthorize {
     Serialize,
     Deserialize,
     PartialEq,
+    Eq,
     Clone,
     Copy,
     AbiExample,
@@ -159,6 +160,7 @@ impl Lockup {
     Serialize,
     Deserialize,
     PartialEq,
+    Eq,
     Clone,
     Copy,
     AbiExample,
@@ -238,6 +240,7 @@ impl Authorized {
     Serialize,
     Deserialize,
     PartialEq,
+    Eq,
     Clone,
     Copy,
     AbiExample,
@@ -593,6 +596,11 @@ mod test {
         let bincode_serialized = serialize(&stake).unwrap();
         let borsh_serialized = StakeState::try_to_vec(&stake).unwrap();
         assert_eq!(bincode_serialized, borsh_serialized);
+    }
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(StakeState::size_of(), std::mem::size_of::<StakeState>());
     }
 
     #[test]

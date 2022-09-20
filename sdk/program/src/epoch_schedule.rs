@@ -1,4 +1,4 @@
-//! configuration for epochs, slots
+//! Configuration for epochs and slots.
 
 /// 1 Epoch = 400 * 8192 ms ~= 55 minutes
 pub use crate::clock::{Epoch, Slot, DEFAULT_SLOTS_PER_EPOCH};
@@ -21,7 +21,7 @@ pub const MAX_LEADER_SCHEDULE_EPOCH_OFFSET: u64 = 3;
 pub const MINIMUM_SLOTS_PER_EPOCH: u64 = 32;
 
 #[repr(C)]
-#[derive(Debug, Copy, PartialEq, Deserialize, Serialize, AbiExample)]
+#[derive(Debug, Copy, PartialEq, Eq, Deserialize, Serialize, AbiExample)]
 #[serde(rename_all = "camelCase")]
 pub struct EpochSchedule {
     /// The maximum number of slots in each epoch.

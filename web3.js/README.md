@@ -23,7 +23,10 @@
 
 This is the Safecoin Javascript API built on the Safecoin [JSON RPC API](https://docs.solana.com/apps/jsonrpc-api)
 
-[Latest API Documentation](https://solana-labs.github.io/solana-web3.js/)
+## Documentation and examples
+
+ - [The Safecoin Cookbook](https://solanacookbook.com/) has extensive task-based documentation using this library.
+ - For more detail on individual functions, see the [latest API Documentation](https://solana-labs.github.io/solana-web3.js/)
 
 ## Installation
 
@@ -84,20 +87,11 @@ console.log(solanaWeb3);
 console.log(solanaWeb3);
 ```
 
-## Examples
+## Flow Support (Discontinued)
 
-Example scripts for the web3.js repo and native programs:
-
-- [Web3 Examples](https://github.com/fair-exchange/safecoin/tree/master/web3.js/examples)
-
-Example scripts for the Safecoin Program Library:
-
-- [Token Program Examples](https://github.com/fair-exchange/safecoin-program-library/tree/master/token/js/examples)
-
-## Flow
-
-A [Flow library definition](https://flow.org/en/docs/libdefs/) is provided at
-https://unpkg.com/@safecoin/web3.js@latest/module.flow.js.
+Flow types are no longer supported in new releases. The last release with Flow support is v1.37.2 and its
+[Flow library definition](https://flow.org/en/docs/libdefs/) is provided at
+https://unpkg.com/@safecoin/web3.js@v1.37.2/module.flow.js.
 Download the file and add the following line under the [libs] section of your project's `.flowconfig` to
 activate it:
 
@@ -114,6 +108,10 @@ and [npmjs.com](https://www.npmjs.com/package/@safecoin/web3.js)
 Each Github release features a tarball containing API documentation and a
 minified version of the module suitable for direct use in a browser environment
 (`<script>` tag)
+
+## Contributing
+
+If you have an issue to report or would like to contribute a pull request, please do so against the monorepo at https://github.com/fair-exchange/safecoin. We are not able to merge pull requests into the mirror repo https://github.com/fair-exchange/safecoin-web3.js and issues filed there may go unnoticed.
 
 ## Disclaimer
 

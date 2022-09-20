@@ -1,6 +1,7 @@
 use {
     crate::{
         cli::{CliCommand, CliCommandInfo, CliConfig, CliError, ProcessResult},
+        compute_unit_price::WithComputeUnitPrice,
         spend_utils::{resolve_spend_tx_and_check_account_balance, SpendAmount},
     },
     clap::{value_t, value_t_or_exit, App, AppSettings, Arg, ArgMatches, SubCommand},
@@ -8,12 +9,14 @@ use {
     crossbeam_channel::unbounded,
     serde::{Deserialize, Serialize},
     safecoin_clap_utils::{
+        compute_unit_price::{compute_unit_price_arg, COMPUTE_UNIT_PRICE_ARG},
         input_parsers::*,
         input_validators::*,
         keypair::DefaultSigner,
         offline::{blockhash_arg, BLOCKHASH_ARG},
     },
     safecoin_cli_output::{
+        cli_version::CliVersion,
         display::{
             build_balance_message, format_labeled_address, new_spinner_progress_bar,
             println_transaction, unix_timestamp_to_string, writeln_name_value,
@@ -39,7 +42,6 @@ use {
         account_utils::StateMut,
         clock::{self, Clock, Slot},
         commitment_config::CommitmentConfig,
-        compute_budget::ComputeBudgetInstruction,
         epoch_schedule::Epoch,
         hash::Hash,
         message::Message,
@@ -270,13 +272,7 @@ impl ClusterQuerySubCommands for App<'_, '_> {
                         .default_value("15")
                         .help("Wait up to timeout seconds for transaction confirmation"),
                 )
-                .arg(
-                    Arg::with_name("compute_unit_price")
-                        .long("compute-unit-price")
-                        .value_name("MICRO-LAMPORTS")
-                        .takes_value(true)
-                        .help("Set the price in micro-lamports of each transaction compute unit"),
-                )
+                .arg(compute_unit_price_arg())
                 .arg(blockhash_arg()),
         )
         .subcommand(
@@ -528,7 +524,7 @@ pub fn parse_cluster_ping(
     let timeout = Duration::from_secs(value_t_or_exit!(matches, "timeout", u64));
     let blockhash = value_of(matches, BLOCKHASH_ARG.name);
     let print_timestamp = matches.is_present("print_timestamp");
-    let compute_unit_price = value_of(matches, "compute_unit_price");
+    let compute_unit_price = value_of(matches, COMPUTE_UNIT_PRICE_ARG.name);
     Ok(CliCommandInfo {
         command: CliCommand::Ping {
             interval,
@@ -1100,8 +1096,11 @@ pub fn process_get_epoch(rpc_client: &RpcClient, _config: &CliConfig) -> Process
 
 pub fn process_get_epoch_info(rpc_client: &RpcClient, config: &CliConfig) -> ProcessResult {
     let epoch_info = rpc_client.get_epoch_info()?;
+    let epoch_completed_percent =
+        epoch_info.slot_index as f64 / epoch_info.slots_in_epoch as f64 * 100_f64;
     let mut cli_epoch_info = CliEpochInfo {
         epoch_info,
+        epoch_completed_percent,
         average_slot_time_ms: 0,
         start_block_time: None,
         current_block_time: None,
@@ -1124,7 +1123,7 @@ pub fn process_get_epoch_info(rpc_client: &RpcClient, config: &CliConfig) -> Pro
             let first_block_in_epoch = rpc_client
                 .get_blocks_with_limit(epoch_expected_start_slot, 1)
                 .ok()
-                .and_then(|slot_vec| slot_vec.get(0).cloned())
+                .and_then(|slot_vec| slot_vec.first().cloned())
                 .unwrap_or(epoch_expected_start_slot);
             let start_block_time =
                 rpc_client
@@ -1392,7 +1391,7 @@ pub fn process_ping(
     timeout: &Duration,
     fixed_blockhash: &Option<Hash>,
     print_timestamp: bool,
-    compute_unit_price: &Option<u64>,
+    compute_unit_price: Option<&u64>,
 ) -> ProcessResult {
     let (signal_sender, signal_receiver) = unbounded();
     ctrlc::set_handler(move || {
@@ -1432,16 +1431,12 @@ pub fn process_ping(
         lamports += 1;
 
         let build_message = |lamports| {
-            let mut ixs = vec![system_instruction::transfer(
+            let ixs = vec![system_instruction::transfer(
                 &config.signers[0].pubkey(),
                 &to,
                 lamports,
-            )];
-            if let Some(compute_unit_price) = compute_unit_price {
-                ixs.push(ComputeBudgetInstruction::set_compute_unit_price(
-                    *compute_unit_price,
-                ));
-            }
+            )]
+            .with_compute_unit_price(compute_unit_price);
             Message::new(&ixs, Some(&config.signers[0].pubkey()))
         };
         let (message, _) = resolve_spend_tx_and_check_account_balance(
@@ -1775,32 +1770,24 @@ pub fn process_show_stakes(
         if vote_account_pubkeys.len() == 1 {
             program_accounts_config.filters = Some(vec![
                 // Filter by `StakeState::Stake(_, _)`
-                rpc_filter::RpcFilterType::Memcmp(rpc_filter::Memcmp {
-                    offset: 0,
-                    bytes: rpc_filter::MemcmpEncodedBytes::Base58(
-                        bs58::encode([2, 0, 0, 0]).into_string(),
-                    ),
-                    encoding: Some(rpc_filter::MemcmpEncoding::Binary),
-                }),
+                rpc_filter::RpcFilterType::Memcmp(rpc_filter::Memcmp::new_base58_encoded(
+                    0,
+                    &[2, 0, 0, 0],
+                )),
                 // Filter by `Delegation::voter_pubkey`, which begins at byte offset 124
-                rpc_filter::RpcFilterType::Memcmp(rpc_filter::Memcmp {
-                    offset: 124,
-                    bytes: rpc_filter::MemcmpEncodedBytes::Base58(
-                        vote_account_pubkeys[0].to_string(),
-                    ),
-                    encoding: Some(rpc_filter::MemcmpEncoding::Binary),
-                }),
+                rpc_filter::RpcFilterType::Memcmp(rpc_filter::Memcmp::new_base58_encoded(
+                    124,
+                    vote_account_pubkeys[0].as_ref(),
+                )),
             ]);
         }
     }
 
     if let Some(withdraw_authority_pubkey) = withdraw_authority_pubkey {
         // withdrawer filter
-        let withdrawer_filter = rpc_filter::RpcFilterType::Memcmp(rpc_filter::Memcmp {
-            offset: 44,
-            bytes: rpc_filter::MemcmpEncodedBytes::Base58(withdraw_authority_pubkey.to_string()),
-            encoding: Some(rpc_filter::MemcmpEncoding::Binary),
-        });
+        let withdrawer_filter = rpc_filter::RpcFilterType::Memcmp(
+            rpc_filter::Memcmp::new_base58_encoded(44, withdraw_authority_pubkey.as_ref()),
+        );
 
         let filters = program_accounts_config.filters.get_or_insert(vec![]);
         filters.push(withdrawer_filter);
@@ -1915,13 +1902,13 @@ pub fn process_show_validators(
 
     progress_bar.set_message("Fetching version information...");
     let mut node_version = HashMap::new();
-    let unknown_version = "unknown".to_string();
     for contact_info in rpc_client.get_cluster_nodes()? {
         node_version.insert(
             contact_info.pubkey,
             contact_info
                 .version
-                .unwrap_or_else(|| unknown_version.clone()),
+                .and_then(|version| CliVersion::from_str(&version).ok())
+                .unwrap_or_else(CliVersion::unknown_version),
         );
     }
 
@@ -1950,8 +1937,8 @@ pub fn process_show_validators(
                 epoch_info.epoch,
                 node_version
                     .get(&vote_account.node_pubkey)
-                    .unwrap_or(&unknown_version)
-                    .clone(),
+                    .cloned()
+                    .unwrap_or_else(CliVersion::unknown_version),
                 skip_rate.get(&vote_account.node_pubkey).cloned(),
                 &config.address_labels,
             )
@@ -1966,15 +1953,15 @@ pub fn process_show_validators(
                 epoch_info.epoch,
                 node_version
                     .get(&vote_account.node_pubkey)
-                    .unwrap_or(&unknown_version)
-                    .clone(),
+                    .cloned()
+                    .unwrap_or_else(CliVersion::unknown_version),
                 skip_rate.get(&vote_account.node_pubkey).cloned(),
                 &config.address_labels,
             )
         })
         .collect();
 
-    let mut stake_by_version: BTreeMap<_, CliValidatorsStakeByVersion> = BTreeMap::new();
+    let mut stake_by_version: BTreeMap<CliVersion, CliValidatorsStakeByVersion> = BTreeMap::new();
     for validator in current_validators.iter() {
         let mut entry = stake_by_version
             .entry(validator.version.clone())
@@ -2141,7 +2128,7 @@ impl fmt::Display for CliRentCalculation {
 impl QuietDisplay for CliRentCalculation {}
 impl VerboseDisplay for CliRentCalculation {}
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RentLengthValue {
     Nonce,
     Stake,
@@ -2154,7 +2141,7 @@ impl RentLengthValue {
     pub fn length(&self) -> usize {
         match self {
             Self::Nonce => NonceState::size(),
-            Self::Stake => std::mem::size_of::<StakeState>(),
+            Self::Stake => StakeState::size_of(),
             Self::System => 0,
             Self::Vote => VoteState::size_of(),
             Self::Bytes(l) => *l,

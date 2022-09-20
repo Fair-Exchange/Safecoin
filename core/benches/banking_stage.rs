@@ -74,7 +74,7 @@ fn bench_consume_buffered(bencher: &mut Bencher) {
         let (exit, poh_recorder, poh_service, _signal_receiver) =
             create_test_recorder(&bank, &blockstore, None, None);
 
-        let recorder = poh_recorder.lock().unwrap().recorder();
+        let recorder = poh_recorder.read().unwrap().recorder();
 
         let tx = test_tx();
         let transactions = vec![tx; 4194304];
@@ -86,7 +86,7 @@ fn bench_consume_buffered(bencher: &mut Bencher) {
         // This tests the performance of buffering packets.
         // If the packet buffers are copied, performance will be poor.
         bencher.iter(move || {
-            let _ignored = BankingStage::consume_buffered_packets(
+            BankingStage::consume_buffered_packets(
                 &my_pubkey,
                 std::u128::MAX,
                 &poh_recorder,
@@ -99,6 +99,7 @@ fn bench_consume_buffered(bencher: &mut Bencher) {
                 &QosService::new(Arc::new(RwLock::new(CostModel::default())), 1),
                 &mut LeaderSlotMetricsTracker::new(0),
                 10,
+                None,
             );
         });
 
@@ -232,10 +233,11 @@ fn bench_banking(bencher: &mut Bencher, tx_type: TransactionType) {
             None,
             s,
             Arc::new(RwLock::new(CostModel::default())),
+            None,
             Arc::new(ConnectionCache::default()),
             bank_forks,
         );
-        poh_recorder.lock().unwrap().set_bank(&bank);
+        poh_recorder.write().unwrap().set_bank(&bank, false);
 
         let chunk_len = verified.len() / CHUNKS;
         let mut start = 0;

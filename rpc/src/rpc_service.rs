@@ -45,7 +45,7 @@ use {
         path::{Path, PathBuf},
         sync::{
             atomic::{AtomicBool, AtomicU64, Ordering},
-            Arc, Mutex, RwLock,
+            Arc, RwLock,
         },
         thread::{self, Builder, JoinHandle},
     },
@@ -161,7 +161,22 @@ impl RpcRequestMiddleware {
     where
         P: AsRef<Path>,
     {
-        let root = &self.snapshot_config.as_ref().unwrap().snapshot_archives_dir;
+        let root = if self
+            .full_snapshot_archive_path_regex
+            .is_match(Path::new("").join(&stem).to_str().unwrap())
+        {
+            &self
+                .snapshot_config
+                .as_ref()
+                .unwrap()
+                .full_snapshot_archives_dir
+        } else {
+            &self
+                .snapshot_config
+                .as_ref()
+                .unwrap()
+                .incremental_snapshot_archives_dir
+        };
         let local_path = root.join(&stem);
         if local_path.exists() {
             local_path
@@ -237,7 +252,7 @@ impl RequestMiddleware for RpcRequestMiddleware {
                 // Convenience redirect to the latest snapshot
                 let full_snapshot_archive_info =
                     snapshot_utils::get_highest_full_snapshot_archive_info(
-                        &snapshot_config.snapshot_archives_dir,
+                        &snapshot_config.full_snapshot_archives_dir,
                     );
                 let snapshot_archive_info =
                     if let Some(full_snapshot_archive_info) = full_snapshot_archive_info {
@@ -245,7 +260,7 @@ impl RequestMiddleware for RpcRequestMiddleware {
                             Some(full_snapshot_archive_info.snapshot_archive_info().clone())
                         } else {
                             snapshot_utils::get_highest_incremental_snapshot_archive_info(
-                                &snapshot_config.snapshot_archives_dir,
+                                &snapshot_config.incremental_snapshot_archives_dir,
                                 full_snapshot_archive_info.slot(),
                             )
                             .map(|incremental_snapshot_archive_info| {
@@ -327,12 +342,13 @@ impl JsonRpcService {
         block_commitment_cache: Arc<RwLock<BlockCommitmentCache>>,
         blockstore: Arc<Blockstore>,
         cluster_info: Arc<ClusterInfo>,
-        poh_recorder: Option<Arc<Mutex<PohRecorder>>>,
+        poh_recorder: Option<Arc<RwLock<PohRecorder>>>,
         genesis_hash: Hash,
         ledger_path: &Path,
         validator_exit: Arc<RwLock<Exit>>,
         known_validators: Option<HashSet<Pubkey>>,
         override_health_check: Arc<AtomicBool>,
+        startup_verification_complete: Arc<AtomicBool>,
         optimistically_confirmed_bank: Arc<RwLock<OptimisticallyConfirmedBank>>,
         send_transaction_service_config: send_transaction_service::Config,
         max_slots: Arc<MaxSlots>,
@@ -350,6 +366,7 @@ impl JsonRpcService {
             known_validators,
             config.health_check_slot_distance,
             override_health_check,
+            startup_verification_complete,
         ));
 
         let largest_accounts_cache = Arc::new(RwLock::new(LargestAccountsCache::new(
@@ -368,7 +385,7 @@ impl JsonRpcService {
             tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(rpc_threads)
                 .on_thread_start(move || renice_this_thread(rpc_niceness_adj).unwrap())
-                .thread_name("sol-rpc-el")
+                .thread_name("solRpcEl")
                 .enable_all()
                 .build()
                 .expect("Runtime"),
@@ -463,7 +480,7 @@ impl JsonRpcService {
 
         let (close_handle_sender, close_handle_receiver) = unbounded();
         let thread_hdl = Builder::new()
-            .name("solana-jsonrpc".to_string())
+            .name("solJsonRpcSvc".to_string())
             .spawn(move || {
                 renice_this_thread(rpc_niceness_adj).unwrap();
 
@@ -613,6 +630,7 @@ mod tests {
             validator_exit,
             None,
             Arc::new(AtomicBool::new(false)),
+            Arc::new(AtomicBool::new(true)),
             optimistically_confirmed_bank,
             send_transaction_service::Config {
                 retry_rate_ms: 1000,
@@ -625,7 +643,7 @@ mod tests {
             Arc::new(AtomicU64::default()),
         );
         let thread = rpc_service.thread_hdl.thread();
-        assert_eq!(thread.name().unwrap(), "solana-jsonrpc");
+        assert_eq!(thread.name().unwrap(), "solJsonRpcSvc");
 
         assert_eq!(
             10_000,
@@ -811,6 +829,7 @@ mod tests {
         ));
         let health_check_slot_distance = 123;
         let override_health_check = Arc::new(AtomicBool::new(false));
+        let startup_verification_complete = Arc::new(AtomicBool::new(true));
         let known_validators = vec![
             safecoin_sdk::pubkey::new_rand(),
             safecoin_sdk::pubkey::new_rand(),
@@ -822,6 +841,7 @@ mod tests {
             Some(known_validators.clone().into_iter().collect()),
             health_check_slot_distance,
             override_health_check.clone(),
+            startup_verification_complete,
         ));
 
         let rm = RpcRequestMiddleware::new(PathBuf::from("/"), None, create_bank_forks(), health);

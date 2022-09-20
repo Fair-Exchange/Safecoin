@@ -176,7 +176,7 @@ impl RpcClient {
             rpc_client: nonblocking::rpc_client::RpcClient::new_sender(sender, config),
             runtime: Some(
                 tokio::runtime::Builder::new_current_thread()
-                    .thread_name("rpc-client")
+                    .thread_name("solRpcClient")
                     .enable_io()
                     .enable_time()
                     .build()
@@ -3712,6 +3712,60 @@ impl RpcClient {
         )
     }
 
+    /// Returns the stake minimum delegation, in lamports.
+    ///
+    /// # RPC Reference
+    ///
+    /// This method corresponds directly to the [`getStakeMinimumDelegation`] RPC method.
+    ///
+    /// [`getStakeMinimumDelegation`]: https://docs.solana.com/developing/clients/jsonrpc-api#getstakeminimumdelegation
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use safecoin_client::{
+    /// #     rpc_client::RpcClient,
+    /// #     client_error::ClientError,
+    /// # };
+    /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
+    /// let stake_minimum_delegation = rpc_client.get_stake_minimum_delegation()?;
+    /// # Ok::<(), ClientError>(())
+    /// ```
+    pub fn get_stake_minimum_delegation(&self) -> ClientResult<u64> {
+        self.invoke(self.rpc_client.get_stake_minimum_delegation())
+    }
+
+    /// Returns the stake minimum delegation, in lamports, based on the commitment level.
+    ///
+    /// # RPC Reference
+    ///
+    /// This method corresponds directly to the [`getStakeMinimumDelegation`] RPC method.
+    ///
+    /// [`getStakeMinimumDelegation`]: https://docs.solana.com/developing/clients/jsonrpc-api#getstakeminimumdelegation
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use safecoin_client::{
+    /// #     rpc_client::RpcClient,
+    /// #     client_error::ClientError,
+    /// # };
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
+    /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
+    /// let stake_minimum_delegation =
+    /// rpc_client.get_stake_minimum_delegation_with_commitment(CommitmentConfig::confirmed())?;
+    /// # Ok::<(), ClientError>(())
+    /// ```
+    pub fn get_stake_minimum_delegation_with_commitment(
+        &self,
+        commitment_config: CommitmentConfig,
+    ) -> ClientResult<u64> {
+        self.invoke(
+            self.rpc_client
+                .get_stake_minimum_delegation_with_commitment(commitment_config),
+        )
+    }
+
     /// Request the transaction count.
     pub fn get_transaction_count(&self) -> ClientResult<u64> {
         self.invoke(self.rpc_client.get_transaction_count())
@@ -4316,5 +4370,25 @@ mod tests {
         #[allow(deprecated)]
         let is_err = rpc_client.get_latest_blockhash().is_err();
         assert!(is_err);
+    }
+
+    #[test]
+    fn test_get_stake_minimum_delegation() {
+        let expected_minimum_delegation: u64 = 123_456_789;
+        let rpc_client = RpcClient::new_mock("succeeds".to_string());
+
+        // Test: without commitment
+        {
+            let actual_minimum_delegation = rpc_client.get_stake_minimum_delegation().unwrap();
+            assert_eq!(expected_minimum_delegation, actual_minimum_delegation);
+        }
+
+        // Test: with commitment
+        {
+            let actual_minimum_delegation = rpc_client
+                .get_stake_minimum_delegation_with_commitment(CommitmentConfig::confirmed())
+                .unwrap();
+            assert_eq!(expected_minimum_delegation, actual_minimum_delegation);
+        }
     }
 }

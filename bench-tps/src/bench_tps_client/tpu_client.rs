@@ -2,8 +2,8 @@ use {
     crate::bench_tps_client::{BenchTpsClient, Result},
     safecoin_client::tpu_client::TpuClient,
     safecoin_sdk::{
-        commitment_config::CommitmentConfig, epoch_info::EpochInfo, hash::Hash, message::Message,
-        pubkey::Pubkey, signature::Signature, transaction::Transaction,
+        account::Account, commitment_config::CommitmentConfig, epoch_info::EpochInfo, hash::Hash,
+        message::Message, pubkey::Pubkey, signature::Signature, transaction::Transaction,
     },
 };
 
@@ -14,9 +14,7 @@ impl BenchTpsClient for TpuClient {
         Ok(signature)
     }
     fn send_batch(&self, transactions: Vec<Transaction>) -> Result<()> {
-        for transaction in transactions {
-            BenchTpsClient::send_transaction(self, transaction)?;
-        }
+        self.try_send_transaction_batch(&transactions)?;
         Ok(())
     }
     fn get_latest_blockhash(&self) -> Result<Hash> {
@@ -94,6 +92,12 @@ impl BenchTpsClient for TpuClient {
     ) -> Result<Signature> {
         self.rpc_client()
             .request_airdrop_with_blockhash(pubkey, lamports, recent_blockhash)
+            .map_err(|err| err.into())
+    }
+
+    fn get_account(&self, pubkey: &Pubkey) -> Result<Account> {
+        self.rpc_client()
+            .get_account(pubkey)
             .map_err(|err| err.into())
     }
 }

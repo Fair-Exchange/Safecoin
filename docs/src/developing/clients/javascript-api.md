@@ -207,7 +207,7 @@ let allocateStruct = {
 };
 ```
 
-The above is created using `u32` and `ns64` from `@safecoin/buffer-layout` to facilitate the payload creation. The `allocate` function takes in the parameter `space`. To interact with the function we must provide the data as a Buffer format. The `buffer-layout` library helps with allocating the buffer and encoding it correctly for Rust programs on Safecoin to interpret.
+The above is created using `u32` and `ns64` from `@solana/buffer-layout` to facilitate the payload creation. The `allocate` function takes in the parameter `space`. To interact with the function we must provide the data as a Buffer format. The `buffer-layout` library helps with allocating the buffer and encoding it correctly for Rust programs on Safecoin to interpret.
 
 Let's break down this struct.
 
@@ -266,7 +266,7 @@ The `layout` in the allocate struct must always have `u32('instruction')` first 
 }
 ```
 
-`ns64('space')` is the argument for the `allocate` function. You can see in the original `allocate` function in Rust that space was of the type `u64`. `u64` is an unsigned 64bit integer. Javascript by default only provides up to 53bit integers. `ns64` comes from `@safecoin/buffer-layout` to help with type conversions between Rust and Javascript. You can find more type conversions between Rust and Javascript at [solana-labs/buffer-layout](https://github.com/solana-labs/buffer-layout).
+`ns64('space')` is the argument for the `allocate` function. You can see in the original `allocate` function in Rust that space was of the type `u64`. `u64` is an unsigned 64bit integer. Javascript by default only provides up to 53bit integers. `ns64` comes from `@solana/buffer-layout` to help with type conversions between Rust and Javascript. You can find more type conversions between Rust and Javascript at [solana-labs/buffer-layout](https://github.com/solana-labs/buffer-layout).
 
 ```javascript
 let data = Buffer.alloc(allocateStruct.layout.span);
@@ -291,7 +291,7 @@ Finally, we add the transaction instruction with all the account keys, payer, da
 The full code can be found below.
 
 ```javascript
-const {struct, u32, ns64} = require("@safecoin/buffer-layout");
+const {struct, u32, ns64} = require("@solana/buffer-layout");
 const {Buffer} = require('buffer');
 const web3 = require("@safecoin/web3.js");
 

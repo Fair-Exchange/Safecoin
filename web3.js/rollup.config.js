@@ -1,6 +1,9 @@
+import alias from '@rollup/plugin-alias';
 import babel from '@rollup/plugin-babel';
 import commonjs from '@rollup/plugin-commonjs';
+import * as fs from 'fs';
 import json from '@rollup/plugin-json';
+import path from 'path';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import {terser} from 'rollup-plugin-terser';
@@ -9,12 +12,47 @@ const env = process.env.NODE_ENV;
 const extensions = ['.js', '.ts'];
 
 function generateConfig(configType, format) {
-  const browser = configType === 'browser';
+  const browser = configType === 'browser' || configType === 'react-native';
   const bundle = format === 'iife';
 
   const config = {
     input: 'src/index.ts',
     plugins: [
+      alias({
+        entries: [
+          {
+            find: /^\./, // Relative paths.
+            replacement: '.',
+            async customResolver(source, importer, options) {
+              const resolved = await this.resolve(source, importer, {
+                skipSelf: true,
+                ...options,
+              });
+              if (resolved == null) {
+                return;
+              }
+              const {id: resolvedId} = resolved;
+              const directory = path.dirname(resolvedId);
+              const moduleFilename = path.basename(resolvedId);
+              const forkPath = path.join(
+                directory,
+                '__forks__',
+                configType,
+                moduleFilename,
+              );
+              const hasForkCacheKey = `has_fork:${forkPath}`;
+              let hasFork = this.cache.get(hasForkCacheKey);
+              if (hasFork === undefined) {
+                hasFork = fs.existsSync(forkPath);
+                this.cache.set(hasForkCacheKey, hasFork);
+              }
+              if (hasFork) {
+                return forkPath;
+              }
+            },
+          },
+        ],
+      }),
       commonjs(),
       nodeResolve({
         browser,
@@ -40,8 +78,12 @@ function generateConfig(configType, format) {
       }),
     ],
     onwarn: function (warning, rollupWarn) {
-      if (warning.code !== 'CIRCULAR_DEPENDENCY') {
-        rollupWarn(warning);
+      rollupWarn(warning);
+      if (warning.code === 'CIRCULAR_DEPENDENCY') {
+        throw new Error(
+          'Please eliminate the circular dependencies listed ' +
+            'above and retry the build',
+        );
       }
     },
     treeshake: {
@@ -49,11 +91,12 @@ function generateConfig(configType, format) {
     },
   };
 
-  if (configType !== 'browser') {
+  if (!browser) {
     // Prevent dependencies from being bundled
     config.external = [
       /@babel\/runtime/,
       '@solana/buffer-layout',
+      'bigint-buffer',
       'bn.js',
       'borsh',
       'bs58',
@@ -61,7 +104,7 @@ function generateConfig(configType, format) {
       'crypto-hash',
       'jayson/lib/client/browser',
       'js-sha3',
-      'cross-fetch',
+      'node-fetch',
       'rpc-websockets',
       'secp256k1',
       'superstruct',
@@ -71,9 +114,10 @@ function generateConfig(configType, format) {
 
   switch (configType) {
     case 'browser':
+    case 'react-native':
       switch (format) {
         case 'iife': {
-          config.external = ['http', 'https'];
+          config.external = ['http', 'https', 'node-fetch'];
 
           config.output = [
             {
@@ -96,21 +140,26 @@ function generateConfig(configType, format) {
         default: {
           config.output = [
             {
-              file: 'lib/index.browser.cjs.js',
+              file: `lib/index.${
+                configType === 'react-native' ? 'native' : 'browser.cjs'
+              }.js`,
               format: 'cjs',
               sourcemap: true,
             },
-            {
-              file: 'lib/index.browser.esm.js',
-              format: 'es',
-              sourcemap: true,
-            },
-          ];
+            configType === 'browser'
+              ? {
+                  file: 'lib/index.browser.esm.js',
+                  format: 'es',
+                  sourcemap: true,
+                }
+              : null,
+          ].filter(Boolean);
 
           // Prevent dependencies from being bundled
           config.external = [
             /@babel\/runtime/,
             '@solana/buffer-layout',
+            'bigint-buffer',
             'bn.js',
             'borsh',
             'bs58',
@@ -120,6 +169,8 @@ function generateConfig(configType, format) {
             'https',
             'jayson/lib/client/browser',
             'js-sha3',
+            'node-fetch',
+            'react-native-url-polyfill',
             'rpc-websockets',
             'secp256k1',
             'superstruct',
@@ -160,4 +211,5 @@ export default [
   generateConfig('node'),
   generateConfig('browser'),
   generateConfig('browser', 'iife'),
+  generateConfig('react-native'),
 ];

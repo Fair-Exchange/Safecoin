@@ -107,6 +107,10 @@ Operate a configured testnet
                                       - Boot from a snapshot that has warped ahead to WARP_SLOT rather than a slot 0 genesis.
    --full-rpc
                                       - Support full RPC services on all nodes
+
+   --tpu-enable-udp
+                                      - Enable UDP for tpu transactions
+
  sanity/start-specific options:
    -F                   - Discard validator nodes that didn't bootup successfully
    -o noInstallCheck    - Skip safecoin-install sanity
@@ -193,9 +197,13 @@ build() {
       buildVariant=--debug
     fi
 
+    if $profileBuild; then
+      profilerFlags="RUSTFLAGS='-C force-frame-pointers=y -g ${RUSTFLAGS}'"
+    fi
+
     $MAYBE_DOCKER bash -c "
       set -ex
-      scripts/cargo-install-all.sh farf $buildVariant --validator-only
+      $profilerFlags scripts/cargo-install-all.sh farf $buildVariant --validator-only
     "
   )
 
@@ -316,6 +324,7 @@ startBootstrapLeader() {
          \"$waitForNodeInit\" \
          \"$extraPrimordialStakes\" \
          \"$TMPFS_ACCOUNTS\" \
+         \"$enableUdp\" \
       "
 
   ) >> "$logFile" 2>&1 || {
@@ -388,6 +397,7 @@ startNode() {
          \"$waitForNodeInit\" \
          \"$extraPrimordialStakes\" \
          \"$TMPFS_ACCOUNTS\" \
+         \"$enableUdp\" \
       "
   ) >> "$logFile" 2>&1 &
   declare pid=$!
@@ -591,7 +601,7 @@ deploy() {
     if $bootstrapLeader; then
       SECONDS=0
       declare bootstrapNodeDeployTime=
-      startBootstrapLeader "$nodeAddress" $nodeIndex "$netLogDir/bootstrap-validator-$ipAddress.log"
+      startBootstrapLeader "$nodeAddress" "$nodeIndex" "$netLogDir/bootstrap-validator-$ipAddress.log"
       bootstrapNodeDeployTime=$SECONDS
       $metricsWriteDatapoint "testnet-deploy net-bootnode-leader-started=1"
 
@@ -599,7 +609,7 @@ deploy() {
       SECONDS=0
       pids=()
     else
-      startNode "$ipAddress" $nodeType $nodeIndex
+      startNode "$ipAddress" "$nodeType" "$nodeIndex"
 
       # Stagger additional node start time. If too many nodes start simultaneously
       # the bootstrap node gets more rsync requests from the additional nodes than
@@ -783,6 +793,7 @@ maybeAllowPrivateAddr=""
 maybeAccountsDbSkipShrink=""
 maybeSkipRequireTower=""
 debugBuild=false
+profileBuild=false
 doBuild=true
 gpuMode=auto
 netemPartition=""
@@ -795,6 +806,7 @@ maybeWarpSlot=
 maybeFullRpc=false
 waitForNodeInit=true
 extraPrimordialStakes=0
+enableUdp=false
 
 command=$1
 [[ -n $command ]] || usage
@@ -869,6 +881,9 @@ while [[ -n $1 ]]; do
     elif [[ $1 = --debug ]]; then
       debugBuild=true
       shift 1
+    elif [[ $1 = --profile ]]; then
+      profileBuild=true
+      shift 1
     elif [[ $1 = --partition ]]; then
       netemPartition=$2
       shift 2
@@ -903,6 +918,9 @@ while [[ -n $1 ]]; do
       shift 2
     elif [[ $1 == --full-rpc ]]; then
       maybeFullRpc=true
+      shift 1
+    elif [[ $1 == --tpu-enable-udp ]]; then
+      enableUdp=true
       shift 1
     elif [[ $1 == --async-node-init ]]; then
       waitForNodeInit=false
@@ -1106,7 +1124,7 @@ startnode)
   nodeType=
   nodeIndex=
   getNodeType
-  startNode "$nodeAddress" $nodeType $nodeIndex
+  startNode "$nodeAddress" "$nodeType" "$nodeIndex"
   ;;
 startclients)
   startClients

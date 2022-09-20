@@ -42,7 +42,7 @@ impl AbiExample for Builtin {
         Self {
             name: String::default(),
             id: Pubkey::default(),
-            process_instruction_with_context: |_, _, _| Ok(()),
+            process_instruction_with_context: |_, _| Ok(()),
         }
     }
 }
@@ -144,7 +144,6 @@ fn genesis_builtins() -> Vec<Builtin> {
 /// place holder for precompile programs, remove when the precompile program is deactivated via feature activation
 fn dummy_process_instruction(
     _first_instruction_account: usize,
-    _data: &[u8],
     _invoke_context: &mut InvokeContext,
 ) -> Result<(), InstructionError> {
     Ok(())
@@ -203,4 +202,17 @@ pub(crate) fn get() -> Builtins {
         genesis_builtins: genesis_builtins(),
         feature_transitions: builtin_feature_transitions(),
     }
+}
+
+/// Returns the addresses of all builtin programs.
+pub fn get_pubkeys() -> Vec<Pubkey> {
+    let builtins = get();
+
+    let mut pubkeys = Vec::new();
+    pubkeys.extend(builtins.genesis_builtins.iter().map(|b| b.id));
+    pubkeys.extend(builtins.feature_transitions.iter().filter_map(|f| match f {
+        BuiltinFeatureTransition::Add { builtin, .. } => Some(builtin.id),
+        BuiltinFeatureTransition::RemoveOrRetain { .. } => None,
+    }));
+    pubkeys
 }

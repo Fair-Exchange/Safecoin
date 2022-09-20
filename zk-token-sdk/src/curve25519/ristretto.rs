@@ -1,11 +1,11 @@
 use bytemuck::{Pod, Zeroable};
 pub use target_arch::*;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodRistrettoPoint(pub [u8; 32]);
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 mod target_arch {
     use {
         super::*,
@@ -99,7 +99,7 @@ mod target_arch {
             Some((&result).into())
         }
 
-        #[cfg(not(target_arch = "bpf"))]
+        #[cfg(not(target_os = "solana"))]
         fn multiply(scalar: &PodScalar, point: &Self) -> Option<Self> {
             let scalar: Scalar = scalar.into();
             let point: RistrettoPoint = point.try_into().ok()?;
@@ -125,15 +125,13 @@ mod target_arch {
     }
 }
 
-#[cfg(target_arch = "bpf")]
+#[cfg(target_os = "solana")]
 #[allow(unused_variables)]
 mod target_arch {
     use {
         super::*,
         crate::curve25519::{
-            curve_syscall_traits::{
-                sol_curve_group_op, sol_curve_validate_point, ADD, CURVE25519_RISTRETTO, MUL, SUB,
-            },
+            curve_syscall_traits::{ADD, CURVE25519_RISTRETTO, MUL, SUB},
             scalar::PodScalar,
         },
     };
@@ -141,7 +139,7 @@ mod target_arch {
     pub fn validate_ristretto(point: &PodRistrettoPoint) -> bool {
         let mut validate_result = 0u8;
         let result = unsafe {
-            sol_curve_validate_point(
+            safecoin_program::syscalls::sol_curve_validate_point(
                 CURVE25519_RISTRETTO,
                 &point.0 as *const u8,
                 &mut validate_result,
@@ -157,7 +155,7 @@ mod target_arch {
     ) -> Option<PodRistrettoPoint> {
         let mut result_point = PodRistrettoPoint::zeroed();
         let result = unsafe {
-            sol_curve_group_op(
+            safecoin_program::syscalls::sol_curve_group_op(
                 CURVE25519_RISTRETTO,
                 ADD,
                 &left_point.0 as *const u8,
@@ -179,7 +177,7 @@ mod target_arch {
     ) -> Option<PodRistrettoPoint> {
         let mut result_point = PodRistrettoPoint::zeroed();
         let result = unsafe {
-            sol_curve_group_op(
+            safecoin_program::syscalls::sol_curve_group_op(
                 CURVE25519_RISTRETTO,
                 SUB,
                 &left_point.0 as *const u8,
@@ -201,7 +199,7 @@ mod target_arch {
     ) -> Option<PodRistrettoPoint> {
         let mut result_point = PodRistrettoPoint::zeroed();
         let result = unsafe {
-            sol_curve_group_op(
+            safecoin_program::syscalls::sol_curve_group_op(
                 CURVE25519_RISTRETTO,
                 MUL,
                 &scalar.0 as *const u8,

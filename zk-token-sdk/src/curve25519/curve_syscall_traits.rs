@@ -83,29 +83,3 @@ pub const CURVE25519_RISTRETTO: u64 = 1;
 pub const ADD: u64 = 0;
 pub const SUB: u64 = 1;
 pub const MUL: u64 = 2;
-
-// Functions are organized by the curve traits, which can be instantiated by multiple curve
-// representations. The functions take in a `curve_id` (e.g. `CURVE25519_EDWARDS`) and should run
-// the associated functions in the appropriate trait instantiation. The `curve_op` function
-// additionally takes in an `op_id` (e.g. `ADD`) that controls which associated functions to run in
-// `GroupOperations`.
-extern "C" {
-    pub fn sol_curve_validate_point(curve_id: u64, point: *const u8, result: *mut u8) -> u64;
-
-    pub fn sol_curve_group_op(
-        curve_id: u64,
-        op_id: u64,
-        left_point: *const u8,
-        right_point: *const u8,
-        result: *mut u8,
-    ) -> u64;
-
-    pub fn sol_curve_multiscalar_mul(
-        curve_id: u64,
-        scalars: *const u8,
-        points: *const u8,
-        result: *mut u8,
-    ) -> u64;
-
-    pub fn sol_curve_pairing_map(curve_id: u64, point: *const u8, result: *mut u8) -> u64;
-}

@@ -2,7 +2,7 @@
 
 mod helper;
 extern crate safecoin_program;
-use safecoin_program::{custom_panic_default, entrypoint::SUCCESS, msg};
+use safecoin_program::{custom_heap_default, custom_panic_default, entrypoint::SUCCESS, msg};
 
 #[no_mangle]
 pub extern "C" fn entrypoint(_input: *mut u8) -> u64 {
@@ -26,6 +26,7 @@ pub extern "C" fn entrypoint(_input: *mut u8) -> u64 {
     SUCCESS
 }
 
+custom_heap_default!();
 custom_panic_default!();
 
 #[cfg(test)]

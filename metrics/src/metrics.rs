@@ -21,8 +21,8 @@ use {
 
 type CounterMap = HashMap<(&'static str, u64), CounterPoint>;
 
-impl From<CounterPoint> for DataPoint {
-    fn from(counter_point: CounterPoint) -> Self {
+impl From<&CounterPoint> for DataPoint {
+    fn from(counter_point: &CounterPoint) -> Self {
         let mut point = Self::new(counter_point.name);
         point.timestamp = counter_point.timestamp;
         point.add_field_i64("count", counter_point.count);
@@ -87,6 +87,9 @@ pub fn serialize_points(points: &Vec<DataPoint>, host_id: &str) -> String {
         for (name, value) in &point.fields {
             len += name.len() + value.len() + EXTRA_LEN;
         }
+        for (name, value) in &point.tags {
+            len += name.len() + value.len() + EXTRA_LEN;
+        }
         len += point.name.len();
         len += TIMESTAMP_LEN;
         len += host_id.len() + HOST_ID_LEN;
@@ -94,6 +97,9 @@ pub fn serialize_points(points: &Vec<DataPoint>, host_id: &str) -> String {
     let mut line = String::with_capacity(len);
     for point in points {
         let _ = write!(line, "{},host_id={}", &point.name, host_id);
+        for (name, value) in point.tags.iter() {
+            let _ = write!(line, ",{}={}", name, value);
+        }
 
         let mut first = true;
         for (name, value) in point.fields.iter() {
@@ -110,7 +116,7 @@ pub fn serialize_points(points: &Vec<DataPoint>, host_id: &str) -> String {
 impl MetricsWriter for InfluxDbMetricsWriter {
     fn write(&self, points: Vec<DataPoint>) {
         if let Some(ref write_url) = self.write_url {
-            info!("submitting {} points", points.len());
+            debug!("submitting {} points", points.len());
 
             let host_id = HOST_ID.read().unwrap();
 
@@ -167,17 +173,19 @@ impl MetricsAgent {
         max_points_per_sec: usize,
     ) -> Self {
         let (sender, receiver) = unbounded::<MetricsCommand>();
-        thread::spawn(move || Self::run(&receiver, &writer, write_frequency, max_points_per_sec));
+
+        thread::Builder::new()
+            .name("solMetricsAgent".into())
+            .spawn(move || Self::run(&receiver, &writer, write_frequency, max_points_per_sec))
+            .unwrap();
 
         Self { sender }
     }
 
     fn collect_points(points: &mut Vec<DataPoint>, counters: &mut CounterMap) -> Vec<DataPoint> {
-        let mut ret: Vec<DataPoint> = Vec::default();
-        std::mem::swap(&mut ret, points);
-        for (_, v) in counters.drain() {
-            ret.push(v.into());
-        }
+        let mut ret = std::mem::take(points);
+        ret.extend(counters.values().map(|v| v.into()));
+        counters.clear();
         ret
     }
 
@@ -407,7 +415,7 @@ fn get_metrics_config() -> Result<MetricsConfig, String> {
 }
 
 pub fn query(q: &str) -> Result<String, String> {
-    let config = get_metrics_config().map_err(|err| err)?;
+    let config = get_metrics_config()?;
     let query_url = format!(
         "{}/query?u={}&p={}&q={}",
         &config.host, &config.username, &config.password, &q

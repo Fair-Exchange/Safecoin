@@ -10,10 +10,7 @@ use {
     },
     safecoin_sdk::{
         account::WritableAccount,
-        feature_set::{
-            prevent_calling_precompiles_as_programs,
-            record_instruction_in_transaction_context_push, FeatureSet,
-        },
+        feature_set::{prevent_calling_precompiles_as_programs, FeatureSet},
         hash::Hash,
         message::SanitizedMessage,
         precompiles::is_precompile,
@@ -93,14 +90,6 @@ impl MessageProcessor {
                 .feature_set
                 .is_active(&prevent_calling_precompiles_as_programs::id())
                 && is_precompile(program_id, |id| invoke_context.feature_set.is_active(id));
-            if is_precompile
-                && !invoke_context
-                    .feature_set
-                    .is_active(&record_instruction_in_transaction_context_push::id())
-            {
-                // Precompiled programs don't have an instruction processor
-                continue;
-            }
 
             // Fixup the special instructions key if present
             // before the account pre-values are taken care of
@@ -119,33 +108,31 @@ impl MessageProcessor {
                 );
             }
 
-            let instruction_accounts = instruction
-                .accounts
-                .iter()
-                .map(|index_in_transaction| {
-                    let index_in_transaction = *index_in_transaction as usize;
-                    InstructionAccount {
-                        index_in_transaction,
-                        index_in_caller: program_indices.len().saturating_add(index_in_transaction),
-                        is_signer: message.is_signer(index_in_transaction),
-                        is_writable: message.is_writable(index_in_transaction),
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            let result = if is_precompile
-                && invoke_context
-                    .feature_set
-                    .is_active(&record_instruction_in_transaction_context_push::id())
+            let mut instruction_accounts = Vec::with_capacity(instruction.accounts.len());
+            for (instruction_account_index, index_in_transaction) in
+                instruction.accounts.iter().enumerate()
             {
+                let index_in_callee = instruction
+                    .accounts
+                    .get(0..instruction_account_index)
+                    .ok_or(TransactionError::InvalidAccountIndex)?
+                    .iter()
+                    .position(|account_index| account_index == index_in_transaction)
+                    .unwrap_or(instruction_account_index);
+                let index_in_transaction = *index_in_transaction as usize;
+                instruction_accounts.push(InstructionAccount {
+                    index_in_transaction,
+                    index_in_caller: index_in_transaction,
+                    index_in_callee,
+                    is_signer: message.is_signer(index_in_transaction),
+                    is_writable: message.is_writable(index_in_transaction),
+                });
+            }
+
+            let result = if is_precompile {
                 invoke_context
                     .transaction_context
-                    .push(
-                        program_indices,
-                        &instruction_accounts,
-                        &instruction.data,
-                        true,
-                    )
+                    .push(program_indices, &instruction_accounts, &instruction.data)
                     .and_then(|_| invoke_context.transaction_context.pop())
             } else {
                 let mut time = Measure::start("execute_instruction");
@@ -222,12 +209,12 @@ mod tests {
 
         fn mock_system_process_instruction(
             _first_instruction_account: usize,
-            data: &[u8],
             invoke_context: &mut InvokeContext,
         ) -> Result<(), InstructionError> {
             let transaction_context = &invoke_context.transaction_context;
             let instruction_context = transaction_context.get_current_instruction_context()?;
-            if let Ok(instruction) = bincode::deserialize(data) {
+            let instruction_data = instruction_context.get_instruction_data();
+            if let Ok(instruction) = bincode::deserialize(instruction_data) {
                 match instruction {
                     MockSystemInstruction::Correct => Ok(()),
                     MockSystemInstruction::TransferLamports { lamports } => {
@@ -242,7 +229,7 @@ mod tests {
                     MockSystemInstruction::ChangeData { data } => {
                         instruction_context
                             .try_borrow_instruction_account(transaction_context, 1)?
-                            .set_data(&[data]);
+                            .set_data(&[data])?;
                         Ok(())
                     }
                 }
@@ -275,7 +262,8 @@ mod tests {
                 create_loadable_account_for_test("mock_system_program"),
             ),
         ];
-        let mut transaction_context = TransactionContext::new(accounts, 1, 3);
+        let mut transaction_context =
+            TransactionContext::new(accounts, Some(Rent::default()), 1, 3);
         let program_indices = vec![vec![2]];
         let executors = Rc::new(RefCell::new(Executors::default()));
         let account_keys = transaction_context.get_keys_of_accounts().to_vec();
@@ -424,14 +412,14 @@ mod tests {
 
         fn mock_system_process_instruction(
             _first_instruction_account: usize,
-            data: &[u8],
             invoke_context: &mut InvokeContext,
         ) -> Result<(), InstructionError> {
             let transaction_context = &invoke_context.transaction_context;
             let instruction_context = transaction_context.get_current_instruction_context()?;
+            let instruction_data = instruction_context.get_instruction_data();
             let mut to_account =
                 instruction_context.try_borrow_instruction_account(transaction_context, 1)?;
-            if let Ok(instruction) = bincode::deserialize(data) {
+            if let Ok(instruction) = bincode::deserialize(instruction_data) {
                 match instruction {
                     MockSystemInstruction::BorrowFail => {
                         let from_account = instruction_context
@@ -460,7 +448,7 @@ mod tests {
                             .try_borrow_instruction_account(transaction_context, 2)?;
                         dup_account.checked_sub_lamports(lamports)?;
                         to_account.checked_add_lamports(lamports)?;
-                        dup_account.set_data(&[data]);
+                        dup_account.set_data(&[data])?;
                         drop(dup_account);
                         let mut from_account = instruction_context
                             .try_borrow_instruction_account(transaction_context, 0)?;
@@ -495,7 +483,8 @@ mod tests {
                 create_loadable_account_for_test("mock_system_program"),
             ),
         ];
-        let mut transaction_context = TransactionContext::new(accounts, 1, 3);
+        let mut transaction_context =
+            TransactionContext::new(accounts, Some(Rent::default()), 1, 3);
         let program_indices = vec![vec![2]];
         let executors = Rc::new(RefCell::new(Executors::default()));
         let account_metas = vec![
@@ -637,7 +626,6 @@ mod tests {
         let mock_program_id = Pubkey::new_unique();
         fn mock_process_instruction(
             _first_instruction_account: usize,
-            _data: &[u8],
             _invoke_context: &mut InvokeContext,
         ) -> Result<(), InstructionError> {
             Err(InstructionError::Custom(0xbabb1e))
@@ -655,7 +643,8 @@ mod tests {
             (secp256k1_program::id(), secp256k1_account),
             (mock_program_id, mock_program_account),
         ];
-        let mut transaction_context = TransactionContext::new(accounts, 1, 2);
+        let mut transaction_context =
+            TransactionContext::new(accounts, Some(Rent::default()), 1, 2);
 
         let message = SanitizedMessage::Legacy(Message::new(
             &[

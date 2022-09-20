@@ -1,4 +1,7 @@
+//! Definitions for the native SAFE token and its fractional lamports.
+
 #![allow(clippy::integer_arithmetic)]
+
 /// There are 10^9 lamports in one SAFE
 pub const LAMPORTS_PER_SAFE: u64 = 1_000_000_000;
 

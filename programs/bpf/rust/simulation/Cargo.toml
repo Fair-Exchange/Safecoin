@@ -1,6 +1,6 @@
 [package]
 name = "solana-bpf-rust-simulation"
-version = "1.10.34"
+version = "1.14.3"
 description = "Safecoin BPF Program Simulation Differences"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -13,13 +13,13 @@ edition = "2021"
 test-bpf = []
 
 [dependencies]
-safecoin-program = { path = "../../../../sdk/program", version = "=1.10.34" }
+safecoin-program = { path = "../../../../sdk/program", version = "=1.14.3" }
 
 [dev-dependencies]
-safecoin-logger = { path = "../../../../logger", version = "=1.10.34" }
-safecoin-program-test = { path = "../../../../program-test", version = "=1.10.34" }
-safecoin-sdk = { path = "../../../../sdk", version = "=1.10.34" }
-safecoin-validator = { path = "../../../../validator", version = "=1.10.34" }
+safecoin-logger = { path = "../../../../logger", version = "=1.14.3" }
+safecoin-program-test = { path = "../../../../program-test", version = "=1.14.3" }
+safecoin-sdk = { path = "../../../../sdk", version = "=1.14.3" }
+safecoin-validator = { path = "../../../../validator", version = "=1.14.3" }
 
 [lib]
 crate-type = ["cdylib", "lib"]

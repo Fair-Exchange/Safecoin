@@ -1,4 +1,7 @@
-//! The `hash` module provides functions for creating SHA-256 hashes.
+//! Hashing with the [SHA-256] hash function, and a general [`Hash`] type.
+//!
+//! [SHA-256]: https://en.wikipedia.org/wiki/SHA-2
+//! [`Hash`]: struct@Hash
 
 use {
     crate::{sanitize::Sanitize, wasm_bindgen},
@@ -8,10 +11,21 @@ use {
     thiserror::Error,
 };
 
+/// Size of a hash in bytes.
 pub const HASH_BYTES: usize = 32;
-/// Maximum string length of a base58 encoded hash
+/// Maximum string length of a base58 encoded hash.
 const MAX_BASE58_LEN: usize = 44;
 
+/// A hash; the 32-byte output of a hashing algorithm.
+///
+/// This struct is used most often in `safecoin-sdk` and related crates to contain
+/// a [SHA-256] hash, but may instead contain a [blake3] hash, as created by the
+/// [`blake3`] module (and used in [`Message::hash`]).
+///
+/// [SHA-256]: https://en.wikipedia.org/wiki/SHA-2
+/// [blake3]: https://github.com/BLAKE3-team/BLAKE3
+/// [`blake3`]: crate::blake3
+/// [`Message::hash`]: crate::message::Message::hash
 #[wasm_bindgen]
 #[derive(
     Serialize,
@@ -54,6 +68,12 @@ impl Hasher {
 }
 
 impl Sanitize for Hash {}
+
+impl From<[u8; HASH_BYTES]> for Hash {
+    fn from(from: [u8; 32]) -> Self {
+        Self(from)
+    }
+}
 
 impl AsRef<[u8]> for Hash {
     fn as_ref(&self) -> &[u8] {
@@ -128,21 +148,18 @@ impl Hash {
 pub fn hashv(vals: &[&[u8]]) -> Hash {
     // Perform the calculation inline, calling this from within a program is
     // not supported
-    #[cfg(not(target_arch = "bpf"))]
+    #[cfg(not(target_os = "solana"))]
     {
         let mut hasher = Hasher::default();
         hasher.hashv(vals);
         hasher.result()
     }
     // Call via a system call to perform the calculation
-    #[cfg(target_arch = "bpf")]
+    #[cfg(target_os = "solana")]
     {
-        extern "C" {
-            fn sol_sha256(vals: *const u8, val_len: u64, hash_result: *mut u8) -> u64;
-        }
         let mut hash_result = [0; HASH_BYTES];
         unsafe {
-            sol_sha256(
+            crate::syscalls::sol_sha256(
                 vals as *const _ as *const u8,
                 vals.len() as u64,
                 &mut hash_result as *mut _ as *mut u8,

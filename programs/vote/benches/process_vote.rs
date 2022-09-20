@@ -81,9 +81,10 @@ fn create_accounts() -> (
         (authority_pubkey, AccountSharedData::default()),
     ];
     let mut instruction_accounts = (0..4)
-        .map(|index| InstructionAccount {
-            index_in_transaction: 1usize.saturating_add(index),
-            index_in_caller: 1usize.saturating_add(index),
+        .map(|index_in_callee| InstructionAccount {
+            index_in_transaction: 1usize.saturating_add(index_in_callee),
+            index_in_caller: index_in_callee,
+            index_in_callee,
             is_signer: false,
             is_writable: false,
         })
@@ -106,17 +107,20 @@ fn bench_process_vote_instruction(
     instruction_data: Vec<u8>,
 ) {
     bencher.iter(|| {
-        let mut transaction_context = TransactionContext::new(transaction_accounts.clone(), 1, 1);
+        let mut transaction_context = TransactionContext::new(
+            transaction_accounts.clone(),
+            Some(sysvar::rent::Rent::default()),
+            1,
+            1,
+        );
         let mut invoke_context = InvokeContext::new_mock(&mut transaction_context, &[]);
         invoke_context
             .push(&instruction_accounts, &[0], &instruction_data)
             .unwrap();
-        assert!(solana_vote_program::vote_processor::process_instruction(
-            1,
-            &instruction_data,
-            &mut invoke_context
-        )
-        .is_ok());
+        assert!(
+            solana_vote_program::vote_processor::process_instruction(1, &mut invoke_context)
+                .is_ok()
+        );
         invoke_context.pop().unwrap();
     });
 }

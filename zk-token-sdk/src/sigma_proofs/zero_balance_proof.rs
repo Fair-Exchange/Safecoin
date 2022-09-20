@@ -7,7 +7,7 @@
 //! The protocol guarantees computationally soundness (by the hardness of discrete log) and perfect
 //! zero-knowledge in the random oracle model.
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 use {
     crate::encryption::{
         elgamal::{ElGamalCiphertext, ElGamalKeypair, ElGamalPubkey},
@@ -40,7 +40,7 @@ pub struct ZeroBalanceProof {
 }
 
 #[allow(non_snake_case)]
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 impl ZeroBalanceProof {
     /// Zero-balance proof constructor.
     ///
@@ -152,6 +152,10 @@ impl ZeroBalanceProof {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, ZeroBalanceProofError> {
+        if bytes.len() != 96 {
+            return Err(ZeroBalanceProofError::Format);
+        }
+
         let bytes = array_ref![bytes, 0, 96];
         let (Y_P, Y_D, z) = array_refs![bytes, 32, 32, 32];
 

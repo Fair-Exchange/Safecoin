@@ -7,7 +7,7 @@ use {
     safecoin_program::instruction::Instruction,
 };
 
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ProofInstruction {
     /// Verify a `CloseAccountData` struct
@@ -73,7 +73,7 @@ impl ProofInstruction {
     }
 
     pub fn decode_type(input: &[u8]) -> Option<Self> {
-        FromPrimitive::from_u8(input[0])
+        input.first().and_then(|x| FromPrimitive::from_u8(*x))
     }
 
     pub fn decode_data<T: Pod>(input: &[u8]) -> Option<&T> {

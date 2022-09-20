@@ -18,7 +18,7 @@ mod safe_associated_token_account {
 }
 
 static SPL_PROGRAMS: &[(Pubkey, &[u8])] = &[
-    (safe_token::ID, include_bytes!("programs/safe_token-3.3.0.so")),
+    (safe_token::ID, include_bytes!("programs/safe_token-3.5.0.so")),
     (
         safe_memo_1_0::ID,
         include_bytes!("programs/safe_memo-1.0.0.so"),
@@ -29,7 +29,7 @@ static SPL_PROGRAMS: &[(Pubkey, &[u8])] = &[
     ),
     (
         safe_associated_token_account::ID,
-        include_bytes!("programs/safe_associated_token_account-1.0.5.so"),
+        include_bytes!("programs/safe_associated_token_account-1.1.1.so"),
     ),
 ];
 

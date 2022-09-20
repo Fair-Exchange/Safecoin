@@ -1,6 +1,6 @@
 [package]
 name = "solana-bpf-rust-dep-crate"
-version = "1.10.34"
+version = "1.14.3"
 description = "Safecoin BPF test program written in Rust"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -11,9 +11,9 @@ edition = "2021"
 
 [dependencies]
 byteorder = { version = "1", default-features = false }
-safecoin-program = { path = "../../../../sdk/program", version = "=1.10.34" }
 # list of crates which must be buildable for bpf programs
-safecoin-address-lookup-table-program = { path = "../../../../programs/address-lookup-table", version = "=1.10.34" }
+safecoin-address-lookup-table-program = { path = "../../../../programs/address-lookup-table", version = "=1.14.3" }
+safecoin-program = { path = "../../../../sdk/program", version = "=1.14.3" }
 
 [lib]
 crate-type = ["cdylib"]

@@ -1,6 +1,6 @@
 [package]
 name = "solana-bpf-rust-mem"
-version = "1.10.34"
+version = "1.14.3"
 description = "Safecoin BPF test program written in Rust"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -13,12 +13,12 @@ edition = "2021"
 no-entrypoint = []
 
 [dependencies]
-safecoin-program = { path = "../../../../sdk/program", version = "=1.10.34" }
+safecoin-program = { path = "../../../../sdk/program", version = "=1.14.3" }
 
 [dev-dependencies]
-safecoin-program-runtime = { path = "../../../../program-runtime", version = "=1.10.34" }
-safecoin-program-test = { path = "../../../../program-test", version = "=1.10.34" }
-safecoin-sdk = { path = "../../../../sdk", version = "=1.10.34" }
+safecoin-program-runtime = { path = "../../../../program-runtime", version = "=1.14.3" }
+safecoin-program-test = { path = "../../../../program-test", version = "=1.14.3" }
+safecoin-sdk = { path = "../../../../sdk", version = "=1.14.3" }
 
 [lib]
 crate-type = ["cdylib", "lib"]

@@ -228,7 +228,7 @@ pub trait RemoteWallet<T> {
         unimplemented!();
     }
 
-    /// Sign transaction data with wallet managing pubkey at derivation path m/44'/19165'/<account>'/<change>'.
+    /// Sign transaction data with wallet managing pubkey at derivation path m/44'/501'/<account>'/<change>'.
     fn sign_message(
         &self,
         derivation_path: &DerivationPath,

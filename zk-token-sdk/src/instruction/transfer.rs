@@ -2,7 +2,7 @@ use {
     crate::zk_token_elgamal::pod,
     bytemuck::{Pod, Zeroable},
 };
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 use {
     crate::{
         encryption::{
@@ -24,16 +24,16 @@ use {
     std::convert::TryInto,
 };
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 const TRANSFER_SOURCE_AMOUNT_BITS: usize = 64;
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 const TRANSFER_AMOUNT_LO_BITS: usize = 16;
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 const TRANSFER_AMOUNT_LO_NEGATED_BITS: usize = 16;
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 const TRANSFER_AMOUNT_HI_BITS: usize = 32;
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 lazy_static::lazy_static! {
     pub static ref COMMITMENT_MAX: PedersenCommitment = Pedersen::encode((1_u64 <<
                                                                          TRANSFER_AMOUNT_LO_NEGATED_BITS) - 1);
@@ -58,7 +58,7 @@ pub struct TransferData {
     pub proof: TransferProof,
 }
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 impl TransferData {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -195,7 +195,7 @@ impl TransferData {
     }
 }
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 impl Verifiable for TransferData {
     fn verify(&self) -> Result<(), ProofError> {
         // generate transcript and append all public inputs
@@ -239,7 +239,7 @@ pub struct TransferProof {
 }
 
 #[allow(non_snake_case)]
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 impl TransferProof {
     fn transcript_new(
         transfer_pubkeys: &pod::TransferPubkeys,
@@ -430,14 +430,14 @@ impl TransferProof {
 /// The ElGamal public keys needed for a transfer
 #[derive(Clone)]
 #[repr(C)]
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 pub struct TransferPubkeys {
     pub source_pubkey: ElGamalPubkey,
     pub destination_pubkey: ElGamalPubkey,
     pub auditor_pubkey: ElGamalPubkey,
 }
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 impl TransferPubkeys {
     // TODO: use constructor instead
     pub fn to_bytes(&self) -> [u8; 96] {
@@ -469,7 +469,7 @@ impl TransferPubkeys {
 
 #[derive(Clone)]
 #[repr(C)]
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 pub struct TransferAmountEncryption {
     pub commitment: PedersenCommitment,
     pub source_handle: DecryptHandle,
@@ -477,7 +477,7 @@ pub struct TransferAmountEncryption {
     pub auditor_handle: DecryptHandle,
 }
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 impl TransferAmountEncryption {
     pub fn new(
         amount: u64,
@@ -596,6 +596,40 @@ mod test {
         );
 
         assert!(transfer_data.is_err());
+
+        // Case 5: invalid destination or auditor pubkey
+        let spendable_balance: u64 = 0;
+        let spendable_ciphertext = source_keypair.public.encrypt(spendable_balance);
+
+        let transfer_amount: u64 = 0;
+
+        // destination pubkey invalid
+        let dest_pk = pod::ElGamalPubkey::zeroed().try_into().unwrap();
+        let auditor_pk = ElGamalKeypair::new_rand().public;
+
+        let transfer_data = TransferData::new(
+            transfer_amount,
+            (spendable_balance, &spendable_ciphertext),
+            &source_keypair,
+            (&dest_pk, &auditor_pk),
+        )
+        .unwrap();
+
+        assert!(transfer_data.verify().is_err());
+
+        // auditor pubkey invalid
+        let dest_pk = ElGamalKeypair::new_rand().public;
+        let auditor_pk = pod::ElGamalPubkey::zeroed().try_into().unwrap();
+
+        let transfer_data = TransferData::new(
+            transfer_amount,
+            (spendable_balance, &spendable_ciphertext),
+            &source_keypair,
+            (&dest_pk, &auditor_pk),
+        )
+        .unwrap();
+
+        assert!(transfer_data.verify().is_err());
     }
 
     #[test]

@@ -25,7 +25,7 @@ lazy_static! {
 }
 
 /// The Safecoin CLI configuration.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct Config {
     /// The RPC address of a Safecoin validator node.
     ///

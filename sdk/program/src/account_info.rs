@@ -1,3 +1,5 @@
+//! Account information.
+
 use {
     crate::{
         clock::Epoch, debug_account_data::*, entrypoint::MAX_PERMITTED_DATA_INCREASE,

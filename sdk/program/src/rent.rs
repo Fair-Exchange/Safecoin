@@ -1,3 +1,7 @@
+//! Configuration for network [rent].
+//!
+//! [rent]: https://docs.solana.com/implemented-proposals/rent
+
 #![allow(clippy::integer_arithmetic)]
 //! configuration for network rent
 

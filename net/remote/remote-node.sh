@@ -28,6 +28,8 @@ maybeFullRpc="${19}"
 waitForNodeInit="${20}"
 extraPrimordialStakes="${21:=0}"
 tmpfsAccounts="${22:false}"
+enableUdp="${23}"
+
 set +x
 
 missing() {
@@ -280,7 +282,11 @@ EOF
 
     if $maybeFullRpc; then
       args+=(--enable-rpc-transaction-history)
-      args+=(--enable-cpi-and-log-storage)
+      args+=(--enable-extended-tx-metadata-storage)
+    fi
+
+    if $enableUdp; then
+      args+=(--tpu-enable-udp)
     fi
 
     if [[ $airdropsEnabled = true ]]; then
@@ -408,7 +414,11 @@ EOF
 
     if $maybeFullRpc; then
       args+=(--enable-rpc-transaction-history)
-      args+=(--enable-cpi-and-log-storage)
+      args+=(--enable-extended-tx-metadata-storage)
+    fi
+
+    if $enableUdp; then
+      args+=(--tpu-enable-udp)
     fi
 
 cat >> ~/solana/on-reboot <<EOF

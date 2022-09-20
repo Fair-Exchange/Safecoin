@@ -4,7 +4,10 @@ use {
         lamports::LamportsError,
         pubkey::Pubkey,
     },
-    serde::ser::{Serialize, Serializer},
+    serde::{
+        ser::{Serialize, Serializer},
+        Deserialize,
+    },
     safecoin_program::{account_info::AccountInfo, debug_account_data::*, sysvar::Sysvar},
     std::{
         cell::{Ref, RefCell},
@@ -94,7 +97,8 @@ impl Serialize for AccountSharedData {
 /// An Account with data that is stored on chain
 /// This will be the in-memory representation of the 'Account' struct data.
 /// The existing 'Account' structure cannot easily change due to downstream projects.
-#[derive(PartialEq, Eq, Clone, Default, AbiExample)]
+#[derive(PartialEq, Eq, Clone, Default, AbiExample, Deserialize)]
+#[serde(from = "Account")]
 pub struct AccountSharedData {
     /// lamports in the account
     lamports: u64,
@@ -113,10 +117,10 @@ pub struct AccountSharedData {
 /// Returns true if accounts are essentially equivalent as in all fields are equivalent.
 pub fn accounts_equal<T: ReadableAccount, U: ReadableAccount>(me: &T, other: &U) -> bool {
     me.lamports() == other.lamports()
-        && me.data() == other.data()
-        && me.owner() == other.owner()
         && me.executable() == other.executable()
         && me.rent_epoch() == other.rent_epoch()
+        && me.owner() == other.owner()
+        && me.data() == other.data()
 }
 
 impl From<AccountSharedData> for Account {

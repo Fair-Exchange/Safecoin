@@ -1,3 +1,5 @@
+//! The [`ProgramError`] type and related definitions.
+
 #![allow(clippy::integer_arithmetic)]
 use {
     crate::{decode_error::DecodeError, instruction::InstructionError, msg, pubkey::PubkeyError},
@@ -127,7 +129,7 @@ pub const MAX_ACCOUNTS_DATA_SIZE_EXCEEDED: u64 = to_builtin!(19);
 pub const INVALID_ACCOUNT_DATA_REALLOC: u64 = to_builtin!(20);
 // Warning: Any new program errors added here must also be:
 // - Added to the below conversions
-// - Added as an equivilent to InstructionError
+// - Added as an equivalent to InstructionError
 // - Be featureized in the BPF loader to return `InstructionError::InvalidError`
 //   until the feature is activated
 

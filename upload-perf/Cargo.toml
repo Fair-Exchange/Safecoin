@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-upload-perf"
-version = "1.10.34"
+version = "1.14.3"
 description = "Metrics Upload Utility"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -10,8 +10,8 @@ homepage = "https://safecoin.org/"
 publish = false
 
 [dependencies]
-serde_json = "1.0.79"
-safecoin-metrics = { path = "../metrics", version = "=1.10.34" }
+serde_json = "1.0.81"
+safecoin-metrics = { path = "../metrics", version = "=1.14.3" }
 
 [[bin]]
 name = "safecoin-upload-perf"

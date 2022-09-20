@@ -1,5 +1,8 @@
-//! Safecoin Rust-based BPF program entry point supported by the latest
-//! BPFLoader.  For more information see './bpf_loader.rs'
+//! The Rust-based BPF program entry point supported by the latest BPF loader.
+//!
+//! For more information see the [`bpf_loader`] module.
+//!
+//! [`bpf_loader`]: crate::bpf_loader
 
 extern crate alloc;
 use {
@@ -32,6 +35,9 @@ pub const SUCCESS: u64 = 0;
 pub const HEAP_START_ADDRESS: u64 = 0x300000000;
 /// Length of the heap memory region used for program heap.
 pub const HEAP_LENGTH: usize = 32 * 1024;
+
+/// Value used to indicate that a serialized account is not a duplicate
+pub const NON_DUP_MARKER: u8 = u8::MAX;
 
 /// Declare the program entry point and set up global handlers.
 ///
@@ -152,7 +158,7 @@ macro_rules! entrypoint {
 #[macro_export]
 macro_rules! custom_heap_default {
     () => {
-        #[cfg(all(not(feature = "custom-heap"), target_arch = "bpf"))]
+        #[cfg(all(not(feature = "custom-heap"), target_os = "solana"))]
         #[global_allocator]
         static A: $crate::entrypoint::BumpAllocator = $crate::entrypoint::BumpAllocator {
             start: $crate::entrypoint::HEAP_START_ADDRESS as usize,
@@ -197,7 +203,7 @@ macro_rules! custom_heap_default {
 /// with the `#[no_mangle]` attribute, as below:
 ///
 /// ```ignore
-/// #[cfg(all(feature = "custom-panic", target_arch = "bpf"))]
+/// #[cfg(all(feature = "custom-panic", target_os = "solana"))]
 /// #[no_mangle]
 /// fn custom_panic(info: &core::panic::PanicInfo<'_>) {
 ///     $crate::msg!("{}", info);
@@ -208,7 +214,7 @@ macro_rules! custom_heap_default {
 #[macro_export]
 macro_rules! custom_panic_default {
     () => {
-        #[cfg(all(not(feature = "custom-panic"), target_arch = "bpf"))]
+        #[cfg(all(not(feature = "custom-panic"), target_os = "solana"))]
         #[no_mangle]
         fn custom_panic(info: &core::panic::PanicInfo<'_>) {
             // Full panic reporting
@@ -280,7 +286,7 @@ pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a Pubkey, Vec<AccountInfo<'a
     for _ in 0..num_accounts {
         let dup_info = *(input.add(offset) as *const u8);
         offset += size_of::<u8>();
-        if dup_info == std::u8::MAX {
+        if dup_info == NON_DUP_MARKER {
             #[allow(clippy::cast_ptr_alignment)]
             let is_signer = *(input.add(offset) as *const u8) != 0;
             offset += size_of::<u8>();

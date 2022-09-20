@@ -22,11 +22,15 @@ use {
         connection_cache::ConnectionCache,
         rpc_client::RpcClient,
         rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig},
-        rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
+        rpc_filter::{Memcmp, RpcFilterType},
         tpu_client::{TpuClient, TpuClientConfig},
     },
     safecoin_program_runtime::invoke_context::InvokeContext,
-    solana_rbpf::{elf::Executable, verifier, vm::Config},
+    solana_rbpf::{
+        elf::Executable,
+        verifier::RequisiteVerifier,
+        vm::{Config, VerifiedExecutable},
+    },
     safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
     safecoin_sdk::{
         account::Account,
@@ -42,6 +46,7 @@ use {
         signature::{keypair_from_seed, read_keypair_file, Keypair, Signature, Signer},
         system_instruction::{self, SystemError},
         system_program,
+        sysvar::rent::Rent,
         transaction::{Transaction, TransactionError},
         transaction_context::TransactionContext,
     },
@@ -55,7 +60,12 @@ use {
     },
 };
 
-#[derive(Debug, PartialEq)]
+pub const CLOSE_PROGRAM_WARNING: &str = "WARNING! \
+Closed programs cannot be recreated at the same program id. \
+Once a program is closed, it can never be invoked again. \
+To proceed with closing, rerun the `close` command with the `--bypass-warning` flag";
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum ProgramCliCommand {
     Deploy {
         program_location: Option<String>,
@@ -104,6 +114,7 @@ pub enum ProgramCliCommand {
         recipient_pubkey: Pubkey,
         authority_index: SignerIndex,
         use_lamports_unit: bool,
+        bypass_warning: bool,
     },
 }
 
@@ -126,7 +137,7 @@ impl ProgramSubCommands for App<'_, '_> {
                 )
                 .subcommand(
                     SubCommand::with_name("deploy")
-                        .about("Deploy a program")
+                        .about("Deploy an upgradeable program")
                         .arg(
                             Arg::with_name("program_location")
                                 .index(1)
@@ -381,12 +392,18 @@ impl ProgramSubCommands for App<'_, '_> {
                                 .long("lamports")
                                 .takes_value(false)
                                 .help("Display balance in lamports instead of SAFE"),
+                        )
+                        .arg(
+                            Arg::with_name("bypass_warning")
+                                .long("bypass-warning")
+                                .takes_value(false)
+                                .help("Bypass the permanent program closure warning"),
                         ),
                 )
         )
         .subcommand(
             SubCommand::with_name("deploy")
-                .about("Deploy a program")
+                .about("Deploy a non-upgradeable program. Use `safecoin program deploy` instead to deploy upgradeable programs")
                 .setting(AppSettings::Hidden)
                 .arg(
                     Arg::with_name("program_location")
@@ -669,6 +686,7 @@ pub fn parse_program_subcommand(
                     recipient_pubkey,
                     authority_index: signer_info.index_of(authority_pubkey).unwrap(),
                     use_lamports_unit: matches.is_present("lamports"),
+                    bypass_warning: matches.is_present("bypass_warning"),
                 }),
                 signers: signer_info.signers,
             }
@@ -776,6 +794,7 @@ pub fn process_program_subcommand(
             recipient_pubkey,
             authority_index,
             use_lamports_unit,
+            bypass_warning,
         } => process_close(
             &rpc_client,
             config,
@@ -783,6 +802,7 @@ pub fn process_program_subcommand(
             *recipient_pubkey,
             *authority_index,
             *use_lamports_unit,
+            *bypass_warning,
         ),
     }
 }
@@ -960,7 +980,7 @@ fn process_program_deploy(
             let program_len = account
                 .data
                 .len()
-                .saturating_sub(UpgradeableLoaderState::buffer_data_offset().unwrap_or_default());
+                .saturating_sub(UpgradeableLoaderState::size_of_buffer_metadata());
 
             (vec![], program_len)
         } else {
@@ -983,7 +1003,7 @@ fn process_program_deploy(
         program_len * 2
     };
     let minimum_balance = rpc_client.get_minimum_balance_for_rent_exemption(
-        UpgradeableLoaderState::programdata_len(program_len)?,
+        UpgradeableLoaderState::size_of_programdata(program_len),
     )?;
 
     let result = if do_deploy {
@@ -1095,7 +1115,7 @@ fn process_write_buffer(
         program_data.len()
     };
     let minimum_balance = rpc_client.get_minimum_balance_for_rent_exemption(
-        UpgradeableLoaderState::programdata_len(buffer_data_len)?,
+        UpgradeableLoaderState::size_of_programdata(buffer_data_len),
     )?;
 
     let result = do_process_program_write_and_deploy(
@@ -1199,24 +1219,19 @@ fn get_buffers(
     authority_pubkey: Option<Pubkey>,
     use_lamports_unit: bool,
 ) -> Result<CliUpgradeableBuffers, Box<dyn std::error::Error>> {
-    let mut filters = vec![RpcFilterType::Memcmp(Memcmp {
-        offset: 0,
-        bytes: MemcmpEncodedBytes::Base58(bs58::encode(vec![1, 0, 0, 0]).into_string()),
-        encoding: None,
-    })];
+    let mut filters = vec![RpcFilterType::Memcmp(Memcmp::new_base58_encoded(
+        0,
+        &[1, 0, 0, 0],
+    ))];
     if let Some(authority_pubkey) = authority_pubkey {
-        filters.push(RpcFilterType::Memcmp(Memcmp {
-            offset: ACCOUNT_TYPE_SIZE,
-            bytes: MemcmpEncodedBytes::Base58(bs58::encode(vec![1]).into_string()),
-            encoding: None,
-        }));
-        filters.push(RpcFilterType::Memcmp(Memcmp {
-            offset: ACCOUNT_TYPE_SIZE + OPTION_SIZE,
-            bytes: MemcmpEncodedBytes::Base58(
-                bs58::encode(authority_pubkey.as_ref()).into_string(),
-            ),
-            encoding: None,
-        }));
+        filters.push(RpcFilterType::Memcmp(Memcmp::new_base58_encoded(
+            ACCOUNT_TYPE_SIZE,
+            &[1],
+        )));
+        filters.push(RpcFilterType::Memcmp(Memcmp::new_base58_encoded(
+            ACCOUNT_TYPE_SIZE + OPTION_SIZE,
+            authority_pubkey.as_ref(),
+        )));
     }
 
     let results = get_accounts_with_filter(
@@ -1252,24 +1267,19 @@ fn get_programs(
     authority_pubkey: Option<Pubkey>,
     use_lamports_unit: bool,
 ) -> Result<CliUpgradeablePrograms, Box<dyn std::error::Error>> {
-    let mut filters = vec![RpcFilterType::Memcmp(Memcmp {
-        offset: 0,
-        bytes: MemcmpEncodedBytes::Base58(bs58::encode(vec![3, 0, 0, 0]).into_string()),
-        encoding: None,
-    })];
+    let mut filters = vec![RpcFilterType::Memcmp(Memcmp::new_base58_encoded(
+        0,
+        &[3, 0, 0, 0],
+    ))];
     if let Some(authority_pubkey) = authority_pubkey {
-        filters.push(RpcFilterType::Memcmp(Memcmp {
-            offset: ACCOUNT_TYPE_SIZE + SLOT_SIZE,
-            bytes: MemcmpEncodedBytes::Base58(bs58::encode(vec![1]).into_string()),
-            encoding: None,
-        }));
-        filters.push(RpcFilterType::Memcmp(Memcmp {
-            offset: ACCOUNT_TYPE_SIZE + SLOT_SIZE + OPTION_SIZE,
-            bytes: MemcmpEncodedBytes::Base58(
-                bs58::encode(authority_pubkey.as_ref()).into_string(),
-            ),
-            encoding: None,
-        }));
+        filters.push(RpcFilterType::Memcmp(Memcmp::new_base58_encoded(
+            ACCOUNT_TYPE_SIZE + SLOT_SIZE,
+            &[1],
+        )));
+        filters.push(RpcFilterType::Memcmp(Memcmp::new_base58_encoded(
+            ACCOUNT_TYPE_SIZE + SLOT_SIZE + OPTION_SIZE,
+            authority_pubkey.as_ref(),
+        )));
     }
 
     let results = get_accounts_with_filter(
@@ -1287,11 +1297,7 @@ fn get_programs(
         {
             let mut bytes = vec![2, 0, 0, 0];
             bytes.extend_from_slice(programdata_address.as_ref());
-            let filters = vec![RpcFilterType::Memcmp(Memcmp {
-                offset: 0,
-                bytes: MemcmpEncodedBytes::Base58(bs58::encode(bytes).into_string()),
-                encoding: None,
-            })];
+            let filters = vec![RpcFilterType::Memcmp(Memcmp::new_base58_encoded(0, &bytes))];
 
             let results = get_accounts_with_filter(rpc_client, filters, 0)?;
             if results.len() != 1 {
@@ -1310,7 +1316,7 @@ fn get_programs(
                     .unwrap_or_else(|| "none".to_string()),
                 last_deploy_slot: slot,
                 data_len: programdata_account.data.len()
-                    - UpgradeableLoaderState::programdata_data_offset()?,
+                    - UpgradeableLoaderState::size_of_programdata_metadata(),
                 lamports: programdata_account.lamports,
                 use_lamports_unit,
             });
@@ -1392,7 +1398,7 @@ fn process_show(
                                         .unwrap_or_else(|| "none".to_string()),
                                     last_deploy_slot: slot,
                                     data_len: programdata_account.data.len()
-                                        - UpgradeableLoaderState::programdata_data_offset()?,
+                                        - UpgradeableLoaderState::size_of_programdata_metadata(),
                                     lamports: programdata_account.lamports,
                                     use_lamports_unit,
                                 }))
@@ -1413,7 +1419,7 @@ fn process_show(
                                 .map(|pubkey| pubkey.to_string())
                                 .unwrap_or_else(|| "none".to_string()),
                             data_len: account.data.len()
-                                - UpgradeableLoaderState::buffer_data_offset()?,
+                                - UpgradeableLoaderState::size_of_buffer_metadata(),
                             lamports: account.lamports,
                             use_lamports_unit,
                         }))
@@ -1470,8 +1476,7 @@ fn process_dump(
                         if let Ok(UpgradeableLoaderState::ProgramData { .. }) =
                             programdata_account.state()
                         {
-                            let offset =
-                                UpgradeableLoaderState::programdata_data_offset().unwrap_or(0);
+                            let offset = UpgradeableLoaderState::size_of_programdata_metadata();
                             let program_data = &programdata_account.data[offset..];
                             let mut f = File::create(output_location)?;
                             f.write_all(program_data)?;
@@ -1483,7 +1488,7 @@ fn process_dump(
                         Err(format!("Program {} has been closed", account_pubkey).into())
                     }
                 } else if let Ok(UpgradeableLoaderState::Buffer { .. }) = account.state() {
-                    let offset = UpgradeableLoaderState::buffer_data_offset().unwrap_or(0);
+                    let offset = UpgradeableLoaderState::size_of_buffer_metadata();
                     let program_data = &account.data[offset..];
                     let mut f = File::create(output_location)?;
                     f.write_all(program_data)?;
@@ -1563,6 +1568,7 @@ fn process_close(
     recipient_pubkey: Pubkey,
     authority_index: SignerIndex,
     use_lamports_unit: bool,
+    bypass_warning: bool,
 ) -> ProcessResult {
     let authority_signer = config.signers[authority_index];
 
@@ -1618,13 +1624,16 @@ fn process_close(
                         }) = account.state()
                         {
                             if authority_pubkey != Some(authority_signer.pubkey()) {
-                                return Err(format!(
+                                Err(format!(
                                     "Program authority {:?} does not match {:?}",
                                     authority_pubkey,
                                     Some(authority_signer.pubkey())
                                 )
-                                .into());
+                                .into())
                             } else {
+                                if !bypass_warning {
+                                    return Err(String::from(CLOSE_PROGRAM_WARNING).into());
+                                }
                                 close(
                                     rpc_client,
                                     config,
@@ -1642,22 +1651,16 @@ fn process_close(
                                 ))
                             }
                         } else {
-                            return Err(
-                                format!("Program {} has been closed", account_pubkey).into()
-                            );
+                            Err(format!("Program {} has been closed", account_pubkey).into())
                         }
                     } else {
-                        return Err(format!("Program {} has been closed", account_pubkey).into());
+                        Err(format!("Program {} has been closed", account_pubkey).into())
                     }
                 }
-                _ => {
-                    return Err(
-                        format!("{} is not a Program or Buffer account", account_pubkey).into(),
-                    );
-                }
+                _ => Err(format!("{} is not a Program or Buffer account", account_pubkey).into()),
             }
         } else {
-            return Err(format!("Unable to find the account {}", account_pubkey).into());
+            Err(format!("Unable to find the account {}", account_pubkey).into())
         }
     } else {
         let buffers = get_buffers(
@@ -1787,7 +1790,7 @@ fn do_process_program_write_and_deploy(
                     buffer_pubkey,
                     &account,
                     if loader_id == &bpf_loader_upgradeable::id() {
-                        UpgradeableLoaderState::buffer_len(program_len)?
+                        UpgradeableLoaderState::size_of_buffer(program_len)
                     } else {
                         program_len
                     },
@@ -1877,7 +1880,7 @@ fn do_process_program_write_and_deploy(
                     buffer_pubkey,
                     &program_signers[1].pubkey(),
                     rpc_client.get_minimum_balance_for_rent_exemption(
-                        UpgradeableLoaderState::program_len()?,
+                        UpgradeableLoaderState::size_of_program(),
                     )?,
                     programdata_len,
                 )?,
@@ -1947,7 +1950,7 @@ fn do_process_program_upgrade(
     let loader_id = bpf_loader_upgradeable::id();
     let data_len = program_data.len();
     let minimum_balance = rpc_client.get_minimum_balance_for_rent_exemption(
-        UpgradeableLoaderState::programdata_len(data_len)?,
+        UpgradeableLoaderState::size_of_programdata(data_len),
     )?;
 
     // Build messages to calculate fees
@@ -1966,7 +1969,7 @@ fn do_process_program_upgrade(
                     &config.signers[0].pubkey(),
                     &buffer_signer.pubkey(),
                     &account,
-                    UpgradeableLoaderState::buffer_len(data_len)?,
+                    UpgradeableLoaderState::size_of_buffer(data_len),
                     minimum_balance,
                     true,
                 )?
@@ -2077,20 +2080,25 @@ fn read_and_verify_elf(program_location: &str) -> Result<Vec<u8>, Box<dyn std::e
     let mut program_data = Vec::new();
     file.read_to_end(&mut program_data)
         .map_err(|err| format!("Unable to read program file: {}", err))?;
-    let mut transaction_context = TransactionContext::new(Vec::new(), 1, 1);
+    let mut transaction_context = TransactionContext::new(Vec::new(), Some(Rent::default()), 1, 1);
     let mut invoke_context = InvokeContext::new_mock(&mut transaction_context, &[]);
 
     // Verify the program
-    Executable::<BpfError, ThisInstructionMeter>::from_elf(
+    let executable = Executable::<BpfError, ThisInstructionMeter>::from_elf(
         &program_data,
-        Some(verifier::check),
         Config {
             reject_broken_elfs: true,
             ..Config::default()
         },
-        register_syscalls(&mut invoke_context).unwrap(),
+        register_syscalls(&mut invoke_context, true).unwrap(),
     )
     .map_err(|err| format!("ELF error: {}", err))?;
+
+    let _ =
+        VerifiedExecutable::<RequisiteVerifier, BpfError, ThisInstructionMeter>::from_executable(
+            executable,
+        )
+        .map_err(|err| format!("ELF error: {}", err))?;
 
     Ok(program_data)
 }
@@ -3021,6 +3029,30 @@ mod tests {
                     recipient_pubkey: default_keypair.pubkey(),
                     authority_index: 0,
                     use_lamports_unit: false,
+                    bypass_warning: false,
+                }),
+                signers: vec![read_keypair_file(&keypair_file).unwrap().into()],
+            }
+        );
+
+        // with bypass-warning
+        write_keypair_file(&authority_keypair, &authority_keypair_file).unwrap();
+        let test_command = test_commands.clone().get_matches_from(vec![
+            "test",
+            "program",
+            "close",
+            &buffer_pubkey.to_string(),
+            "--bypass-warning",
+        ]);
+        assert_eq!(
+            parse_command(&test_command, &default_signer, &mut None).unwrap(),
+            CliCommandInfo {
+                command: CliCommand::Program(ProgramCliCommand::Close {
+                    account_pubkey: Some(buffer_pubkey),
+                    recipient_pubkey: default_keypair.pubkey(),
+                    authority_index: 0,
+                    use_lamports_unit: false,
+                    bypass_warning: true,
                 }),
                 signers: vec![read_keypair_file(&keypair_file).unwrap().into()],
             }
@@ -3044,6 +3076,7 @@ mod tests {
                     recipient_pubkey: default_keypair.pubkey(),
                     authority_index: 1,
                     use_lamports_unit: false,
+                    bypass_warning: false,
                 }),
                 signers: vec![
                     read_keypair_file(&keypair_file).unwrap().into(),
@@ -3069,6 +3102,7 @@ mod tests {
                     recipient_pubkey,
                     authority_index: 0,
                     use_lamports_unit: false,
+                    bypass_warning: false,
                 }),
                 signers: vec![read_keypair_file(&keypair_file).unwrap().into(),],
             }
@@ -3090,6 +3124,7 @@ mod tests {
                     recipient_pubkey: default_keypair.pubkey(),
                     authority_index: 0,
                     use_lamports_unit: true,
+                    bypass_warning: false,
                 }),
                 signers: vec![read_keypair_file(&keypair_file).unwrap().into(),],
             }

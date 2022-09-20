@@ -1,11 +1,11 @@
 use bytemuck::{Pod, Zeroable};
 pub use target_arch::*;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodEdwardsPoint(pub [u8; 32]);
 
-#[cfg(not(target_arch = "bpf"))]
+#[cfg(not(target_os = "solana"))]
 mod target_arch {
     use {
         super::*,
@@ -99,7 +99,7 @@ mod target_arch {
             Some((&result).into())
         }
 
-        #[cfg(not(target_arch = "bpf"))]
+        #[cfg(not(target_os = "solana"))]
         fn multiply(scalar: &PodScalar, point: &Self) -> Option<Self> {
             let scalar: Scalar = scalar.into();
             let point: EdwardsPoint = point.try_into().ok()?;
@@ -125,14 +125,12 @@ mod target_arch {
     }
 }
 
-#[cfg(target_arch = "bpf")]
+#[cfg(target_os = "solana")]
 mod target_arch {
     use {
         super::*,
         crate::curve25519::{
-            curve_syscall_traits::{
-                sol_curve_group_op, sol_curve_validate_point, ADD, CURVE25519_EDWARDS, MUL, SUB,
-            },
+            curve_syscall_traits::{ADD, CURVE25519_EDWARDS, MUL, SUB},
             scalar::PodScalar,
         },
     };
@@ -140,7 +138,7 @@ mod target_arch {
     pub fn validate_edwards(point: &PodEdwardsPoint) -> bool {
         let mut validate_result = 0u8;
         let result = unsafe {
-            sol_curve_validate_point(
+            safecoin_program::syscalls::sol_curve_validate_point(
                 CURVE25519_EDWARDS,
                 &point.0 as *const u8,
                 &mut validate_result,
@@ -155,7 +153,7 @@ mod target_arch {
     ) -> Option<PodEdwardsPoint> {
         let mut result_point = PodEdwardsPoint::zeroed();
         let result = unsafe {
-            sol_curve_group_op(
+            safecoin_program::syscalls::sol_curve_group_op(
                 CURVE25519_EDWARDS,
                 ADD,
                 &left_point.0 as *const u8,
@@ -177,7 +175,7 @@ mod target_arch {
     ) -> Option<PodEdwardsPoint> {
         let mut result_point = PodEdwardsPoint::zeroed();
         let result = unsafe {
-            sol_curve_group_op(
+            safecoin_program::syscalls::sol_curve_group_op(
                 CURVE25519_EDWARDS,
                 SUB,
                 &left_point.0 as *const u8,
@@ -199,7 +197,7 @@ mod target_arch {
     ) -> Option<PodEdwardsPoint> {
         let mut result_point = PodEdwardsPoint::zeroed();
         let result = unsafe {
-            sol_curve_group_op(
+            safecoin_program::syscalls::sol_curve_group_op(
                 CURVE25519_EDWARDS,
                 MUL,
                 &scalar.0 as *const u8,

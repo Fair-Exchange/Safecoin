@@ -1,5 +1,6 @@
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(min_specialization))]
 #![allow(clippy::integer_arithmetic)]
+#![recursion_limit = "2048"]
 //! The `solana` library implements the Safecoin high-performance blockchain architecture.
 //! It includes a full Rust implementation of the architecture (see
 //! [Validator](server/struct.Validator.html)) as well as hooks to GPU implementations of its most
@@ -36,8 +37,10 @@ pub mod ledger_cleanup_service;
 pub mod ledger_metric_report_service;
 pub mod optimistic_confirmation_verifier;
 pub mod outstanding_requests;
-pub mod packet_hasher;
+mod packet_hasher;
 pub mod packet_threshold;
+pub mod poh_timing_report_service;
+pub mod poh_timing_reporter;
 pub mod progress_map;
 pub mod qos_service;
 pub mod repair_generic_traversal;
@@ -53,7 +56,7 @@ pub mod rewards_recorder_service;
 pub mod sample_performance_service;
 pub mod serve_repair;
 pub mod serve_repair_service;
-pub mod shred_fetch_stage;
+mod shred_fetch_stage;
 pub mod sigverify;
 pub mod sigverify_shreds;
 pub mod sigverify_stage;
@@ -65,6 +68,7 @@ mod tower1_7_14;
 pub mod tower_storage;
 pub mod tpu;
 pub mod tracer_packet_stats;
+pub mod transaction_priority_details;
 pub mod tree_diff;
 pub mod tvu;
 pub mod unfrozen_gossip_verified_vote_hashes;
@@ -76,6 +80,9 @@ pub mod vote_stake_tracker;
 pub mod voting_service;
 pub mod warm_quic_cache_service;
 pub mod window_service;
+
+#[macro_use]
+extern crate eager;
 
 #[macro_use]
 extern crate log;

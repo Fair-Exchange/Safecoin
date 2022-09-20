@@ -1,7 +1,7 @@
 [package]
 name = "safecoin-cargo-build-bpf"
-version = "1.10.34"
-description = "Compile a local package and all of its dependencies using the Safecoin BPF SDK"
+version = "1.14.3"
+description = "Compile a local package and all of its dependencies using the Safecoin SBF SDK"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
 homepage = "https://safecoin.org/"
@@ -10,16 +10,9 @@ edition = "2021"
 publish = false
 
 [dependencies]
-bzip2 = "0.4.3"
-cargo_metadata = "0.14.2"
+cargo_metadata = "0.15.0"
 clap = { version = "3.1.5", features = ["cargo", "env"] }
-regex = "1.5.4"
-safecoin-download-utils = { path = "../../download-utils", version = "=1.10.34" }
-safecoin-sdk = { path = "..", version = "=1.10.34" }
-tar = "0.4.38"
-
-[dev-dependencies]
-serial_test = "*"
+safecoin-sdk = { path = "..", version = "=1.14.3" }
 
 [features]
 program = []
