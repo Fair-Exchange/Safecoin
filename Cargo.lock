@@ -4888,7 +4888,7 @@ dependencies = [
  "safecoin-remote-wallet",
  "safecoin-sdk",
  "safecoin-version",
- "solana-clap-v3-utils",
+ "safecoin-clap-v3-utils",
  "tiny-bip39",
 ]
 
@@ -6274,7 +6274,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-clap-v3-utils"
+name = "safecoin-clap-v3-utils"
 version = "1.14.3"
 dependencies = [
  "chrono",
