@@ -22,8 +22,8 @@ serde_json = "1.0.81"
 safecoin-config-program = { path = "../programs/config", version = "=1.14.3" }
 safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
 safecoin-vote-program = { path = "../programs/vote", version = "=1.14.3" }
-safe-token = { version = "=3.5.0", features = ["no-entrypoint"] }
-safe-token-2022 = { version = "=0.4.2", features = ["no-entrypoint"] }
+safe-token = { version = "=3.5.0", path = "../../safecoin-program-library/token/program", features = ["no-entrypoint"] }
+safe-token-2022 = { version = "=0.4", path = "../../safecoin-program-library/token/program-2022", features = ["no-entrypoint"] }
 thiserror = "1.0"
 zstd = "0.11.2"
 
