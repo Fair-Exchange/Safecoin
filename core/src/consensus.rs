@@ -117,7 +117,7 @@ impl SwitchForkDecision {
 }
 
 pub const VOTE_THRESHOLD_DEPTH: usize = 8;
-pub const SWITCH_FORK_THRESHOLD: f64 = 0.005;
+pub const SWITCH_FORK_THRESHOLD: f64 = 0.001;
 
 pub type Result<T> = std::result::Result<T, TowerError>;
 
