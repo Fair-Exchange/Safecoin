@@ -11,7 +11,6 @@ use {
     safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount, WritableAccount},
         clock::{Epoch, Slot, UnixTimestamp},
-        epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
         feature_set::{self, filter_votes_outside_slot_hashes, efficient_consensus, FeatureSet},
         hash::Hash,
         instruction::InstructionError,
