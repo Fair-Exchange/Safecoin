@@ -2004,17 +2004,17 @@ impl ReplayStage {
 	       	 + vote.hash().to_string().chars().last().unwrap() as usize ) % 10 as usize;
 
 
-            let mut feature_set = FeatureSet::default();
-            let mut allowed_offset_int = if feature_set
-                .is_active(&feature_set::efficient_consensus::id())
-            {
-                0
-            } else {
-                1
-            };
+//            let mut feature_set = FeatureSet::default();
+//            let mut allowed_offset_int = if feature_set
+//                .is_active(&feature_set::efficient_consensus::id())
+//            {
+//                0
+//            } else {
+//                1
+//            };
 
 
-//    let mut allowed_offset_int = 1;
+    let mut allowed_offset_int = 0;
 //    if feature_set.is_active(&feature_set::efficient_consensus::id())
 //    {
 //    let mut allowed_offset_int = 0;
