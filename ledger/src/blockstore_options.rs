@@ -118,6 +118,7 @@ impl LedgerColumnOptions {
             BlockstoreCompressionType::Snappy => "Snappy",
             BlockstoreCompressionType::Lz4 => "Lz4",
             BlockstoreCompressionType::Zlib => "Zlib",
+	    BlockstoreCompressionType::Zstd => "Zstd",
         }
     }
 }
@@ -238,6 +239,7 @@ pub enum BlockstoreCompressionType {
     Snappy,
     Lz4,
     Zlib,
+    Zstd,
 }
 
 impl Default for BlockstoreCompressionType {
@@ -253,6 +255,7 @@ impl BlockstoreCompressionType {
             Self::Snappy => RocksCompressionType::Snappy,
             Self::Lz4 => RocksCompressionType::Lz4,
             Self::Zlib => RocksCompressionType::Zlib,
+	    Self::Zstd => RocksCompressionType::Zstd,
         }
     }
 }
