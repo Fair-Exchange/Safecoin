@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-sdk-macro"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin SDK Macro"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"

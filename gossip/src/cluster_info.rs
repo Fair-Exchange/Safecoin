@@ -48,7 +48,7 @@ use {
     solana_ledger::shred::Shred,
     safecoin_measure::measure::Measure,
     solana_net_utils::{
-        bind_common, bind_common_in_range, bind_in_range, bind_two_consecutive_in_range,
+        bind_common, bind_common_in_range, bind_in_range, bind_two_in_range_with_offset,
         find_available_port_in_range, multi_bind_in_range, PortRange,
     },
     solana_perf::{
@@ -275,6 +275,7 @@ pub(crate) enum Protocol {
     PruneMessage(Pubkey, PruneData),
     PingMessage(Ping),
     PongMessage(Pong),
+    // Update count_packets_received if new variants are added here.
 }
 
 impl Protocol {
@@ -2160,20 +2161,23 @@ impl ClusterInfo {
         I: IntoIterator<Item = (SocketAddr, Ping)>,
     {
         let keypair = self.keypair();
-        let packets: Vec<_> = pings
-            .into_iter()
-            .filter_map(|(addr, ping)| {
-                let pong = Pong::new(&ping, &keypair).ok()?;
-                let pong = Protocol::PongMessage(pong);
-                match Packet::from_data(Some(&addr), pong) {
-                    Ok(packet) => Some(packet),
-                    Err(err) => {
-                        error!("failed to write pong packet: {:?}", err);
-                        None
+        let mut packets = Vec::new();
+        for (addr, ping) in pings {
+            // Respond both with and without domain so that the other node will
+            // accept the response regardless of its upgrade status.
+            // TODO: remove domain = false once cluster is upgraded.
+            for domain in [false, true] {
+                if let Ok(pong) = Pong::new(domain, &ping, &keypair) {
+                    let pong = Protocol::PongMessage(pong);
+                    match Packet::from_data(Some(&addr), pong) {
+                        Ok(packet) => packets.push(packet),
+                        Err(err) => {
+                            error!("failed to write pong packet: {:?}", err);
+                        }
                     }
                 }
-            })
-            .collect();
+            }
+        }
         if packets.is_empty() {
             None
         } else {
@@ -2396,18 +2400,6 @@ impl ClusterInfo {
                 Protocol::PongMessage(pong) => pong_messages.push((from_addr, pong)),
             }
         }
-        self.stats
-            .packets_received_pull_requests_count
-            .add_relaxed(pull_requests.len() as u64);
-        self.stats
-            .packets_received_pull_responses_count
-            .add_relaxed(pull_responses.len() as u64);
-        self.stats
-            .packets_received_push_messages_count
-            .add_relaxed(push_messages.len() as u64);
-        self.stats
-            .packets_received_prune_messages_count
-            .add_relaxed(prune_messages.len() as u64);
         if self.require_stake_for_gossip(stakes) {
             for (_, data) in &mut pull_responses {
                 retain_staked(data, stakes);
@@ -2450,9 +2442,26 @@ impl ClusterInfo {
         thread_pool: &ThreadPool,
     ) -> Result<(), GossipError> {
         const RECV_TIMEOUT: Duration = Duration::from_secs(1);
-        let packets: Vec<_> = receiver.recv_timeout(RECV_TIMEOUT)?.into();
+        fn count_packets_received(packets: &PacketBatch, counts: &mut [u64; 7]) {
+            for packet in packets {
+                let k = match packet
+                    .data(..4)
+                    .and_then(|data| <[u8; 4]>::try_from(data).ok())
+                    .map(u32::from_le_bytes)
+                {
+                    Some(k @ 0..=6) => k as usize,
+                    None | Some(_) => 6,
+                };
+                counts[k] += 1;
+            }
+        }
+        let packets = receiver.recv_timeout(RECV_TIMEOUT)?;
+        let mut counts = [0u64; 7];
+        count_packets_received(&packets, &mut counts);
+        let packets = Vec::from(packets);
         let mut packets = VecDeque::from(packets);
         for packet_batch in receiver.try_iter() {
+            count_packets_received(&packet_batch, &mut counts);
             packets.extend(packet_batch.iter().cloned());
             let excess_count = packets.len().saturating_sub(MAX_GOSSIP_TRAFFIC);
             if excess_count > 0 {
@@ -2462,9 +2471,6 @@ impl ClusterInfo {
                     .add_relaxed(excess_count as u64);
             }
         }
-        self.stats
-            .packets_received_count
-            .add_relaxed(packets.len() as u64);
         let verify_packet = |packet: Packet| {
             let protocol: Protocol = packet.deserialize_slice(..).ok()?;
             protocol.sanitize().ok()?;
@@ -2475,6 +2481,30 @@ impl ClusterInfo {
             let _st = ScopedTimer::from(&self.stats.verify_gossip_packets_time);
             thread_pool.install(|| packets.into_par_iter().filter_map(verify_packet).collect())
         };
+        self.stats
+            .packets_received_count
+            .add_relaxed(counts.iter().sum::<u64>());
+        self.stats
+            .packets_received_pull_requests_count
+            .add_relaxed(counts[0]);
+        self.stats
+            .packets_received_pull_responses_count
+            .add_relaxed(counts[1]);
+        self.stats
+            .packets_received_push_messages_count
+            .add_relaxed(counts[2]);
+        self.stats
+            .packets_received_prune_messages_count
+            .add_relaxed(counts[3]);
+        self.stats
+            .packets_received_ping_messages_count
+            .add_relaxed(counts[4]);
+        self.stats
+            .packets_received_pong_messages_count
+            .add_relaxed(counts[5]);
+        self.stats
+            .packets_received_unknown_count
+            .add_relaxed(counts[6]);
         self.stats
             .packets_received_verified_count
             .add_relaxed(packets.len() as u64);
@@ -2737,20 +2767,21 @@ impl Node {
     }
     pub fn new_localhost_with_pubkey(pubkey: &Pubkey) -> Self {
         let bind_ip_addr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+        let port_range = (1024, 65535);
         let ((_tpu_port, tpu), (_tpu_quic_port, tpu_quic)) =
-            bind_two_consecutive_in_range(bind_ip_addr, (1024, 65535)).unwrap();
+            bind_two_in_range_with_offset(bind_ip_addr, port_range, QUIC_PORT_OFFSET).unwrap();
         let (gossip_port, (gossip, ip_echo)) =
-            bind_common_in_range(bind_ip_addr, (1024, 65535)).unwrap();
+            bind_common_in_range(bind_ip_addr, port_range).unwrap();
         let gossip_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), gossip_port);
         let tvu = UdpSocket::bind("127.0.0.1:0").unwrap();
         let tvu_forwards = UdpSocket::bind("127.0.0.1:0").unwrap();
         let ((_tpu_forwards_port, tpu_forwards), (_tpu_forwards_quic_port, tpu_forwards_quic)) =
-            bind_two_consecutive_in_range(bind_ip_addr, (1024, 65535)).unwrap();
+            bind_two_in_range_with_offset(bind_ip_addr, port_range, QUIC_PORT_OFFSET).unwrap();
         let tpu_vote = UdpSocket::bind("127.0.0.1:0").unwrap();
         let repair = UdpSocket::bind("127.0.0.1:0").unwrap();
-        let rpc_port = find_available_port_in_range(bind_ip_addr, (1024, 65535)).unwrap();
+        let rpc_port = find_available_port_in_range(bind_ip_addr, port_range).unwrap();
         let rpc_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), rpc_port);
-        let rpc_pubsub_port = find_available_port_in_range(bind_ip_addr, (1024, 65535)).unwrap();
+        let rpc_pubsub_port = find_available_port_in_range(bind_ip_addr, port_range).unwrap();
         let rpc_pubsub_addr =
             SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), rpc_pubsub_port);
 
@@ -2826,9 +2857,9 @@ impl Node {
         let (tvu_port, tvu) = Self::bind(bind_ip_addr, port_range);
         let (tvu_forwards_port, tvu_forwards) = Self::bind(bind_ip_addr, port_range);
         let ((tpu_port, tpu), (_tpu_quic_port, tpu_quic)) =
-            bind_two_consecutive_in_range(bind_ip_addr, port_range).unwrap();
+            bind_two_in_range_with_offset(bind_ip_addr, port_range, QUIC_PORT_OFFSET).unwrap();
         let ((tpu_forwards_port, tpu_forwards), (_tpu_forwards_quic_port, tpu_forwards_quic)) =
-            bind_two_consecutive_in_range(bind_ip_addr, port_range).unwrap();
+            bind_two_in_range_with_offset(bind_ip_addr, port_range, QUIC_PORT_OFFSET).unwrap();
         let (tpu_vote_port, tpu_vote) = Self::bind(bind_ip_addr, port_range);
         let (_, retransmit_socket) = Self::bind(bind_ip_addr, port_range);
         let (repair_port, repair) = Self::bind(bind_ip_addr, port_range);
@@ -3181,7 +3212,9 @@ mod tests {
         let pongs: Vec<(SocketAddr, Pong)> = pings
             .iter()
             .zip(&remote_nodes)
-            .map(|(ping, (keypair, socket))| (*socket, Pong::new(ping, keypair).unwrap()))
+            .map(|(ping, (keypair, socket))| {
+                (*socket, Pong::new(/*domain:*/ true, ping, keypair).unwrap())
+            })
             .collect();
         let now = now + Duration::from_millis(1);
         cluster_info.handle_batch_pong_messages(pongs, now);
@@ -3224,7 +3257,7 @@ mod tests {
             .collect();
         let pongs: Vec<_> = pings
             .iter()
-            .map(|ping| Pong::new(ping, &this_node).unwrap())
+            .map(|ping| Pong::new(/*domain:*/ false, ping, &this_node).unwrap())
             .collect();
         let recycler = PacketBatchRecycler::default();
         let packets = cluster_info
@@ -3236,9 +3269,9 @@ mod tests {
                 &recycler,
             )
             .unwrap();
-        assert_eq!(remote_nodes.len(), packets.len());
+        assert_eq!(remote_nodes.len() * 2, packets.len());
         for (packet, (_, socket), pong) in izip!(
-            packets.into_iter(),
+            packets.into_iter().step_by(2),
             remote_nodes.into_iter(),
             pongs.into_iter()
         ) {

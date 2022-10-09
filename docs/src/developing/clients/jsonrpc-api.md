@@ -388,10 +388,10 @@ Returns identity and transaction information about a confirmed block in the ledg
 - `<object>` - (optional) Configuration object containing the following optional fields:
   - (optional) `encoding: <string>` - encoding for each returned Transaction, either "json", "jsonParsed", "base58" (_slow_), "base64". If parameter not provided, the default encoding is "json".
     "jsonParsed" encoding attempts to use program-specific instruction parsers to return more human-readable and explicit data in the `transaction.message.instructions` list. If "jsonParsed" is requested but a parser cannot be found, the instruction falls back to regular JSON encoding (`accounts`, `data`, and `programIdIndex` fields).
-  - (optional) `transactionDetails: <string>` - level of transaction detail to return, either "full", "signatures", or "none". If parameter not provided, the default detail level is "full".
+  - (optional) `transactionDetails: <string>` - level of transaction detail to return, either "full", "accounts", "signatures", or "none". If parameter not provided, the default detail level is "full". If "accounts" are requested, transaction details only include signatures and an annotated list of accounts in each transaction. Transaction metadata is limited to only: fee, err, pre_balances, post_balances, pre_token_balances, and post_token_balances.
   - (optional) `rewards: bool` - whether to populate the `rewards` array. If parameter not provided, the default includes rewards.
   - (optional) [Commitment](jsonrpc-api.md#configuring-state-commitment); "processed" is not supported. If parameter not provided, the default is "finalized".
-  - (optional) `maxSupportedTransactionVersion: <number>` - set the max transaction version to return in responses. If the requested block contains a transaction with a higher version, an error will be returned.
+  - (optional) `maxSupportedTransactionVersion: <number>` - set the max transaction version to return in responses. If the requested block contains a transaction with a higher version, an error will be returned. If this parameter is omitted, only legacy transactions will be returned, and a block containing any versioned transaction will prompt the error.
 
 #### Results:
 
@@ -413,6 +413,12 @@ The result field will be an object with the following fields:
       - `preTokenBalances: <array|undefined>` - List of [token balances](#token-balances-structure) from before the transaction was processed or omitted if token balance recording was not yet enabled during this transaction
       - `postTokenBalances: <array|undefined>` - List of [token balances](#token-balances-structure) from after the transaction was processed or omitted if token balance recording was not yet enabled during this transaction
       - `logMessages: <array|null>` - array of string log messages or `null` if log message recording was not enabled during this transaction
+      - `rewards: <array|null>` - transaction-level rewards, populated if rewards are requested; an array of JSON objects containing:
+        - `pubkey: <string>` - The public key, as base-58 encoded string, of the account that received the reward
+        - `lamports: <i64>`- number of reward lamports credited or debited by the account, as a i64
+        - `postBalance: <u64>` - account balance in lamports after the reward was applied
+        - `rewardType: <string|undefined>` - type of reward: "fee", "rent", "voting", "staking"
+        - `commission: <u8|undefined>` - vote account commission when the reward was credited, only present for voting and staking rewards
       - DEPRECATED: `status: <object>` - Transaction status
         - `"Ok": <null>` - Transaction was successful
         - `"Err": <ERR>` - Transaction failed with TransactionError
@@ -421,7 +427,7 @@ The result field will be an object with the following fields:
         - `readonly: <array[string]>` - Ordered list of base-58 encoded addresses for readonly loaded accounts
     - `version: <"legacy"|number|undefined>` - Transaction version. Undefined if `maxSupportedTransactionVersion` is not set in request params.
   - `signatures: <array>` - present if "signatures" are requested for transaction details; an array of signatures strings, corresponding to the transaction order in the block
-  - `rewards: <array>` - present if rewards are requested; an array of JSON objects containing:
+  - `rewards: <array|undefined>` - block-level rewards, present if rewards are requested; an array of JSON objects containing:
     - `pubkey: <string>` - The public key, as base-58 encoded string, of the account that received the reward
     - `lamports: <i64>`- number of reward lamports credited or debited by the account, as a i64
     - `postBalance: <u64>` - account balance in lamports after the reward was applied
@@ -462,6 +468,7 @@ Result:
           "postTokenBalances": [],
           "preBalances": [499998937500, 26858640, 1, 1, 1],
           "preTokenBalances": [],
+          "rewards": null,
           "status": {
             "Ok": null
           }
@@ -533,6 +540,7 @@ Result:
           "postTokenBalances": [],
           "preBalances": [499998937500, 26858640, 1, 1, 1],
           "preTokenBalances": [],
+          "rewards": [],
           "status": {
             "Ok": null
           }
@@ -2881,7 +2889,7 @@ Returns transaction details for a confirmed transaction
   - (optional) `encoding: <string>` - encoding for each returned Transaction, either "json", "jsonParsed", "base58" (_slow_), "base64". If parameter not provided, the default encoding is "json".
     "jsonParsed" encoding attempts to use program-specific instruction parsers to return more human-readable and explicit data in the `transaction.message.instructions` list. If "jsonParsed" is requested but a parser cannot be found, the instruction falls back to regular JSON encoding (`accounts`, `data`, and `programIdIndex` fields).
   - (optional) [Commitment](jsonrpc-api.md#configuring-state-commitment); "processed" is not supported. If parameter not provided, the default is "finalized".
-  - (optional) `maxSupportedTransactionVersion: <number>` - set the max transaction version to return in responses. If the requested transaction is a higher version, an error will be returned.
+  - (optional) `maxSupportedTransactionVersion: <number>` - set the max transaction version to return in responses. If the requested transaction is a higher version, an error will be returned. If this parameter is omitted, only legacy transactions will be returned, and any versioned transaction will prompt the error.
 
 #### Results:
 
@@ -2902,7 +2910,7 @@ Returns transaction details for a confirmed transaction
     - DEPRECATED: `status: <object>` - Transaction status
       - `"Ok": <null>` - Transaction was successful
       - `"Err": <ERR>` - Transaction failed with TransactionError
-    - `rewards: <array>` - present if rewards are requested; an array of JSON objects containing:
+    - `rewards: <array|null>` - transaction-level rewards, populated if rewards are requested; an array of JSON objects containing:
       - `pubkey: <string>` - The public key, as base-58 encoded string, of the account that received the reward
       - `lamports: <i64>`- number of reward lamports credited or debited by the account, as a i64
       - `postBalance: <u64>` - account balance in lamports after the reward was applied
@@ -2945,6 +2953,7 @@ Result:
       "postTokenBalances": [],
       "preBalances": [499998937500, 26858640, 1, 1, 1],
       "preTokenBalances": [],
+      "rewards": [],
       "status": {
         "Ok": null
       }
@@ -3015,6 +3024,7 @@ Result:
       "postTokenBalances": [],
       "preBalances": [499998937500, 26858640, 1, 1, 1],
       "preTokenBalances": [],
+      "rewards": null,
       "status": {
         "Ok": null
       }
@@ -3086,7 +3096,7 @@ curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
 Result:
 
 ```json
-{ "jsonrpc": "2.0", "result": { "safecoin-core": "1.10.34" }, "id": 1 }
+{ "jsonrpc": "2.0", "result": { "safecoin-core": "1.13.3" }, "id": 1 }
 ```
 
 ### getVoteAccounts
@@ -3357,7 +3367,7 @@ submission.
   - `encoding: <string>` - (optional) Encoding used for the transaction data. Either `"base58"` (_slow_, **DEPRECATED**), or `"base64"`. (default: `"base58"`).
   - `maxRetries: <usize>` - (optional) Maximum number of times for the RPC node to retry sending the transaction to the leader.
     If this parameter not provided, the RPC node will retry the transaction until it is finalized or until the blockhash expires.
-  - (optional) `minContextSlot: <number>` - set the minimum slot that the request can be evaluated at.
+  - (optional) `minContextSlot: <number>` - set the minimum slot at which to perform preflight transaction checks.
 
 #### Results:
 

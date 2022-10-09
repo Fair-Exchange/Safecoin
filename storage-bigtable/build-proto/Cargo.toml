@@ -7,7 +7,7 @@ license = "Apache-2.0"
 name = "proto"
 publish = false
 repository = "https://github.com/fair-exchange/safecoin"
-version = "1.10.34"
+version = "1.13.3"
 
 [workspace]
 

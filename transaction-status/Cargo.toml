@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-transaction-status"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin transaction status types"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -20,16 +20,15 @@ log = "0.4.14"
 serde = "1.0.136"
 serde_derive = "1.0.103"
 serde_json = "1.0.79"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.10.34" }
-safecoin-measure = { path = "../measure", version = "=1.10.34" }
-safecoin-metrics = { path = "../metrics", version = "=1.10.34" }
-safecoin-runtime = { path = "../runtime", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.10.34" }
-safe-associated-token-account = { version = "=1.0.12",  features = ["no-entrypoint"] }
-safe-memo = {  version = "=3.0.8",  features = ["no-entrypoint"] }
-safe-token = { version = "=3.3.3",   features = ["no-entrypoint"] }
-safe-token-2022 = { version = "0.2.0",   features = ["no-entrypoint"] }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.13.3" }
+safecoin-measure = { path = "../measure", version = "=1.13.3" }
+safecoin-metrics = { path = "../metrics", version = "=1.13.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.13.3" }
+safe-associated-token-account = { version = "=1.1.1", path = "../../safecoin-program-library/associated-token-account/program", features = ["no-entrypoint"] }
+safe-memo = { version = "=3.0.5", features = ["no-entrypoint"] }
+safe-token = { version = "=3.5.0", path = "../../safecoin-program-library/token/program", features = ["no-entrypoint"] }
+safe-token-2022 = { version = "=0.4", path = "../../safecoin-program-library/token/program-2022", features = ["no-entrypoint"] }
 thiserror = "1.0"
 
 [package.metadata.docs.rs]

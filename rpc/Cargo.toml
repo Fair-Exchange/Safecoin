@@ -1,6 +1,6 @@
 [package]
 name = "solana-rpc"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin RPC"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -29,27 +29,27 @@ serde = "1.0.136"
 serde_derive = "1.0.103"
 serde_json = "1.0.79"
 soketto = "0.7"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.10.34" }
-safecoin-client = { path = "../client", version = "=1.10.34" }
-solana-entry = { path = "../entry", version = "=1.10.34" }
-safecoin-faucet = { path = "../faucet", version = "=1.10.34" }
-safecoin-gossip = { path = "../gossip", version = "=1.10.34" }
-safecoin-ledger = { path = "../ledger", version = "=1.10.34" }
-safecoin-measure = { path = "../measure", version = "=1.10.34" }
-safecoin-metrics = { path = "../metrics", version = "=1.10.34" }
-safecoin-perf = { path = "../perf", version = "=1.10.34" }
-solana-poh = { path = "../poh", version = "=1.10.34" }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.10.34" }
-safecoin-runtime = { path = "../runtime", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
-safecoin-send-transaction-service = { path = "../send-transaction-service", version = "=1.10.34" }
-safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.10.34" }
-safecoin-streamer = { path = "../streamer", version = "=1.10.34" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.10.34" }
-safecoin-version = { path = "../version", version = "=1.10.36" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.10.34" }
-safe-token = { version = "=3.3.3",  features = ["no-entrypoint"] }
-safe-token-2022 = { version = "0.2.0",  features = ["no-entrypoint"] }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.13.3" }
+safecoin-client = { path = "../client", version = "=1.13.3" }
+solana-entry = { path = "../entry", version = "=1.13.3" }
+safecoin-faucet = { path = "../faucet", version = "=1.13.3" }
+safecoin-gossip = { path = "../gossip", version = "=1.13.3" }
+safecoin-ledger = { path = "../ledger", version = "=1.13.3" }
+safecoin-measure = { path = "../measure", version = "=1.13.3" }
+safecoin-metrics = { path = "../metrics", version = "=1.13.3" }
+safecoin-perf = { path = "../perf", version = "=1.13.3" }
+solana-poh = { path = "../poh", version = "=1.13.3" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.13.3" }
+safecoin-runtime = { path = "../runtime", version = "=1.13.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
+safecoin-send-transaction-service = { path = "../send-transaction-service", version = "=1.13.3" }
+safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.13.3" }
+safecoin-streamer = { path = "../streamer", version = "=1.13.3" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.13.3" }
+safecoin-version = { path = "../version", version = "=1.13.3" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.13.3" }
+safe-token = { version = "=3.5.0", path = "../../safecoin-program-library/token/program", features = ["no-entrypoint"] }
+safe-token-2022 = { version = "=0.4", path = "../../safecoin-program-library/token/program-2022", features = ["no-entrypoint"] }
 stream-cancel = "0.8.1"
 thiserror = "1.0"
 tokio = { version = "~1.14.1", features = ["full"] }
@@ -57,9 +57,9 @@ tokio-util = { version = "0.6", features = ["codec", "compat"] }
 
 [dev-dependencies]
 serial_test = "0.6.0"
-safecoin-address-lookup-table-program = { path = "../programs/address-lookup-table", version = "=1.10.34" }
-safecoin-net-utils = { path = "../net-utils", version = "=1.10.34" }
-safecoin-stake-program = { path = "../programs/stake", version = "=1.10.34" }
+safecoin-address-lookup-table-program = { path = "../programs/address-lookup-table", version = "=1.13.3" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.13.3" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.13.3" }
 symlink = "0.1.0"
 
 [lib]

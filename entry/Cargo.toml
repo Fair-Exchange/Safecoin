@@ -1,6 +1,6 @@
 [package]
 name = "solana-entry"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin Entry"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -18,16 +18,16 @@ log = "0.4.11"
 rand = "0.7.0"
 rayon = "1.5.1"
 serde = "1.0.136"
-safecoin-measure = { path = "../measure", version = "=1.10.34" }
-safecoin-merkle-tree = { path = "../merkle-tree", version = "=1.10.34" }
-safecoin-metrics = { path = "../metrics", version = "=1.10.34" }
-safecoin-perf = { path = "../perf", version = "=1.10.34" }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
+safecoin-measure = { path = "../measure", version = "=1.13.3" }
+safecoin-merkle-tree = { path = "../merkle-tree", version = "=1.13.3" }
+safecoin-metrics = { path = "../metrics", version = "=1.13.3" }
+safecoin-perf = { path = "../perf", version = "=1.13.3" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.13.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
 
 [dev-dependencies]
 matches = "0.1.9"
-safecoin-logger = { path = "../logger", version = "=1.10.34" }
+safecoin-logger = { path = "../logger", version = "=1.13.3" }
 
 [lib]
 crate-type = ["lib"]

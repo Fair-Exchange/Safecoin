@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-client"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin Client"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -39,20 +39,20 @@ semver = "1.0.6"
 serde = "1.0.136"
 serde_derive = "1.0.103"
 serde_json = "1.0.79"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.10.34" }
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.10.34" }
-safecoin-faucet = { path = "../faucet", version = "=1.10.34" }
-safecoin-measure = { path = "../measure", version = "=1.10.34" }
-safecoin-metrics = { path = "../metrics", version = "=1.10.34" }
-safecoin-net-utils = { path = "../net-utils", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
-safecoin-streamer = { path = "../streamer", version = "=1.10.34" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.10.34" }
-safecoin-version = { path = "../version", version = "=1.10.36" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.10.34" }
-safe-token-2022 = { version = "0.2.0",  features = ["no-entrypoint"] }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.13.3" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.13.3" }
+safecoin-faucet = { path = "../faucet", version = "=1.13.3" }
+safecoin-measure = { path = "../measure", version = "=1.13.3" }
+safecoin-metrics = { path = "../metrics", version = "=1.13.3" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.13.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
+safecoin-streamer = { path = "../streamer", version = "=1.13.3" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.13.3" }
+safecoin-version = { path = "../version", version = "=1.13.3" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.13.3" }
+safe-token-2022 = { version = "=0.4", path = "../../safecoin-program-library/token/program-2022", features = ["no-entrypoint"] }
 thiserror = "1.0"
-tokio = { version = "~1.14.1", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1.8"
 tokio-tungstenite = { version = "0.17.1", features = ["rustls-tls-webpki-roots"] }
 tungstenite = { version = "0.17.2", features = ["rustls-tls-webpki-roots"] }
@@ -61,8 +61,8 @@ url = "2.2.2"
 [dev-dependencies]
 assert_matches = "1.5.0"
 jsonrpc-http-server = "18.0.0"
-safecoin-logger = { path = "../logger", version = "=1.10.34" }
-safecoin-perf = { path = "../perf", version = "=1.10.34" }
+safecoin-logger = { path = "../logger", version = "=1.13.3" }
+safecoin-perf = { path = "../perf", version = "=1.13.3" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

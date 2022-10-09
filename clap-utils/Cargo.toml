@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-clap-utils"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin utilities for the clap"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -13,9 +13,9 @@ edition = "2021"
 chrono = "0.4"
 clap = "2.33.0"
 rpassword = "6.0"
-safecoin-perf = { path = "../perf", version = "=1.10.34" }
-safecoin-remote-wallet = { path = "../remote-wallet", version = "=1.10.34", default-features = false }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
+safecoin-perf = { path = "../perf", version = "=1.13.3" }
+safecoin-remote-wallet = { path = "../remote-wallet", version = "=1.13.3", default-features = false }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
 thiserror = "1.0.30"
 tiny-bip39 = "0.8.2"
 uriparse = "0.6.3"

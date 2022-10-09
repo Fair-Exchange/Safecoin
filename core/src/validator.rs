@@ -95,7 +95,7 @@ use {
         timing::timestamp,
     },
     safecoin_send_transaction_service::send_transaction_service,
-    solana_streamer::socket::SocketAddrSpace,
+    solana_streamer::{socket::SocketAddrSpace, streamer::StakedNodes},
     solana_vote_program::vote_state::VoteState,
     std::{
         collections::{HashMap, HashSet},
@@ -111,7 +111,7 @@ use {
 };
 
 const MAX_COMPLETED_DATA_SETS_IN_CHANNEL: usize = 100_000;
-const WAIT_FOR_SUPERMAJORITY_THRESHOLD_PERCENT: u64 = 50;
+const WAIT_FOR_SUPERMAJORITY_THRESHOLD_PERCENT: u64 = 80;
 
 pub struct ValidatorConfig {
     pub dev_halt_at_slot: Option<Slot>,
@@ -172,7 +172,6 @@ pub struct ValidatorConfig {
     pub accounts_shrink_ratio: AccountShrinkThreshold,
     pub wait_to_vote_slot: Option<Slot>,
     pub ledger_column_options: LedgerColumnOptions,
-    pub enable_quic_servers: bool,
 }
 
 impl Default for ValidatorConfig {
@@ -236,7 +235,6 @@ impl Default for ValidatorConfig {
             accounts_db_config: None,
             wait_to_vote_slot: None,
             ledger_column_options: LedgerColumnOptions::default(),
-            enable_quic_servers: true,
         }
     }
 }
@@ -627,6 +625,7 @@ impl Validator {
             block_commitment_cache.clone(),
             optimistically_confirmed_bank.clone(),
             &config.pubsub_config,
+            None,
         ));
 
         let max_slots = Arc::new(MaxSlots::default());
@@ -671,12 +670,15 @@ impl Validator {
         );
         let poh_recorder = Arc::new(Mutex::new(poh_recorder));
 
+        let staked_nodes = Arc::new(RwLock::new(StakedNodes::default()));
+
         let connection_cache = match use_quic {
             true => {
                 let mut connection_cache = ConnectionCache::new(tpu_connection_pool_size);
                 connection_cache
                     .update_client_certificate(&identity_keypair, node.info.gossip.ip())
                     .expect("Failed to update QUIC client certificates");
+                connection_cache.set_staked_nodes(&staked_nodes, &identity_keypair.pubkey());
                 Arc::new(connection_cache)
             }
             false => Arc::new(ConnectionCache::with_udp(tpu_connection_pool_size)),
@@ -802,7 +804,10 @@ impl Validator {
             Some(stats_reporter_sender.clone()),
             &exit,
         );
-        let serve_repair = Arc::new(RwLock::new(ServeRepair::new(cluster_info.clone())));
+        let serve_repair = Arc::new(RwLock::new(ServeRepair::new(
+            cluster_info.clone(),
+            bank_forks.clone(),
+        )));
         let serve_repair_service = ServeRepairService::new(
             &serve_repair,
             Some(blockstore.clone()),
@@ -989,7 +994,7 @@ impl Validator {
             &cost_model,
             &connection_cache,
             &identity_keypair,
-            config.enable_quic_servers,
+            &staked_nodes,
         );
 
         datapoint_info!(

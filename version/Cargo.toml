@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-version"
-version = "1.10.36"
+version = "1.13.3"
 description = "Safecoin Version"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -14,9 +14,9 @@ log = "0.4.14"
 semver = "1.0.6"
 serde = "1.0.136"
 serde_derive = "1.0.103"
-safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.10.34" }
-safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
+safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.13.3" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.13.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
 
 [lib]
 name = "solana_version"

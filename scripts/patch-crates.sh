@@ -18,6 +18,8 @@ update_solana_dependencies() {
   sed -i -e "s#\(safecoin-account-decoder = { version = \"\)[^\"]*\(\"\)#\1=$solana_ver\2#g" "${tomls[@]}" || return $?
   sed -i -e "s#\(safecoin-faucet = \"\)[^\"]*\(\"\)#\1=$solana_ver\2#g" "${tomls[@]}" || return $?
   sed -i -e "s#\(safecoin-faucet = { version = \"\)[^\"]*\(\"\)#\1=$solana_ver\2#g" "${tomls[@]}" || return $?
+  sed -i -e "s#\(safe-zk-token-sdk = \"\)[^\"]*\(\"\)#\1=$solana_ver\2#g" "${tomls[@]}" || return $?
+  sed -i -e "s#\(safe-zk-token-sdk = { version = \"\)[^\"]*\(\"\)#\1=$solana_ver\2#g" "${tomls[@]}" || return $?
 }
 
 patch_crates_io_solana() {
@@ -32,5 +34,6 @@ safecoin-program = { path = "$solana_dir/sdk/program" }
 safecoin-program-test = { path = "$solana_dir/program-test" }
 safecoin-sdk = { path = "$solana_dir/sdk" }
 safecoin-faucet = { path = "$solana_dir/faucet" }
+safe-zk-token-sdk = { path = "$solana_dir/zk-token-sdk" }
 EOF
 }

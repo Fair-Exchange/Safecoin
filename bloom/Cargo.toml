@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-bloom"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin bloom filter"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -17,9 +17,9 @@ rand = "0.7.0"
 rayon = "1.5.1"
 serde = { version = "1.0.136", features = ["rc"] }
 serde_derive = "1.0.103"
-safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.10.34" }
-safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
+safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.13.3" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.13.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
 
 [lib]
 crate-type = ["lib"]

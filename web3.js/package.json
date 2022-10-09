@@ -1,14 +1,14 @@
 {
   "name": "@safecoin/web3.js",
-  "version": "1.44.3",
+  "version": "0.0.0-development",
   "description": "Safecoin Javascript API",
   "keywords": [
     "api",
     "blockchain"
   ],
   "license": "MIT",
-  "author": "Safecoin Maintainers <safe@safecoin.org>",
-  "homepage": "https://safecoin.org/",
+  "author": "Solana Maintainers <maintainers@solana.com>",
+  "homepage": "https://solana.com/",
   "repository": {
     "type": "git",
     "url": "https://github.com/fair-exchange/safecoin-web3.js.git"
@@ -89,7 +89,7 @@
     "@rollup/plugin-multi-entry": "^4.0.0",
     "@rollup/plugin-node-resolve": "^13.0.0",
     "@rollup/plugin-replace": "^3.0.0",
-    "@safecoin/safe-token": "^0.2.0",
+    "@safecoin/safe-token": "^0.1.2",
     "@types/bn.js": "^5.1.0",
     "@types/bs58": "^4.0.1",
     "@types/chai": "^4.2.15",

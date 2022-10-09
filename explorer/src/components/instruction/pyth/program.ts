@@ -1,10 +1,10 @@
-import * as BufferLayout from "@safecoin/buffer-layout";
+import * as BufferLayout from "@solana/buffer-layout";
 import {
   InstructionType,
   PublicKey,
   TransactionInstruction,
 } from "@safecoin/web3.js";
-import { Layout, uint8ArrayToBuffer } from "@safecoin/buffer-layout";
+import { Layout, uint8ArrayToBuffer } from "@solana/buffer-layout";
 
 /**
  * An enumeration of valid PythInstructionTypes

@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-banks-interface"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin banks RPC interface"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -11,7 +11,7 @@ edition = "2021"
 
 [dependencies]
 serde = { version = "1.0.136", features = ["derive"] }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
 tarpc = { version = "0.27.2", features = ["full"] }
 
 [lib]

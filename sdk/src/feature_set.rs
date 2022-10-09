@@ -410,11 +410,18 @@ pub mod preserve_rent_epoch_for_rent_exempt_accounts {
 pub mod prevent_crediting_accounts_that_end_rent_paying {
     safecoin_sdk::declare_id!("2dtQ7jzJtQdAWZM8baLKLo9taHw2Hg7fMLb6wvBL3LhG");
 }
-pub mod efficient_consensus {
-    safecoin_sdk::declare_id!("6ZboDuhox5YiUyAhByam9CdPWwdB78MX5P3Q8h4NrW6x");
+
+pub mod sign_repair_requests {
+    safecoin_sdk::declare_id!("sigrs6u1EWeHuoKFkY8RR7qcSsPmrAeBBPESyf5pnYe");
 }
 
+pub mod return_none_for_zero_lamport_accounts {
+    safecoin_sdk::declare_id!("7K5HFrS1WAq6ND7RQbShXZXbtAookyTfaDQPTJNuZpze");
+}
 
+pub mod increase_tx_account_lock_limit {
+    safecoin_sdk::declare_id!("9LZdXeKGeBV6hRLdxS1rHbHoEUsKqesCC2ZAPTPKJAbK");
+}
 
 lazy_static! {
     /// Map of feature identifiers to user-visible description
@@ -513,7 +520,9 @@ lazy_static! {
         (cap_accounts_data_size_per_block::id(), "cap the accounts data size per block #25517"),
         (preserve_rent_epoch_for_rent_exempt_accounts::id(), "preserve rent epoch for rent exempt accounts #26479"),
         (prevent_crediting_accounts_that_end_rent_paying::id(), "prevent crediting rent paying accounts #26606"),
-        (efficient_consensus::id(), "More efficient consensus"),
+        (sign_repair_requests::id(), "sign repair requests #26834"),
+        (return_none_for_zero_lamport_accounts::id(), "return none for zero lamport accounts #27800"),
+        (increase_tx_account_lock_limit::id(), "increase tx account lock limit to 128 #27241"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()

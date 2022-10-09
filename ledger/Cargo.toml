@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-ledger"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin ledger"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -33,24 +33,27 @@ reed-solomon-erasure = { version = "5.0.1", features = ["simd-accel"] }
 serde = "1.0.136"
 serde_bytes = "0.11.5"
 sha2 = "0.10.2"
-safecoin-bpf-loader-program = { path = "../programs/bpf_loader", version = "=1.10.34" }
-solana-entry = { path = "../entry", version = "=1.10.34" }
-safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.10.34" }
-safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.10.34" }
-safecoin-measure = { path = "../measure", version = "=1.10.34" }
-safecoin-metrics = { path = "../metrics", version = "=1.10.34" }
-safecoin-perf = { path = "../perf", version = "=1.10.34" }
-safecoin-program-runtime = { path = "../program-runtime", version = "=1.10.34" }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.10.34" }
-safecoin-runtime = { path = "../runtime", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
-safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.10.34" }
-safecoin-storage-proto = { path = "../storage-proto", version = "=1.10.34" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.10.34" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.10.34" }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.13.3" }
+safecoin-bpf-loader-program = { path = "../programs/bpf_loader", version = "=1.13.3" }
+solana-entry = { path = "../entry", version = "=1.13.3" }
+safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.13.3" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.13.3" }
+safecoin-measure = { path = "../measure", version = "=1.13.3" }
+safecoin-metrics = { path = "../metrics", version = "=1.13.3" }
+safecoin-perf = { path = "../perf", version = "=1.13.3" }
+safecoin-program-runtime = { path = "../program-runtime", version = "=1.13.3" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.13.3" }
+safecoin-runtime = { path = "../runtime", version = "=1.13.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
+safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.13.3" }
+safecoin-storage-proto = { path = "../storage-proto", version = "=1.13.3" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.13.3" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.13.3" }
+safe-token = { version = "=3.5.0", path = "../../safecoin-program-library/token/program", features = ["no-entrypoint"] }
+safe-token-2022 = { version = "=0.4", path = "../../safecoin-program-library/token/program-2022", features = ["no-entrypoint"] }
 tempfile = "3.3.0"
 thiserror = "1.0"
-tokio = { version = "~1.14.1", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 trees = "0.4.2"
 
@@ -59,13 +62,13 @@ trees = "0.4.2"
 # when also using the bzip2 crate
 version = "0.18.0"
 default-features = false
-features = ["lz4", "snappy"]
+features = ["lz4"]
 
 [dev-dependencies]
 assert_matches = "1.5.0"
 matches = "0.1.9"
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.10.34" }
-safecoin-logger = { path = "../logger", version = "=1.10.34" }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.13.3" }
+safecoin-logger = { path = "../logger", version = "=1.13.3" }
 
 [build-dependencies]
 rustc_version = "0.4"

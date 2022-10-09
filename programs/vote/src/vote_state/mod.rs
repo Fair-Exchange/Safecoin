@@ -11,7 +11,7 @@ use {
         account_utils::State,
         clock::{Epoch, Slot, UnixTimestamp},
         epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
-        feature_set::{self, filter_votes_outside_slot_hashes, efficient_consensus, FeatureSet},
+        feature_set::{self, filter_votes_outside_slot_hashes, FeatureSet},
         hash::Hash,
         instruction::InstructionError,
         keyed_account::KeyedAccount,
@@ -1390,37 +1390,6 @@ pub fn process_vote<S: std::hash::BuildHasher>(
             .ok_or(VoteError::EmptySlots)
             .and_then(|slot| vote_state.process_timestamp(*slot, timestamp))?;
     }
-
-
-let authorized_voter = vote_state.get_and_update_authorized_voter(clock.epoch)?;
-// Filter consensus for a randomly chosen subset of validators
-// Generate random integers from slot hash and pubkeys
-let mut slot_hash_int = ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize;
-let mut mixed_int = ( ( ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize
-       	 * ( authorized_voter.to_string().chars().last().unwrap() as usize
-       	   + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) / 10 ) as usize
-	   + authorized_voter.to_string().chars().last().unwrap() as usize
-	   + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) % 10 as usize;
-
-
-            let mut allowed_offset_int = if feature_set
-                .is_active(&feature_set::efficient_consensus::id())
-            {
-                0
-            } else {
-                1
-            };
-
-
-
-//  Compare generated integers to determine voter selection.   Given method has a 3/10 chance, plus bootstrap option
-if slot_hash_int > (mixed_int + allowed_offset_int) ||  slot_hash_int < (mixed_int - allowed_offset_int) {
-	     if authorized_voter.to_string() != "83E5RMejo6d98FV1EAXTx5t4bvoDMoxE4DboDee3VJsu" {    // Bootstrap validator for early stability
-	     	 return Err(InstructionError::UninitializedAccount);
-              }
-}
-
-
     vote_account.set_state(&VoteStateVersions::new_current(vote_state))
 }
 

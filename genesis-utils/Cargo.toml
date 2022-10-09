@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-genesis-utils"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin Genesis Utils"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -10,9 +10,9 @@ documentation = "https://docs.rs/safecoin-download-utils"
 edition = "2021"
 
 [dependencies]
-safecoin-download-utils = { path = "../download-utils", version = "=1.10.34" }
-safecoin-runtime = { path = "../runtime", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
+safecoin-download-utils = { path = "../download-utils", version = "=1.13.3" }
+safecoin-runtime = { path = "../runtime", version = "=1.13.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
 
 [lib]
 crate-type = ["lib"]

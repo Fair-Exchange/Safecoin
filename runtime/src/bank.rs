@@ -35,6 +35,7 @@
 //! already been signed and verified.
 #[allow(deprecated)]
 use safecoin_sdk::recent_blockhashes_account;
+pub use safecoin_sdk::reward_type::RewardType;
 use {
     crate::{
         account_overrides::AccountOverrides,
@@ -133,7 +134,7 @@ use {
         timing::years_as_slots,
         transaction::{
             MessageHash, Result, SanitizedTransaction, Transaction, TransactionError,
-            TransactionVerificationMode, VersionedTransaction,
+            TransactionVerificationMode, VersionedTransaction, MAX_TX_ACCOUNT_LOCKS,
         },
         transaction_context::{InstructionTrace, TransactionAccount, TransactionContext},
     },
@@ -1036,14 +1037,6 @@ impl PartialEq for Bank {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, AbiExample, AbiEnumVisitor, Clone, Copy)]
-pub enum RewardType {
-    Fee,
-    Rent,
-    Staking,
-    Voting,
-}
-
 #[derive(Debug)]
 pub enum RewardCalculationEvent<'a, 'b> {
     Staking(&'a Pubkey, &'b InflationPointCalculationEvent),
@@ -1051,21 +1044,6 @@ pub enum RewardCalculationEvent<'a, 'b> {
 
 fn null_tracer() -> Option<impl Fn(&RewardCalculationEvent) + Send + Sync> {
     None::<fn(&RewardCalculationEvent)>
-}
-
-impl fmt::Display for RewardType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                RewardType::Fee => "fee",
-                RewardType::Rent => "rent",
-                RewardType::Staking => "staking",
-                RewardType::Voting => "voting",
-            }
-        )
-    }
 }
 
 pub trait DropCallback: fmt::Debug {
@@ -2905,19 +2883,15 @@ impl Bank {
                         self.store_account(&vote_pubkey, &vote_account);
                     }
 
-                    if vote_rewards > 0 {
-                        Some((
-                            vote_pubkey,
-                            RewardInfo {
-                                reward_type: RewardType::Voting,
-                                lamports: vote_rewards as i64,
-                                post_balance: vote_account.lamports(),
-                                commission: Some(commission),
-                            },
-                        ))
-                    } else {
-                        None
-                    }
+                    Some((
+                        vote_pubkey,
+                        RewardInfo {
+                            reward_type: RewardType::Voting,
+                            lamports: vote_rewards as i64,
+                            post_balance: vote_account.lamports(),
+                            commission: Some(commission),
+                        },
+                    ))
                 },
             )
             .collect();
@@ -3532,16 +3506,28 @@ impl Bank {
         tick_height % self.ticks_per_slot == 0
     }
 
+    /// Get the max number of accounts that a transaction may lock in this block
+    pub fn get_transaction_account_lock_limit(&self) -> usize {
+        if self
+            .feature_set
+            .is_active(&feature_set::increase_tx_account_lock_limit::id())
+        {
+            MAX_TX_ACCOUNT_LOCKS
+        } else {
+            64
+        }
+    }
+
     /// Prepare a transaction batch from a list of legacy transactions. Used for tests only.
     pub fn prepare_batch_for_tests(&self, txs: Vec<Transaction>) -> TransactionBatch {
         let sanitized_txs = txs
             .into_iter()
             .map(SanitizedTransaction::from_transaction_for_tests)
             .collect::<Vec<_>>();
-        let lock_results = self
-            .rc
-            .accounts
-            .lock_accounts(sanitized_txs.iter(), &FeatureSet::all_enabled());
+        let lock_results = self.rc.accounts.lock_accounts(
+            sanitized_txs.iter(),
+            self.get_transaction_account_lock_limit(),
+        );
         TransactionBatch::new(lock_results, self, Cow::Owned(sanitized_txs))
     }
 
@@ -3561,10 +3547,10 @@ impl Bank {
                 )
             })
             .collect::<Result<Vec<_>>>()?;
-        let lock_results = self
-            .rc
-            .accounts
-            .lock_accounts(sanitized_txs.iter(), &FeatureSet::all_enabled());
+        let lock_results = self.rc.accounts.lock_accounts(
+            sanitized_txs.iter(),
+            self.get_transaction_account_lock_limit(),
+        );
         Ok(TransactionBatch::new(
             lock_results,
             self,
@@ -3580,7 +3566,7 @@ impl Bank {
         let lock_results = self
             .rc
             .accounts
-            .lock_accounts(txs.iter(), &self.feature_set);
+            .lock_accounts(txs.iter(), self.get_transaction_account_lock_limit());
         TransactionBatch::new(lock_results, self, Cow::Borrowed(txs))
     }
 
@@ -3595,7 +3581,7 @@ impl Bank {
         let lock_results = self.rc.accounts.lock_accounts_with_results(
             transactions.iter(),
             transaction_results,
-            &self.feature_set,
+            self.get_transaction_account_lock_limit(),
         );
         TransactionBatch::new(lock_results, self, Cow::Borrowed(transactions))
     }
@@ -3605,7 +3591,9 @@ impl Bank {
         &'a self,
         transaction: SanitizedTransaction,
     ) -> TransactionBatch<'a, '_> {
-        let lock_result = transaction.get_account_locks(&self.feature_set).map(|_| ());
+        let lock_result = transaction
+            .get_account_locks(self.get_transaction_account_lock_limit())
+            .map(|_| ());
         let mut batch =
             TransactionBatch::new(vec![lock_result], self, Cow::Owned(vec![transaction]));
         batch.set_needs_unlock(false);
@@ -4104,14 +4092,32 @@ impl Bank {
             .iter()
             .enumerate()
             .filter_map(|(index, res)| match res {
+                // following are retryable errors
                 Err(TransactionError::AccountInUse) => {
                     error_counters.account_in_use += 1;
                     Some(index)
                 }
-                Err(TransactionError::WouldExceedMaxBlockCostLimit)
-                | Err(TransactionError::WouldExceedMaxVoteCostLimit)
-                | Err(TransactionError::WouldExceedMaxAccountCostLimit)
-                | Err(TransactionError::WouldExceedAccountDataBlockLimit) => Some(index),
+                Err(TransactionError::WouldExceedMaxBlockCostLimit) => {
+                    error_counters.would_exceed_max_block_cost_limit += 1;
+                    Some(index)
+                }
+                Err(TransactionError::WouldExceedMaxVoteCostLimit) => {
+                    error_counters.would_exceed_max_vote_cost_limit += 1;
+                    Some(index)
+                }
+                Err(TransactionError::WouldExceedMaxAccountCostLimit) => {
+                    error_counters.would_exceed_max_account_cost_limit += 1;
+                    Some(index)
+                }
+                Err(TransactionError::WouldExceedAccountDataBlockLimit) => {
+                    error_counters.would_exceed_account_data_block_limit += 1;
+                    Some(index)
+                }
+                // following are non-retryable errors
+                Err(TransactionError::TooManyAccountLocks) => {
+                    error_counters.too_many_account_locks += 1;
+                    None
+                }
                 Err(_) => None,
                 Ok(_) => None,
             })
@@ -6130,7 +6136,6 @@ impl Bank {
 
     pub fn calculate_and_verify_capitalization(&self, debug_verify: bool) -> bool {
         let calculated = self.calculate_capitalization(debug_verify);
-                *self.inflation.write().unwrap() = Inflation::full();
         let expected = self.capitalization();
         if calculated == expected {
             true
@@ -6654,7 +6659,7 @@ impl Bank {
         let new_feature_activations = self.compute_active_feature_set(!init_finish_or_warp);
 
         if new_feature_activations.contains(&feature_set::pico_inflation::id()) {
-            *self.inflation.write().unwrap() = Inflation::full();
+            *self.inflation.write().unwrap() = Inflation::pico();
             self.fee_rate_governor.burn_percent = 50; // 50% fee burn
             self.rent_collector.rent.burn_percent = 50; // 50% rent burn
         }
@@ -7030,7 +7035,6 @@ pub(crate) mod tests {
             system_program,
             sysvar::rewards::Rewards,
             timing::duration_as_s,
-            transaction::MAX_TX_ACCOUNT_LOCKS,
             transaction_context::InstructionContext,
         },
         solana_vote_program::{
@@ -7715,6 +7719,10 @@ pub(crate) mod tests {
         genesis_config
             .accounts
             .remove(&feature_set::require_rent_exempt_accounts::id())
+            .unwrap();
+        genesis_config
+            .accounts
+            .remove(&feature_set::preserve_rent_epoch_for_rent_exempt_accounts::id())
             .unwrap();
 
         genesis_config.epoch_schedule = EpochSchedule::custom(
@@ -9193,15 +9201,26 @@ pub(crate) mod tests {
         // verify validator rewards show up in bank1.rewards vector
         assert_eq!(
             *bank1.rewards.read().unwrap(),
-            vec![(
-                stake_id,
-                RewardInfo {
-                    reward_type: RewardType::Staking,
-                    lamports: (rewards.validator_point_value * validator_points as f64) as i64,
-                    post_balance: bank1.get_balance(&stake_id),
-                    commission: Some(0),
-                }
-            )]
+            vec![
+                (
+                    vote_id,
+                    RewardInfo {
+                        reward_type: RewardType::Voting,
+                        lamports: 0,
+                        post_balance: bank1.get_balance(&vote_id),
+                        commission: Some(0),
+                    }
+                ),
+                (
+                    stake_id,
+                    RewardInfo {
+                        reward_type: RewardType::Staking,
+                        lamports: (rewards.validator_point_value * validator_points as f64) as i64,
+                        post_balance: bank1.get_balance(&stake_id),
+                        commission: Some(0),
+                    }
+                )
+            ]
         );
         bank1.freeze();
         assert!(bank1.calculate_and_verify_capitalization(true));
@@ -9244,7 +9263,7 @@ pub(crate) mod tests {
 
         let vote_id = safecoin_sdk::pubkey::new_rand();
         let mut vote_account =
-            vote_state::create_account(&vote_id, &safecoin_sdk::pubkey::new_rand(), 50, 100);
+            vote_state::create_account(&vote_id, &safecoin_sdk::pubkey::new_rand(), 0, 100);
         let (stake_id1, stake_account1) = crate::stakes::tests::create_stake_account(123, &vote_id);
         let (stake_id2, stake_account2) = crate::stakes::tests::create_stake_account(456, &vote_id);
 
@@ -13079,7 +13098,8 @@ pub(crate) mod tests {
             bank.last_blockhash(),
         );
 
-        while tx.message.account_keys.len() <= MAX_TX_ACCOUNT_LOCKS {
+        let transaction_account_lock_limit = bank.get_transaction_account_lock_limit();
+        while tx.message.account_keys.len() <= transaction_account_lock_limit {
             tx.message.account_keys.push(safecoin_sdk::pubkey::new_rand());
         }
 

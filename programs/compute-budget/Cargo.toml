@@ -1,7 +1,7 @@
 [package]
 name = "safecoin-compute-budget-program"
 description = "Safecoin Compute Budget program"
-version = "1.10.34"
+version = "1.13.3"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/safecoin-compute-budget-program"
 repository = "https://github.com/fair-exchange/safecoin"
@@ -10,8 +10,8 @@ license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
-safecoin-program-runtime = { path = "../../program-runtime", version = "=1.10.34" }
-safecoin-sdk = { path = "../../sdk", version = "=1.10.34" }
+safecoin-program-runtime = { path = "../../program-runtime", version = "=1.13.3" }
+safecoin-sdk = { path = "../../sdk", version = "=1.13.3" }
 
 [lib]
 crate-type = ["lib"]

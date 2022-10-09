@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-sdk"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin SDK"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -71,11 +71,11 @@ serde_derive = "1.0.103"
 serde_json = { version = "1.0.79", optional = true }
 sha2 = "0.10.2"
 sha3 = { version = "0.10.1", optional = true }
-safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.10.34" }
-safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.10.34" }
-safecoin-logger = { path = "../logger", version = "=1.10.34", optional = true }
-safecoin-program = { path = "program", version = "=1.10.34" }
-safecoin-sdk-macro = { path = "macro", version = "=1.10.34" }
+safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.13.3" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.13.3" }
+safecoin-logger = { path = "../logger", version = "=1.13.3", optional = true }
+safecoin-program = { path = "program", version = "=1.13.3" }
+safecoin-sdk-macro = { path = "macro", version = "=1.13.3" }
 thiserror = "1.0"
 uriparse = "0.6.3"
 wasm-bindgen = "0.2"

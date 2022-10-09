@@ -1,6 +1,6 @@
 [package]
 name = "safecoin-runtime"
-version = "1.10.34"
+version = "1.13.3"
 description = "Safecoin runtime"
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/fair-exchange/safecoin"
@@ -37,27 +37,27 @@ rayon = "1.5.1"
 regex = "1.5.4"
 serde = { version = "1.0.136", features = ["rc"] }
 serde_derive = "1.0.103"
-safecoin-address-lookup-table-program = { path = "../programs/address-lookup-table", version = "=1.10.34" }
-safecoin-bucket-map = { path = "../bucket_map", version = "=1.10.34" }
-safecoin-compute-budget-program = { path = "../programs/compute-budget", version = "=1.10.34" }
-safecoin-config-program = { path = "../programs/config", version = "=1.10.34" }
-safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.10.34" }
-safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.10.34" }
-safecoin-measure = { path = "../measure", version = "=1.10.34" }
-safecoin-metrics = { path = "../metrics", version = "=1.10.34" }
-safecoin-program-runtime = { path = "../program-runtime", version = "=1.10.34" }
-safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.10.34" }
-safecoin-sdk = { path = "../sdk", version = "=1.10.34" }
-safecoin-stake-program = { path = "../programs/stake", version = "=1.10.34" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.10.34" }
-safe-zk-token-proof-program = { path = "../programs/zk-token-proof", version = "=1.10.34" }
-safe-zk-token-sdk = { path = "../zk-token-sdk", version = "=1.10.34" }
+safecoin-address-lookup-table-program = { path = "../programs/address-lookup-table", version = "=1.13.3" }
+safecoin-bucket-map = { path = "../bucket_map", version = "=1.13.3" }
+safecoin-compute-budget-program = { path = "../programs/compute-budget", version = "=1.13.3" }
+safecoin-config-program = { path = "../programs/config", version = "=1.13.3" }
+safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.13.3" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.13.3" }
+safecoin-measure = { path = "../measure", version = "=1.13.3" }
+safecoin-metrics = { path = "../metrics", version = "=1.13.3" }
+safecoin-program-runtime = { path = "../program-runtime", version = "=1.13.3" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.13.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.13.3" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.13.3" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.13.3" }
+safe-zk-token-proof-program = { path = "../programs/zk-token-proof", version = "=1.13.3" }
+safe-zk-token-sdk = { path = "../zk-token-sdk", version = "=1.13.3" }
 symlink = "0.1.0"
 tar = "0.4.38"
 tempfile = "3.3.0"
 thiserror = "1.0"
 zstd = "0.11.1"
-lz4 = "1.23.3"
+lz4 = "1.24.0"
 strum_macros = "0.24"
 strum = { version = "0.24", features = ["derive"] }
 
@@ -70,7 +70,7 @@ assert_matches = "1.5.0"
 ed25519-dalek = "=1.0.1"
 libsecp256k1 = "0.6.0"
 rand_chacha = "0.2.2"
-safecoin-logger = { path = "../logger", version = "=1.10.34" }
+safecoin-logger = { path = "../logger", version = "=1.13.3" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
