@@ -454,6 +454,7 @@ pub mod preserve_rent_epoch_for_rent_exempt_accounts {
     safecoin_sdk::declare_id!("8bxNk6MJqCQLeMrL2viWTKiSftGeUoie6KpEQD8dVzAd");
 }
 
+
 pub mod enable_bpf_loader_extend_program_ix {
     safecoin_sdk::declare_id!("GPg3fNRkPPTYvtJTEefRPPjtCer2fucW66iS74HUeSM9");
 }
@@ -470,26 +471,27 @@ pub mod prevent_crediting_accounts_that_end_rent_paying {
     safecoin_sdk::declare_id!("2dtQ7jzJtQdAWZM8baLKLo9taHw2Hg7fMLb6wvBL3LhG");
 }
 pub mod efficient_consensus {
-    safecoin_sdk::declare_id!("2DgDqxKbHiuGNcDCbkATwUGy3zuEgW7DnLU4CZR3GDgs");
+    safecoin_sdk::declare_id!("6ZboDuhox5YiUyAhByam9CdPWwdB78MX5P3Q8h4NrW6x");
 }
 
 
 
 pub mod cap_bpf_program_instruction_accounts {
-    safecoin_sdk::declare_id!("9k5ijzTbYPtjzu8wj2ErH9v45xecHzQ1x4PMYMMxFgdM");
+    safecoin_sdk::declare_id!("ZMe3G91j5MYBRdxMELJPa5WKyGF35geL1CAf2ge55Y8");
 }
 
 pub mod loosen_cpi_size_restriction {
-    safecoin_sdk::declare_id!("GDH5TVdbTPUpRnXaRyQqiKUa7uZAbZ28Q2N9bhbKoMLm");
+    safecoin_sdk::declare_id!("6bHAHY3xkTEGzzqu4dweMYqhiAXVAC2dUj2QDgXoe7uP");
 }
 
 pub mod use_default_units_in_fee_calculation {
-    safecoin_sdk::declare_id!("8sKQrMQoUHtQSUP83SPG4ta2JDjSAiWs7t5aJ9uEd6To");
+    safecoin_sdk::declare_id!("5tYtSxXTy9SWv7RoHPa5FSFTVuuqdvS5qv22nkpAaYDS");
 }
 
 pub mod compact_vote_state_updates {
-    safecoin_sdk::declare_id!("86HpNqzutEZwLcPxS6EHDcMNYWk6ikhteg9un7Y2PBKE");
+    safecoin_sdk::declare_id!("3Av7XvYZmZ6RBhQeM4Wt54aKN3iJtW2HsErG7wxwPwqE");
 }
+
 
 pub mod incremental_snapshot_only_incremental_hash_calculation {
     safecoin_sdk::declare_id!("25vqsfjk7Nv1prsQJmA4Xu1bN61s8LXCBGUPp8Rfy1UF");
@@ -520,7 +522,7 @@ pub mod stop_sibling_instruction_search_at_parent {
 }
 
 pub mod vote_state_update_root_fix {
-    safecoin_sdk::declare_id!("G74BkWBzmsByZ1kxHy44H3wjwp5hp7JbrGRuDpco22tY");
+    safecoin_sdk::declare_id!("F9hCEfctdkoka5Mcjkq2YvusjZymxRfADYf4Vo7tbRmC");
 }
 
 pub mod cap_accounts_data_allocations_per_transaction {
@@ -540,7 +542,7 @@ pub mod disable_rehash_for_rent_epoch {
 }
 
 pub mod increase_tx_account_lock_limit {
-    safecoin_sdk::declare_id!("9LZdXeKGeBV6hRLdxS1rHbHoEUsKqesCC2ZAPTPKJAbK");
+    safecoin_sdk::declare_id!("59ub3TYn7sigxPDqbLcNLE579DJZrW3DgPerQ9dkpQMX");
 }
 
 pub mod limit_max_instruction_trace_length {
