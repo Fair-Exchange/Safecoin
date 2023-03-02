@@ -1,7 +1,7 @@
 use {
     clap::{crate_description, crate_name, crate_version, ArgEnum, Args, Parser},
     serde::{Deserialize, Serialize},
-    safecoin_sdk::pubkey::Pubkey,
+    solana_sdk::pubkey::Pubkey,
     std::{net::SocketAddr, process::exit, str::FromStr},
 };
 
@@ -21,8 +21,8 @@ pub struct DosClientParameters {
     #[clap(
         long = "entrypoint",
         parse(try_from_str = addr_parser),
-        default_value = "127.0.0.1:10015",
-        help = "Gossip entrypoint address. Usually <ip>:10015"
+        default_value = "127.0.0.1:8001",
+        help = "Gossip entrypoint address. Usually <ip>:8001"
     )]
     pub entrypoint_addr: SocketAddr,
 
@@ -183,12 +183,12 @@ pub fn build_cli_parameters() -> DosClientParameters {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, clap::Parser, safecoin_sdk::pubkey::Pubkey};
+    use {super::*, clap::Parser, solana_sdk::pubkey::Pubkey};
 
     #[test]
     fn test_cli_parse_rpc_no_data_input() {
         let result = DosClientParameters::try_parse_from(vec![
-            "safecoin-dos",
+            "solana-dos",
             "--mode",
             "rpc",
             "--data-type",
@@ -204,11 +204,11 @@ mod tests {
 
     #[test]
     fn test_cli_parse_rpc_data_input() {
-        let entrypoint_addr: SocketAddr = "127.0.0.1:10015".parse().unwrap();
+        let entrypoint_addr: SocketAddr = "127.0.0.1:8001".parse().unwrap();
         let pubkey = Pubkey::default();
         let pubkey_str: String = pubkey.to_string();
         let params = DosClientParameters::try_parse_from(vec![
-            "safecoin-dos",
+            "solana-dos",
             "--mode",
             "rpc",
             "--data-type",
@@ -237,9 +237,9 @@ mod tests {
 
     #[test]
     fn test_cli_parse_dos_valid_signatures() {
-        let entrypoint_addr: SocketAddr = "127.0.0.1:10015".parse().unwrap();
+        let entrypoint_addr: SocketAddr = "127.0.0.1:8001".parse().unwrap();
         let params = DosClientParameters::try_parse_from(vec![
-            "safecoin-dos",
+            "solana-dos",
             "--mode",
             "tpu",
             "--data-type",
@@ -280,9 +280,9 @@ mod tests {
 
     #[test]
     fn test_cli_parse_dos_transfer() {
-        let entrypoint_addr: SocketAddr = "127.0.0.1:10015".parse().unwrap();
+        let entrypoint_addr: SocketAddr = "127.0.0.1:8001".parse().unwrap();
         let params = DosClientParameters::try_parse_from(vec![
-            "safecoin-dos",
+            "solana-dos",
             "--mode",
             "tpu",
             "--data-type",
@@ -322,7 +322,7 @@ mod tests {
         );
 
         let result = DosClientParameters::try_parse_from(vec![
-            "safecoin-dos",
+            "solana-dos",
             "--mode",
             "tpu",
             "--data-type",
@@ -339,9 +339,9 @@ mod tests {
             clap::error::ErrorKind::MissingRequiredArgument
         );
 
-        let entrypoint_addr: SocketAddr = "127.0.0.1:10015".parse().unwrap();
+        let entrypoint_addr: SocketAddr = "127.0.0.1:8001".parse().unwrap();
         let params = DosClientParameters::try_parse_from(vec![
-            "safecoin-dos",
+            "solana-dos",
             "--mode",
             "tpu",
             "--data-type",
@@ -383,9 +383,9 @@ mod tests {
 
     #[test]
     fn test_cli_parse_dos_create_account() {
-        let entrypoint_addr: SocketAddr = "127.0.0.1:10015".parse().unwrap();
+        let entrypoint_addr: SocketAddr = "127.0.0.1:8001".parse().unwrap();
         let params = DosClientParameters::try_parse_from(vec![
-            "safecoin-dos",
+            "solana-dos",
             "--mode",
             "tpu",
             "--data-type",
@@ -428,7 +428,7 @@ mod tests {
     fn test_cli_parse_dos_conflicting_sign_instruction() {
         // check conflicting args num-signatures and num-instructions
         let result = DosClientParameters::try_parse_from(vec![
-            "safecoin-dos",
+            "solana-dos",
             "--mode",
             "tpu",
             "--data-type",

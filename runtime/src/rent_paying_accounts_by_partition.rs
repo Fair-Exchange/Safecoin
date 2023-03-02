@@ -1,7 +1,7 @@
 //! Provide fast iteration of all pubkeys which could possibly be rent paying, grouped by rent collection partition
 use {
     crate::bank::{Bank, PartitionIndex, PartitionsPerCycle},
-    safecoin_sdk::{epoch_schedule::EpochSchedule, pubkey::Pubkey},
+    solana_sdk::{epoch_schedule::EpochSchedule, pubkey::Pubkey},
     std::collections::HashSet,
 };
 
@@ -32,7 +32,6 @@ impl RentPayingAccountsByPartition {
         Self {
             partition_count,
             accounts: (0..=partition_count)
-                .into_iter()
                 .map(|_| HashSet::<Pubkey>::default())
                 .collect(),
         }
@@ -65,7 +64,7 @@ pub(crate) mod tests {
     #[test]
     fn test_add() {
         let mut test = RentPayingAccountsByPartition::new(&EpochSchedule::custom(32, 0, false));
-        let pk = Pubkey::new(&[1; 32]);
+        let pk = Pubkey::from([1; 32]);
         test.add_account(&pk);
         // make sure duplicate adds only result in a single item
         test.add_account(&pk);

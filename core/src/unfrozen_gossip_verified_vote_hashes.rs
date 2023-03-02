@@ -1,6 +1,6 @@
 use {
     crate::latest_validator_votes_for_frozen_banks::LatestValidatorVotesForFrozenBanks,
-    safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey},
+    solana_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey},
     std::collections::{BTreeMap, HashMap},
 };
 

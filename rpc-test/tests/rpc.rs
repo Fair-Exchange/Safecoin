@@ -5,18 +5,20 @@ use {
     log::*,
     reqwest::{self, header::CONTENT_TYPE},
     serde_json::{json, Value},
-    safecoin_account_decoder::UiAccount,
-    safecoin_client::{
-        client_error::{ClientErrorKind, Result as ClientResult},
-        connection_cache::{ConnectionCache, DEFAULT_TPU_CONNECTION_POOL_SIZE},
-        nonblocking::pubsub_client::PubsubClient,
-        rpc_client::RpcClient,
-        rpc_config::{RpcAccountInfoConfig, RpcSignatureSubscribeConfig},
-        rpc_request::RpcError,
-        rpc_response::{Response as RpcResponse, RpcSignatureResult, SlotUpdate},
+    solana_account_decoder::UiAccount,
+    solana_client::{
+        connection_cache::ConnectionCache,
         tpu_client::{TpuClient, TpuClientConfig},
     },
-    safecoin_sdk::{
+    solana_pubsub_client::nonblocking::pubsub_client::PubsubClient,
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_rpc_client_api::{
+        client_error::{ErrorKind as ClientErrorKind, Result as ClientResult},
+        config::{RpcAccountInfoConfig, RpcSignatureSubscribeConfig},
+        request::RpcError,
+        response::{Response as RpcResponse, RpcSignatureResult, SlotUpdate},
+    },
+    solana_sdk::{
         commitment_config::CommitmentConfig,
         hash::Hash,
         pubkey::Pubkey,
@@ -27,7 +29,8 @@ use {
     },
     solana_streamer::socket::SocketAddrSpace,
     solana_test_validator::TestValidator,
-    safecoin_transaction_status::TransactionStatus,
+    solana_tpu_client::tpu_client::DEFAULT_TPU_CONNECTION_POOL_SIZE,
+    solana_transaction_status::TransactionStatus,
     std::{
         collections::HashSet,
         net::UdpSocket,
@@ -72,7 +75,7 @@ fn test_rpc_send_tx() {
         TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
     let rpc_url = test_validator.rpc_url();
 
-    let bob_pubkey = safecoin_sdk::pubkey::new_rand();
+    let bob_pubkey = solana_sdk::pubkey::new_rand();
 
     let req = json_req!("getRecentBlockhash", json!([]));
     let json = post_rpc(req, &rpc_url);
@@ -101,7 +104,7 @@ fn test_rpc_send_tx() {
 
     let request = json_req!("getSignatureStatuses", [[signature]]);
 
-    for _ in 0..safecoin_sdk::clock::DEFAULT_TICKS_PER_SLOT {
+    for _ in 0..solana_sdk::clock::DEFAULT_TICKS_PER_SLOT {
         let json = post_rpc(request.clone(), &rpc_url);
 
         let result: Option<TransactionStatus> =
@@ -119,7 +122,8 @@ fn test_rpc_send_tx() {
     assert!(confirmed_tx);
 
     use {
-        safecoin_account_decoder::UiAccountEncoding, safecoin_client::rpc_config::RpcAccountInfoConfig,
+        solana_account_decoder::UiAccountEncoding,
+        solana_rpc_client_api::config::RpcAccountInfoConfig,
     };
     let config = RpcAccountInfoConfig {
         encoding: Some(UiAccountEncoding::Base64),
@@ -144,7 +148,7 @@ fn test_rpc_invalid_requests() {
         TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
     let rpc_url = test_validator.rpc_url();
 
-    let bob_pubkey = safecoin_sdk::pubkey::new_rand();
+    let bob_pubkey = solana_sdk::pubkey::new_rand();
 
     // test invalid get_balance request
     let req = json_req!("getBalance", json!(["invalid9999"]));
@@ -256,7 +260,7 @@ fn test_rpc_subscriptions() {
         .map(|_| {
             system_transaction::transfer(
                 &alice,
-                &safecoin_sdk::pubkey::new_rand(),
+                &solana_sdk::pubkey::new_rand(),
                 transfer_amount,
                 recent_blockhash,
             )
@@ -428,7 +432,7 @@ fn test_rpc_subscriptions() {
         }
     }
 
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(60);
     while !account_set.is_empty() {
         let timeout = deadline.saturating_duration_since(Instant::now());
         match account_receiver.recv_timeout(timeout) {
@@ -457,22 +461,31 @@ fn run_tpu_send_transaction(tpu_use_quic: bool) {
         CommitmentConfig::processed(),
     ));
     let connection_cache = match tpu_use_quic {
-        true => Arc::new(ConnectionCache::new(DEFAULT_TPU_CONNECTION_POOL_SIZE)),
-        false => Arc::new(ConnectionCache::with_udp(DEFAULT_TPU_CONNECTION_POOL_SIZE)),
+        true => ConnectionCache::new(DEFAULT_TPU_CONNECTION_POOL_SIZE),
+        false => ConnectionCache::with_udp(DEFAULT_TPU_CONNECTION_POOL_SIZE),
     };
-    let tpu_client = TpuClient::new_with_connection_cache(
-        rpc_client.clone(),
-        &test_validator.rpc_pubsub_url(),
-        TpuClientConfig::default(),
-        connection_cache,
-    )
-    .unwrap();
-
     let recent_blockhash = rpc_client.get_latest_blockhash().unwrap();
     let tx =
         system_transaction::transfer(&mint_keypair, &Pubkey::new_unique(), 42, recent_blockhash);
-    assert!(tpu_client.send_transaction(&tx));
-
+    let success = match connection_cache {
+        ConnectionCache::Quic(cache) => TpuClient::new_with_connection_cache(
+            rpc_client.clone(),
+            &test_validator.rpc_pubsub_url(),
+            TpuClientConfig::default(),
+            cache,
+        )
+        .unwrap()
+        .send_transaction(&tx),
+        ConnectionCache::Udp(cache) => TpuClient::new_with_connection_cache(
+            rpc_client.clone(),
+            &test_validator.rpc_pubsub_url(),
+            TpuClientConfig::default(),
+            cache,
+        )
+        .unwrap()
+        .send_transaction(&tx),
+    };
+    assert!(success);
     let timeout = Duration::from_secs(5);
     let now = Instant::now();
     let signatures = vec![tx.signatures[0]];

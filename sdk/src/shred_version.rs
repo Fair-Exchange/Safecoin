@@ -1,6 +1,10 @@
+//! Calculation of [shred] versions.
+//!
+//! [shred]: https://docs.solana.com/terminology#shred
+
 #![cfg(feature = "full")]
 
-use safecoin_sdk::{
+use solana_sdk::{
     hard_forks::HardForks,
     hash::{extend_and_hash, Hash},
 };

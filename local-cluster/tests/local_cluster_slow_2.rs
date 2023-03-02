@@ -6,7 +6,7 @@ use {
     log::*,
     serial_test::serial,
     solana_core::validator::ValidatorConfig,
-    safecoin_gossip::gossip_service::discover_cluster,
+    solana_gossip::gossip_service::discover_cluster,
     solana_ledger::{ancestor_iterator::AncestorIterator, blockstore::Blockstore},
     solana_local_cluster::{
         cluster::Cluster,
@@ -14,7 +14,7 @@ use {
         local_cluster::{ClusterConfig, LocalCluster},
         validator_configs::*,
     },
-    safecoin_sdk::{
+    solana_sdk::{
         client::SyncClient,
         clock::Slot,
         poh_config::PohConfig,
@@ -90,7 +90,7 @@ fn test_consistency_halt() {
 
     sleep(Duration::from_millis(5000));
     let cluster_nodes = discover_cluster(
-        &cluster.entry_point_info.gossip,
+        &cluster.entry_point_info.gossip().unwrap(),
         1,
         SocketAddrSpace::Unspecified,
     )
@@ -115,7 +115,7 @@ fn test_consistency_halt() {
     warn!("adding a validator");
     cluster.add_validator(
         &validator_snapshot_test_config.validator_config,
-        validator_stake as u64,
+        validator_stake,
         Arc::new(Keypair::new()),
         None,
         SocketAddrSpace::Unspecified,
@@ -123,7 +123,7 @@ fn test_consistency_halt() {
     let num_nodes = 2;
     assert_eq!(
         discover_cluster(
-            &cluster.entry_point_info.gossip,
+            &cluster.entry_point_info.gossip().unwrap(),
             num_nodes,
             SocketAddrSpace::Unspecified
         )
@@ -136,7 +136,7 @@ fn test_consistency_halt() {
     let mut encountered_error = false;
     loop {
         let discover = discover_cluster(
-            &cluster.entry_point_info.gossip,
+            &cluster.entry_point_info.gossip().unwrap(),
             2,
             SocketAddrSpace::Unspecified,
         );
@@ -154,7 +154,7 @@ fn test_consistency_halt() {
             }
         }
         let client = cluster
-            .get_validator_client(&cluster.entry_point_info.id)
+            .get_validator_client(cluster.entry_point_info.pubkey())
             .unwrap();
         if let Ok(slot) = client.get_slot() {
             if slot > 210 {
@@ -187,7 +187,7 @@ fn test_leader_failure_4() {
         &local.entry_point_info,
         &local
             .validators
-            .get(&local.entry_point_info.id)
+            .get(local.entry_point_info.pubkey())
             .unwrap()
             .config
             .validator_exit,
@@ -238,7 +238,7 @@ fn test_ledger_cleanup_service() {
             .unwrap()
             .for_each(|_| slots += 1);
         // with 3 nodes up to 3 slots can be in progress and not complete so max slots in blockstore should be up to 103
-        assert!(slots <= 103, "got {}", slots);
+        assert!(slots <= 103, "got {slots}");
     }
 }
 
@@ -269,7 +269,7 @@ fn test_ledger_cleanup_service() {
 #[test]
 fn test_slot_hash_expiry() {
     solana_logger::setup_with_default(RUST_LOG_FILTER);
-    safecoin_sdk::slot_hashes::set_entries_for_tests_only(64);
+    solana_sdk::slot_hashes::set_entries_for_tests_only(64);
 
     let slots_per_epoch = 2048;
     let node_stakes = vec![60 * DEFAULT_NODE_STAKE, 40 * DEFAULT_NODE_STAKE];
@@ -372,14 +372,14 @@ fn test_slot_hash_expiry() {
 
     info!(
         "Run A on majority fork until it reaches slot hash expiry {}",
-        safecoin_sdk::slot_hashes::get_entries()
+        solana_sdk::slot_hashes::get_entries()
     );
     let mut last_vote_on_a;
     // Keep A running for a while longer so the majority fork has some decent size
     loop {
         last_vote_on_a = wait_for_last_vote_in_tower_to_land_in_ledger(&a_ledger_path, &a_pubkey);
         if last_vote_on_a
-            >= common_ancestor_slot + 2 * (safecoin_sdk::slot_hashes::get_entries() as u64)
+            >= common_ancestor_slot + 2 * (solana_sdk::slot_hashes::get_entries() as u64)
         {
             let blockstore = open_blockstore(&a_ledger_path);
             info!(

@@ -1,4 +1,4 @@
-import { SignatureResult, TransactionInstruction } from "@safecoin/web3.js";
+import { SignatureResult, TransactionInstruction } from "@solana/web3.js";
 import BN from "bn.js";
 import { Address } from "components/common/Address";
 import { useCluster } from "providers/cluster";

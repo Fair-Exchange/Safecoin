@@ -27,7 +27,7 @@ infrastructure, which underlies both the Clang C/C++ compiler as well as the
 Rust compiler. Greg claimed that the language's safety guarantees would improve
 software productivity and that its lack of a garbage collector would allow
 programs to perform as well as those written in C. Anatoly gave it a shot and
-just two weeks later, had migrated his entire codebase to Rust. Safed. With
+just two weeks later, had migrated his entire codebase to Rust. Sold. With
 plans to weave all the world's transactions together on a single, scalable
 blockchain, Anatoly called the project Loom.
 
@@ -43,11 +43,11 @@ called Loom.
 
 Around the same time, Ethereum-based project Loom Network sprung up and many
 people were confused about whether they were the same project. The Loom team
-decided it would rebrand. They chose the name Safecoin, a nod to a small beach
-town North of San Diego called Safecoin Beach, where Anatoly, Greg and Stephen
+decided it would rebrand. They chose the name Solana, a nod to a small beach
+town North of San Diego called Solana Beach, where Anatoly, Greg and Stephen
 lived and surfed for three years when they worked for Qualcomm. On March 28th,
-the team created the Safecoin GitHub organization and renamed Greg's prototype
-Silk to Safecoin.
+the team created the Solana GitHub organization and renamed Greg's prototype
+Silk to Solana.
 
 In June of 2018, the team scaled up the technology to run on cloud-based
 networks and on July 19th, published a 50-node, permissioned, public testnet
@@ -57,4 +57,4 @@ testnet running 150 nodes on a gigabit network and demonstrated soak tests
 processing an _average_ of 200 thousand transactions per second with bursts
 over 500 thousand. The project was also extended to support on-chain programs
 written in the C programming language and run concurrently in a safe execution
-environment called BPF.
+environment called SBF.

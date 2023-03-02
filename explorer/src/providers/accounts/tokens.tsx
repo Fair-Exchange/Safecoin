@@ -1,5 +1,5 @@
 import React from "react";
-import { Connection, PublicKey } from "@safecoin/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import * as Cache from "providers/cache";
 import { ActionType, FetchStatus } from "providers/cache";
 import { TokenAccountInfo } from "validators/accounts/token";
@@ -41,7 +41,7 @@ export function TokensProvider({ children }: ProviderProps) {
 }
 
 export const TOKEN_PROGRAM_ID = new PublicKey(
-  "ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN"
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 );
 
 async function fetchAccountTokens(
@@ -66,7 +66,7 @@ async function fetchAccountTokens(
       "processed"
     ).getParsedTokenAccountsByOwner(pubkey, { programId: TOKEN_PROGRAM_ID });
     data = {
-      tokens: value.map((accountInfo) => {
+      tokens: value.slice(0, 101).map((accountInfo) => {
         const parsedInfo = accountInfo.account.data.parsed.info;
         const info = create(parsedInfo, TokenAccountInfo);
         return { info, pubkey: accountInfo.pubkey };

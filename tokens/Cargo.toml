@@ -1,39 +1,40 @@
 [package]
-name = "safecoin-tokens"
-description = "Safecoin: Enterprise Security for the Community by the Community"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+name = "solana-tokens"
+description = "Blockchain, Rebuilt for Scale"
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
-version = "1.14.3"
-repository = "https://github.com/fair-exchange/safecoin"
+version = "1.15.3"
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/safecoin-tokens"
+homepage = "https://solana.com/"
+documentation = "https://docs.rs/solana-tokens"
 
 [dependencies]
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4.23", features = ["serde"] }
 clap = "2.33.0"
 console = "0.15.0"
 csv = "1.1.6"
-ctrlc = { version = "3.2.2", features = ["termination"] }
+ctrlc = { version = "3.2.3", features = ["termination"] }
 indexmap = "1.9.1"
-indicatif = "0.16.2"
-pickledb = "0.4.1"
+indicatif = "0.17.1"
+pickledb = { version = "0.5.1", default-features = false, features = ["yaml"] }
 serde = { version = "1.0", features = ["derive"] }
-safecoin-account-decoder = { path = "../account-decoder", version = "=1.14.3" }
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.14.3" }
-safecoin-cli-config = { path = "../cli-config", version = "=1.14.3" }
-safecoin-client = { path = "../client", version = "=1.14.3" }
-safecoin-remote-wallet = { path = "../remote-wallet", version = "=1.14.3" }
-safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.14.3" }
-safecoin-version = { path = "../version", version = "=1.14.3" }
-safe-associated-token-account = { version = "=1.1.1" }
-safe-token = { version = "=3.5.0",  features = ["no-entrypoint"] }
+solana-account-decoder = { path = "../account-decoder", version = "=1.15.3" }
+solana-clap-utils = { path = "../clap-utils", version = "=1.15.3" }
+solana-cli-config = { path = "../cli-config", version = "=1.15.3" }
+solana-remote-wallet = { path = "../remote-wallet", version = "=1.15.3" }
+solana-rpc-client = { path = "../rpc-client", version = "=1.15.3" }
+solana-rpc-client-api = { path = "../rpc-client-api", version = "=1.15.3" }
+solana-sdk = { path = "../sdk", version = "=1.15.3" }
+solana-transaction-status = { path = "../transaction-status", version = "=1.15.3" }
+solana-version = { path = "../version", version = "=1.15.3" }
+spl-associated-token-account = { version = "=1.1.2" }
+spl-token = { version = "=3.5.0", features = ["no-entrypoint"] }
 tempfile = "3.3.0"
 thiserror = "1.0"
 
 [dev-dependencies]
 bincode = "1.3.3"
-safecoin-logger = { path = "../logger", version = "=1.14.3" }
-safecoin-streamer = { path = "../streamer", version = "=1.14.3" }
-safecoin-test-validator = { path = "../test-validator", version = "=1.14.3" }
+solana-logger = { path = "../logger", version = "=1.15.3" }
+solana-streamer = { path = "../streamer", version = "=1.15.3" }
+solana-test-validator = { path = "../test-validator", version = "=1.15.3" }

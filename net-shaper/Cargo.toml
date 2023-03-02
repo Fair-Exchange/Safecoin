@@ -1,23 +1,23 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
-name = "safecoin-net-shaper"
-description = "The safecoin cluster network shaping tool"
-version = "1.14.3"
-repository = "https://github.com/fair-exchange/safecoin"
+name = "solana-net-shaper"
+description = "The solana cluster network shaping tool"
+version = "1.15.3"
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
+homepage = "https://solana.com/"
 publish = false
 
 [dependencies]
 clap = { version = "3.1.5", features = ["cargo"] }
 rand = "0.7.0"
-serde = { version = "1.0.138", features = ["derive"] }
-serde_json = "1.0.81"
-safecoin-logger = { path = "../logger", version = "=1.14.3" }
+serde = { version = "1.0.144", features = ["derive"] }
+serde_json = "1.0.83"
+solana-logger = { path = "../logger", version = "=1.15.3" }
 
 [[bin]]
-name = "safecoin-net-shaper"
+name = "solana-net-shaper"
 path = "src/main.rs"
 
 [package.metadata.docs.rs]

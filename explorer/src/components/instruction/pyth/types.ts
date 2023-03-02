@@ -1,4 +1,4 @@
-import { TransactionInstruction } from "@safecoin/web3.js";
+import { TransactionInstruction } from "@solana/web3.js";
 
 export const PROGRAM_IDS: string[] = [
   "gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s", // devnet

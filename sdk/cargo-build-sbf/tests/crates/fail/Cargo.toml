@@ -1,16 +1,16 @@
 [package]
 name = "fail"
-version = "1.14.3"
-description = "Safecoin SBF test program written in Rust"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/fair-exchange/safecoin"
+version = "1.15.3"
+description = "Solana SBF test program written in Rust"
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
+homepage = "https://solana.com/"
 edition = "2021"
 publish = false
 
 [dependencies]
-safecoin-program = { path = "../../../../program", version = "=1.14.3" }
+solana-program = { path = "../../../../program", version = "=1.15.3" }
 
 [lib]
 crate-type = ["cdylib"]

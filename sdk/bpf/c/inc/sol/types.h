@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Safecoin types for BPF programs
+ * @brief Solana types for BPF programs
  */
 
 #ifdef __cplusplus
@@ -124,7 +124,7 @@ static_assert(sizeof(uint64_t) == 8);
 /**
  * Computes the number of elements in an array
  */
-#define SAFE_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#define SOL_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 /**
  * Byte array pointer and string
@@ -132,7 +132,7 @@ static_assert(sizeof(uint64_t) == 8);
 typedef struct {
   const uint8_t *addr; /** bytes */
   uint64_t len; /** number of bytes*/
-} SafeBytes;
+} SolBytes;
 
 #ifdef __cplusplus
 }

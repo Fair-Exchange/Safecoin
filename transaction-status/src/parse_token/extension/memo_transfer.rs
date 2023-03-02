@@ -1,6 +1,6 @@
 use {
     super::*,
-    safe_token_2022::{
+    spl_token_2022::{
         extension::memo_transfer::instruction::RequiredMemoTransfersInstruction,
         instruction::decode_instruction_type,
     },
@@ -13,7 +13,7 @@ pub(in crate::parse_token) fn parse_memo_transfer_instruction(
 ) -> Result<ParsedInstructionEnum, ParseInstructionError> {
     check_num_token_accounts(account_indexes, 2)?;
     let instruction_type_str = match decode_instruction_type(instruction_data)
-        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeToken))?
+        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SplToken))?
     {
         RequiredMemoTransfersInstruction::Enable => "enable",
         RequiredMemoTransfersInstruction::Disable => "disable",
@@ -31,7 +31,7 @@ pub(in crate::parse_token) fn parse_memo_transfer_instruction(
         "multisigOwner",
     );
     Ok(ParsedInstructionEnum {
-        instruction_type: format!("{}RequiredMemoTransfers", instruction_type_str),
+        instruction_type: format!("{instruction_type_str}RequiredMemoTransfers"),
         info: value,
     })
 }
@@ -41,12 +41,12 @@ mod test {
     use {
         super::*,
         crate::parse_token::test::*,
-        safecoin_sdk::pubkey::Pubkey,
-        safe_token_2022::{
+        solana_sdk::pubkey::Pubkey,
+        spl_token_2022::{
             extension::memo_transfer::instruction::{
                 disable_required_transfer_memos, enable_required_transfer_memos,
             },
-            safecoin_program::message::Message,
+            solana_program::message::Message,
         },
     };
 
@@ -57,7 +57,7 @@ mod test {
         // Enable, single owner
         let owner_pubkey = Pubkey::new_unique();
         let enable_memo_transfers_ix = enable_required_transfer_memos(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(account_pubkey),
             &convert_pubkey(owner_pubkey),
             &[],
@@ -85,7 +85,7 @@ mod test {
         let multisig_signer0 = Pubkey::new_unique();
         let multisig_signer1 = Pubkey::new_unique();
         let enable_memo_transfers_ix = enable_required_transfer_memos(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(account_pubkey),
             &convert_pubkey(multisig_pubkey),
             &[
@@ -117,7 +117,7 @@ mod test {
 
         // Disable, single owner
         let enable_memo_transfers_ix = disable_required_transfer_memos(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(account_pubkey),
             &convert_pubkey(owner_pubkey),
             &[],
@@ -145,7 +145,7 @@ mod test {
         let multisig_signer0 = Pubkey::new_unique();
         let multisig_signer1 = Pubkey::new_unique();
         let enable_memo_transfers_ix = disable_required_transfer_memos(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(account_pubkey),
             &convert_pubkey(multisig_pubkey),
             &[

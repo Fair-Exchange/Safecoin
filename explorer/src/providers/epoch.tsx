@@ -1,6 +1,6 @@
 import React from "react";
 import * as Cache from "providers/cache";
-import { Connection, EpochSchedule } from "@safecoin/web3.js";
+import { Connection, EpochSchedule } from "@solana/web3.js";
 import { useCluster, Cluster } from "./cluster";
 import { reportError } from "utils/sentry";
 

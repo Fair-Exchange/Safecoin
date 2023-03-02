@@ -62,90 +62,90 @@ echo "Executing $testName"
 case $testName in
 test-stable)
   if need_to_generate_test_result; then
-    _ "$cargo" stable test --jobs "$JOBS" --all --tests --exclude solana-local-cluster ${V:+--verbose} -- -Z unstable-options --format json --report-time | tee results.json
+    _ cargo test --jobs "$JOBS" --all --tests --exclude solana-local-cluster ${V:+--verbose} -- -Z unstable-options --format json --report-time | tee results.json
     exit_if_error "${PIPESTATUS[0]}"
   else
-    _ "$cargo" stable test --jobs "$JOBS" --all --tests --exclude solana-local-cluster ${V:+--verbose} -- --nocapture
+    _ cargo test --jobs "$JOBS" --all --tests --exclude solana-local-cluster ${V:+--verbose} -- --nocapture
   fi
   ;;
-test-stable-bpf)
+test-stable-sbf)
   # Clear the C dependency files, if dependency moves these files are not regenerated
-  test -d target/debug/bpf && find target/debug/bpf -name '*.d' -delete
-  test -d target/release/bpf && find target/release/bpf -name '*.d' -delete
+  test -d target/debug/sbf && find target/debug/sbf -name '*.d' -delete
+  test -d target/release/sbf && find target/release/sbf -name '*.d' -delete
 
-  # rustfilt required for dumping BPF assembly listings
+  # rustfilt required for dumping SBF assembly listings
   "$cargo" install rustfilt
 
-  # safecoin-keygen required when building C programs
+  # solana-keygen required when building C programs
   _ "$cargo" build --manifest-path=keygen/Cargo.toml
 
   export PATH="$PWD/target/debug":$PATH
-  cargo_build_bpf="$(realpath ./cargo-build-bpf)"
-  cargo_test_bpf="$(realpath ./cargo-test-bpf)"
+  cargo_build_sbf="$(realpath ./cargo-build-sbf)"
+  cargo_test_sbf="$(realpath ./cargo-test-sbf)"
 
-  # BPF safecoin-sdk legacy compile test
-  "$cargo_build_bpf" --manifest-path sdk/Cargo.toml
+  # SBF solana-sdk legacy compile test
+  "$cargo_build_sbf" --manifest-path sdk/Cargo.toml
 
-  # BPF C program system tests
-  _ make -C programs/bpf/c tests
+  # SBF C program system tests
+  _ make -C programs/sbf/c tests
   if need_to_generate_test_result; then
-    _ "$cargo" stable test \
-      --manifest-path programs/bpf/Cargo.toml \
-      --no-default-features --features=bpf_c,bpf_rust -- -Z unstable-options --format json --report-time | tee results.json
+    _ cargo test \
+      --manifest-path programs/sbf/Cargo.toml \
+      --no-default-features --features=sbf_c,sbf_rust -- -Z unstable-options --format json --report-time | tee results.json
     exit_if_error "${PIPESTATUS[0]}"
   else
-    _ "$cargo" stable test \
-      --manifest-path programs/bpf/Cargo.toml \
-      --no-default-features --features=bpf_c,bpf_rust -- --nocapture
+    _ cargo test \
+      --manifest-path programs/sbf/Cargo.toml \
+      --no-default-features --features=sbf_c,sbf_rust -- --nocapture
   fi
 
-  # BPF Rust program unit tests
-  for bpf_test in programs/bpf/rust/*; do
-    if pushd "$bpf_test"; then
+  # SBF Rust program unit tests
+  for sbf_test in programs/sbf/rust/*; do
+    if pushd "$sbf_test"; then
       "$cargo" test
-      "$cargo_build_bpf" --bpf-sdk ../../../../sdk/bpf --dump
-      "$cargo_test_bpf" --bpf-sdk ../../../../sdk/bpf
+      "$cargo_build_sbf" --sbf-sdk ../../../../sdk/sbf --dump
+      "$cargo_test_sbf" --sbf-sdk ../../../../sdk/sbf
       popd
     fi
   done |& tee cargo.log
-  # Save the output of cargo building the bpf tests so we can analyze
+  # Save the output of cargo building the sbf tests so we can analyze
   # the number of redundant rebuilds of dependency crates. The
-  # expected number of safecoin-program crate compilations is 4. There
-  # should be 3 builds of safecoin-program while 128bit crate is
+  # expected number of solana-program crate compilations is 4. There
+  # should be 3 builds of solana-program while 128bit crate is
   # built. These compilations are not redundant because the crate is
   # built for different target each time. An additional compilation of
-  # safecoin-program is performed when simulation crate is built. This
-  # last compiled safecoin-program is of different version, normally the
+  # solana-program is performed when simulation crate is built. This
+  # last compiled solana-program is of different version, normally the
   # latest mainbeta release version.
-  safecoin_program_count=$(grep -c 'safecoin-program v' cargo.log)
+  solana_program_count=$(grep -c 'solana-program v' cargo.log)
   rm -f cargo.log
-  if ((safecoin_program_count > 10)); then
-      echo "Regression of build redundancy ${safecoin_program_count}."
-      echo "Review dependency features that trigger redundant rebuilds of safecoin-program."
+  if ((solana_program_count > 12)); then
+      echo "Regression of build redundancy ${solana_program_count}."
+      echo "Review dependency features that trigger redundant rebuilds of solana-program."
       exit 1
   fi
 
-  # bpf-tools version
-  "$cargo_build_bpf" -V
+  # sbf-tools version
+  "$cargo_build_sbf" -V
 
-  # BPF program instruction count assertion
-  bpf_target_path=programs/bpf/target
+  # SBF program instruction count assertion
+  sbf_target_path=programs/sbf/target
   if need_to_generate_test_result; then
-    _ "$cargo" stable test \
-      --manifest-path programs/bpf/Cargo.toml \
-      --no-default-features --features=bpf_c,bpf_rust assert_instruction_count \
+    _ cargo test \
+      --manifest-path programs/sbf/Cargo.toml \
+      --no-default-features --features=sbf_c,sbf_rust assert_instruction_count \
       -- -Z unstable-options --format json --report-time |& tee results.json
-    awk '!/{ "type": .* }/' results.json >"${bpf_target_path}"/deploy/instuction_counts.txt
+    awk '!/{ "type": .* }/' results.json >"${sbf_target_path}"/deploy/instuction_counts.txt
   else
-    _ "$cargo" stable test \
-      --manifest-path programs/bpf/Cargo.toml \
-      --no-default-features --features=bpf_c,bpf_rust assert_instruction_count \
-      -- --nocapture &> "${bpf_target_path}"/deploy/instuction_counts.txt
+    _ cargo test \
+      --manifest-path programs/sbf/Cargo.toml \
+      --no-default-features --features=sbf_c,sbf_rust assert_instruction_count \
+      -- --nocapture &> "${sbf_target_path}"/deploy/instuction_counts.txt
   fi
 
-  bpf_dump_archive="bpf-dumps.tar.bz2"
-  rm -f "$bpf_dump_archive"
-  tar cjvf "$bpf_dump_archive" "${bpf_target_path}"/{deploy/*.txt,bpfel-unknown-unknown/release/*.so}
+  sbf_dump_archive="sbf-dumps.tar.bz2"
+  rm -f "$sbf_dump_archive"
+  tar cjvf "$sbf_dump_archive" "${sbf_target_path}"/{deploy/*.txt,sbf-solana-solana/release/*.so}
   exit 0
   ;;
 test-stable-perf)
@@ -158,59 +158,59 @@ test-stable-perf)
     rm -rf target/perf-libs
     ./fetch-perf-libs.sh
 
-    # Force CUDA for safecoin-core unit tests
+    # Force CUDA for solana-core unit tests
     export TEST_PERF_LIBS_CUDA=1
 
     # Force CUDA in ci/localnet-sanity.sh
-    export SAFECOIN_CUDA=1
+    export SOLANA_CUDA=1
   fi
 
-  _ "$cargo" stable build --bins ${V:+--verbose}
+  _ cargo build --bins ${V:+--verbose}
   if need_to_generate_test_result; then
-    _ "$cargo" stable test --package safecoin-perf --package safecoin-ledger --package safecoin-core --lib ${V:+--verbose} -- -Z unstable-options --format json --report-time | tee results.json
+    _ cargo test --package solana-perf --package solana-ledger --package solana-core --lib ${V:+--verbose} -- -Z unstable-options --format json --report-time | tee results.json
     exit_if_error "${PIPESTATUS[0]}"
   else
-    _ "$cargo" stable test --package safecoin-perf --package safecoin-ledger --package safecoin-core --lib ${V:+--verbose} -- --nocapture
+    _ cargo test --package solana-perf --package solana-ledger --package solana-core --lib ${V:+--verbose} -- --nocapture
   fi
-  _ "$cargo" stable run --manifest-path poh-bench/Cargo.toml ${V:+--verbose} -- --hashes-per-tick 10
+  _ cargo run --manifest-path poh-bench/Cargo.toml ${V:+--verbose} -- --hashes-per-tick 10
   ;;
 test-local-cluster)
-  _ "$cargo" stable build --release --bins ${V:+--verbose}
+  _ cargo build --release --bins ${V:+--verbose}
   if need_to_generate_test_result; then
-    _ "$cargo" stable test --release --package solana-local-cluster --test local_cluster ${V:+--verbose} -- --test-threads=1 -Z unstable-options --format json --report-time | tee results.json
+    _ cargo test --release --package solana-local-cluster --test local_cluster ${V:+--verbose} -- --test-threads=1 -Z unstable-options --format json --report-time | tee results.json
     exit_if_error "${PIPESTATUS[0]}"
   else
-    _ "$cargo" stable test --release --package solana-local-cluster --test local_cluster ${V:+--verbose} -- --nocapture --test-threads=1
+    _ cargo test --release --package solana-local-cluster --test local_cluster ${V:+--verbose} -- --nocapture --test-threads=1
   fi
   exit 0
   ;;
 test-local-cluster-flakey)
-  _ "$cargo" stable build --release --bins ${V:+--verbose}
+  _ cargo build --release --bins ${V:+--verbose}
   if need_to_generate_test_result; then
-    _ "$cargo" stable test --release --package solana-local-cluster --test local_cluster_flakey ${V:+--verbose} -- --test-threads=1 -Z unstable-options --format json --report-time | tee results.json
+    _ cargo test --release --package solana-local-cluster --test local_cluster_flakey ${V:+--verbose} -- --test-threads=1 -Z unstable-options --format json --report-time | tee results.json
     exit_if_error "${PIPESTATUS[0]}"
   else
-    _ "$cargo" stable test --release --package solana-local-cluster --test local_cluster_flakey ${V:+--verbose} -- --nocapture --test-threads=1
+    _ cargo test --release --package solana-local-cluster --test local_cluster_flakey ${V:+--verbose} -- --nocapture --test-threads=1
   fi
   exit 0
   ;;
 test-local-cluster-slow-1)
-  _ "$cargo" stable build --release --bins ${V:+--verbose}
+  _ cargo build --release --bins ${V:+--verbose}
   if need_to_generate_test_result; then
-    _ "$cargo" stable test --release --package solana-local-cluster --test local_cluster_slow_1 ${V:+--verbose} -- --test-threads=1 -Z unstable-options --format json --report-time | tee results.json
+    _ cargo test --release --package solana-local-cluster --test local_cluster_slow_1 ${V:+--verbose} -- --test-threads=1 -Z unstable-options --format json --report-time | tee results.json
     exit_if_error "${PIPESTATUS[0]}"
   else
-    _ "$cargo" stable test --release --package solana-local-cluster --test local_cluster_slow_1 ${V:+--verbose} -- --nocapture --test-threads=1
+    _ cargo test --release --package solana-local-cluster --test local_cluster_slow_1 ${V:+--verbose} -- --nocapture --test-threads=1
   fi
   exit 0
   ;;
 test-local-cluster-slow-2)
-  _ "$cargo" stable build --release --bins ${V:+--verbose}
+  _ cargo build --release --bins ${V:+--verbose}
   if need_to_generate_test_result; then
-    _ "$cargo" stable test --release --package solana-local-cluster --test local_cluster_slow_2 ${V:+--verbose} -- --test-threads=1 -Z unstable-options --format json --report-time | tee results.json
+    _ cargo test --release --package solana-local-cluster --test local_cluster_slow_2 ${V:+--verbose} -- --test-threads=1 -Z unstable-options --format json --report-time | tee results.json
     exit_if_error "${PIPESTATUS[0]}"
   else
-    _ "$cargo" stable test --release --package solana-local-cluster --test local_cluster_slow_2 ${V:+--verbose} -- --nocapture --test-threads=1
+    _ cargo test --release --package solana-local-cluster --test local_cluster_slow_2 ${V:+--verbose} -- --nocapture --test-threads=1
   fi
   exit 0
   ;;
@@ -229,10 +229,10 @@ test-wasm)
   ;;
 test-docs)
   if need_to_generate_test_result; then
-    _ "$cargo" stable test --jobs "$JOBS" --all --doc --exclude solana-local-cluster ${V:+--verbose} -- -Z unstable-options --format json --report-time | tee results.json
+    _ cargo test --jobs "$JOBS" --all --doc --exclude solana-local-cluster ${V:+--verbose} -- -Z unstable-options --format json --report-time | tee results.json
     exit "${PIPESTATUS[0]}"
   else
-    _ "$cargo" stable test --jobs "$JOBS" --all --doc --exclude solana-local-cluster ${V:+--verbose} -- --nocapture
+    _ cargo test --jobs "$JOBS" --all --doc --exclude solana-local-cluster ${V:+--verbose} -- --nocapture
     exit 0
   fi
   ;;

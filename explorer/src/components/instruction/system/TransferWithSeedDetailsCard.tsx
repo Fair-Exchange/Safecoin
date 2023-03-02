@@ -3,8 +3,8 @@ import {
   SystemProgram,
   SignatureResult,
   ParsedInstruction,
-} from "@safecoin/web3.js";
-import { SafeBalance } from "utils";
+} from "@solana/web3.js";
+import { SolBalance } from "components/common/SolBalance";
 import { InstructionCard } from "../InstructionCard";
 import { Copyable } from "components/common/Copyable";
 import { Address } from "components/common/Address";
@@ -58,9 +58,9 @@ export function TransferWithSeedDetailsCard(props: {
       </tr>
 
       <tr>
-        <td>Transfer Amount (SAFE)</td>
+        <td>Transfer Amount (SOL)</td>
         <td className="text-lg-end">
-          <SafeBalance lamports={info.lamports} />
+          <SolBalance lamports={info.lamports} />
         </td>
       </tr>
 

@@ -22,7 +22,7 @@ use {
             create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
         },
     },
-    safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey, signature::Signer},
+    solana_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey, signature::Signer},
     solana_vote_program::vote_transaction,
     std::{
         collections::{HashMap, HashSet},
@@ -111,7 +111,7 @@ impl VoteSimulator {
                         .unwrap()
                         .votes
                         .iter()
-                        .any(|lockout| lockout.slot == parent));
+                        .any(|lockout| lockout.slot() == parent));
                 }
             }
             while new_bank.tick_height() < new_bank.max_tick_height() {

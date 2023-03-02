@@ -3,18 +3,20 @@ use {
         Args, AuthorizeArgs, Command, CountArgs, MoveArgs, NewArgs, QueryArgs, RebaseArgs,
         SetLockupArgs,
     },
-    clap::{value_t, value_t_or_exit, App, Arg, ArgMatches, SubCommand},
-    safecoin_clap_utils::{
+    clap::{
+        crate_description, crate_name, value_t, value_t_or_exit, App, Arg, ArgMatches, SubCommand,
+    },
+    solana_clap_utils::{
         input_parsers::unix_timestamp_from_rfc3339_datetime,
         input_validators::{is_amount, is_rfc3339_datetime, is_valid_pubkey, is_valid_signer},
     },
-    safecoin_cli_config::CONFIG_FILE,
-    safecoin_sdk::native_token::sol_to_lamports,
+    solana_cli_config::CONFIG_FILE,
+    solana_sdk::native_token::sol_to_lamports,
     std::{ffi::OsString, process::exit},
 };
 
 fn fee_payer_arg<'a, 'b>() -> Arg<'a, 'b> {
-    safecoin_clap_utils::fee_payer::fee_payer_arg().required(true)
+    solana_clap_utils::fee_payer::fee_payer_arg().required(true)
 }
 
 fn funding_keypair_arg<'a, 'b>() -> Arg<'a, 'b> {
@@ -106,7 +108,7 @@ fn lockup_epoch_arg<'a, 'b>() -> Arg<'a, 'b> {
         .long("lockup-epoch")
         .takes_value(true)
         .value_name("NUMBER")
-        .help("The epoch height at which each account will be available for withdrawl")
+        .help("The epoch height at which each account will be available for withdrawal")
 }
 
 fn lockup_date_arg<'a, 'b>() -> Arg<'a, 'b> {
@@ -115,7 +117,7 @@ fn lockup_date_arg<'a, 'b>() -> Arg<'a, 'b> {
         .value_name("RFC3339 DATETIME")
         .validator(is_rfc3339_datetime)
         .takes_value(true)
-        .help("The date and time at which each account will be available for withdrawl")
+        .help("The date and time at which each account will be available for withdrawal")
 }
 
 fn num_accounts_arg<'a, 'b>() -> Arg<'a, 'b> {
@@ -133,9 +135,9 @@ where
     T: Into<OsString> + Clone,
 {
     let default_config_file = CONFIG_FILE.as_ref().unwrap();
-    App::new("safecoin-stake-accounts")
-        .about("about")
-        .version("version")
+    App::new(crate_name!())
+        .about(crate_description!())
+        .version(solana_version::version!())
         .arg(
             Arg::with_name("config_file")
                 .long("config")
@@ -150,7 +152,7 @@ where
                 .global(true)
                 .takes_value(true)
                 .value_name("URL")
-                .help("RPC entrypoint address. i.e. http://api.devnet.safecoin.org"),
+                .help("RPC entrypoint address. i.e. http://api.devnet.solana.com"),
         )
         .subcommand(
             SubCommand::with_name("new")
@@ -173,7 +175,7 @@ where
                         .takes_value(true)
                         .value_name("AMOUNT")
                         .validator(is_amount)
-                        .help("Amount to move into the new stake accounts, in SAFE"),
+                        .help("Amount to move into the new stake accounts, in SOL"),
                 )
                 .arg(
                     Arg::with_name("stake_authority")

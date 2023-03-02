@@ -1,8 +1,8 @@
-# Return data from BPF programs
+# Return data from SBF programs
 
 ## Problem
 
-In the Solidity langauge it is permitted to return any number of values from a function,
+In the Solidity language it is permitted to return any number of values from a function,
 for example a variable length string can be returned:
 
 ```
@@ -43,8 +43,8 @@ block, any of these would cause the transaction or rpc to fail.
 
 ## Existing solution
 
-The existing solution that Safeang uses, writes the return data to the callee account data.
-The caller's account cannot be used, since the callee may not be the same BPF program, so
+The existing solution that Solang uses, writes the return data to the callee account data.
+The caller's account cannot be used, since the callee may not be the same SBF program, so
 it will not have permission to write to the callee's account data.
 
 Another solution would be to have a single return data account which is passed
@@ -130,15 +130,15 @@ The compute costs are calculated for getting and setting the return data using
 the syscalls.
 
 For a normal RPC or Transaction, the returndata is base64-encoded and stored along side the sol_log
-strings in the [stable log](https://github.com/fair-exchange/safecoin/blob/95292841947763bdd47ef116b40fc34d0585bca8/sdk/src/process_instruction.rs#L275-L281).
+strings in the [stable log](https://github.com/solana-labs/solana/blob/95292841947763bdd47ef116b40fc34d0585bca8/sdk/src/process_instruction.rs#L275-L281).
 
 ## Note on returning errors
 
 Solidity on Ethereum allows the contract to return an error in the return data. In this case, all
-the account data changes for the account should be reverted. On Safecoin, any non-zero exit code
-for a BPF prorgram means the entire transaction fails. We do not wish to support an error return
+the account data changes for the account should be reverted. On Solana, any non-zero exit code
+for a SBF prorgram means the entire transaction fails. We do not wish to support an error return
 by returning success and then returning an error in the return data. This would mean we would have
-to support reverting the account data changes; this too expensive both on the VM side and the BPF
+to support reverting the account data changes; this too expensive both on the VM side and the SBF
 contract side.
 
 Errors will be reported via sol_log.

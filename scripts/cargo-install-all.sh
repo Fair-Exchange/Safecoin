@@ -83,28 +83,28 @@ if [[ $CI_OS_NAME = windows ]]; then
     cargo-test-bpf
     cargo-test-sbf
     solana
-    safecoin-install
-    safecoin-install-init
-    safecoin-keygen
-    safecoin-stake-accounts
-    safecoin-test-validator
-    safecoin-tokens
+    solana-install
+    solana-install-init
+    solana-keygen
+    solana-stake-accounts
+    solana-test-validator
+    solana-tokens
   )
 else
   ./fetch-perf-libs.sh
 
   BINS=(
     solana
-    safecoin-bench-tps
-    safecoin-faucet
-    safecoin-gossip
-    safecoin-install
-    safecoin-keygen
-    safecoin-ledger-tool
-    safecoin-log-analyzer
-    safecoin-net-shaper
-    safecoin-sys-tuner
-    safecoin-validator
+    solana-bench-tps
+    solana-faucet
+    solana-gossip
+    solana-install
+    solana-keygen
+    solana-ledger-tool
+    solana-log-analyzer
+    solana-net-shaper
+    solana-sys-tuner
+    solana-validator
     rbpf-cli
   )
 
@@ -115,18 +115,18 @@ else
       cargo-build-sbf
       cargo-test-bpf
       cargo-test-sbf
-      safecoin-dos
-      safecoin-install-init
-      safecoin-stake-accounts
-      safecoin-test-validator
-      safecoin-tokens
-      safecoin-watchtower
+      solana-dos
+      solana-install-init
+      solana-stake-accounts
+      solana-test-validator
+      solana-tokens
+      solana-watchtower
     )
   fi
 
-  #XXX: Ensure `safecoin-genesis` is built LAST!
-  # See https://github.com/fair-exchange/safecoin/issues/5826
-  BINS+=(safecoin-genesis)
+  #XXX: Ensure `solana-genesis` is built LAST!
+  # See https://github.com/solana-labs/solana/issues/5826
+  BINS+=(solana-genesis)
 fi
 
 binArgs=()
@@ -141,10 +141,10 @@ mkdir -p "$installDir/bin"
   # shellcheck disable=SC2086 # Don't want to double quote $rust_version
   "$cargo" $maybeRustVersion build $maybeReleaseFlag "${binArgs[@]}"
 
-  # Exclude `safe-token` binary for net.sh builds
+  # Exclude `spl-token` binary for net.sh builds
   if [[ -z "$validatorOnly" ]]; then
     # shellcheck disable=SC2086 # Don't want to double quote $rust_version
-    "$cargo" $maybeRustVersion install --locked safe-token-cli --root "$installDir"
+    "$cargo" $maybeRustVersion install --locked spl-token-cli --root "$installDir"
   fi
 )
 
@@ -161,8 +161,8 @@ if [[ -z "$validatorOnly" ]]; then
   "$cargo" $maybeRustVersion build --manifest-path programs/bpf_loader/gen-syscall-list/Cargo.toml
   # shellcheck disable=SC2086 # Don't want to double quote $rust_version
   "$cargo" $maybeRustVersion run --bin gen-headers
-  mkdir -p "$installDir"/bin/sdk/bpf
-  cp -a sdk/bpf/* "$installDir"/bin/sdk/bpf
+  mkdir -p "$installDir"/bin/sdk/sbf
+  cp -a sdk/sbf/* "$installDir"/bin/sdk/sbf
 fi
 
 (

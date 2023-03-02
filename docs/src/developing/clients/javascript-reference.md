@@ -4,9 +4,9 @@ title: Web3 API Reference
 
 ## Web3 API Reference Guide
 
-The `@safecoin/web3.js` library is a package that has coverage over the [Safecoin JSON RPC API](https://docs.solana.com/developing/clients/jsonrpc-api).
+The `@solana/web3.js` library is a package that has coverage over the [Solana JSON RPC API](/api).
 
-You can find the full documentation for the `@safecoin/web3.js` library [here](https://solana-labs.github.io/solana-web3.js/).
+You can find the full documentation for the `@solana/web3.js` library [here](https://solana-labs.github.io/solana-web3.js/).
 
 ## General
 
@@ -14,16 +14,16 @@ You can find the full documentation for the `@safecoin/web3.js` library [here](h
 
 [Source Documentation](https://solana-labs.github.io/solana-web3.js/classes/Connection.html)
 
-Connection is used to interact with the [Safecoin JSON RPC](https://docs.solana.com/developing/clients/jsonrpc-api). You can use Connection to confirm transactions, get account info, and more.
+Connection is used to interact with the [Solana JSON RPC](/api). You can use Connection to confirm transactions, get account info, and more.
 
-You create a connection by defining the JSON RPC cluster endpoint and the desired commitment. Once this is complete, you can use this connection object to interact with any of the Safecoin JSON RPC API.
+You create a connection by defining the JSON RPC cluster endpoint and the desired commitment. Once this is complete, you can use this connection object to interact with any of the Solana JSON RPC API.
 
 #### Example Usage
 
 ```javascript
-const web3 = require("@safecoin/web3.js");
+const web3 = require("@solana/web3.js");
 
-let connection = new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed');
+let connection = new web3.Connection(web3.clusterApiUrl("devnet"), "confirmed");
 
 let slot = await connection.getSlot();
 console.log(slot);
@@ -59,24 +59,24 @@ The above example shows only a few of the methods on Connection. Please see the 
 
 [SourceDocumentation](https://solana-labs.github.io/solana-web3.js/classes/Transaction.html)
 
-A transaction is used to interact with programs on the Safecoin blockchain. These transactions are constructed with TransactionInstructions, containing all the accounts possible to interact with, as well as any needed data or program addresses. Each TransactionInstruction consists of keys, data, and a programId. You can do multiple instructions in a single transaction, interacting with multiple programs at once.
+A transaction is used to interact with programs on the Solana blockchain. These transactions are constructed with TransactionInstructions, containing all the accounts possible to interact with, as well as any needed data or program addresses. Each TransactionInstruction consists of keys, data, and a programId. You can do multiple instructions in a single transaction, interacting with multiple programs at once.
 
 #### Example Usage
 
 ```javascript
-const web3 = require('@safecoin/web3.js');
-const nacl = require('tweetnacl');
+const web3 = require("@solana/web3.js");
+const nacl = require("tweetnacl");
 
-// Airdrop SAFE for paying transactions
+// Airdrop SOL for paying transactions
 let payer = web3.Keypair.generate();
-let connection = new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed');
+let connection = new web3.Connection(web3.clusterApiUrl("devnet"), "confirmed");
 
 let airdropSignature = await connection.requestAirdrop(
-    payer.publicKey,
-    web3.LAMPORTS_PER_SAFE,
+  payer.publicKey,
+  web3.LAMPORTS_PER_SOL,
 );
 
-await connection.confirmTransaction(airdropSignature);
+await connection.confirmTransaction({ signature: airdropSignature });
 
 let toAccount = web3.Keypair.generate();
 
@@ -84,27 +84,31 @@ let toAccount = web3.Keypair.generate();
 let transaction = new web3.Transaction();
 
 // Add an instruction to execute
-transaction.add(web3.SystemProgram.transfer({
+transaction.add(
+  web3.SystemProgram.transfer({
     fromPubkey: payer.publicKey,
     toPubkey: toAccount.publicKey,
     lamports: 1000,
-}));
+  }),
+);
 
 // Send and confirm transaction
 // Note: feePayer is by default the first signer, or payer, if the parameter is not set
-await web3.sendAndConfirmTransaction(connection, transaction, [payer])
+await web3.sendAndConfirmTransaction(connection, transaction, [payer]);
 
 // Alternatively, manually construct the transaction
 let recentBlockhash = await connection.getRecentBlockhash();
 let manualTransaction = new web3.Transaction({
-    recentBlockhash: recentBlockhash.blockhash,
-    feePayer: payer.publicKey
+  recentBlockhash: recentBlockhash.blockhash,
+  feePayer: payer.publicKey,
 });
-manualTransaction.add(web3.SystemProgram.transfer({
+manualTransaction.add(
+  web3.SystemProgram.transfer({
     fromPubkey: payer.publicKey,
     toPubkey: toAccount.publicKey,
     lamports: 1000,
-}));
+  }),
+);
 
 let transactionBuffer = manualTransaction.serializeMessage();
 let signature = nacl.sign.detached(transactionBuffer, payer.secretKey);
@@ -112,7 +116,7 @@ let signature = nacl.sign.detached(transactionBuffer, payer.secretKey);
 manualTransaction.addSignature(payer.publicKey, signature);
 
 let isVerifiedSignature = manualTransaction.verifySignatures();
-console.log(`The signatures were verifed: ${isVerifiedSignature}`)
+console.log(`The signatures were verifed: ${isVerifiedSignature}`);
 
 // The signatures were verified: true
 
@@ -125,12 +129,12 @@ await web3.sendAndConfirmRawTransaction(connection, rawTransaction);
 
 [Source Documentation](https://solana-labs.github.io/solana-web3.js/classes/Keypair.html)
 
-The keypair is used to create an account with a public key and secret key within Safecoin. You can either generate, generate from a seed, or create from a secret key.
+The keypair is used to create an account with a public key and secret key within Solana. You can either generate, generate from a seed, or create from a secret key.
 
 #### Example Usage
 
 ```javascript
-const {Keypair} = require("@safecoin/web3.js")
+const { Keypair } = require("@solana/web3.js");
 
 let account = Keypair.generate();
 
@@ -147,8 +151,10 @@ console.log(account.secretKey);
 //   205, 189, 165, 112,  32, 200, 116, 164, 234
 // ]
 
-
-let seed = Uint8Array.from([70,60,102,100,70,60,102,100,70,60,102,100,70,60,102,100,70,60,102,100,70,60,102,100,70,60,102,100,70,60,102,100]);
+let seed = Uint8Array.from([
+  70, 60, 102, 100, 70, 60, 102, 100, 70, 60, 102, 100, 70, 60, 102, 100, 70,
+  60, 102, 100, 70, 60, 102, 100, 70, 60, 102, 100, 70, 60, 102, 100,
+]);
 let accountFromSeed = Keypair.fromSeed(seed);
 
 console.log(accountFromSeed.publicKey.toBase58());
@@ -163,7 +169,6 @@ console.log(accountFromSeed.secretKey);
 //    28, 243, 209,  82, 240, 184,  30,  31,  56, 223, 236,
 //   227,  60,  72, 215,  47, 208, 209, 162,  59
 // ]
-
 
 let accountFromSecret = Keypair.fromSecretKey(account.secretKey);
 
@@ -181,7 +186,7 @@ console.log(accountFromSecret.secretKey);
 // ]
 ```
 
-Using `generate` generates a random Keypair for use as an account on Safecoin. Using `fromSeed`, you can generate a Keypair using a deterministic constructor. `fromSecret` creates a Keypair from a secret Uint8array. You can see that the publicKey for the `generate` Keypair and `fromSecret` Keypair are the same because the secret from the `generate` Keypair is used in `fromSecret`.
+Using `generate` generates a random Keypair for use as an account on Solana. Using `fromSeed`, you can generate a Keypair using a deterministic constructor. `fromSecret` creates a Keypair from a secret Uint8array. You can see that the publicKey for the `generate` Keypair and `fromSecret` Keypair are the same because the secret from the `generate` Keypair is used in `fromSecret`.
 
 **Warning**: Do not use `fromSeed` unless you are creating a seed with high entropy. Do not share your seed. Treat the seed like you would a private key.
 
@@ -189,32 +194,40 @@ Using `generate` generates a random Keypair for use as an account on Safecoin. U
 
 [Source Documentation](https://solana-labs.github.io/solana-web3.js/classes/PublicKey.html)
 
-PublicKey is used throughout `@safecoin/web3.js` in transactions, keypairs, and programs. You require publickey when listing each account in a transaction and as a general identifier on Safecoin.
+PublicKey is used throughout `@solana/web3.js` in transactions, keypairs, and programs. You require publickey when listing each account in a transaction and as a general identifier on Solana.
 
 A PublicKey can be created with a base58 encoded string, buffer, Uint8Array, number, and an array of numbers.
 
 #### Example Usage
 
 ```javascript
-const {Buffer} = require('buffer');
-const web3 = require('@safecoin/web3.js');
-const crypto = require('crypto');
+const { Buffer } = require("buffer");
+const web3 = require("@solana/web3.js");
+const crypto = require("crypto");
 
 // Create a PublicKey with a base58 encoded string
-let base58publicKey = new web3.PublicKey('5xot9PVkphiX2adznghwrAuxGs2zeWisNSxMW6hU6Hkj');
+let base58publicKey = new web3.PublicKey(
+  "5xot9PVkphiX2adznghwrAuxGs2zeWisNSxMW6hU6Hkj",
+);
 console.log(base58publicKey.toBase58());
 
 // 5xot9PVkphiX2adznghwrAuxGs2zeWisNSxMW6hU6Hkj
 
 // Create a Program Address
 let highEntropyBuffer = crypto.randomBytes(31);
-let programAddressFromKey = await web3.PublicKey.createProgramAddress([highEntropyBuffer.slice(0, 31)], base58publicKey);
+let programAddressFromKey = await web3.PublicKey.createProgramAddress(
+  [highEntropyBuffer.slice(0, 31)],
+  base58publicKey,
+);
 console.log(`Generated Program Address: ${programAddressFromKey.toBase58()}`);
 
 // Generated Program Address: 3thxPEEz4EDWHNxo1LpEpsAxZryPAHyvNVXJEJWgBgwJ
 
 // Find Program address given a PublicKey
-let validProgramAddress = await web3.PublicKey.findProgramAddress([Buffer.from('', 'utf8')], programAddressFromKey);
+let validProgramAddress = await web3.PublicKey.findProgramAddress(
+  [Buffer.from("", "utf8")],
+  programAddressFromKey,
+);
 console.log(`Valid Program Address: ${validProgramAddress}`);
 
 // Valid Program Address: C14Gs3oyeXbASzwUpqSymCKpEyccfEuSe8VRar9vJQRE,253
@@ -229,79 +242,90 @@ The SystemProgram grants the ability to create accounts, allocate account data, 
 #### Example Usage
 
 ```javascript
-const web3 = require("@safecoin/web3.js");
+const web3 = require("@solana/web3.js");
 
-// Airdrop SAFE for paying transactions
+// Airdrop SOL for paying transactions
 let payer = web3.Keypair.generate();
-let connection = new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed');
+let connection = new web3.Connection(web3.clusterApiUrl("devnet"), "confirmed");
 
 let airdropSignature = await connection.requestAirdrop(
-    payer.publicKey,
-    web3.LAMPORTS_PER_SAFE,
+  payer.publicKey,
+  web3.LAMPORTS_PER_SOL,
 );
 
-await connection.confirmTransaction(airdropSignature);
+await connection.confirmTransaction({ signature: airdropSignature });
 
 // Allocate Account Data
 let allocatedAccount = web3.Keypair.generate();
 let allocateInstruction = web3.SystemProgram.allocate({
-    accountPubkey: allocatedAccount.publicKey,
-    space: 100,
-})
+  accountPubkey: allocatedAccount.publicKey,
+  space: 100,
+});
 let transaction = new web3.Transaction().add(allocateInstruction);
 
-await web3.sendAndConfirmTransaction(connection, transaction, [payer, allocatedAccount])
+await web3.sendAndConfirmTransaction(connection, transaction, [
+  payer,
+  allocatedAccount,
+]);
 
 // Create Nonce Account
 let nonceAccount = web3.Keypair.generate();
-let minimumAmountForNonceAccount = await connection.getMinimumBalanceForRentExemption(
-    web3.NONCE_ACCOUNT_LENGTH,
-);
+let minimumAmountForNonceAccount =
+  await connection.getMinimumBalanceForRentExemption(web3.NONCE_ACCOUNT_LENGTH);
 let createNonceAccountTransaction = new web3.Transaction().add(
-web3.SystemProgram.createNonceAccount({
+  web3.SystemProgram.createNonceAccount({
     fromPubkey: payer.publicKey,
     noncePubkey: nonceAccount.publicKey,
     authorizedPubkey: payer.publicKey,
     lamports: minimumAmountForNonceAccount,
-}),
+  }),
 );
 
-await web3.sendAndConfirmTransaction(connection, createNonceAccountTransaction, [payer, nonceAccount])
+await web3.sendAndConfirmTransaction(
+  connection,
+  createNonceAccountTransaction,
+  [payer, nonceAccount],
+);
 
 // Advance nonce - Used to create transactions as an account custodian
 let advanceNonceTransaction = new web3.Transaction().add(
-    web3.SystemProgram.nonceAdvance({
-        noncePubkey: nonceAccount.publicKey,
-        authorizedPubkey: payer.publicKey,
-    }),
+  web3.SystemProgram.nonceAdvance({
+    noncePubkey: nonceAccount.publicKey,
+    authorizedPubkey: payer.publicKey,
+  }),
 );
 
-await web3.sendAndConfirmTransaction(connection, advanceNonceTransaction, [payer])
+await web3.sendAndConfirmTransaction(connection, advanceNonceTransaction, [
+  payer,
+]);
 
 // Transfer lamports between accounts
 let toAccount = web3.Keypair.generate();
 
 let transferTransaction = new web3.Transaction().add(
-web3.SystemProgram.transfer({
+  web3.SystemProgram.transfer({
     fromPubkey: payer.publicKey,
     toPubkey: toAccount.publicKey,
     lamports: 1000,
-}),
+  }),
 );
-await web3.sendAndConfirmTransaction(connection, transferTransaction, [payer])
+await web3.sendAndConfirmTransaction(connection, transferTransaction, [payer]);
 
 // Assign a new account to a program
 let programId = web3.Keypair.generate();
 let assignedAccount = web3.Keypair.generate();
 
 let assignTransaction = new web3.Transaction().add(
-web3.SystemProgram.assign({
+  web3.SystemProgram.assign({
     accountPubkey: assignedAccount.publicKey,
     programId: programId.publicKey,
-}),
+  }),
 );
 
-await web3.sendAndConfirmTransaction(connection, assignTransaction, [payer, assignedAccount]);
+await web3.sendAndConfirmTransaction(connection, assignTransaction, [
+  payer,
+  assignedAccount,
+]);
 ```
 
 ### Secp256k1Program
@@ -313,49 +337,53 @@ The Secp256k1Program is used to verify Secp256k1 signatures, which are used by b
 #### Example Usage
 
 ```javascript
-const {keccak_256} = require('js-sha3');
-const web3 = require("@safecoin/web3.js");
-const secp256k1 = require('secp256k1');
+const { keccak_256 } = require("js-sha3");
+const web3 = require("@solana/web3.js");
+const secp256k1 = require("secp256k1");
 
 // Create a Ethereum Address from secp256k1
 let secp256k1PrivateKey;
 do {
-    secp256k1PrivateKey = web3.Keypair.generate().secretKey.slice(0, 32);
+  secp256k1PrivateKey = web3.Keypair.generate().secretKey.slice(0, 32);
 } while (!secp256k1.privateKeyVerify(secp256k1PrivateKey));
 
-let secp256k1PublicKey = secp256k1.publicKeyCreate(secp256k1PrivateKey, false).slice(1);
+let secp256k1PublicKey = secp256k1
+  .publicKeyCreate(secp256k1PrivateKey, false)
+  .slice(1);
 
-let ethAddress = web3.Secp256k1Program.publicKeyToEthAddress(secp256k1PublicKey);
-console.log(`Ethereum Address: 0x${ethAddress.toString('hex')}`);
+let ethAddress =
+  web3.Secp256k1Program.publicKeyToEthAddress(secp256k1PublicKey);
+console.log(`Ethereum Address: 0x${ethAddress.toString("hex")}`);
 
 // Ethereum Address: 0xadbf43eec40694eacf36e34bb5337fba6a2aa8ee
 
 // Fund a keypair to create instructions
 let fromPublicKey = web3.Keypair.generate();
-let connection = new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed');
+let connection = new web3.Connection(web3.clusterApiUrl("devnet"), "confirmed");
 
 let airdropSignature = await connection.requestAirdrop(
-    fromPublicKey.publicKey,
-    web3.LAMPORTS_PER_SAFE,
+  fromPublicKey.publicKey,
+  web3.LAMPORTS_PER_SOL,
 );
-await connection.confirmTransaction(airdropSignature);
+
+await connection.confirmTransaction({ signature: airdropSignature });
 
 // Sign Message with Ethereum Key
-let plaintext = Buffer.from('string address');
+let plaintext = Buffer.from("string address");
 let plaintextHash = Buffer.from(keccak_256.update(plaintext).digest());
-let {signature, recid: recoveryId} = secp256k1.ecdsaSign(
-    plaintextHash,
-    secp256k1PrivateKey
+let { signature, recid: recoveryId } = secp256k1.ecdsaSign(
+  plaintextHash,
+  secp256k1PrivateKey,
 );
 
 // Create transaction to verify the signature
 let transaction = new Transaction().add(
-    web3.Secp256k1Program.createInstructionWithEthAddress({
-        ethAddress: ethAddress.toString('hex'),
-        plaintext,
-        signature,
-        recoveryId,
-    }),
+  web3.Secp256k1Program.createInstructionWithEthAddress({
+    ethAddress: ethAddress.toString("hex"),
+    plaintext,
+    signature,
+    recoveryId,
+  }),
 );
 
 // Transaction will succeed if the message is verified to be signed by the address
@@ -371,61 +399,57 @@ Message is used as another way to construct transactions. You can construct a me
 #### Example Usage
 
 ```javascript
-const {Buffer} = require("buffer");
-const bs58 = require('bs58');
-const web3 = require('@safecoin/web3.js');
+const { Buffer } = require("buffer");
+const bs58 = require("bs58");
+const web3 = require("@solana/web3.js");
 
 let toPublicKey = web3.Keypair.generate().publicKey;
 let fromPublicKey = web3.Keypair.generate();
 
-let connection = new web3.Connection(
-    web3.clusterApiUrl('devnet'),
-    'confirmed'
-);
+let connection = new web3.Connection(web3.clusterApiUrl("devnet"), "confirmed");
 
 let airdropSignature = await connection.requestAirdrop(
-    fromPublicKey.publicKey,
-    web3.LAMPORTS_PER_SAFE,
+  fromPublicKey.publicKey,
+  web3.LAMPORTS_PER_SOL,
 );
 
-await connection.confirmTransaction(airdropSignature);
+await connection.confirmTransaction({ signature: airdropSignature });
 
 let type = web3.SYSTEM_INSTRUCTION_LAYOUTS.Transfer;
 let data = Buffer.alloc(type.layout.span);
-let layoutFields = Object.assign({instruction: type.index});
+let layoutFields = Object.assign({ instruction: type.index });
 type.layout.encode(layoutFields, data);
 
 let recentBlockhash = await connection.getRecentBlockhash();
 
 let messageParams = {
-    accountKeys: [
-        fromPublicKey.publicKey.toString(),
-        toPublicKey.toString(),
-        web3.SystemProgram.programId.toString()
-    ],
-    header: {
-        numReadonlySignedAccounts: 0,
-        numReadonlyUnsignedAccounts: 1,
-        numRequiredSignatures: 1,
+  accountKeys: [
+    fromPublicKey.publicKey.toString(),
+    toPublicKey.toString(),
+    web3.SystemProgram.programId.toString(),
+  ],
+  header: {
+    numReadonlySignedAccounts: 0,
+    numReadonlyUnsignedAccounts: 1,
+    numRequiredSignatures: 1,
+  },
+  instructions: [
+    {
+      accounts: [0, 1],
+      data: bs58.encode(data),
+      programIdIndex: 2,
     },
-    instructions: [
-        {
-        accounts: [0, 1],
-        data: bs58.encode(data),
-        programIdIndex: 2,
-        },
-    ],
-    recentBlockhash,
+  ],
+  recentBlockhash,
 };
 
 let message = new web3.Message(messageParams);
 
-let transaction = web3.Transaction.populate(
-    message,
-    [fromPublicKey.publicKey.toString()]
-);
+let transaction = web3.Transaction.populate(message, [
+  fromPublicKey.publicKey.toString(),
+]);
 
-await web3.sendAndConfirmTransaction(connection, transaction, [fromPublicKey])
+await web3.sendAndConfirmTransaction(connection, transaction, [fromPublicKey]);
 ```
 
 ### Struct
@@ -437,6 +461,7 @@ The struct class is used to create Rust compatible structs in javascript. This c
 #### Example Usage
 
 Struct in Rust:
+
 ```rust
 pub struct Fee {
     pub denominator: u64,
@@ -445,9 +470,10 @@ pub struct Fee {
 ```
 
 Using web3:
+
 ```javascript
-import BN from 'bn.js';
-import {Struct} from '@safecoin/web3.js';
+import BN from "bn.js";
+import { Struct } from "@solana/web3.js";
 
 export class Fee extends Struct {
   denominator: BN;
@@ -464,6 +490,7 @@ The Enum class is used to represent a Rust compatible Enum in javascript. The en
 #### Example Usage
 
 Rust:
+
 ```rust
 pub enum AccountType {
     Uninitialized,
@@ -473,8 +500,9 @@ pub enum AccountType {
 ```
 
 Web3:
+
 ```javascript
-import {Enum} from '@safecoin/web3.js';
+import { Enum } from "@solana/web3.js";
 
 export class AccountType extends Enum {}
 ```
@@ -490,13 +518,10 @@ You can create a nonce account by first creating a normal account, then using `S
 #### Example Usage
 
 ```javascript
-const web3 = require('@safecoin/web3.js');
+const web3 = require("@solana/web3.js");
 
 // Create connection
-let connection = new web3.Connection(
-    web3.clusterApiUrl('devnet'),
-    'confirmed',
-);
+let connection = new web3.Connection(web3.clusterApiUrl("devnet"), "confirmed");
 
 // Generate accounts
 let account = web3.Keypair.generate();
@@ -504,36 +529,35 @@ let nonceAccount = web3.Keypair.generate();
 
 // Fund account
 let airdropSignature = await connection.requestAirdrop(
-    account.publicKey,
-    web3.LAMPORTS_PER_SAFE,
+  account.publicKey,
+  web3.LAMPORTS_PER_SOL,
 );
 
-await connection.confirmTransaction(airdropSignature);
+await connection.confirmTransaction({ signature: airdropSignature });
 
 // Get Minimum amount for rent exemption
 let minimumAmount = await connection.getMinimumBalanceForRentExemption(
-    web3.NONCE_ACCOUNT_LENGTH,
+  web3.NONCE_ACCOUNT_LENGTH,
 );
 
 // Form CreateNonceAccount transaction
 let transaction = new web3.Transaction().add(
-web3.SystemProgram.createNonceAccount({
+  web3.SystemProgram.createNonceAccount({
     fromPubkey: account.publicKey,
     noncePubkey: nonceAccount.publicKey,
     authorizedPubkey: account.publicKey,
     lamports: minimumAmount,
-}),
+  }),
 );
 // Create Nonce Account
-await web3.sendAndConfirmTransaction(
-    connection,
-    transaction,
-    [account, nonceAccount]
-);
+await web3.sendAndConfirmTransaction(connection, transaction, [
+  account,
+  nonceAccount,
+]);
 
 let nonceAccountData = await connection.getNonce(
-    nonceAccount.publicKey,
-    'confirmed',
+  nonceAccount.publicKey,
+  "confirmed",
 );
 
 console.log(nonceAccountData);
@@ -546,12 +570,12 @@ console.log(nonceAccountData);
 // }
 
 let nonceAccountInfo = await connection.getAccountInfo(
-    nonceAccount.publicKey,
-    'confirmed'
+  nonceAccount.publicKey,
+  "confirmed",
 );
 
 let nonceAccountFromInfo = web3.NonceAccount.fromAccountData(
-    nonceAccountInfo.data
+  nonceAccountInfo.data,
 );
 
 console.log(nonceAccountFromInfo);
@@ -575,10 +599,12 @@ Vote account is an object that grants the capability of decoding vote accounts f
 #### Example Usage
 
 ```javascript
-const web3 = require('@safecoin/web3.js');
+const web3 = require("@solana/web3.js");
 
 let voteAccountInfo = await connection.getProgramAccounts(web3.VOTE_PROGRAM_ID);
-let voteAccountFromData = web3.VoteAccount.fromAccountData(voteAccountInfo[0].account.data);
+let voteAccountFromData = web3.VoteAccount.fromAccountData(
+  voteAccountInfo[0].account.data,
+);
 console.log(voteAccountFromData);
 /*
 VoteAccount {
@@ -641,42 +667,51 @@ VoteAccount {
 
 [SourceDocumentation](https://solana-labs.github.io/solana-web3.js/classes/StakeProgram.html)
 
-The StakeProgram facilitates staking SAFE and delegating them to any validators on the network. You can use StakeProgram to create a stake account, stake some SAFE, authorize accounts for withdrawal of your stake, deactivate your stake, and withdraw your funds. The StakeInstruction class is used to decode and read more instructions from transactions calling the StakeProgram
+The StakeProgram facilitates staking SOL and delegating them to any validators on the network. You can use StakeProgram to create a stake account, stake some SOL, authorize accounts for withdrawal of your stake, deactivate your stake, and withdraw your funds. The StakeInstruction class is used to decode and read more instructions from transactions calling the StakeProgram
 
 #### Example Usage
 
 ```javascript
-const web3 = require("@safecoin/web3.js");
+const web3 = require("@solana/web3.js");
 
 // Fund a key to create transactions
 let fromPublicKey = web3.Keypair.generate();
-let connection = new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed');
+let connection = new web3.Connection(web3.clusterApiUrl("devnet"), "confirmed");
 
 let airdropSignature = await connection.requestAirdrop(
-    fromPublicKey.publicKey,
-    web3.LAMPORTS_PER_SAFE,
+  fromPublicKey.publicKey,
+  web3.LAMPORTS_PER_SOL,
 );
-await connection.confirmTransaction(airdropSignature);
+await connection.confirmTransaction({ signature: airdropSignature });
 
 // Create Account
 let stakeAccount = web3.Keypair.generate();
 let authorizedAccount = web3.Keypair.generate();
 /* Note: This is the minimum amount for a stake account -- Add additional Lamports for staking
     For example, we add 50 lamports as part of the stake */
-let lamportsForStakeAccount = (await connection.getMinimumBalanceForRentExemption(web3.StakeProgram.space)) + 50;
+let lamportsForStakeAccount =
+  (await connection.getMinimumBalanceForRentExemption(
+    web3.StakeProgram.space,
+  )) + 50;
 
 let createAccountTransaction = web3.StakeProgram.createAccount({
-    fromPubkey: fromPublicKey.publicKey,
-    authorized: new web3.Authorized(authorizedAccount.publicKey, authorizedAccount.publicKey),
-    lamports: lamportsForStakeAccount,
-    lockup: new web3.Lockup(0, 0, fromPublicKey.publicKey),
-    stakePubkey: stakeAccount.publicKey
+  fromPubkey: fromPublicKey.publicKey,
+  authorized: new web3.Authorized(
+    authorizedAccount.publicKey,
+    authorizedAccount.publicKey,
+  ),
+  lamports: lamportsForStakeAccount,
+  lockup: new web3.Lockup(0, 0, fromPublicKey.publicKey),
+  stakePubkey: stakeAccount.publicKey,
 });
-await web3.sendAndConfirmTransaction(connection, createAccountTransaction, [fromPublicKey, stakeAccount]);
+await web3.sendAndConfirmTransaction(connection, createAccountTransaction, [
+  fromPublicKey,
+  stakeAccount,
+]);
 
 // Check that stake is available
 let stakeBalance = await connection.getBalance(stakeAccount.publicKey);
-console.log(`Stake balance: ${stakeBalance}`)
+console.log(`Stake balance: ${stakeBalance}`);
 // Stake balance: 2282930
 
 // We can verify the state of our stake. This may take some time to become active
@@ -686,42 +721,49 @@ console.log(`Stake state: ${stakeState.state}`);
 
 // To delegate our stake, we get the current vote accounts and choose the first
 let voteAccounts = await connection.getVoteAccounts();
-let voteAccount = voteAccounts.current.concat(
-    voteAccounts.delinquent,
-)[0];
+let voteAccount = voteAccounts.current.concat(voteAccounts.delinquent)[0];
 let votePubkey = new web3.PublicKey(voteAccount.votePubkey);
 
 // We can then delegate our stake to the voteAccount
 let delegateTransaction = web3.StakeProgram.delegate({
-    stakePubkey: stakeAccount.publicKey,
-    authorizedPubkey: authorizedAccount.publicKey,
-    votePubkey: votePubkey,
+  stakePubkey: stakeAccount.publicKey,
+  authorizedPubkey: authorizedAccount.publicKey,
+  votePubkey: votePubkey,
 });
-await web3.sendAndConfirmTransaction(connection, delegateTransaction, [fromPublicKey, authorizedAccount]);
+await web3.sendAndConfirmTransaction(connection, delegateTransaction, [
+  fromPublicKey,
+  authorizedAccount,
+]);
 
 // To withdraw our funds, we first have to deactivate the stake
 let deactivateTransaction = web3.StakeProgram.deactivate({
-    stakePubkey: stakeAccount.publicKey,
-    authorizedPubkey: authorizedAccount.publicKey,
+  stakePubkey: stakeAccount.publicKey,
+  authorizedPubkey: authorizedAccount.publicKey,
 });
-await web3.sendAndConfirmTransaction(connection, deactivateTransaction, [fromPublicKey, authorizedAccount]);
+await web3.sendAndConfirmTransaction(connection, deactivateTransaction, [
+  fromPublicKey,
+  authorizedAccount,
+]);
 
 // Once deactivated, we can withdraw our funds
 let withdrawTransaction = web3.StakeProgram.withdraw({
-    stakePubkey: stakeAccount.publicKey,
-    authorizedPubkey: authorizedAccount.publicKey,
-    toPubkey: fromPublicKey.publicKey,
-    lamports: stakeBalance,
+  stakePubkey: stakeAccount.publicKey,
+  authorizedPubkey: authorizedAccount.publicKey,
+  toPubkey: fromPublicKey.publicKey,
+  lamports: stakeBalance,
 });
 
-await web3.sendAndConfirmTransaction(connection, withdrawTransaction, [fromPublicKey, authorizedAccount]);
+await web3.sendAndConfirmTransaction(connection, withdrawTransaction, [
+  fromPublicKey,
+  authorizedAccount,
+]);
 ```
 
 ### Authorized
 
 [Source Documentation](https://solana-labs.github.io/solana-web3.js/classes/Authorized.html)
 
-Authorized is an object used when creating an authorized account for staking within Safecoin. You can designate a `staker` and `withdrawer` separately, allowing for a different account to withdraw other than the staker.
+Authorized is an object used when creating an authorized account for staking within Solana. You can designate a `staker` and `withdrawer` separately, allowing for a different account to withdraw other than the staker.
 
 You can find more usage of the `Authorized` object under [`StakeProgram`](javascript-api.md#StakeProgram)
 
@@ -734,7 +776,12 @@ Lockup is used in conjunction with the [StakeProgram](javascript-api.md#StakePro
 #### Example Usage
 
 ```javascript
-const {Authorized, Keypair, Lockup, StakeProgram} = require("@safecoin/web3.js");
+const {
+  Authorized,
+  Keypair,
+  Lockup,
+  StakeProgram,
+} = require("@solana/web3.js");
 
 let account = Keypair.generate();
 let stakeAccount = Keypair.generate();
@@ -742,13 +789,14 @@ let authorized = new Authorized(account.publicKey, account.publicKey);
 let lockup = new Lockup(0, 0, account.publicKey);
 
 let createStakeAccountInstruction = StakeProgram.createAccount({
-    fromPubkey: account.publicKey,
-    authorized: authorized,
-    lamports: 1000,
-    lockup: lockup,
-    stakePubkey: stakeAccount.publicKey
+  fromPubkey: account.publicKey,
+  authorized: authorized,
+  lamports: 1000,
+  lockup: lockup,
+  stakePubkey: stakeAccount.publicKey,
 });
 ```
+
 The above code creates a `createStakeAccountInstruction` to be used when creating an account with the `StakeProgram`. The Lockup is set to 0 for both the epoch and Unix timestamp, disabling lockup for the account.
 
 See [StakeProgram](javascript-api.md#StakeProgram) for more.

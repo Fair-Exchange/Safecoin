@@ -5,7 +5,7 @@ use {
     console::Emoji,
     dialoguer::{theme::ColorfulTheme, Select},
     semver::Version as FirmwareVersion,
-    safecoin_sdk::derivation_path::DerivationPath,
+    solana_sdk::derivation_path::DerivationPath,
     std::{fmt, sync::Arc},
 };
 #[cfg(feature = "hidapi")]
@@ -13,7 +13,7 @@ use {
     crate::{ledger_error::LedgerError, locator::Manufacturer},
     log::*,
     num_traits::FromPrimitive,
-    safecoin_sdk::{pubkey::Pubkey, signature::Signature},
+    solana_sdk::{pubkey::Pubkey, signature::Signature},
     std::{cmp::min, convert::TryFrom},
 };
 
@@ -67,6 +67,7 @@ mod commands {
     pub const GET_APP_CONFIGURATION: u8 = 0x04;
     pub const GET_PUBKEY: u8 = 0x05;
     pub const SIGN_MESSAGE: u8 = 0x06;
+    pub const SIGN_OFFCHAIN_MESSAGE: u8 = 0x07;
 }
 
 enum ConfigurationVersion {
@@ -278,7 +279,7 @@ impl LedgerWallet {
                 self.pretty_path
             );
             let result = self.read()?;
-            println!("{}Approved", CHECK_MARK);
+            println!("{CHECK_MARK}Approved");
             Ok(result)
         } else {
             self.read()
@@ -419,10 +420,7 @@ impl RemoteWallet<hidapi::DeviceInfo> for LedgerWallet {
             0,
             &derivation_path,
         )?;
-        if key.len() != 32 {
-            return Err(RemoteWalletError::Protocol("Key packet size mismatch"));
-        }
-        Ok(Pubkey::new(&key))
+        Pubkey::try_from(key).map_err(|_| RemoteWalletError::Protocol("Key packet size mismatch"))
     }
 
     fn sign_message(
@@ -430,6 +428,13 @@ impl RemoteWallet<hidapi::DeviceInfo> for LedgerWallet {
         derivation_path: &DerivationPath,
         data: &[u8],
     ) -> Result<Signature, RemoteWalletError> {
+        // If the first byte of the data is 0xff then it is an off-chain message
+        // because it starts with the Domain Specifier b"\xffsolana offchain".
+        // On-chain messages, in contrast, start with either 0x80 (MESSAGE_VERSION_PREFIX)
+        // or the number of signatures (0x00 - 0x13).
+        if !data.is_empty() && data[0] == 0xff {
+            return self.sign_offchain_message(derivation_path, data);
+        }
         let mut payload = if self.outdated_app() {
             extend_and_serialize(derivation_path)
         } else {
@@ -498,10 +503,55 @@ impl RemoteWallet<hidapi::DeviceInfo> for LedgerWallet {
             chunks.last_mut().unwrap().0 &= !P2_MORE;
 
             for (p2, payload) in chunks {
-                result = self.send_apdu(commands::SIGN_MESSAGE, p1, p2, &payload)?;
+                result = self.send_apdu(
+                    if self.outdated_app() {
+                        commands::DEPRECATED_SIGN_MESSAGE
+                    } else {
+                        commands::SIGN_MESSAGE
+                    },
+                    p1,
+                    p2,
+                    &payload,
+                )?;
             }
         }
 
+        if result.len() != 64 {
+            return Err(RemoteWalletError::Protocol(
+                "Signature packet size mismatch",
+            ));
+        }
+        Ok(Signature::new(&result))
+    }
+
+    fn sign_offchain_message(
+        &self,
+        derivation_path: &DerivationPath,
+        message: &[u8],
+    ) -> Result<Signature, RemoteWalletError> {
+        if message.len()
+            > solana_sdk::offchain_message::v0::OffchainMessage::MAX_LEN_LEDGER
+                + solana_sdk::offchain_message::v0::OffchainMessage::HEADER_LEN
+        {
+            return Err(RemoteWalletError::InvalidInput(
+                "Off-chain message to sign is too long".to_string(),
+            ));
+        }
+
+        let mut data = extend_and_serialize_multiple(&[derivation_path]);
+        data.extend_from_slice(message);
+
+        let p1 = P1_CONFIRM;
+        let mut p2 = 0;
+        let mut payload = data.as_slice();
+        while payload.len() > MAX_CHUNK_SIZE {
+            let chunk = &payload[..MAX_CHUNK_SIZE];
+            self.send_apdu(commands::SIGN_OFFCHAIN_MESSAGE, p1, p2 | P2_MORE, chunk)?;
+            payload = &payload[MAX_CHUNK_SIZE..];
+            p2 |= P2_EXTEND;
+        }
+
+        let result = self.send_apdu(commands::SIGN_OFFCHAIN_MESSAGE, p1, p2, payload)?;
         if result.len() != 64 {
             return Err(RemoteWalletError::Protocol(
                 "Signature packet size mismatch",
@@ -579,9 +629,8 @@ pub fn get_ledger_from_info(
 
     let wallet_host_device_path = if host_device_paths.len() > 1 {
         let selection = Select::with_theme(&ColorfulTheme::default())
-            .with_prompt(&format!(
-                "Multiple hardware wallets found. Please select a device for {:?}",
-                keypair_name
+            .with_prompt(format!(
+                "Multiple hardware wallets found. Please select a device for {keypair_name:?}"
             ))
             .default(0)
             .items(&items[..])

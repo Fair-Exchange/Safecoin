@@ -1,8 +1,8 @@
 use {
-    safecoin_gossip::cluster_info::ClusterInfo,
+    solana_gossip::cluster_info::ClusterInfo,
     solana_poh::poh_recorder::PohRecorder,
-    safecoin_sdk::{clock::NUM_CONSECUTIVE_LEADER_SLOTS, pubkey::Pubkey},
-    safecoin_send_transaction_service::tpu_info::TpuInfo,
+    solana_sdk::{clock::NUM_CONSECUTIVE_LEADER_SLOTS, pubkey::Pubkey},
+    solana_send_transaction_service::tpu_info::TpuInfo,
     std::{
         collections::HashMap,
         net::SocketAddr,
@@ -59,7 +59,7 @@ impl TpuInfo for ClusterTpuInfo {
 mod test {
     use {
         super::*,
-        safecoin_gossip::contact_info::ContactInfo,
+        solana_gossip::contact_info::ContactInfo,
         solana_ledger::{
             blockstore::Blockstore, get_tmp_ledger_path, leader_schedule_cache::LeaderScheduleCache,
         },
@@ -69,13 +69,13 @@ mod test {
                 create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
             },
         },
-        safecoin_sdk::{
+        solana_sdk::{
             poh_config::PohConfig,
             signature::{Keypair, Signer},
             timing::timestamp,
         },
         solana_streamer::socket::SocketAddrSpace,
-        std::sync::atomic::AtomicBool,
+        std::{net::Ipv4Addr, sync::atomic::AtomicBool},
     };
 
     #[test]
@@ -108,7 +108,7 @@ mod test {
                 &Pubkey::default(),
                 &Arc::new(blockstore),
                 &Arc::new(LeaderScheduleCache::new_from_bank(&bank)),
-                &Arc::new(PohConfig::default()),
+                &PohConfig::default(),
                 Arc::new(AtomicBool::default()),
             );
 
@@ -119,9 +119,9 @@ mod test {
                 SocketAddrSpace::Unspecified,
             ));
 
-            let validator0_socket = SocketAddr::from(([127, 0, 0, 1], 1111));
-            let validator1_socket = SocketAddr::from(([127, 0, 0, 1], 2222));
-            let validator2_socket = SocketAddr::from(([127, 0, 0, 1], 3333));
+            let validator0_socket = SocketAddr::from((Ipv4Addr::LOCALHOST, 1111));
+            let validator1_socket = SocketAddr::from((Ipv4Addr::LOCALHOST, 2222));
+            let validator2_socket = SocketAddr::from((Ipv4Addr::LOCALHOST, 3333));
             let recent_peers: HashMap<_, _> = vec![
                 (
                     validator_vote_keypairs0.node_keypair.pubkey(),

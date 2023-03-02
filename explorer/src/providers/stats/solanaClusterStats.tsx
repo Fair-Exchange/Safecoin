@@ -1,5 +1,5 @@
 import React from "react";
-import { Connection } from "@safecoin/web3.js";
+import { Connection } from "@solana/web3.js";
 import { useCluster, Cluster } from "providers/cluster";
 import {
   DashboardInfo,
@@ -81,7 +81,7 @@ function getConnection(url: string): Connection | undefined {
   } catch (error) {}
 }
 
-export function SafecoinClusterStatsProvider({ children }: Props) {
+export function SolanaClusterStatsProvider({ children }: Props) {
   const { cluster, url } = useCluster();
   const [active, setActive] = React.useState(false);
   const [dashboardInfo, dispatchDashboardInfo] = React.useReducer(

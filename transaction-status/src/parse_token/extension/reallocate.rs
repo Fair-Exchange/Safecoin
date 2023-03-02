@@ -1,4 +1,4 @@
-use {super::*, safe_token_2022::extension::ExtensionType};
+use {super::*, spl_token_2022::extension::ExtensionType};
 
 pub(in crate::parse_token) fn parse_reallocate_instruction(
     extension_types: Vec<ExtensionType>,
@@ -32,8 +32,8 @@ mod test {
     use {
         super::*,
         crate::parse_token::test::*,
-        safecoin_sdk::pubkey::Pubkey,
-        safe_token_2022::{instruction::reallocate, safecoin_program::message::Message},
+        solana_sdk::pubkey::Pubkey,
+        spl_token_2022::{instruction::reallocate, solana_program::message::Message},
     };
 
     #[test]
@@ -49,7 +49,7 @@ mod test {
         // Single owner
         let owner_pubkey = Pubkey::new_unique();
         let reallocate_ix = reallocate(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(account_pubkey),
             &convert_pubkey(payer_pubkey),
             &convert_pubkey(owner_pubkey),
@@ -71,7 +71,7 @@ mod test {
                     "account": account_pubkey.to_string(),
                     "payer": payer_pubkey.to_string(),
                     "owner": owner_pubkey.to_string(),
-                    "systemProgram": safecoin_sdk::system_program::id().to_string(),
+                    "systemProgram": solana_sdk::system_program::id().to_string(),
                     "extensionTypes": ["transferFeeAmount", "memoTransfer"],
                 })
             }
@@ -82,7 +82,7 @@ mod test {
         let multisig_signer0 = Pubkey::new_unique();
         let multisig_signer1 = Pubkey::new_unique();
         let reallocate_ix = reallocate(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(account_pubkey),
             &convert_pubkey(payer_pubkey),
             &convert_pubkey(multisig_pubkey),
@@ -111,7 +111,7 @@ mod test {
                         multisig_signer0.to_string(),
                         multisig_signer1.to_string(),
                     ],
-                    "systemProgram": safecoin_sdk::system_program::id().to_string(),
+                    "systemProgram": solana_sdk::system_program::id().to_string(),
                     "extensionTypes": ["transferFeeAmount", "memoTransfer"],
                 })
             }

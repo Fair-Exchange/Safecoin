@@ -1,18 +1,18 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
 name = "solana-geyser-plugin-interface"
-description = "The Safecoin Geyser plugin interface."
-version = "1.14.3"
-repository = "https://github.com/fair-exchange/safecoin"
+description = "The Solana Geyser plugin interface."
+version = "1.15.3"
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
+homepage = "https://solana.com/"
 documentation = "https://docs.rs/solana-geyser-plugin-interface"
 
 [dependencies]
 log = "0.4.17"
-safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.14.3" }
+solana-sdk = { path = "../sdk", version = "=1.15.3" }
+solana-transaction-status = { path = "../transaction-status", version = "=1.15.3" }
 thiserror = "1.0.31"
 
 [package.metadata.docs.rs]

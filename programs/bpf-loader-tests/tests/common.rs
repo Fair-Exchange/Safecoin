@@ -2,8 +2,8 @@
 
 use {
     solana_bpf_loader_program::{process_instruction, upgradeable::id},
-    safecoin_program_test::*,
-    safecoin_sdk::{
+    solana_program_test::*,
+    solana_sdk::{
         account::AccountSharedData,
         account_utils::StateMut,
         bpf_loader_upgradeable::UpgradeableLoaderState,
@@ -49,8 +49,7 @@ pub async fn assert_ix_error(
             .unwrap_err()
             .unwrap(),
         TransactionError::InstructionError(0, expected_err),
-        "{}",
-        assertion_failed_msg,
+        "{assertion_failed_msg}",
     );
 }
 
@@ -59,6 +58,7 @@ pub async fn add_upgradeable_loader_account(
     account_address: &Pubkey,
     account_state: &UpgradeableLoaderState,
     account_data_len: usize,
+    account_callback: impl Fn(&mut AccountSharedData),
 ) {
     let rent = context.banks_client.get_rent().await.unwrap();
     let mut account = AccountSharedData::new(
@@ -69,5 +69,6 @@ pub async fn add_upgradeable_loader_account(
     account
         .set_state(account_state)
         .expect("state failed to serialize into account data");
+    account_callback(&mut account);
     context.set_account(account_address, &account);
 }

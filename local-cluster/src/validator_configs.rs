@@ -1,6 +1,6 @@
 use {
     solana_core::validator::ValidatorConfig,
-    safecoin_sdk::exit::Exit,
+    solana_sdk::exit::Exit,
     std::sync::{Arc, RwLock},
 };
 
@@ -27,13 +27,11 @@ pub fn safe_clone_config(config: &ValidatorConfig) -> ValidatorConfig {
         new_hard_forks: config.new_hard_forks.clone(),
         known_validators: config.known_validators.clone(),
         repair_validators: config.repair_validators.clone(),
+        repair_whitelist: config.repair_whitelist.clone(),
         gossip_validators: config.gossip_validators.clone(),
         halt_on_known_validators_accounts_hash_mismatch: config
             .halt_on_known_validators_accounts_hash_mismatch,
         accounts_hash_fault_injection_slots: config.accounts_hash_fault_injection_slots,
-        no_rocksdb_compaction: config.no_rocksdb_compaction,
-        rocksdb_compaction_interval: config.rocksdb_compaction_interval,
-        rocksdb_max_compaction_jitter: config.rocksdb_max_compaction_jitter,
         accounts_hash_interval_slots: config.accounts_hash_interval_slots,
         max_genesis_archive_unpacked_size: config.max_genesis_archive_unpacked_size,
         wal_recovery_mode: config.wal_recovery_mode.clone(),
@@ -51,11 +49,11 @@ pub fn safe_clone_config(config: &ValidatorConfig) -> ValidatorConfig {
         no_os_disk_stats_reporting: config.no_os_disk_stats_reporting,
         poh_pinned_cpu_core: config.poh_pinned_cpu_core,
         account_indexes: config.account_indexes.clone(),
-        accounts_db_caching_enabled: config.accounts_db_caching_enabled,
         warp_slot: config.warp_slot,
         accounts_db_test_hash_calculation: config.accounts_db_test_hash_calculation,
         accounts_db_skip_shrink: config.accounts_db_skip_shrink,
         tpu_coalesce_ms: config.tpu_coalesce_ms,
+        staked_nodes_overrides: config.staked_nodes_overrides.clone(),
         validator_exit: Arc::new(RwLock::new(Exit::default())),
         poh_hashes_per_batch: config.poh_hashes_per_batch,
         process_ledger_before_services: config.process_ledger_before_services,
@@ -65,6 +63,8 @@ pub fn safe_clone_config(config: &ValidatorConfig) -> ValidatorConfig {
         wait_to_vote_slot: config.wait_to_vote_slot,
         ledger_column_options: config.ledger_column_options.clone(),
         runtime_config: config.runtime_config.clone(),
+        replay_slots_concurrently: config.replay_slots_concurrently,
+        banking_trace_dir_byte_limit: config.banking_trace_dir_byte_limit,
     }
 }
 

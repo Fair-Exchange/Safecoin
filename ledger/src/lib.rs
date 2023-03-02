@@ -40,4 +40,4 @@ extern crate log;
 extern crate lazy_static;
 
 #[macro_use]
-extern crate safecoin_frozen_abi_macro;
+extern crate solana_frozen_abi_macro;

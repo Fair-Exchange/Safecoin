@@ -4,14 +4,16 @@ use {
     log::*,
     rand::{thread_rng, Rng},
     rayon::prelude::*,
-    safecoin_account_decoder::parse_token::safe_token_pubkey,
-    safecoin_clap_utils::input_parsers::pubkey_of,
-    safecoin_client::{rpc_client::RpcClient, transaction_executor::TransactionExecutor},
-    safecoin_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT},
-    safecoin_gossip::gossip_service::discover,
-    solana_runtime::inline_safe_token,
-    safecoin_sdk::{
+    solana_account_decoder::parse_token::spl_token_pubkey,
+    solana_clap_utils::input_parsers::pubkey_of,
+    solana_client::transaction_executor::TransactionExecutor,
+    solana_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT},
+    solana_gossip::gossip_service::discover,
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_runtime::inline_spl_token,
+    solana_sdk::{
         commitment_config::CommitmentConfig,
+        hash::Hash,
         instruction::{AccountMeta, Instruction},
         message::Message,
         pubkey::Pubkey,
@@ -21,10 +23,10 @@ use {
         transaction::Transaction,
     },
     solana_streamer::socket::SocketAddrSpace,
-    safecoin_transaction_status::parse_token::safe_token_instruction,
+    solana_transaction_status::parse_token::spl_token_instruction,
     std::{
         cmp::min,
-        net::SocketAddr,
+        net::{Ipv4Addr, SocketAddr},
         process::exit,
         sync::{
             atomic::{AtomicU64, Ordering},
@@ -34,6 +36,52 @@ use {
         time::{Duration, Instant},
     },
 };
+
+pub const MAX_RPC_CALL_RETRIES: usize = 5;
+
+pub fn poll_get_latest_blockhash(client: &RpcClient) -> Option<Hash> {
+    let mut num_retries = MAX_RPC_CALL_RETRIES;
+    loop {
+        let response = client.get_latest_blockhash();
+        if let Ok(blockhash) = response {
+            return Some(blockhash);
+        } else {
+            num_retries -= 1;
+            warn!(
+                "get_latest_blockhash failure: {:?}. remaining retries {}",
+                response, num_retries
+            );
+        }
+        if num_retries == 0 {
+            panic!("failed to get_latest_blockhash(), rpc node down?")
+        }
+        sleep(Duration::from_millis(100));
+    }
+}
+
+pub fn poll_get_fee_for_message(client: &RpcClient, message: &mut Message) -> (Option<u64>, Hash) {
+    let mut num_retries = MAX_RPC_CALL_RETRIES;
+    loop {
+        let response = client.get_fee_for_message(message);
+
+        if let Ok(fee) = response {
+            return (Some(fee), message.recent_blockhash);
+        } else {
+            num_retries -= 1;
+            warn!(
+                "get_fee_for_message failure: {:?}. remaining retries {}",
+                response, num_retries
+            );
+
+            let blockhash = poll_get_latest_blockhash(client).expect("blockhash");
+            message.recent_blockhash = blockhash;
+        }
+        if num_retries == 0 {
+            panic!("failed to get_fee_for_message(), rpc node down?")
+        }
+        sleep(Duration::from_millis(100));
+    }
+}
 
 pub fn airdrop_lamports(
     client: &RpcClient,
@@ -53,8 +101,13 @@ pub fn airdrop_lamports(
             id.pubkey(),
         );
 
-        let blockhash = client.get_latest_blockhash().unwrap();
-        match request_airdrop_transaction(faucet_addr, &id.pubkey(), airdrop_amount, blockhash) {
+        let blockhash = poll_get_latest_blockhash(client);
+        match request_airdrop_transaction(
+            faucet_addr,
+            &id.pubkey(),
+            airdrop_amount,
+            blockhash.unwrap(),
+        ) {
             Ok(transaction) => {
                 let mut tries = 0;
                 loop {
@@ -66,22 +119,20 @@ pub fn airdrop_lamports(
                     }
                     if tries >= 5 {
                         panic!(
-                            "Error requesting airdrop: to addr: {:?} amount: {} {:?}",
-                            faucet_addr, airdrop_amount, result
+                            "Error requesting airdrop: to addr: {faucet_addr:?} amount: {airdrop_amount} {result:?}"
                         )
                     }
                 }
             }
             Err(err) => {
                 panic!(
-                    "Error requesting airdrop: {:?} to addr: {:?} amount: {}",
-                    err, faucet_addr, airdrop_amount
+                    "Error requesting airdrop: {err:?} to addr: {faucet_addr:?} amount: {airdrop_amount}"
                 );
             }
         };
 
         let current_balance = client.get_balance(&id.pubkey()).unwrap_or_else(|e| {
-            panic!("airdrop error {}", e);
+            panic!("airdrop error {e}");
         });
         info!("current balance {}...", current_balance);
 
@@ -115,10 +166,9 @@ fn make_create_message(
     let space = maybe_space.unwrap_or_else(|| thread_rng().gen_range(0, 1000));
 
     let instructions: Vec<_> = (0..num_instructions)
-        .into_iter()
         .flat_map(|_| {
             let program_id = if mint.is_some() {
-                inline_safe_token::id()
+                inline_spl_token::id()
             } else {
                 system_program::id()
             };
@@ -135,12 +185,12 @@ fn make_create_message(
                 &program_id,
             )];
             if let Some(mint_address) = mint {
-                instructions.push(safe_token_instruction(
-                    safe_token::instruction::initialize_account(
-                        &safe_token::id(),
-                        &safe_token_pubkey(&to_pubkey),
-                        &safe_token_pubkey(&mint_address),
-                        &safe_token_pubkey(&base_keypair.pubkey()),
+                instructions.push(spl_token_instruction(
+                    spl_token::instruction::initialize_account(
+                        &spl_token::id(),
+                        &spl_token_pubkey(&to_pubkey),
+                        &spl_token_pubkey(&mint_address),
+                        &spl_token_pubkey(&base_keypair.pubkey()),
                     )
                     .unwrap(),
                 ));
@@ -160,13 +210,12 @@ fn make_close_message(
     max_closed: Arc<AtomicU64>,
     num_instructions: usize,
     balance: u64,
-    safe_token: bool,
+    spl_token: bool,
 ) -> Message {
     let instructions: Vec<_> = (0..num_instructions)
-        .into_iter()
         .filter_map(|_| {
-            let program_id = if safe_token {
-                inline_safe_token::id()
+            let program_id = if spl_token {
+                inline_spl_token::id()
             } else {
                 system_program::id()
             };
@@ -178,13 +227,13 @@ fn make_close_message(
             let seed = max_closed.fetch_add(1, Ordering::Relaxed).to_string();
             let address =
                 Pubkey::create_with_seed(&base_keypair.pubkey(), &seed, &program_id).unwrap();
-            if safe_token {
-                Some(safe_token_instruction(
-                    safe_token::instruction::close_account(
-                        &safe_token::id(),
-                        &safe_token_pubkey(&address),
-                        &safe_token_pubkey(&keypair.pubkey()),
-                        &safe_token_pubkey(&base_keypair.pubkey()),
+            if spl_token {
+                Some(spl_token_instruction(
+                    spl_token::instruction::close_account(
+                        &spl_token::id(),
+                        &spl_token_pubkey(&address),
+                        &spl_token_pubkey(&keypair.pubkey()),
+                        &spl_token_pubkey(&base_keypair.pubkey()),
                         &[],
                     )
                     .unwrap(),
@@ -228,7 +277,7 @@ fn run_accounts_bench(
     let mut latest_blockhash = Instant::now();
     let mut last_log = Instant::now();
     let mut count = 0;
-    let mut blockhash = client.get_latest_blockhash().expect("blockhash");
+    let mut blockhash = poll_get_latest_blockhash(&client).expect("blockhash");
     let mut tx_sent_count = 0;
     let mut total_accounts_created = 0;
     let mut total_accounts_closed = 0;
@@ -275,14 +324,13 @@ fn run_accounts_bench(
 
     loop {
         if latest_blockhash.elapsed().as_millis() > 10_000 {
-            blockhash = client.get_latest_blockhash().expect("blockhash");
+            blockhash = poll_get_latest_blockhash(&client).expect("blockhash");
             latest_blockhash = Instant::now();
         }
 
         message.recent_blockhash = blockhash;
-        let fee = client
-            .get_fee_for_message(&message)
-            .expect("get_fee_for_message");
+        let (fee, blockhash) = poll_get_fee_for_message(&client, &mut message);
+        let fee = fee.expect("get_fee_for_message");
         let lamports = min_balance + fee;
 
         for (i, balance) in balances.iter_mut().enumerate() {
@@ -293,7 +341,7 @@ fn run_accounts_bench(
                 last_balance = Instant::now();
                 if *balance < lamports * 2 {
                     info!(
-                        "Balance {} is less than needed: {}, doing aidrop...",
+                        "Balance {} is less than needed: {}, doing airdrop...",
                         balance, lamports
                     );
                     if !airdrop_lamports(
@@ -380,7 +428,7 @@ fn run_accounts_bench(
         }
 
         count += 1;
-        if last_log.elapsed().as_millis() > 3000 || count >= iterations {
+        if last_log.elapsed().as_millis() > 3000 || (count >= iterations && iterations != 0) {
             info!(
                 "total_accounts_created: {} total_accounts_closed: {} tx_sent_count: {} loop_count: {} balance(s): {:?}",
                 total_accounts_created, total_accounts_closed, tx_sent_count, count, balances
@@ -403,13 +451,12 @@ fn run_accounts_bench(
             let max_created_seed = seed_tracker.max_created.load(Ordering::Relaxed);
 
             if latest_blockhash.elapsed().as_millis() > 10_000 {
-                blockhash = client.get_latest_blockhash().expect("blockhash");
+                blockhash = poll_get_latest_blockhash(&client).expect("blockhash");
                 latest_blockhash = Instant::now();
             }
             message.recent_blockhash = blockhash;
-            let fee = client
-                .get_fee_for_message(&message)
-                .expect("get_fee_for_message");
+            let (fee, blockhash) = poll_get_fee_for_message(&client, &mut message);
+            let fee = fee.expect("get_fee_for_message");
 
             let sigs_len = executor.num_outstanding();
             if sigs_len < batch_size && max_closed_seed < max_created_seed {
@@ -484,7 +531,7 @@ fn main() {
                 .long("entrypoint")
                 .takes_value(true)
                 .value_name("HOST:PORT")
-                .help("RPC entrypoint address. Usually <ip>:8328"),
+                .help("RPC entrypoint address. Usually <ip>:8899"),
         )
         .arg(
             Arg::with_name("faucet_addr")
@@ -570,18 +617,18 @@ fn main() {
 
     let skip_gossip = !matches.is_present("check_gossip");
 
-    let port = if skip_gossip { DEFAULT_RPC_PORT } else { 10015 };
-    let mut entrypoint_addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let port = if skip_gossip { DEFAULT_RPC_PORT } else { 8001 };
+    let mut entrypoint_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
     if let Some(addr) = matches.value_of("entrypoint") {
         entrypoint_addr = solana_net_utils::parse_host_port(addr).unwrap_or_else(|e| {
-            eprintln!("failed to parse entrypoint address: {}", e);
+            eprintln!("failed to parse entrypoint address: {e}");
             exit(1)
         });
     }
-    let mut faucet_addr = SocketAddr::from(([127, 0, 0, 1], FAUCET_PORT));
+    let mut faucet_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, FAUCET_PORT));
     if let Some(addr) = matches.value_of("faucet_addr") {
         faucet_addr = solana_net_utils::parse_host_port(addr).unwrap_or_else(|e| {
-            eprintln!("failed to parse entrypoint address: {}", e);
+            eprintln!("failed to parse entrypoint address: {e}");
             exit(1)
         });
     }
@@ -593,7 +640,7 @@ fn main() {
     let iterations = value_t!(matches, "iterations", usize).unwrap_or(10);
     let num_instructions = value_t!(matches, "num_instructions", usize).unwrap_or(1);
     if num_instructions == 0 || num_instructions > 500 {
-        eprintln!("bad num_instructions: {}", num_instructions);
+        eprintln!("bad num_instructions: {num_instructions}");
         exit(1);
     }
 
@@ -603,7 +650,7 @@ fn main() {
         .iter()
         .map(|keypair_string| {
             read_keypair_file(keypair_string)
-                .unwrap_or_else(|_| panic!("bad keypair {:?}", keypair_string))
+                .unwrap_or_else(|_| panic!("bad keypair {keypair_string:?}"))
         })
         .collect();
     let mut payer_keypair_refs: Vec<&Keypair> = vec![];
@@ -625,7 +672,7 @@ fn main() {
             SocketAddrSpace::Unspecified,
         )
         .unwrap_or_else(|err| {
-            eprintln!("Failed to discover {} node: {:?}", entrypoint_addr, err);
+            eprintln!("Failed to discover {entrypoint_addr} node: {err:?}");
             exit(1);
         });
 
@@ -656,16 +703,16 @@ pub mod test {
     use {
         super::*,
         solana_core::validator::ValidatorConfig,
-        safecoin_faucet::faucet::run_local_faucet,
+        solana_faucet::faucet::run_local_faucet,
         solana_local_cluster::{
             local_cluster::{ClusterConfig, LocalCluster},
             validator_configs::make_identical_validator_configs,
         },
-        safecoin_measure::measure::Measure,
-        safecoin_sdk::{native_token::sol_to_lamports, poh_config::PohConfig},
+        solana_measure::measure::Measure,
+        solana_sdk::{native_token::sol_to_lamports, poh_config::PohConfig},
         solana_test_validator::TestValidator,
-        safe_token::{
-            safecoin_program::program_pack::Pack,
+        spl_token::{
+            solana_program::program_pack::Pack,
             state::{Account, Mint},
         },
     };
@@ -683,7 +730,7 @@ pub mod test {
             ..ClusterConfig::default()
         };
 
-        let faucet_addr = SocketAddr::from(([127, 0, 0, 1], 9900));
+        let faucet_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 9900));
         let cluster = LocalCluster::new(&mut config, SocketAddrSpace::Unspecified);
         let iterations = 10;
         let maybe_space = None;
@@ -693,7 +740,7 @@ pub mod test {
         let num_instructions = 2;
         let mut start = Measure::start("total accounts run");
         run_accounts_bench(
-            cluster.entry_point_info.rpc,
+            cluster.entry_point_info.rpc().unwrap(),
             faucet_addr,
             &[&cluster.funding_keypair],
             iterations,
@@ -710,7 +757,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_create_then_reclaim_safe_token_accounts() {
+    fn test_create_then_reclaim_spl_token_accounts() {
         solana_logger::setup();
         let mint_keypair = Keypair::new();
         let mint_pubkey = mint_keypair.pubkey();
@@ -755,13 +802,13 @@ pub mod test {
                     &spl_mint_keypair.pubkey(),
                     spl_mint_rent,
                     spl_mint_len as u64,
-                    &inline_safe_token::id(),
+                    &inline_spl_token::id(),
                 ),
-                safe_token_instruction(
-                    safe_token::instruction::initialize_mint(
-                        &safe_token::id(),
-                        &safe_token_pubkey(&spl_mint_keypair.pubkey()),
-                        &safe_token_pubkey(&spl_mint_keypair.pubkey()),
+                spl_token_instruction(
+                    spl_token::instruction::initialize_mint(
+                        &spl_token::id(),
+                        &spl_token_pubkey(&spl_mint_keypair.pubkey()),
+                        &spl_token_pubkey(&spl_mint_keypair.pubkey()),
                         None,
                         2,
                     )

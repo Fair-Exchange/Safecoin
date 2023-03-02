@@ -4,7 +4,7 @@ import {
   Connection,
   SignatureResult,
   TransactionConfirmationStatus,
-} from "@safecoin/web3.js";
+} from "@solana/web3.js";
 import { useCluster, Cluster } from "../cluster";
 import { DetailsProvider } from "./parsed";
 import { RawDetailsProvider } from "./raw";

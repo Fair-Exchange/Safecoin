@@ -4,7 +4,7 @@ use {
 };
 
 /// The serialized AppendVecId type is fixed as usize
-pub(super) type SerializedAppendVecId = usize;
+pub(crate) type SerializedAppendVecId = usize;
 
 // Serializable version of AccountStorageEntry for snapshot format
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -37,4 +37,4 @@ impl From<&AccountStorageEntry> for SerializableAccountStorageEntry {
 }
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-impl safecoin_frozen_abi::abi_example::IgnoreAsHelper for SerializableAccountStorageEntry {}
+impl solana_frozen_abi::abi_example::IgnoreAsHelper for SerializableAccountStorageEntry {}

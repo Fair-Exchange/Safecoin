@@ -1,20 +1,21 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
-name = "safecoin-store-tool"
+name = "solana-store-tool"
 description = "Tool to inspect append vecs"
-version = "1.14.3"
-repository = "https://github.com/fair-exchange/safecoin"
+version = "1.15.3"
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
+homepage = "https://solana.com/"
 publish = false
 
 [dependencies]
 clap = "2.33.1"
 log = { version = "0.4.17" }
-safecoin-logger = { path = "../../logger", version = "=1.14.3" }
-safecoin-runtime = { path = "..", version = "=1.14.3" }
-safecoin-version = { path = "../../version", version = "=1.14.3" }
+solana-logger = { path = "../../logger", version = "=1.15.3" }
+solana-runtime = { path = "..", version = "=1.15.3" }
+solana-sdk = { path = "../../sdk", version = "=1.15.3" }
+solana-version = { path = "../../version", version = "=1.15.3" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

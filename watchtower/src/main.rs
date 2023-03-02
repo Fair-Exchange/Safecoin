@@ -4,17 +4,18 @@
 use {
     clap::{crate_description, crate_name, value_t, value_t_or_exit, App, Arg},
     log::*,
-    safecoin_clap_utils::{
+    solana_clap_utils::{
         input_parsers::pubkeys_of,
         input_validators::{is_parsable, is_pubkey_or_keypair, is_url},
     },
-    safecoin_cli_output::display::format_labeled_address,
-    safecoin_client::{client_error, rpc_client::RpcClient, rpc_response::RpcVoteAccountStatus},
+    solana_cli_output::display::format_labeled_address,
     solana_metrics::{datapoint_error, datapoint_info},
-    solana_notifier::Notifier,
-    safecoin_sdk::{
+    solana_notifier::{NotificationType, Notifier},
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_rpc_client_api::{client_error, response::RpcVoteAccountStatus},
+    solana_sdk::{
         hash::Hash,
-        native_token::{sol_to_lamports, Safe},
+        native_token::{sol_to_lamports, Sol},
         pubkey::Pubkey,
     },
     std::{
@@ -43,8 +44,8 @@ fn get_config() -> Config {
         .about(crate_description!())
         .version(solana_version::version!())
         .after_help("ADDITIONAL HELP:
-        To receive a Slack, Discord and/or Telegram notification on sanity failure,
-        define environment variables before running `safecoin-watchtower`:
+        To receive a Slack, Discord, PagerDuty and/or Telegram notification on sanity failure,
+        define environment variables before running `solana-watchtower`:
 
         export SLACK_WEBHOOK=...
         export DISCORD_WEBHOOK=...
@@ -54,9 +55,13 @@ fn get_config() -> Config {
         export TELEGRAM_BOT_TOKEN=...
         export TELEGRAM_CHAT_ID=...
 
+        PagerDuty requires an Integration Key from the Events API v2 (Add this integration to your PagerDuty service to get this)
+
+        export PAGERDUTY_INTEGRATION_KEY=...
+
         To receive a Twilio SMS notification on failure, having a Twilio account,
         and a sending number owned by that account,
-        define environment variable before running `safecoin-watchtower`:
+        define environment variable before running `solana-watchtower`:
 
         export TWILIO_CONFIG='ACCOUNT=<account>,TOKEN=<securityToken>,TO=<receivingNumber>,FROM=<sendingNumber>'")
         .arg({
@@ -67,7 +72,7 @@ fn get_config() -> Config {
                 .takes_value(true)
                 .global(true)
                 .help("Configuration file to use");
-            if let Some(ref config_file) = *safecoin_cli_config::CONFIG_FILE {
+            if let Some(ref config_file) = *solana_cli_config::CONFIG_FILE {
                 arg.default_value(config_file)
             } else {
                 arg
@@ -117,11 +122,11 @@ fn get_config() -> Config {
         .arg(
             Arg::with_name("minimum_validator_identity_balance")
                 .long("minimum-validator-identity-balance")
-                .value_name("SAFE")
+                .value_name("SOL")
                 .takes_value(true)
                 .default_value("10")
                 .validator(is_parsable::<f64>)
-                .help("Alert when the validator identity balance is less than this amount of SAFE")
+                .help("Alert when the validator identity balance is less than this amount of SOL")
         )
         .arg(
             // Deprecated parameter, now always enabled
@@ -150,14 +155,14 @@ fn get_config() -> Config {
                 .value_name("SUFFIX")
                 .takes_value(true)
                 .default_value("")
-                .help("Add this string into all notification messages after \"safecoin-watchtower\"")
+                .help("Add this string into all notification messages after \"solana-watchtower\"")
         )
         .get_matches();
 
     let config = if let Some(config_file) = matches.value_of("config_file") {
-        safecoin_cli_config::Config::load(config_file).unwrap_or_default()
+        solana_cli_config::Config::load(config_file).unwrap_or_default()
     } else {
-        safecoin_cli_config::Config::default()
+        solana_cli_config::Config::default()
     };
 
     let interval = Duration::from_secs(value_t_or_exit!(matches, "interval", u64));
@@ -239,6 +244,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let mut last_notification_msg = "".into();
     let mut num_consecutive_failures = 0;
     let mut last_success = Instant::now();
+    let mut incident = Hash::new_unique();
 
     loop {
         let failure = match get_cluster_info(&config, &rpc_client) {
@@ -269,9 +275,9 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 info!(
                     "Current stake: {:.2}% | Total stake: {}, current stake: {}, delinquent: {}",
                     current_stake_percent,
-                    Safe(total_stake),
-                    Safe(total_current_stake),
-                    Safe(total_delinquent_stake)
+                    Sol(total_stake),
+                    Sol(total_current_stake),
+                    Sol(total_delinquent_stake)
                 );
 
                 if transaction_count > last_transaction_count {
@@ -280,8 +286,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                     failures.push((
                         "transaction-count",
                         format!(
-                            "Transaction count is not advancing: {} <= {}",
-                            transaction_count, last_transaction_count
+                            "Transaction count is not advancing: {transaction_count} <= {last_transaction_count}"
                         ),
                     ));
                 }
@@ -291,14 +296,14 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 } else {
                     failures.push((
                         "recent-blockhash",
-                        format!("Unable to get new blockhash: {}", recent_blockhash),
+                        format!("Unable to get new blockhash: {recent_blockhash}"),
                     ));
                 }
 
                 if config.monitor_active_stake && current_stake_percent < 80. {
                     failures.push((
                         "current-stake",
-                        format!("Current stake is {:.2}%", current_stake_percent),
+                        format!("Current stake is {current_stake_percent:.2}%"),
                     ));
                 }
 
@@ -313,21 +318,20 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                         .iter()
                         .any(|vai| vai.node_pubkey == *validator_identity.to_string())
                     {
-                        validator_errors
-                            .push(format!("{} delinquent", formatted_validator_identity));
+                        validator_errors.push(format!("{formatted_validator_identity} delinquent"));
                     } else if !vote_accounts
                         .current
                         .iter()
                         .any(|vai| vai.node_pubkey == *validator_identity.to_string())
                     {
-                        validator_errors.push(format!("{} missing", formatted_validator_identity));
+                        validator_errors.push(format!("{formatted_validator_identity} missing"));
                     }
 
                     if let Some(balance) = validator_balances.get(validator_identity) {
                         if *balance < config.minimum_validator_identity_balance {
                             failures.push((
                                 "balance",
-                                format!("{} has {}", formatted_validator_identity, Safe(*balance)),
+                                format!("{} has {}", formatted_validator_identity, Sol(*balance)),
                             ));
                         }
                     }
@@ -345,7 +349,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             Err(err) => {
                 let mut failure = Some(("rpc-error", err.to_string()));
 
-                if let client_error::ClientErrorKind::Reqwest(reqwest_err) = err.kind() {
+                if let client_error::ErrorKind::Reqwest(reqwest_err) = err.kind() {
                     if let Some(client_error::reqwest::StatusCode::BAD_GATEWAY) =
                         reqwest_err.status()
                     {
@@ -361,14 +365,14 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
         if let Some((failure_test_name, failure_error_message)) = &failure {
             let notification_msg = format!(
-                "safecoin-watchtower{}: Error: {}: {}",
+                "solana-watchtower{}: Error: {}: {}",
                 config.name_suffix, failure_test_name, failure_error_message
             );
             num_consecutive_failures += 1;
             if num_consecutive_failures > config.unhealthy_threshold {
                 datapoint_info!("watchtower-sanity", ("ok", false, bool));
                 if last_notification_msg != notification_msg {
-                    notifier.send(&notification_msg);
+                    notifier.send(&notification_msg, &NotificationType::Trigger { incident });
                 }
                 datapoint_error!(
                     "watchtower-sanity-failure",
@@ -394,14 +398,15 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                     humantime::format_duration(alarm_duration)
                 );
                 info!("{}", all_clear_msg);
-                notifier.send(&format!(
-                    "safecoin-watchtower{}: {}",
-                    config.name_suffix, all_clear_msg
-                ));
+                notifier.send(
+                    &format!("solana-watchtower{}: {}", config.name_suffix, all_clear_msg),
+                    &NotificationType::Resolve { incident },
+                );
             }
             last_notification_msg = "".into();
             last_success = Instant::now();
             num_consecutive_failures = 0;
+            incident = Hash::new_unique();
         }
         sleep(config.interval);
     }

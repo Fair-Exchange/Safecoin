@@ -1,18 +1,18 @@
 use {
-    safecoin_account_decoder::parse_token::real_number_string_trimmed,
-    safecoin_sdk::native_token::lamports_to_sol,
+    solana_account_decoder::parse_token::real_number_string_trimmed,
+    solana_sdk::native_token::lamports_to_sol,
     std::{
         fmt::{Debug, Display, Formatter, Result},
         ops::Add,
     },
 };
 
-const SAFE_SYMBOL: &str = "◎";
+const SOL_SYMBOL: &str = "◎";
 
 #[derive(PartialEq, Eq)]
 pub enum TokenType {
-    Safe,
-    SafeToken,
+    Sol,
+    SplToken,
 }
 
 pub struct Token {
@@ -24,13 +24,13 @@ pub struct Token {
 impl Token {
     fn write_with_symbol(&self, f: &mut Formatter) -> Result {
         match &self.token_type {
-            TokenType::Safe => {
+            TokenType::Sol => {
                 let amount = lamports_to_sol(self.amount);
-                write!(f, "{}{}", SAFE_SYMBOL, amount)
+                write!(f, "{SOL_SYMBOL}{amount}")
             }
-            TokenType::SafeToken => {
+            TokenType::SplToken => {
                 let amount = real_number_string_trimmed(self.amount, self.decimals);
-                write!(f, "{} tokens", amount)
+                write!(f, "{amount} tokens")
             }
         }
     }
@@ -39,15 +39,15 @@ impl Token {
         Self {
             amount,
             decimals: 9,
-            token_type: TokenType::Safe,
+            token_type: TokenType::Sol,
         }
     }
 
-    pub fn safe_token(amount: u64, decimals: u8) -> Self {
+    pub fn spl_token(amount: u64, decimals: u8) -> Self {
         Self {
             amount,
             decimals,
-            token_type: TokenType::SafeToken,
+            token_type: TokenType::SplToken,
         }
     }
 }

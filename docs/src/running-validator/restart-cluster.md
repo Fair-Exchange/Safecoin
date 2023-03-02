@@ -1,26 +1,38 @@
 ## Restarting a cluster
 
-### Step 1. Identify the slot that the cluster will be restarted at
+### Step 1. Identify the latest optimistically confirmed slot for the cluster
 
-The highest optimistically confirmed slot is the best slot to start from, which
-can be found by looking for
-[this](https://github.com/fair-exchange/safecoin/blob/0264147d42d506fb888f5c4c021a998e231a3e74/core/src/optimistic_confirmation_verifier.rs#L71)
-metrics datapoint. Otherwise use the last root.
+In Solana 1.14 or greater, run the following command to output the latest
+optimistically confirmed slot your validator observed:
+```bash
+solana-ledger-tool -l ledger latest-optimistic-slots
+```
+
+In Solana 1.13 or less, the latest optimistically confirmed can be found by looking for the more recent occurrence of
+[this](https://github.com/solana-labs/solana/blob/0264147d42d506fb888f5c4c021a998e231a3e74/core/src/optimistic_confirmation_verifier.rs#L71)
+metrics datapoint.
 
 Call this slot `SLOT_X`
 
+Note that it's possible that some validators observed an optimistically
+confirmed slot that's greater than others before the outage.  Survey the other
+validators on the cluster to ensure that a greater optimistically confirmed slot
+does not exist before proceeding. If a greater slot value is found use it
+instead.
+
+
 ### Step 2. Stop the validator(s)
 
-### Step 3. Optionally install the new safecoin version
+### Step 3. Optionally install the new solana version
 
 ### Step 4. Create a new snapshot for slot `SLOT_X` with a hard fork at slot `SLOT_X`
 
 ```bash
-$ safecoin-ledger-tool -l ledger create-snapshot SLOT_X ledger --hard-fork SLOT_X
+$ solana-ledger-tool -l ledger create-snapshot SLOT_X ledger --hard-fork SLOT_X
 ```
 
 The ledger directory should now contain the new snapshot.
-`safecoin-ledger-tool create-snapshot` will also output the new shred version, and bank hash value,
+`solana-ledger-tool create-snapshot` will also output the new shred version, and bank hash value,
 call this NEW_SHRED_VERSION and NEW_BANK_HASH respectively.
 
 Adjust your validator's arguments:
@@ -46,16 +58,16 @@ Post something like the following to #announcements (adjusting the text as appro
 >
 > Steps:
 >
-> 1. Install the v1.1.12 release: https://github.com/fair-exchange/safecoin/releases/tag/v1.1.12
+> 1. Install the v1.1.12 release: https://github.com/solana-labs/solana/releases/tag/v1.1.12
 > 2. a. Preferred method, start from your local ledger with:
 >
 > ```bash
-> safecoin-validator
+> solana-validator
 >   --wait-for-supermajority SLOT_X     # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
 >   --expected-bank-hash NEW_BANK_HASH  # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
 >   --hard-fork SLOT_X                  # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
 >   --no-snapshot-fetch                 # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
->   --entrypoint entrypoint.testnet.safecoin.org:10015
+>   --entrypoint entrypoint.testnet.solana.com:8001
 >   --known-validator 5D1fNXzvv5NjV1ysLjirC4WY92RNsVH18vjmcszZd8on
 >   --expected-genesis-hash 4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY
 >   --only-known-rpc
@@ -66,10 +78,10 @@ Post something like the following to #announcements (adjusting the text as appro
 > b. If your validator doesn't have ledger up to slot SLOT_X or if you have deleted your ledger, have it instead download a snapshot with:
 >
 > ```bash
-> safecoin-validator
+> solana-validator
 >   --wait-for-supermajority SLOT_X     # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
 >   --expected-bank-hash NEW_BANK_HASH  # <-- NEW! IMPORTANT! REMOVE AFTER THIS RESTART
->   --entrypoint entrypoint.testnet.safecoin.org:10015
+>   --entrypoint entrypoint.testnet.solana.com:8001
 >   --known-validator 5D1fNXzvv5NjV1ysLjirC4WY92RNsVH18vjmcszZd8on
 >   --expected-genesis-hash 4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY
 >   --only-known-rpc
@@ -77,13 +89,13 @@ Post something like the following to #announcements (adjusting the text as appro
 >   ...                                # <-- your other --identity/--vote-account/etc arguments
 > ```
 >
->      You can check for which slots your ledger has with: `safecoin-ledger-tool -l path/to/ledger bounds`
+>      You can check for which slots your ledger has with: `solana-ledger-tool -l path/to/ledger bounds`
 >
 > 3. Wait until 80% of the stake comes online
 >
 > To confirm your restarted validator is correctly waiting for the 80%:
 > a. Look for `N% of active stake visible in gossip` log messages
-> b. Ask it over RPC what slot it's on: `safecoin --url http://127.0.0.1:8328 slot`. It should return `SLOT_X` until we get to 80% stake
+> b. Ask it over RPC what slot it's on: `solana --url http://127.0.0.1:8899 slot`. It should return `SLOT_X` until we get to 80% stake
 >
 > Thanks!
 
@@ -104,7 +116,7 @@ and create a new snapshot with additional `--destake-vote-account <PUBKEY>`
 arguments for each of the non-responsive validator's vote account address
 
 ```bash
-$ safecoin-ledger-tool -l ledger create-snapshot SLOT_X ledger --hard-fork SLOT_X \
+$ solana-ledger-tool -l ledger create-snapshot SLOT_X ledger --hard-fork SLOT_X \
     --destake-vote-account <VOTE_ACCOUNT_1> \
     --destake-vote-account <VOTE_ACCOUNT_2> \
     .

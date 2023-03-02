@@ -64,8 +64,8 @@ local|tar|skip)
   PATH="$HOME"/.cargo/bin:"$PATH"
   export USE_INSTALL=1
   solana_cli=solana
-  safecoin_gossip=safecoin-gossip
-  safecoin_install=safecoin-install
+  solana_gossip=solana-gossip
+  solana_install=solana-install
   ;;
 *)
   echo "Unknown deployment method: $deployMethod"
@@ -85,7 +85,7 @@ fi
 echo "--- $sanityTargetIp: validators"
 (
   set -x
-  $solana_cli --url http://"$sanityTargetIp":8328 validators
+  $solana_cli --url http://"$sanityTargetIp":8899 validators
 )
 
 echo "--- $sanityTargetIp: node count ($numSanityNodes expected)"
@@ -97,7 +97,7 @@ echo "--- $sanityTargetIp: node count ($numSanityNodes expected)"
     nodeArg="num-nodes-exactly"
   fi
 
-  $safecoin_gossip --allow-private-addr spy --entrypoint "$sanityTargetIp:10015" \
+  $solana_gossip --allow-private-addr spy --entrypoint "$sanityTargetIp:8001" \
     --$nodeArg "$numSanityNodes" --timeout 60 \
 )
 
@@ -107,14 +107,14 @@ echo "--- $sanityTargetIp: RPC API: getTransactionCount"
   curl --retry 5 --retry-delay 2 --retry-connrefused \
     -X POST -H 'Content-Type: application/json' \
     -d '{"jsonrpc":"2.0","id":1, "method":"getTransactionCount"}' \
-    http://"$sanityTargetIp":8328
+    http://"$sanityTargetIp":8899
 )
 
 if [[ "$airdropsEnabled" = true ]]; then
   echo "--- $sanityTargetIp: wallet sanity"
   (
     set -x
-    scripts/wallet-sanity.sh --url http://"$sanityTargetIp":8328
+    scripts/wallet-sanity.sh --url http://"$sanityTargetIp":8899
   )
 else
   echo "^^^ +++"
@@ -122,17 +122,17 @@ else
 fi
 
 if $installCheck && [[ -r update_manifest_keypair.json ]]; then
-  echo "--- $sanityTargetIp: safecoin-install test"
+  echo "--- $sanityTargetIp: solana-install test"
 
   (
     set -x
     rm -rf install-data-dir
-    $safecoin_install init \
+    $solana_install init \
       --no-modify-path \
       --data-dir install-data-dir \
-      --url http://"$sanityTargetIp":8328 \
+      --url http://"$sanityTargetIp":8899 \
 
-    $safecoin_install info
+    $solana_install info
   )
 fi
 

@@ -1,12 +1,12 @@
 use {
     clap::{crate_description, crate_name, values_t, App, Arg},
     log::*,
-    safecoin_clap_utils::input_parsers::{lamports_of_sol, value_of},
-    safecoin_faucet::{
+    solana_clap_utils::input_parsers::{lamports_of_sol, value_of},
+    solana_faucet::{
         faucet::{run_faucet, Faucet, FAUCET_PORT},
         socketaddr,
     },
-    safecoin_sdk::signature::read_keypair_file,
+    solana_sdk::signature::read_keypair_file,
     std::{
         collections::HashSet,
         net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -17,7 +17,7 @@ use {
 
 #[tokio::main]
 async fn main() {
-    let default_keypair = safecoin_cli_config::Config::default().keypair_path;
+    let default_keypair = solana_cli_config::Config::default().keypair_path;
 
     solana_logger::setup_with_default("solana=info");
     solana_metrics::set_panic_hook("faucet", /*version:*/ None);
@@ -47,14 +47,14 @@ async fn main() {
                 .alias("cap")
                 .value_name("NUM")
                 .takes_value(true)
-                .help("Request limit for time slice, in SAFE"),
+                .help("Request limit for time slice, in SOL"),
         )
         .arg(
             Arg::with_name("per_request_cap")
                 .long("per-request-cap")
                 .value_name("NUM")
                 .takes_value(true)
-                .help("Request limit for a single request, in SAFE"),
+                .help("Request limit for a single request, in SOL"),
         )
         .arg(
             Arg::with_name("allowed_ip")

@@ -1,4 +1,4 @@
-//! Collection of sigma proofs (more precisely, "arguments") that are used in the Safecoin zk-token
+//! Collection of sigma proofs (more precisely, "arguments") that are used in the Solana zk-token
 //! protocol.
 //!
 //! The module contains implementations of the following proof systems that work on Pedersen
@@ -18,5 +18,6 @@
 pub mod equality_proof;
 pub mod errors;
 pub mod fee_proof;
+pub mod pubkey_proof;
 pub mod validity_proof;
 pub mod zero_balance_proof;

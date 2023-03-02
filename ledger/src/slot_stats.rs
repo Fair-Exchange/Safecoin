@@ -2,7 +2,7 @@ use {
     crate::blockstore_meta::SlotMeta,
     bitflags::bitflags,
     lru::LruCache,
-    safecoin_sdk::clock::Slot,
+    solana_sdk::clock::Slot,
     std::{
         collections::HashMap,
         sync::{Mutex, MutexGuard},
@@ -39,10 +39,10 @@ pub struct SlotStats {
 impl SlotStats {
     pub fn get_min_index_count(&self) -> usize {
         self.turbine_fec_set_index_counts
-            .iter()
-            .map(|(_, cnt)| *cnt)
+            .values()
             .min()
-            .unwrap_or(0)
+            .copied()
+            .unwrap_or_default()
     }
 
     fn report(&self, slot: Slot) {
@@ -124,7 +124,7 @@ impl SlotsStats {
         if let Some((num_repaired, num_recovered)) = slot_full_reporting_info {
             let slot_meta = slot_meta.unwrap();
             let total_time_ms =
-                safecoin_sdk::timing::timestamp().saturating_sub(slot_meta.first_shred_timestamp);
+                solana_sdk::timing::timestamp().saturating_sub(slot_meta.first_shred_timestamp);
             let last_index = slot_meta
                 .last_index
                 .and_then(|ix| i64::try_from(ix).ok())

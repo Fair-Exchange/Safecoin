@@ -3,7 +3,7 @@ extern crate test;
 use {
     solana_entry::entry::{self, VerifyRecyclers},
     solana_perf::test_tx::test_tx,
-    safecoin_sdk::{
+    solana_sdk::{
         hash::Hash,
         transaction::{
             Result, SanitizedTransaction, SimpleAddressLoader, TransactionVerificationMode,

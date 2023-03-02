@@ -1,4 +1,4 @@
-use safecoin_sdk::{pubkey::Pubkey, signature::Signer};
+use solana_sdk::{pubkey::Pubkey, signature::Signer};
 
 pub struct SenderStakeArgs {
     pub stake_account_address: Pubkey,
@@ -21,12 +21,12 @@ pub struct DistributeTokensArgs {
     pub sender_keypair: Box<dyn Signer>,
     pub fee_payer: Box<dyn Signer>,
     pub stake_args: Option<StakeArgs>,
-    pub safe_token_args: Option<SafeTokenArgs>,
+    pub spl_token_args: Option<SplTokenArgs>,
     pub transfer_amount: Option<u64>,
 }
 
 #[derive(Default)]
-pub struct SafeTokenArgs {
+pub struct SplTokenArgs {
     pub token_account_address: Pubkey,
     pub mint: Pubkey,
     pub decimals: u8,
@@ -34,7 +34,7 @@ pub struct SafeTokenArgs {
 
 pub struct BalancesArgs {
     pub input_csv: String,
-    pub safe_token_args: Option<SafeTokenArgs>,
+    pub spl_token_args: Option<SplTokenArgs>,
 }
 
 pub struct TransactionLogArgs {

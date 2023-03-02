@@ -1,11 +1,11 @@
 use {
     crate::cluster_slots::ClusterSlots,
     crossbeam_channel::{Receiver, RecvTimeoutError, Sender},
-    safecoin_gossip::cluster_info::ClusterInfo,
+    solana_gossip::cluster_info::ClusterInfo,
     solana_ledger::blockstore::Blockstore,
-    safecoin_measure::measure::Measure,
+    solana_measure::measure::Measure,
     solana_runtime::bank_forks::BankForks,
-    safecoin_sdk::clock::Slot,
+    solana_sdk::clock::Slot,
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -181,20 +181,17 @@ impl ClusterSlotsService {
 mod test {
     use {
         super::*,
-        safecoin_gossip::{cluster_info::Node, crds_value::LowestSlot},
-        safecoin_sdk::{pubkey::Pubkey, signature::Keypair},
+        solana_gossip::{cluster_info::Node, crds_value::LowestSlot},
+        solana_sdk::signature::{Keypair, Signer},
         solana_streamer::socket::SocketAddrSpace,
     };
 
     #[test]
     pub fn test_update_lowest_slot() {
-        let pubkey = Pubkey::new_unique();
+        let keypair = Arc::new(Keypair::new());
+        let pubkey = keypair.pubkey();
         let node_info = Node::new_localhost_with_pubkey(&pubkey);
-        let cluster_info = ClusterInfo::new(
-            node_info.info,
-            Arc::new(Keypair::new()),
-            SocketAddrSpace::Unspecified,
-        );
+        let cluster_info = ClusterInfo::new(node_info.info, keypair, SocketAddrSpace::Unspecified);
         ClusterSlotsService::update_lowest_slot(5, &cluster_info);
         cluster_info.flush_push_queue();
         let lowest = {

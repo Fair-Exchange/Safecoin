@@ -1,4 +1,4 @@
-use safecoin_program::hash::{hashv, Hash};
+use solana_program::hash::{hashv, Hash};
 
 // We need to discern between leaf and intermediate nodes to prevent trivial second
 // pre-image attacks.
@@ -33,7 +33,7 @@ impl<'a> ProofEntry<'a> {
         left_sibling: Option<&'a Hash>,
         right_sibling: Option<&'a Hash>,
     ) -> Self {
-        assert!((None == left_sibling) ^ (None == right_sibling));
+        assert!(left_sibling.is_none() ^ right_sibling.is_none());
         Self(target, left_sibling, right_sibling)
     }
 }
@@ -154,7 +154,7 @@ impl MerkleTree {
             let level = &self.nodes[level_start..(level_start + level_len)];
 
             let target = &level[node_index];
-            if lsib != None || rsib != None {
+            if lsib.is_some() || rsib.is_some() {
                 path.push(ProofEntry::new(target, lsib, rsib));
             }
             if node_index % 2 == 0 {

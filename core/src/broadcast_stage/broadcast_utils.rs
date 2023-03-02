@@ -6,7 +6,7 @@ use {
     solana_ledger::shred::ShredData,
     solana_poh::poh_recorder::WorkingBankEntry,
     solana_runtime::bank::Bank,
-    safecoin_sdk::clock::Slot,
+    solana_sdk::clock::Slot,
     std::{
         sync::Arc,
         time::{Duration, Instant},
@@ -103,7 +103,7 @@ mod tests {
         super::*,
         crossbeam_channel::unbounded,
         solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
-        safecoin_sdk::{
+        solana_sdk::{
             genesis_config::GenesisConfig, pubkey::Pubkey, system_transaction,
             transaction::Transaction,
         },
@@ -118,7 +118,7 @@ mod tests {
         let bank0 = Arc::new(Bank::new_for_tests(&genesis_config));
         let tx = system_transaction::transfer(
             &mint_keypair,
-            &safecoin_sdk::pubkey::new_rand(),
+            &solana_sdk::pubkey::new_rand(),
             1,
             genesis_config.hash(),
         );

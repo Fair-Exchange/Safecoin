@@ -1,5 +1,5 @@
 import React from "react";
-import { ParsedInstruction, PublicKey, SignatureResult } from "@safecoin/web3.js";
+import { ParsedInstruction, PublicKey, SignatureResult } from "@solana/web3.js";
 import { InstructionCard } from "./InstructionCard";
 import { Address } from "components/common/Address";
 

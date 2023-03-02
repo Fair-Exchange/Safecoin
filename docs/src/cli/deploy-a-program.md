@@ -3,13 +3,13 @@ title: Deploy a Program
 ---
 
 Developers can deploy on-chain [programs](terminology.md#program) (often called
-smart contracts elsewhere) with the Safecoin tools.
+smart contracts elsewhere) with the Solana tools.
 
-To learn about developing and executing programs on Safecoin, start with the
-[overview](developing/programming-model/overview.md) and then dig into the
+To learn about developing and executing programs on Solana, start with the
+[intro to Solana programs](developing/intro/programs.md) and then dig into the
 details of [on-chain programs](developing/on-chain-programs/overview.md).
 
-To deploy a program, use the Safecoin tools to interact with the on-chain loader
+To deploy a program, use the Solana tools to interact with the on-chain loader
 to:
 
 - Initialize a program account
@@ -28,7 +28,7 @@ To deploy a program, you will need the location of the program's shared object
 (the program binary .so)
 
 ```bash
-safecoin program deploy <PROGRAM_FILEPATH>
+solana program deploy <PROGRAM_FILEPATH>
 ```
 
 Successful deployment will return the program id of the deployed program, for
@@ -41,7 +41,7 @@ Program Id: 3KS2k14CmtnuVv2fvYcvdrNgC94Y11WETBpMUGgXyWZL
 Specify the keypair in the deploy command to deploy to a specific program id:
 
 ```bash
-safecoin program deploy --program-id <KEYPAIR_FILEPATH> <PROGRAM_FILEPATH>
+solana program deploy --program-id <KEYPAIR_FILEPATH> <PROGRAM_FILEPATH>
 ```
 
 If the program id is not specified on the command line the tools will first look
@@ -62,7 +62,7 @@ generated automatically by the program build tools:
 To get information about a deployed program:
 
 ```bash
-safecoin program show <ACCOUNT_ADDRESS>
+solana program show <ACCOUNT_ADDRESS>
 ```
 
 An example output looks like:
@@ -95,7 +95,7 @@ redeployments will be to the same program address.
 The command looks the same as the deployment command:
 
 ```bash
-safecoin program deploy <PROGRAM_FILEPATH>
+solana program deploy <PROGRAM_FILEPATH>
 ```
 
 By default, programs are deployed to accounts that are twice the size of the
@@ -106,12 +106,12 @@ may fail. To avoid this, specify a `max_len` that is at least the size (in
 bytes) that the program is expected to become (plus some wiggle room).
 
 ```bash
-safecoin program deploy --max-len 200000 <PROGRAM_FILEPATH>
+solana program deploy --max-len 200000 <PROGRAM_FILEPATH>
 ```
 
 Note that program accounts are required to be
 [rent-exempt](developing/programming-model/accounts.md#rent-exemption), and the
-`max-len` is fixed after initial deployment, so any SAFE in the program accounts
+`max-len` is fixed after initial deployment, so any SOL in the program accounts
 is locked up permanently.
 
 ### Resuming a failed deploy
@@ -127,21 +127,21 @@ needed to recover the generated intermediate buffer's keypair:
 ```
 ==================================================================================
 Recover the intermediate account's ephemeral keypair file with
-`safecoin-keygen recover` and the following 12-word seed phrase:
+`solana-keygen recover` and the following 12-word seed phrase:
 ==================================================================================
 valley flat great hockey share token excess clever benefit traffic avocado athlete
 ==================================================================================
 To resume a deploy, pass the recovered keypair as
-the [BUFFER_SIGNER] to `safecoin program deploy` or `safecoin program write-buffer'.
+the [BUFFER_SIGNER] to `solana program deploy` or `solana program write-buffer'.
 Or to recover the account's lamports, pass it as the
-[BUFFER_ACCOUNT_ADDRESS] argument to `safecoin program drain`.
+[BUFFER_ACCOUNT_ADDRESS] argument to `solana program drain`.
 ==================================================================================
 ```
 
 To recover the keypair:
 
 ```bash
-safecoin-keygen recover -o <KEYPAIR_PATH>
+solana-keygen recover -o <KEYPAIR_PATH>
 ```
 
 When asked, enter the 12-word seed phrase.
@@ -149,7 +149,7 @@ When asked, enter the 12-word seed phrase.
 Then issue a new `deploy` command and specify the buffer:
 
 ```bash
-safecoin program deploy --buffer <KEYPAIR_PATH> <PROGRAM_FILEPATH>
+solana program deploy --buffer <KEYPAIR_PATH> <PROGRAM_FILEPATH>
 ```
 
 ### Closing program and buffer accounts, and reclaiming their lamports
@@ -166,45 +166,45 @@ to list all the open program or buffer accounts that match the default
 authority:
 
 ```bash
-safecoin program show --programs
-safecoin program show --buffers
+solana program show --programs
+solana program show --buffers
 ```
 
 To specify a different authority:
 
 ```bash
-safecoin program show --programs --buffer-authority <AURTHORITY_ADRESS>
-safecoin program show --buffers --buffer-authority <AURTHORITY_ADRESS>
+solana program show --programs --buffer-authority <AURTHORITY_ADRESS>
+solana program show --buffers --buffer-authority <AURTHORITY_ADRESS>
 ```
 
 To close a single account:
 
 ```bash
-safecoin program close <BADDRESS>
+solana program close <BADDRESS>
 ```
 
 To close a single account and specify a different authority than the default:
 
 ```bash
-safecoin program close <ADDRESS> --buffer-authority <KEYPAIR_FILEPATH>
+solana program close <ADDRESS> --buffer-authority <KEYPAIR_FILEPATH>
 ```
 
 To close a single account and specify a different recipient than the default:
 
 ```bash
-safecoin program close <ADDRESS> --recipient <RECIPIENT_ADDRESS>
+solana program close <ADDRESS> --recipient <RECIPIENT_ADDRESS>
 ```
 
 To close all the buffer accounts associated with the current authority:
 
 ```bash
-safecoin program close --buffers
+solana program close --buffers
 ```
 
 To show all buffer accounts regardless of the authority
 
 ```bash
-safecoin program show --buffers --all
+solana program show --buffers --all
 ```
 
 ### Set a program's upgrade authority
@@ -217,19 +217,19 @@ require an authority to be explicitly specified.
 The authority can be specified during deployment:
 
 ```bash
-safecoin program deploy --upgrade-authority <UPGRADE_AUTHORITY_SIGNER> <PROGRAM_FILEPATH>
+solana program deploy --upgrade-authority <UPGRADE_AUTHORITY_SIGNER> <PROGRAM_FILEPATH>
 ```
 
 Or after deployment and using the default keypair as the current authority:
 
 ```bash
-safecoin program set-upgrade-authority <PROGRAM_ADDRESS> --new-upgrade-authority <NEW_UPGRADE_AUTHORITY>
+solana program set-upgrade-authority <PROGRAM_ADDRESS> --new-upgrade-authority <NEW_UPGRADE_AUTHORITY>
 ```
 
 Or after deployment and specifying the current authority:
 
 ```bash
-safecoin program set-upgrade-authority <PROGRAM_ADDRESS> --upgrade-authority <UPGRADE_AUTHORITY_SIGNER> --new-upgrade-authority <NEW_UPGRADE_AUTHORITY>
+solana program set-upgrade-authority <PROGRAM_ADDRESS> --upgrade-authority <UPGRADE_AUTHORITY_SIGNER> --new-upgrade-authority <NEW_UPGRADE_AUTHORITY>
 ```
 
 ### Immutable programs
@@ -238,13 +238,13 @@ A program can be marked immutable, which prevents all further redeployments, by
 specifying the `--final` flag during deployment:
 
 ```bash
-safecoin program deploy <PROGRAM_FILEPATH> --final
+solana program deploy <PROGRAM_FILEPATH> --final
 ```
 
 Or anytime after:
 
 ```bash
-safecoin program set-upgrade-authority <PROGRAM_ADDRESS> --final
+solana program set-upgrade-authority <PROGRAM_ADDRESS> --final
 ```
 
 ### Dumping a program to a file
@@ -252,7 +252,7 @@ safecoin program set-upgrade-authority <PROGRAM_ADDRESS> --final
 The deployed program may be dumped back to a local file:
 
 ```bash
-safecoin program dump <ACCOUNT_ADDRESS> <OUTPUT_FILEPATH>
+solana program dump <ACCOUNT_ADDRESS> <OUTPUT_FILEPATH>
 ```
 
 The dumped file will be in the same as what was deployed, so in the case of a
@@ -264,7 +264,7 @@ known program binary. The original program file can be zero-extended, hashed,
 and compared to the hash of the dumped file.
 
 ```bash
-$ safecoin dump <ACCOUNT_ADDRESS> dump.so
+$ solana dump <ACCOUNT_ADDRESS> dump.so
 $ cp original.so extended.so
 $ truncate -r dump.so extended.so
 $ sha256sum extended.so dump.so
@@ -278,13 +278,13 @@ like multi-entity governed programs where the governing members fist verify the
 intermediary buffer contents and then vote to allow an upgrade using it.
 
 ```bash
-safecoin program write-buffer <PROGRAM_FILEPATH>
+solana program write-buffer <PROGRAM_FILEPATH>
 ```
 
 Buffer accounts support authorities like program accounts:
 
 ```bash
-safecoin program set-buffer-authority <BUFFER_ADDRESS> --new-upgrade-authority <NEW_UPGRADE_AUTHORITY>
+solana program set-buffer-authority <BUFFER_ADDRESS> --new-buffer-authority <NEW_BUFFER_AUTHORITY>
 ```
 
 One exception is that buffer accounts cannot be marked immutable like program
@@ -294,7 +294,7 @@ The buffer account, once entirely written, can be passed to `deploy` to deploy
 the program:
 
 ```bash
-safecoin program deploy --program-id <PROGRAM_ADDRESS> --buffer <BUFFER_ADDRESS>
+solana program deploy --program-id <PROGRAM_ADDRESS> --buffer <BUFFER_ADDRESS>
 ```
 
 Note, the buffer's authority must match the program's upgrade authority.

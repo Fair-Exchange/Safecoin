@@ -1,25 +1,27 @@
 [package]
-name = "safecoin-stake-accounts"
-description = "Safecoin: Enterprise Security for the Community by the Community"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+name = "solana-stake-accounts"
+description = "Blockchain, Rebuilt for Scale"
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
-version = "1.14.3"
-repository = "https://github.com/fair-exchange/safecoin"
+version = "1.15.3"
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/safecoin-stake-accounts"
+homepage = "https://solana.com/"
+documentation = "https://docs.rs/solana-stake-accounts"
 
 [dependencies]
 clap = "2.33.1"
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.14.3" }
-safecoin-cli-config = { path = "../cli-config", version = "=1.14.3" }
-safecoin-client = { path = "../client", version = "=1.14.3" }
-safecoin-remote-wallet = { path = "../remote-wallet", version = "=1.14.3" }
-safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
-safecoin-stake-program = { path = "../programs/stake", version = "=1.14.3" }
+solana-clap-utils = { path = "../clap-utils", version = "=1.15.3" }
+solana-cli-config = { path = "../cli-config", version = "=1.15.3" }
+solana-remote-wallet = { path = "../remote-wallet", version = "=1.15.3" }
+solana-rpc-client = { path = "../rpc-client", version = "=1.15.3" }
+solana-rpc-client-api = { path = "../rpc-client-api", version = "=1.15.3" }
+solana-sdk = { path = "../sdk", version = "=1.15.3" }
+solana-stake-program = { path = "../programs/stake", version = "=1.15.3" }
+solana-version = { path = "../version", version = "=1.15.3" }
 
 [dev-dependencies]
-safecoin-runtime = { path = "../runtime", version = "=1.14.3" }
+solana-runtime = { path = "../runtime", version = "=1.15.3" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

@@ -3,8 +3,8 @@
 /// In addition, the dynamic library must export a "C" function _create_plugin which
 /// creates the implementation of the plugin.
 use {
-    safecoin_sdk::{clock::UnixTimestamp, signature::Signature, transaction::SanitizedTransaction},
-    safecoin_transaction_status::{Reward, TransactionStatusMeta},
+    solana_sdk::{clock::UnixTimestamp, signature::Signature, transaction::SanitizedTransaction},
+    solana_transaction_status::{Reward, TransactionStatusMeta},
     std::{any::Any, error, io},
     thiserror::Error,
 };
@@ -133,8 +133,22 @@ pub struct ReplicaBlockInfo<'a> {
     pub block_height: Option<u64>,
 }
 
+/// Extending ReplicaBlockInfo by sending the transaction_entries_count.
+#[derive(Clone, Debug)]
+pub struct ReplicaBlockInfoV2<'a> {
+    pub parent_slot: u64,
+    pub parent_blockhash: &'a str,
+    pub slot: u64,
+    pub blockhash: &'a str,
+    pub rewards: &'a [Reward],
+    pub block_time: Option<UnixTimestamp>,
+    pub block_height: Option<u64>,
+    pub executed_transaction_count: u64,
+}
+
 pub enum ReplicaBlockInfoVersions<'a> {
     V0_0_1(&'a ReplicaBlockInfo<'a>),
+    V0_0_2(&'a ReplicaBlockInfoV2<'a>),
 }
 
 /// Errors returned by plugin calls

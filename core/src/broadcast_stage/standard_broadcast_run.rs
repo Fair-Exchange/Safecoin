@@ -9,8 +9,9 @@ use {
         broadcast_stage::broadcast_utils::UnfinishedSlotInfo, cluster_nodes::ClusterNodesCache,
     },
     solana_entry::entry::Entry,
-    solana_ledger::shred::{ProcessShredsStats, Shred, ShredFlags, Shredder},
-    safecoin_sdk::{
+    solana_ledger::shred::{ProcessShredsStats, ReedSolomonCache, Shred, ShredFlags, Shredder},
+    solana_sdk::{
+        genesis_config::ClusterType,
         signature::Keypair,
         timing::{duration_as_us, AtomicInterval},
     },
@@ -29,6 +30,7 @@ pub struct StandardBroadcastRun {
     last_datapoint_submit: Arc<AtomicInterval>,
     num_batches: usize,
     cluster_nodes_cache: Arc<ClusterNodesCache<BroadcastStage>>,
+    reed_solomon_cache: Arc<ReedSolomonCache>,
 }
 
 impl StandardBroadcastRun {
@@ -48,6 +50,7 @@ impl StandardBroadcastRun {
             last_datapoint_submit: Arc::default(),
             num_batches: 0,
             cluster_nodes_cache,
+            reed_solomon_cache: Arc::<ReedSolomonCache>::default(),
         }
     }
 
@@ -58,6 +61,7 @@ impl StandardBroadcastRun {
         &mut self,
         keypair: &Keypair,
         max_ticks_in_slot: u8,
+        cluster_type: ClusterType,
         stats: &mut ProcessShredsStats,
     ) -> Vec<Shred> {
         const SHRED_TICK_REFERENCE_MASK: u8 = ShredFlags::SHRED_TICK_REFERENCE_MASK.bits();
@@ -70,14 +74,22 @@ impl StandardBroadcastRun {
                 let shredder =
                     Shredder::new(state.slot, state.parent, reference_tick, self.shred_version)
                         .unwrap();
+                let merkle_variant =
+                    should_use_merkle_variant(state.slot, cluster_type, self.shred_version);
                 let (mut shreds, coding_shreds) = shredder.entries_to_shreds(
                     keypair,
                     &[],  // entries
                     true, // is_last_in_slot,
                     state.next_shred_index,
                     state.next_code_index,
+                    merkle_variant,
+                    &self.reed_solomon_cache,
                     stats,
                 );
+                if merkle_variant {
+                    stats.num_merkle_data_shreds += shreds.len();
+                    stats.num_merkle_coding_shreds += coding_shreds.len();
+                }
                 self.report_and_reset_stats(true);
                 self.unfinished_slot = None;
                 shreds.extend(coding_shreds);
@@ -93,6 +105,7 @@ impl StandardBroadcastRun {
         blockstore: &Blockstore,
         reference_tick: u8,
         is_slot_end: bool,
+        cluster_type: ClusterType,
         process_stats: &mut ProcessShredsStats,
     ) -> (
         Vec<Shred>, // data shreds
@@ -104,7 +117,7 @@ impl StandardBroadcastRun {
             None => {
                 // If the blockstore has shreds for the slot, it should not
                 // recreate the slot:
-                // https://github.com/fair-exchange/safecoin/blob/ff68bf6c2/ledger/src/leader_schedule_cache.rs#L142-L146
+                // https://github.com/solana-labs/solana/blob/ff68bf6c2/ledger/src/leader_schedule_cache.rs#L142-L146
                 if let Some(slot_meta) = blockstore.meta(slot).unwrap() {
                     if slot_meta.received > 0 || slot_meta.consumed > 0 {
                         process_stats.num_extant_slots += 1;
@@ -118,14 +131,21 @@ impl StandardBroadcastRun {
         };
         let shredder =
             Shredder::new(slot, parent_slot, reference_tick, self.shred_version).unwrap();
+        let merkle_variant = should_use_merkle_variant(slot, cluster_type, self.shred_version);
         let (data_shreds, coding_shreds) = shredder.entries_to_shreds(
             keypair,
             entries,
             is_slot_end,
             next_shred_index,
             next_code_index,
+            merkle_variant,
+            &self.reed_solomon_cache,
             process_stats,
         );
+        if merkle_variant {
+            process_stats.num_merkle_data_shreds += data_shreds.len();
+            process_stats.num_merkle_coding_shreds += coding_shreds.len();
+        }
         let next_shred_index = match data_shreds.iter().map(Shred::index).max() {
             Some(index) => index + 1,
             None => next_shred_index,
@@ -200,10 +220,15 @@ impl StandardBroadcastRun {
         let mut process_stats = ProcessShredsStats::default();
 
         let mut to_shreds_time = Measure::start("broadcast_to_shreds");
+        let cluster_type = bank.cluster_type();
 
         // 1) Check if slot was interrupted
-        let prev_slot_shreds =
-            self.finish_prev_slot(keypair, bank.ticks_per_slot() as u8, &mut process_stats);
+        let prev_slot_shreds = self.finish_prev_slot(
+            keypair,
+            bank.ticks_per_slot() as u8,
+            cluster_type,
+            &mut process_stats,
+        );
 
         // 2) Convert entries to shreds and coding shreds
         let is_last_in_slot = last_tick_height == bank.max_tick_height();
@@ -214,13 +239,14 @@ impl StandardBroadcastRun {
             blockstore,
             reference_tick as u8,
             is_last_in_slot,
+            cluster_type,
             &mut process_stats,
         );
         // Insert the first data shred synchronously so that blockstore stores
         // that the leader started this block. This must be done before the
         // blocks are sent out over the wire. By contrast Self::insert skips
         // the 1st data shred with index zero.
-        // https://github.com/fair-exchange/safecoin/blob/53695ecd2/core/src/broadcast_stage/standard_broadcast_run.rs#L334-L339
+        // https://github.com/solana-labs/solana/blob/53695ecd2/core/src/broadcast_stage/standard_broadcast_run.rs#L334-L339
         if let Some(shred) = data_shreds.first() {
             if shred.index() == 0 {
                 blockstore
@@ -316,7 +342,7 @@ impl StandardBroadcastRun {
         let insert_shreds_start = Instant::now();
         let mut shreds = Arc::try_unwrap(shreds).unwrap_or_else(|shreds| (*shreds).clone());
         // The first data shred is inserted synchronously.
-        // https://github.com/fair-exchange/safecoin/blob/53695ecd2/core/src/broadcast_stage/standard_broadcast_run.rs#L239-L246
+        // https://github.com/solana-labs/solana/blob/53695ecd2/core/src/broadcast_stage/standard_broadcast_run.rs#L239-L246
         if let Some(shred) = shreds.first() {
             if shred.is_data() && shred.index() == 0 {
                 shreds.swap_remove(0);
@@ -447,18 +473,22 @@ impl BroadcastRun for StandardBroadcastRun {
     }
 }
 
+fn should_use_merkle_variant(_slot: Slot, _cluster_type: ClusterType, _shred_version: u16) -> bool {
+    false
+}
+
 #[cfg(test)]
 mod test {
     use {
         super::*,
         solana_entry::entry::create_ticks,
-        safecoin_gossip::cluster_info::{ClusterInfo, Node},
+        solana_gossip::cluster_info::{ClusterInfo, Node},
         solana_ledger::{
             blockstore::Blockstore, genesis_utils::create_genesis_config, get_tmp_ledger_path,
             shred::max_ticks_per_n_shreds,
         },
         solana_runtime::bank::Bank,
-        safecoin_sdk::{
+        solana_sdk::{
             genesis_config::GenesisConfig,
             signature::{Keypair, Signer},
         },
@@ -488,7 +518,7 @@ mod test {
         let leader_info = Node::new_localhost_with_pubkey(&leader_pubkey);
         let cluster_info = Arc::new(ClusterInfo::new(
             leader_info.info,
-            Arc::new(Keypair::new()),
+            leader_keypair.clone(),
             SocketAddrSpace::Unspecified,
         ));
         let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
@@ -530,7 +560,12 @@ mod test {
         run.current_slot_and_parent = Some((4, 2));
 
         // Slot 2 interrupted slot 1
-        let shreds = run.finish_prev_slot(&keypair, 0, &mut ProcessShredsStats::default());
+        let shreds = run.finish_prev_slot(
+            &keypair,
+            0,
+            ClusterType::Devnet,
+            &mut ProcessShredsStats::default(),
+        );
         let shred = shreds
             .get(0)
             .expect("Expected a shred that signals an interrupt");

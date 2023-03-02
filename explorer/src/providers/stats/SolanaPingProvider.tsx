@@ -74,7 +74,7 @@ function downsample(points: PingInfo[], bucketSize: number): PingInfo[] {
   return buckets;
 }
 
-export function SafecoinPingProvider({ children }: Props) {
+export function SolanaPingProvider({ children }: Props) {
   const { cluster } = useCluster();
   const { active } = useStatsProvider();
   const [rollup, setRollup] = React.useState<PingRollupInfo | undefined>({
@@ -153,7 +153,7 @@ export function SafecoinPingProvider({ children }: Props) {
   return <PingContext.Provider value={rollup}>{children}</PingContext.Provider>;
 }
 
-export function useSafecoinPingInfo() {
+export function useSolanaPingInfo() {
   const context = React.useContext(PingContext);
   if (!context) {
     throw new Error(`useContext must be used within a StatsProvider`);

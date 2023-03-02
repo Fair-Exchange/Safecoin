@@ -1,6 +1,6 @@
 import {expect} from 'chai';
 
-import {clusterApiUrl} from '../src/util/cluster';
+import {clusterApiUrl} from '../src/utils/cluster';
 
 describe('Cluster Util', () => {
   it('invalid', () => {
@@ -10,13 +10,13 @@ describe('Cluster Util', () => {
   });
 
   it('devnet', () => {
-    expect(clusterApiUrl()).to.eq('https://api.devnet.safecoin.org');
-    expect(clusterApiUrl('devnet')).to.eq('https://api.devnet.safecoin.org');
+    expect(clusterApiUrl()).to.eq('https://api.devnet.solana.com');
+    expect(clusterApiUrl('devnet')).to.eq('https://api.devnet.solana.com');
     expect(clusterApiUrl('devnet', true)).to.eq(
-      'https://api.devnet.safecoin.org',
+      'https://api.devnet.solana.com',
     );
     expect(clusterApiUrl('devnet', false)).to.eq(
-      'http://api.devnet.safecoin.org',
+      'http://api.devnet.solana.com',
     );
   });
 });

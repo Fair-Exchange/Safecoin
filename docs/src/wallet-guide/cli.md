@@ -2,10 +2,10 @@
 title: Command Line Wallets
 ---
 
-Safecoin supports several different types of wallets that can be used to interface
-directly with the Safecoin command-line tools.
+Solana supports several different types of wallets that can be used to interface
+directly with the Solana command-line tools.
 
-To use a Command Line Wallet, you must first [install the Safecoin CLI tools](../cli/install-solana-cli-tools.md)
+To use a Command Line Wallet, you must first [install the Solana CLI tools](../cli/install-solana-cli-tools.md)
 
 ## File System Wallet
 

@@ -3,7 +3,7 @@ import {
   InstructionType,
   PublicKey,
   TransactionInstruction,
-} from "@safecoin/web3.js";
+} from "@solana/web3.js";
 import { Layout, uint8ArrayToBuffer } from "@solana/buffer-layout";
 
 /**
@@ -402,7 +402,7 @@ export class PythInstruction {
     return {
       signerPubkey: instruction.keys[0].pubkey,
       pricePubkey: instruction.keys[1].pubkey,
-      publisherPubkey: PublicKey.decode(publisherPubkey),
+      publisherPubkey: new PublicKey(publisherPubkey),
     };
   }
 
@@ -420,7 +420,7 @@ export class PythInstruction {
     return {
       signerPubkey: instruction.keys[0].pubkey,
       pricePubkey: instruction.keys[1].pubkey,
-      publisherPubkey: PublicKey.decode(publisherPubkey),
+      publisherPubkey: new PublicKey(publisherPubkey),
     };
   }
 

@@ -11,7 +11,7 @@ import {
   AccountBalanceRow,
   AccountHeader,
 } from "components/common/Account";
-import { PublicKey } from "@safecoin/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { Address } from "components/common/Address";
 
 const MAX_SLASH_PENALTY = Math.pow(2, 8);
@@ -58,7 +58,7 @@ function StakeConfigCard({
     <div className="card">
       <AccountHeader
         title="Stake Config"
-        refresh={() => refresh(account.pubkey)}
+        refresh={() => refresh(account.pubkey, "parsed")}
       />
 
       <TableCardBody>
@@ -91,7 +91,7 @@ function ValidatorInfoCard({
     <div className="card">
       <AccountHeader
         title="Validator Info"
-        refresh={() => refresh(account.pubkey)}
+        refresh={() => refresh(account.pubkey, "parsed")}
       />
 
       <TableCardBody>

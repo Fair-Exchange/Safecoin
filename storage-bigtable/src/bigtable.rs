@@ -16,6 +16,7 @@ use {
     tonic::{codegen::InterceptedService, transport::ClientTlsConfig, Request, Status},
 };
 
+#[allow(clippy::derive_partial_eq_without_eq)]
 mod google {
     mod rpc {
         include!(concat!(
@@ -135,16 +136,7 @@ impl BigTableConnection {
         match std::env::var("BIGTABLE_EMULATOR_HOST") {
             Ok(endpoint) => {
                 info!("Connecting to bigtable emulator at {}", endpoint);
-
-                Ok(Self {
-                    access_token: None,
-                    channel: tonic::transport::Channel::from_shared(format!("http://{}", endpoint))
-                        .map_err(|err| Error::InvalidUri(endpoint, err.to_string()))?
-                        .connect_lazy(),
-                    table_prefix: format!("projects/emulator/instances/{}/tables/", instance_name),
-                    app_profile_id: app_profile_id.to_string(),
-                    timeout,
-                })
+                Self::new_for_emulator(instance_name, app_profile_id, &endpoint, timeout)
             }
 
             Err(_) => {
@@ -212,6 +204,23 @@ impl BigTableConnection {
                 })
             }
         }
+    }
+
+    pub fn new_for_emulator(
+        instance_name: &str,
+        app_profile_id: &str,
+        endpoint: &str,
+        timeout: Option<Duration>,
+    ) -> Result<Self> {
+        Ok(Self {
+            access_token: None,
+            channel: tonic::transport::Channel::from_shared(format!("http://{endpoint}"))
+                .map_err(|err| Error::InvalidUri(String::from(endpoint), err.to_string()))?
+                .connect_lazy(),
+            table_prefix: format!("projects/emulator/instances/{instance_name}/tables/"),
+            app_profile_id: app_profile_id.to_string(),
+            timeout,
+        })
     }
 
     /// Create a new BigTable client.
@@ -455,6 +464,31 @@ impl<F: FnMut(Request<()>) -> InterceptedRequestResult> BigTable<F> {
 
         let rows = self.decode_read_rows_response(response).await?;
         Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    /// Check whether a row key exists in a `table`
+    pub async fn row_key_exists(&mut self, table_name: &str, row_key: RowKey) -> Result<bool> {
+        self.refresh_access_token().await;
+
+        let response = self
+            .client
+            .read_rows(ReadRowsRequest {
+                table_name: format!("{}{}", self.table_prefix, table_name),
+                app_profile_id: self.app_profile_id.clone(),
+                rows_limit: 1,
+                rows: Some(RowSet {
+                    row_keys: vec![row_key.into_bytes()],
+                    row_ranges: vec![],
+                }),
+                filter: Some(RowFilter {
+                    filter: Some(row_filter::Filter::StripValueTransformer(true)),
+                }),
+            })
+            .await?
+            .into_inner();
+
+        let rows = self.decode_read_rows_response(response).await?;
+        Ok(!rows.is_empty())
     }
 
     /// Get latest data from `table`.
@@ -812,13 +846,13 @@ where
     let value = &row_data
         .iter()
         .find(|(name, _)| name == "proto")
-        .ok_or_else(|| Error::ObjectNotFound(format!("{}/{}", table, key)))?
+        .ok_or_else(|| Error::ObjectNotFound(format!("{table}/{key}")))?
         .1;
 
     let data = decompress(value)?;
     T::decode(&data[..]).map_err(|err| {
         warn!("Failed to deserialize {}/{}: {}", table, key, err);
-        Error::ObjectCorrupt(format!("{}/{}", table, key))
+        Error::ObjectCorrupt(format!("{table}/{key}"))
     })
 }
 
@@ -833,13 +867,13 @@ where
     let value = &row_data
         .iter()
         .find(|(name, _)| name == "bin")
-        .ok_or_else(|| Error::ObjectNotFound(format!("{}/{}", table, key)))?
+        .ok_or_else(|| Error::ObjectNotFound(format!("{table}/{key}")))?
         .1;
 
     let data = decompress(value)?;
     bincode::deserialize(&data).map_err(|err| {
         warn!("Failed to deserialize {}/{}: {}", table, key, err);
-        Error::ObjectCorrupt(format!("{}/{}", table, key))
+        Error::ObjectCorrupt(format!("{table}/{key}"))
     })
 }
 
@@ -849,12 +883,12 @@ mod tests {
         super::*,
         crate::StoredConfirmedBlock,
         prost::Message,
-        safecoin_sdk::{
+        solana_sdk::{
             hash::Hash, message::v0::LoadedAddresses, signature::Keypair, system_transaction,
             transaction::VersionedTransaction, transaction_context::TransactionReturnData,
         },
         solana_storage_proto::convert::generated,
-        safecoin_transaction_status::{
+        solana_transaction_status::{
             ConfirmedBlock, TransactionStatusMeta, TransactionWithStatusMeta,
             VersionedTransactionWithStatusMeta,
         },
@@ -886,7 +920,7 @@ mod tests {
     #[test]
     fn test_deserialize_protobuf_or_bincode_cell_data() {
         let from = Keypair::new();
-        let recipient = safecoin_sdk::pubkey::new_rand();
+        let recipient = solana_sdk::pubkey::new_rand();
         let transaction = system_transaction::transfer(&from, &recipient, 42, Hash::default());
         let with_meta = TransactionWithStatusMeta::Complete(VersionedTransactionWithStatusMeta {
             transaction: VersionedTransaction::from(transaction),

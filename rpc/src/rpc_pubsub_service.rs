@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        rpc_pubsub::{RpcSafePubSubImpl, RpcSafePubSubInternal},
+        rpc_pubsub::{RpcSolPubSubImpl, RpcSolPubSubInternal},
         rpc_subscription_tracker::{
             SubscriptionControl, SubscriptionId, SubscriptionParams, SubscriptionToken,
         },
@@ -194,7 +194,7 @@ pub struct TestBroadcastReceiver {
 impl TestBroadcastReceiver {
     pub fn recv(&mut self) -> String {
         match self.recv_timeout(std::time::Duration::from_secs(10)) {
-            Err(err) => panic!("broadcast receiver error: {}", err),
+            Err(err) => panic!("broadcast receiver error: {err}"),
             Ok(str) => str,
         }
     }
@@ -230,10 +230,10 @@ impl TestBroadcastReceiver {
 #[cfg(test)]
 pub fn test_connection(
     subscriptions: &Arc<RpcSubscriptions>,
-) -> (RpcSafePubSubImpl, TestBroadcastReceiver) {
+) -> (RpcSolPubSubImpl, TestBroadcastReceiver) {
     let current_subscriptions = Arc::new(DashMap::new());
 
-    let rpc_impl = RpcSafePubSubImpl::new(
+    let rpc_impl = RpcSolPubSubImpl::new(
         PubSubConfig {
             enable_block_subscription: true,
             enable_vote_subscription: true,
@@ -285,7 +285,7 @@ async fn handle_connection(
     let current_subscriptions = Arc::new(DashMap::new());
 
     let mut json_rpc_handler = IoHandler::new();
-    let rpc_impl = RpcSafePubSubImpl::new(
+    let rpc_impl = RpcSolPubSubImpl::new(
         config,
         subscription_control,
         Arc::clone(&current_subscriptions),
@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn test_pubsub_new() {
-        let pubsub_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0);
+        let pubsub_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
         let exit = Arc::new(AtomicBool::new(false));
         let max_complete_transaction_status_slot = Arc::new(AtomicU64::default());
         let GenesisConfigInfo { genesis_config, .. } = create_genesis_config(10_000);

@@ -5,6 +5,7 @@ extern crate lazy_static;
 extern crate serde_derive;
 
 pub mod parse_account_data;
+pub mod parse_address_lookup_table;
 pub mod parse_bpf_loader;
 pub mod parse_config;
 pub mod parse_nonce;
@@ -17,7 +18,7 @@ pub mod validator_info;
 
 use {
     crate::parse_account_data::{parse_account_data, AccountAdditionalData, ParsedAccount},
-    safecoin_sdk::{
+    solana_sdk::{
         account::{ReadableAccount, WritableAccount},
         clock::Epoch,
         fee_calculator::FeeCalculator,
@@ -42,6 +43,7 @@ pub struct UiAccount {
     pub owner: String,
     pub executable: bool,
     pub rent_epoch: Epoch,
+    pub space: Option<u64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -82,6 +84,7 @@ impl UiAccount {
         additional_data: Option<AccountAdditionalData>,
         data_slice_config: Option<UiDataSliceConfig>,
     ) -> Self {
+        let space = account.data().len();
         let data = match encoding {
             UiAccountEncoding::Binary => {
                 let data = Self::encode_bs58(account, data_slice_config);
@@ -115,7 +118,7 @@ impl UiAccount {
                     UiAccountData::Json(parsed_data)
                 } else {
                     UiAccountData::Binary(
-                        base64::encode(&account.data()),
+                        base64::encode(slice_data(account.data(), data_slice_config)),
                         UiAccountEncoding::Base64,
                     )
                 }
@@ -127,6 +130,7 @@ impl UiAccount {
             owner: account.owner().to_string(),
             executable: account.executable(),
             rent_epoch: account.rent_epoch(),
+            space: Some(space as u64),
         }
     }
 
@@ -204,7 +208,7 @@ fn slice_data(data: &[u8], data_slice_config: Option<UiDataSliceConfig>) -> &[u8
 mod test {
     use {
         super::*,
-        safecoin_sdk::account::{Account, AccountSharedData},
+        solana_sdk::account::{Account, AccountSharedData},
     };
 
     #[test]

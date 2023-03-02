@@ -1,11 +1,11 @@
 import React from "react";
-import { SafeBalance } from "utils";
-import { BlockResponse, PublicKey } from "@safecoin/web3.js";
+import { SolBalance } from "components/common/SolBalance";
+import { PublicKey, VersionedBlockResponse } from "@solana/web3.js";
 import { Address } from "components/common/Address";
 
 const PAGE_SIZE = 10;
 
-export function BlockRewardsCard({ block }: { block: BlockResponse }) {
+export function BlockRewardsCard({ block }: { block: VersionedBlockResponse }) {
   const [rewardsDisplayed, setRewardsDisplayed] = React.useState(PAGE_SIZE);
 
   if (!block.rewards || block.rewards.length < 1) {
@@ -50,11 +50,11 @@ export function BlockRewardsCard({ block }: { block: BlockResponse }) {
                   </td>
                   <td>{reward.rewardType}</td>
                   <td>
-                    <SafeBalance lamports={reward.lamports} />
+                    <SolBalance lamports={reward.lamports} />
                   </td>
                   <td>
                     {reward.postBalance ? (
-                      <SafeBalance lamports={reward.postBalance} />
+                      <SolBalance lamports={reward.postBalance} />
                     ) : (
                       "-"
                     )}

@@ -48,7 +48,7 @@ datasources:
   database: testnet
   user: $INFLUXDB_READ_USER
   password: $INFLUXDB_READ_PASSWORD
-  url: http://influxdb:10016
+  url: http://influxdb:8086
   editable: true
 EOF
 fi
@@ -79,7 +79,7 @@ docker run \
   --detach \
   --name=influxdb \
   --net=influxdb \
-  --publish 10016:10016 \
+  --publish 8086:8086 \
   --user "$(id -u):$(id -g)" \
   --volume "$PWD"/influxdb.conf:/etc/influxdb/influxdb.conf:ro \
   --volume "$PWD"/lib/influxdb:/var/lib/influxdb \

@@ -1,5 +1,5 @@
 import React from "react";
-import { PublicKey } from "@safecoin/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { FetchStatus } from "providers/cache";
 import {
   useFetchAccountOwnedTokens,
@@ -63,6 +63,12 @@ export function OwnedTokensCard({ pubkey }: { pubkey: PublicKey }) {
         retryText="Try Again"
         text={"No token holdings found"}
       />
+    );
+  }
+
+  if (tokens.length > 100) {
+    return (
+      <ErrorCard text="Token holdings is not available for accounts with over 100 token accounts" />
     );
   }
 

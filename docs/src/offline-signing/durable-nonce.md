@@ -4,7 +4,7 @@ title: Durable Transaction Nonces
 
 Durable transaction nonces are a mechanism for getting around the typical
 short lifetime of a transaction's [`recent_blockhash`](developing/programming-model/transactions.md#recent-blockhash).
-They are implemented as a Safecoin Program, the mechanics of which can be read
+They are implemented as a Solana Program, the mechanics of which can be read
 about in the [proposal](../implemented-proposals/durable-tx-nonces.md).
 
 ## Usage Examples
@@ -38,8 +38,8 @@ A nonce account is created by first generating a new keypair, then create the ac
 - Command
 
 ```bash
-safecoin-keygen new -o nonce-keypair.json
-safecoin create-nonce-account nonce-keypair.json 1
+solana-keygen new -o nonce-keypair.json
+solana create-nonce-account nonce-keypair.json 1
 ```
 
 - Output
@@ -61,7 +61,7 @@ presently stored nonce value with
 - Command
 
 ```bash
-safecoin nonce nonce-keypair.json
+solana nonce nonce-keypair.json
 ```
 
 - Output
@@ -80,7 +80,7 @@ value can be advanced by
 - Command
 
 ```bash
-safecoin new-nonce nonce-keypair.json
+solana new-nonce nonce-keypair.json
 ```
 
 - Output
@@ -98,14 +98,14 @@ Inspect a nonce account in a more human friendly format with
 - Command
 
 ```bash
-safecoin nonce-account nonce-keypair.json
+solana nonce-account nonce-keypair.json
 ```
 
 - Output
 
 ```text
-balance: 0.5 SAFE
-minimum balance required: 0.00136416 SAFE
+balance: 0.5 SOL
+minimum balance required: 0.00136416 SOL
 nonce: DZar6t2EaCFQTbUP4DHKwZ1wT8gCPW2aRfkVWhydkBvS
 ```
 
@@ -118,7 +118,7 @@ Withdraw funds from a nonce account with
 - Command
 
 ```bash
-safecoin withdraw-from-nonce-account nonce-keypair.json ~/.config/safecoin/id.json 0.5
+solana withdraw-from-nonce-account nonce-keypair.json ~/.config/solana/id.json 0.5
 ```
 
 - Output
@@ -138,7 +138,7 @@ Reassign the authority of a nonce account after creation with
 - Command
 
 ```bash
-safecoin authorize-nonce-account nonce-keypair.json nonce-authority.json
+solana authorize-nonce-account nonce-keypair.json nonce-authority.json
 ```
 
 - Output
@@ -165,7 +165,7 @@ The following subcommands have received this treatment so far
 
 ### Example Pay Using Durable Nonce
 
-Here we demonstrate Alice paying Bob 1 SAFE using a durable nonce. The procedure
+Here we demonstrate Alice paying Bob 1 SOL using a durable nonce. The procedure
 is the same for all subcommands supporting durable nonces
 
 #### - Create accounts
@@ -173,19 +173,19 @@ is the same for all subcommands supporting durable nonces
 First we need some accounts for Alice, Alice's nonce and Bob
 
 ```bash
-$ safecoin-keygen new -o alice.json
-$ safecoin-keygen new -o nonce.json
-$ safecoin-keygen new -o bob.json
+$ solana-keygen new -o alice.json
+$ solana-keygen new -o nonce.json
+$ solana-keygen new -o bob.json
 ```
 
 #### - Fund Alice's account
 
 Alice will need some funds to create a nonce account and send to Bob. Airdrop
-her some SAFE
+her some SOL
 
 ```bash
-$ safecoin airdrop -k alice.json 1
-1 SAFE
+$ solana airdrop -k alice.json 1
+1 SOL
 ```
 
 #### - Create Alice's nonce account
@@ -195,7 +195,7 @@ Now Alice needs a nonce account. Create one
 > Here, no separate [nonce authority](#nonce-authority) is employed, so `alice.json` has full authority over the nonce account
 
 ```bash
-$ safecoin create-nonce-account -k alice.json nonce.json 0.1
+$ solana create-nonce-account -k alice.json nonce.json 0.1
 3KPZr96BTsL3hqera9up82KAU462Gz31xjqJ6eHUAjF935Yf8i1kmfEbo6SVbNaACKE5z6gySrNjVRvmS8DcPuwV
 ```
 
@@ -205,7 +205,7 @@ Alice attempts to pay Bob, but takes too long to sign. The specified blockhash
 expires and the transaction fails
 
 ```bash
-$ safecoin transfer -k alice.json --blockhash expiredDTaxfagttWjQweib42b6ZHADSx94Tw8gHx11 bob.json 0.01
+$ solana transfer -k alice.json --blockhash expiredDTaxfagttWjQweib42b6ZHADSx94Tw8gHx11 bob.json 0.01
 [2020-01-02T18:48:28.462911000Z ERROR solana_cli::cli] Io(Custom { kind: Other, error: "Transaction \"33gQQaoPc9jWePMvDAeyJpcnSPiGUAdtVg8zREWv4GiKjkcGNufgpcbFyRKRrA25NkgjZySEeKue5rawyeH5TzsV\" failed: None" })
 Error: Io(Custom { kind: Other, error: "Transaction \"33gQQaoPc9jWePMvDAeyJpcnSPiGUAdtVg8zREWv4GiKjkcGNufgpcbFyRKRrA25NkgjZySEeKue5rawyeH5TzsV\" failed: None" })
 ```
@@ -218,30 +218,30 @@ blockhash stored there
 > Remember, `alice.json` is the [nonce authority](#nonce-authority) in this example
 
 ```bash
-$ safecoin nonce-account nonce.json
-balance: 0.1 SAFE
-minimum balance required: 0.00136416 SAFE
+$ solana nonce-account nonce.json
+balance: 0.1 SOL
+minimum balance required: 0.00136416 SOL
 nonce: F7vmkY3DTaxfagttWjQweib42b6ZHADSx94Tw8gHx3W7
 ```
 
 ```bash
-$ safecoin transfer -k alice.json --blockhash F7vmkY3DTaxfagttWjQweib42b6ZHADSx94Tw8gHx3W7 --nonce nonce.json bob.json 0.01
+$ solana transfer -k alice.json --blockhash F7vmkY3DTaxfagttWjQweib42b6ZHADSx94Tw8gHx3W7 --nonce nonce.json bob.json 0.01
 HR1368UKHVZyenmH7yVz5sBAijV6XAPeWbEiXEGVYQorRMcoijeNAbzZqEZiH8cDB8tk65ckqeegFjK8dHwNFgQ
 ```
 
 #### - Success!
 
-The transaction succeeds! Bob receives 0.01 SAFE from Alice and Alice's stored
+The transaction succeeds! Bob receives 0.01 SOL from Alice and Alice's stored
 nonce advances to a new value
 
 ```bash
-$ safecoin balance -k bob.json
-0.01 SAFE
+$ solana balance -k bob.json
+0.01 SOL
 ```
 
 ```bash
-$ safecoin nonce-account nonce.json
-balance: 0.1 SAFE
-minimum balance required: 0.00136416 SAFE
+$ solana nonce-account nonce.json
+balance: 0.1 SOL
+minimum balance required: 0.00136416 SOL
 nonce: 6bjroqDcZgTv6Vavhqf81oBHTv3aMnX19UTB51YhAZnN
 ```

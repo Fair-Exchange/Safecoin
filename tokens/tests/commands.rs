@@ -1,9 +1,9 @@
 use {
-    safecoin_client::rpc_client::RpcClient,
-    safecoin_sdk::signature::{Keypair, Signer},
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_sdk::signature::{Keypair, Signer},
     solana_streamer::socket::SocketAddrSpace,
     solana_test_validator::TestValidator,
-    safecoin_tokens::commands::test_process_distribute_tokens_with_client,
+    solana_tokens::commands::test_process_distribute_tokens_with_client,
 };
 
 #[test]

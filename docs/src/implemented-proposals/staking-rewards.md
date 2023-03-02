@@ -2,7 +2,7 @@
 title: Staking Rewards
 ---
 
-A Proof of Stake \(PoS\), \(i.e. using in-protocol asset, SAFE, to provide secure consensus\) design is outlined here. Safecoin implements a proof of stake reward/security scheme for validator nodes in the cluster. The purpose is threefold:
+A Proof of Stake \(PoS\), \(i.e. using in-protocol asset, SOL, to provide secure consensus\) design is outlined here. Solana implements a proof of stake reward/security scheme for validator nodes in the cluster. The purpose is threefold:
 
 - Align validator incentives with that of the greater cluster through skin-in-the-game deposits at risk
 
@@ -10,21 +10,21 @@ A Proof of Stake \(PoS\), \(i.e. using in-protocol asset, SAFE, to provide secur
 
 - Provide an avenue for validator rewards provided as a function of validator participation in the cluster.
 
-While many of the details of the specific implementation are currently under consideration and are expected to come into focus through specific modeling studies and parameter exploration on the Safecoin testnet, we outline here our current thinking on the main components of the PoS system. Much of this thinking is based on the current status of Casper FFG, with optimizations and specific attributes to be modified as is allowed by Safecoin's Proof of History \(PoH\) blockchain data structure.
+While many of the details of the specific implementation are currently under consideration and are expected to come into focus through specific modeling studies and parameter exploration on the Solana testnet, we outline here our current thinking on the main components of the PoS system. Much of this thinking is based on the current status of Casper FFG, with optimizations and specific attributes to be modified as is allowed by Solana's Proof of History \(PoH\) blockchain data structure.
 
 ## General Overview
 
-Safecoin's ledger validation design is based on a rotating, stake-weighted selected leader broadcasting transactions in a PoH data structure to validating nodes. These nodes, upon receiving the leader's broadcast, have the opportunity to vote on the current state and PoH height by signing a transaction into the PoH stream.
+Solana's ledger validation design is based on a rotating, stake-weighted selected leader broadcasting transactions in a PoH data structure to validating nodes. These nodes, upon receiving the leader's broadcast, have the opportunity to vote on the current state and PoH height by signing a transaction into the PoH stream.
 
-To become a Safecoin validator, one must deposit/lock-up some amount of SAFE in a contract. This SAFE will not be accessible for a specific time period. The precise duration of the staking lockup period has not been determined. However we can consider three phases of this time for which specific parameters will be necessary:
+To become a Solana validator, one must deposit/lock-up some amount of SOL in a contract. This SOL will not be accessible for a specific time period. The precise duration of the staking lockup period has not been determined. However we can consider three phases of this time for which specific parameters will be necessary:
 
-- _Warm-up period_: which SAFE is deposited and inaccessible to the node, however PoH transaction validation has not begun. Most likely on the order of days to weeks
+- _Warm-up period_: which SOL is deposited and inaccessible to the node, however PoH transaction validation has not begun. Most likely on the order of days to weeks
 
-- _Validation period_: a minimum duration for which the deposited SAFE will be inaccessible, at risk of slashing \(see slashing rules below\) and earning rewards for the validator participation. Likely duration of months to a year.
+- _Validation period_: a minimum duration for which the deposited SOL will be inaccessible, at risk of slashing \(see slashing rules below\) and earning rewards for the validator participation. Likely duration of months to a year.
 
 - _Cool-down period_: a duration of time following the submission of a 'withdrawal' transaction. During this period validation responsibilities have been removed and the funds continue to be inaccessible. Accumulated rewards should be delivered at the end of this period, along with the return of the initial deposit.
 
-Safecoin's trustless sense of time and ordering provided by its PoH data structure, along with its [turbine](https://www.youtube.com/watch?v=qt_gDRXHrHQ&t=1s) data broadcast and transmission design, should provide sub-second transaction confirmation times that scale with the log of the number of nodes in the cluster. This means we shouldn't have to restrict the number of validating nodes with a prohibitive 'minimum deposits' and expect nodes to be able to become validators with nominal amounts of SAFE staked. At the same time, Safecoin's focus on high-throughput should create incentive for validation clients to provide high-performant and reliable hardware. Combined with potentially a minimum network speed threshold to join as a validation-client, we expect a healthy validation delegation market to emerge.
+Solana's trustless sense of time and ordering provided by its PoH data structure, along with its [turbine](https://www.youtube.com/watch?v=qt_gDRXHrHQ&t=1s) data broadcast and transmission design, should provide sub-second transaction confirmation times that scale with the log of the number of nodes in the cluster. This means we shouldn't have to restrict the number of validating nodes with a prohibitive 'minimum deposits' and expect nodes to be able to become validators with nominal amounts of SOL staked. At the same time, Solana's focus on high-throughput should create incentive for validation clients to provide high-performant and reliable hardware. Combined with potentially a minimum network speed threshold to join as a validation-client, we expect a healthy validation delegation market to emerge.
 
 ## Penalties
 

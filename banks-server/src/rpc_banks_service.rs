@@ -1,9 +1,9 @@
-//! The `rpc_banks_service` module implements the Safecoin Banks RPC API.
+//! The `rpc_banks_service` module implements the Solana Banks RPC API.
 
 use {
     crate::banks_server::start_tcp_server,
     futures::{future::FutureExt, pin_mut, prelude::stream::StreamExt, select},
-    safecoin_client::connection_cache::ConnectionCache,
+    solana_client::connection_cache::ConnectionCache,
     solana_runtime::{bank_forks::BankForks, commitment::BlockCommitmentCache},
     std::{
         net::SocketAddr,

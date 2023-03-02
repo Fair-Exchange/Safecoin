@@ -11,7 +11,7 @@ export interface IInstructionInputData {
  * @internal
  */
 export type InstructionType<TInputData extends IInstructionInputData> = {
-  /** The Instruction index (from safecoin upstream program) */
+  /** The Instruction index (from solana upstream program) */
   index: number;
   /** The BufferLayout to use to build data */
   layout: BufferLayout.Layout<TInputData>;

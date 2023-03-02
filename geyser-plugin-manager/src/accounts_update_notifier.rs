@@ -5,15 +5,16 @@ use {
     solana_geyser_plugin_interface::geyser_plugin_interface::{
         ReplicaAccountInfoV2, ReplicaAccountInfoVersions,
     },
-    safecoin_measure::measure::Measure,
+    solana_measure::measure::Measure,
     solana_metrics::*,
     solana_runtime::{
         accounts_update_notifier_interface::AccountsUpdateNotifierInterface,
-        append_vec::{StoredAccountMeta, StoredMeta},
+        append_vec::StoredAccountMeta,
     },
-    safecoin_sdk::{
+    solana_sdk::{
         account::{AccountSharedData, ReadableAccount},
         clock::Slot,
+        pubkey::Pubkey,
         signature::Signature,
     },
     std::sync::{Arc, RwLock},
@@ -27,12 +28,13 @@ impl AccountsUpdateNotifierInterface for AccountsUpdateNotifierImpl {
     fn notify_account_update(
         &self,
         slot: Slot,
-        meta: &StoredMeta,
         account: &AccountSharedData,
         txn_signature: &Option<&Signature>,
+        pubkey: &Pubkey,
+        write_version: u64,
     ) {
         if let Some(account_info) =
-            self.accountinfo_from_shared_account_data(meta, account, txn_signature)
+            self.accountinfo_from_shared_account_data(account, txn_signature, pubkey, write_version)
         {
             self.notify_plugins_of_account_update(account_info, slot, false);
         }
@@ -104,18 +106,19 @@ impl AccountsUpdateNotifierImpl {
 
     fn accountinfo_from_shared_account_data<'a>(
         &self,
-        meta: &'a StoredMeta,
         account: &'a AccountSharedData,
         txn_signature: &'a Option<&'a Signature>,
+        pubkey: &'a Pubkey,
+        write_version: u64,
     ) -> Option<ReplicaAccountInfoV2<'a>> {
         Some(ReplicaAccountInfoV2 {
-            pubkey: meta.pubkey.as_ref(),
+            pubkey: pubkey.as_ref(),
             lamports: account.lamports(),
             owner: account.owner().as_ref(),
             executable: account.executable(),
             rent_epoch: account.rent_epoch(),
             data: account.data(),
-            write_version: meta.write_version,
+            write_version,
             txn_signature: *txn_signature,
         })
     }
@@ -125,13 +128,13 @@ impl AccountsUpdateNotifierImpl {
         stored_account_meta: &'a StoredAccountMeta,
     ) -> Option<ReplicaAccountInfoV2<'a>> {
         Some(ReplicaAccountInfoV2 {
-            pubkey: stored_account_meta.meta.pubkey.as_ref(),
+            pubkey: stored_account_meta.pubkey().as_ref(),
             lamports: stored_account_meta.account_meta.lamports,
             owner: stored_account_meta.account_meta.owner.as_ref(),
             executable: stored_account_meta.account_meta.executable,
             rent_epoch: stored_account_meta.account_meta.rent_epoch,
             data: stored_account_meta.data,
-            write_version: stored_account_meta.meta.write_version,
+            write_version: stored_account_meta.meta.write_version_obsolete,
             txn_signature: None,
         })
     }

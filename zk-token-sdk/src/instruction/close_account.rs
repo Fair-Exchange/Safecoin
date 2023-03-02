@@ -32,7 +32,7 @@ pub struct CloseAccountData {
     pub ciphertext: pod::ElGamalCiphertext, // 64 bytes
 
     /// Proof that the source account available balance is zero
-    pub proof: CloseAccountProof, // 64 bytes
+    pub proof: CloseAccountProof, // 96 bytes
 }
 
 #[cfg(not(target_os = "solana"))]
@@ -41,7 +41,7 @@ impl CloseAccountData {
         keypair: &ElGamalKeypair,
         ciphertext: &ElGamalCiphertext,
     ) -> Result<Self, ProofError> {
-        let pod_pubkey = pod::ElGamalPubkey((&keypair.public).to_bytes());
+        let pod_pubkey = pod::ElGamalPubkey(keypair.public.to_bytes());
         let pod_ciphertext = pod::ElGamalCiphertext(ciphertext.to_bytes());
 
         let mut transcript = CloseAccountProof::transcript_new(&pod_pubkey, &pod_ciphertext);

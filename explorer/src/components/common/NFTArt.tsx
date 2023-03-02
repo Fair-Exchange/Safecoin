@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Stream } from "@cloudflare/stream-react";
-import { PublicKey } from "@safecoin/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import {
   programs,
   MetadataJson,
@@ -11,7 +11,7 @@ import ContentLoader from "react-content-loader";
 import ErrorLogo from "img/logos-solana/dark-solana-logo.svg";
 import { getLast } from "utils";
 
-const MAX_TIME_LOADING_IMAGE = 5000; /* 5 seconds */
+export const MAX_TIME_LOADING_IMAGE = 5000; /* 5 seconds */
 
 const LoadingPlaceholder = () => (
   <ContentLoader
@@ -27,7 +27,7 @@ const LoadingPlaceholder = () => (
 );
 
 const ErrorPlaceHolder = () => (
-  <img src={ErrorLogo} width="120" height="120" alt="Safecoin Logo" />
+  <img src={ErrorLogo} width="120" height="120" alt="Solana Logo" />
 );
 
 const ViewOriginalArtContentLink = ({ src }: { src: string }) => {
@@ -42,7 +42,7 @@ const ViewOriginalArtContentLink = ({ src }: { src: string }) => {
   );
 };
 
-const CachedImageContent = ({ uri }: { uri?: string }) => {
+export const CachedImageContent = ({ uri }: { uri?: string }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showError, setShowError] = useState<boolean>(false);
   const [timeout, setTimeout] = useState<NodeJS.Timeout | undefined>(undefined);

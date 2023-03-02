@@ -1,5 +1,5 @@
 use {
-    safecoin_sdk::clock::Slot,
+    solana_sdk::clock::Slot,
     std::{
         ops::AddAssign,
         time::{Duration, Instant},
@@ -24,12 +24,16 @@ pub struct ProcessShredsStats {
     // If the blockstore already has shreds for the broadcast slot.
     pub num_extant_slots: u64,
     pub(crate) data_buffer_residual: usize,
+    pub num_merkle_data_shreds: usize,
+    pub num_merkle_coding_shreds: usize,
 }
 
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct ShredFetchStats {
     pub index_overrun: usize,
     pub shred_count: usize,
+    pub(crate) num_shreds_merkle_code: usize,
+    pub(crate) num_shreds_merkle_data: usize,
     pub ping_count: usize,
     pub ping_err_verify_count: usize,
     pub(crate) index_bad_deserialize: usize,
@@ -66,6 +70,12 @@ impl ProcessShredsStats {
             ("receive_time", self.receive_elapsed, i64),
             ("num_data_shreds", num_data_shreds, i64),
             ("num_coding_shreds", num_coding_shreds, i64),
+            ("num_merkle_data_shreds", self.num_merkle_data_shreds, i64),
+            (
+                "num_merkle_coding_shreds",
+                self.num_merkle_coding_shreds,
+                i64
+            ),
             ("slot_broadcast_time", slot_broadcast_time, i64),
             (
                 "get_leader_schedule_time",
@@ -107,6 +117,8 @@ impl ShredFetchStats {
             name,
             ("index_overrun", self.index_overrun, i64),
             ("shred_count", self.shred_count, i64),
+            ("num_shreds_merkle_code", self.num_shreds_merkle_code, i64),
+            ("num_shreds_merkle_data", self.num_shreds_merkle_data, i64),
             ("ping_count", self.ping_count, i64),
             ("ping_err_verify_count", self.ping_err_verify_count, i64),
             ("slot_bad_deserialize", self.slot_bad_deserialize, i64),
@@ -140,6 +152,8 @@ impl AddAssign<ProcessShredsStats> for ProcessShredsStats {
             num_data_shreds_hist,
             num_extant_slots,
             data_buffer_residual,
+            num_merkle_data_shreds,
+            num_merkle_coding_shreds,
         } = rhs;
         self.shredding_elapsed += shredding_elapsed;
         self.receive_elapsed += receive_elapsed;
@@ -152,6 +166,8 @@ impl AddAssign<ProcessShredsStats> for ProcessShredsStats {
         self.coalesce_elapsed += coalesce_elapsed;
         self.num_extant_slots += num_extant_slots;
         self.data_buffer_residual += data_buffer_residual;
+        self.num_merkle_data_shreds += num_merkle_data_shreds;
+        self.num_merkle_coding_shreds += num_merkle_coding_shreds;
         for (i, bucket) in self.num_data_shreds_hist.iter_mut().enumerate() {
             *bucket += num_data_shreds_hist[i];
         }

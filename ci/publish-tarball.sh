@@ -10,7 +10,7 @@ if [[ -n $APPVEYOR ]]; then
 
   appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
   export USERPROFILE="D:\\"
-  ./rustup-init -yv --default-toolchain $rust_stable --default-host x86_64-pc-windows-msvc
+  ./rustup-init -yv --default-toolchain "$rust_stable" --default-host x86_64-pc-windows-msvc
   export PATH="$PATH:/d/.cargo/bin"
   rustc -vV
   cargo -vV
@@ -58,6 +58,8 @@ windows)
     git config core.symlinks true
     find . -type l -delete
     git reset --hard
+    # patched crossbeam doesn't build on windows
+    sed -i 's/^crossbeam-epoch/#crossbeam-epoch/' Cargo.toml
   )
   ;;
 *)
@@ -91,7 +93,7 @@ echo --- Creating release tarball
 
   tar cvf "${TARBALL_BASENAME}"-$TARGET.tar "${RELEASE_BASENAME}"
   bzip2 "${TARBALL_BASENAME}"-$TARGET.tar
-  cp "${RELEASE_BASENAME}"/bin/safecoin-install-init safecoin-install-init-$TARGET
+  cp "${RELEASE_BASENAME}"/bin/solana-install-init solana-install-init-$TARGET
   cp "${RELEASE_BASENAME}"/version.yml "${TARBALL_BASENAME}"-$TARGET.yml
 )
 
@@ -100,15 +102,15 @@ MAYBE_TARBALLS=
 if [[ "$CI_OS_NAME" = linux ]]; then
   (
     set -x
-    sdk/bpf/scripts/package.sh
-    [[ -f bpf-sdk.tar.bz2 ]]
+    sdk/sbf/scripts/package.sh
+    [[ -f sbf-sdk.tar.bz2 ]]
   )
-  MAYBE_TARBALLS="bpf-sdk.tar.bz2"
+  MAYBE_TARBALLS="sbf-sdk.tar.bz2"
 fi
 
 source ci/upload-ci-artifact.sh
 
-for file in "${TARBALL_BASENAME}"-$TARGET.tar.bz2 "${TARBALL_BASENAME}"-$TARGET.yml safecoin-install-init-"$TARGET"* $MAYBE_TARBALLS; do
+for file in "${TARBALL_BASENAME}"-$TARGET.tar.bz2 "${TARBALL_BASENAME}"-$TARGET.yml solana-install-init-"$TARGET"* $MAYBE_TARBALLS; do
   if [[ -n $DO_NOT_PUBLISH_TAR ]]; then
     upload-ci-artifact "$file"
     echo "Skipped $file due to DO_NOT_PUBLISH_TAR"

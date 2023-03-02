@@ -7,19 +7,19 @@ use {
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     reqwest::blocking::Client,
     serde_json::{Map, Value},
-    safecoin_account_decoder::validator_info::{
+    solana_account_decoder::validator_info::{
         self, ValidatorInfo, MAX_LONG_FIELD_LENGTH, MAX_SHORT_FIELD_LENGTH,
     },
-    safecoin_clap_utils::{
+    solana_clap_utils::{
         input_parsers::pubkey_of,
         input_validators::{is_pubkey, is_url},
         keypair::DefaultSigner,
     },
-    safecoin_cli_output::{CliValidatorInfo, CliValidatorInfoVec},
-    safecoin_client::rpc_client::RpcClient,
+    solana_cli_output::{CliValidatorInfo, CliValidatorInfoVec},
     solana_config_program::{config_instruction, get_config_data, ConfigKeys, ConfigState},
-    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
-    safecoin_sdk::{
+    solana_remote_wallet::remote_wallet::RemoteWalletManager,
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_sdk::{
         account::Account,
         message::Message,
         pubkey::Pubkey,
@@ -33,8 +33,7 @@ use {
 pub fn check_details_length(string: String) -> Result<(), String> {
     if string.len() > MAX_LONG_FIELD_LENGTH {
         Err(format!(
-            "validator details longer than {:?}-byte limit",
-            MAX_LONG_FIELD_LENGTH
+            "validator details longer than {MAX_LONG_FIELD_LENGTH:?}-byte limit"
         ))
     } else {
         Ok(())
@@ -46,8 +45,7 @@ pub fn check_url(string: String) -> Result<(), String> {
     is_url(string.clone())?;
     if string.len() > MAX_SHORT_FIELD_LENGTH {
         Err(format!(
-            "url longer than {:?}-byte limit",
-            MAX_SHORT_FIELD_LENGTH
+            "url longer than {MAX_SHORT_FIELD_LENGTH:?}-byte limit"
         ))
     } else {
         Ok(())
@@ -58,8 +56,7 @@ pub fn check_url(string: String) -> Result<(), String> {
 pub fn is_short_field(string: String) -> Result<(), String> {
     if string.len() > MAX_SHORT_FIELD_LENGTH {
         Err(format!(
-            "validator field longer than {:?}-byte limit",
-            MAX_SHORT_FIELD_LENGTH
+            "validator field longer than {MAX_SHORT_FIELD_LENGTH:?}-byte limit"
         ))
     } else {
         Ok(())
@@ -71,22 +68,16 @@ fn verify_keybase(
     keybase_username: &Value,
 ) -> Result<(), Box<dyn error::Error>> {
     if let Some(keybase_username) = keybase_username.as_str() {
-        let url = format!(
-            "https://keybase.pub/{}/safecoin/validator-{:?}",
-            keybase_username, validator_pubkey
-        );
+        let url =
+            format!("https://keybase.pub/{keybase_username}/solana/validator-{validator_pubkey:?}");
         let client = Client::new();
         if client.head(&url).send()?.status().is_success() {
             Ok(())
         } else {
-            Err(format!("keybase_username could not be confirmed at: {}. Please add this pubkey file to your keybase profile to connect", url).into())
+            Err(format!("keybase_username could not be confirmed at: {url}. Please add this pubkey file to your keybase profile to connect").into())
         }
     } else {
-        Err(format!(
-            "keybase_username could not be parsed as String: {}",
-            keybase_username
-        )
-        .into())
+        Err(format!("keybase_username could not be parsed as String: {keybase_username}").into())
     }
 }
 
@@ -116,7 +107,7 @@ fn parse_validator_info(
     account: &Account,
 ) -> Result<(Pubkey, Map<String, serde_json::value::Value>), Box<dyn error::Error>> {
     if account.owner != solana_config_program::id() {
-        return Err(format!("{} is not a validator info account", pubkey).into());
+        return Err(format!("{pubkey} is not a validator info account").into());
     }
     let key_list: ConfigKeys = deserialize(&account.data)?;
     if !key_list.keys.is_empty() {
@@ -125,7 +116,7 @@ fn parse_validator_info(
         let validator_info: Map<_, _> = serde_json::from_str(&validator_info_string)?;
         Ok((validator_pubkey, validator_info))
     } else {
-        Err(format!("{} could not be parsed as a validator info account", pubkey).into())
+        Err(format!("{pubkey} could not be parsed as a validator info account").into())
     }
 }
 
@@ -137,11 +128,11 @@ impl ValidatorInfoSubCommands for App<'_, '_> {
     fn validator_info_subcommands(self) -> Self {
         self.subcommand(
             SubCommand::with_name("validator-info")
-                .about("Publish/get Validator info on Safecoin")
+                .about("Publish/get Validator info on Solana")
                 .setting(AppSettings::SubcommandRequiredElseHelp)
                 .subcommand(
                     SubCommand::with_name("publish")
-                        .about("Publish Validator info on Safecoin")
+                        .about("Publish Validator info on Solana")
                         .arg(
                             Arg::with_name("info_pubkey")
                                 .short("p")
@@ -197,7 +188,7 @@ impl ValidatorInfoSubCommands for App<'_, '_> {
                 )
                 .subcommand(
                     SubCommand::with_name("get")
-                        .about("Get and parse Safecoin Validator info")
+                        .about("Get and parse Solana Validator info")
                         .arg(
                             Arg::with_name("info_pubkey")
                                 .index(1)
@@ -251,10 +242,10 @@ pub fn process_set_validator_info(
         let result = verify_keybase(&config.signers[0].pubkey(), string);
         if result.is_err() {
             if force_keybase {
-                println!("--force supplied, ignoring: {:?}", result);
+                println!("--force supplied, ignoring: {result:?}");
             } else {
                 result.map_err(|err| {
-                    CliError::BadParameter(format!("Invalid validator keybase username: {}", err))
+                    CliError::BadParameter(format!("Invalid validator keybase username: {err}"))
                 })?;
             }
         }
@@ -300,10 +291,7 @@ pub fn process_set_validator_info(
 
     let signers = if balance == 0 {
         if info_pubkey != info_keypair.pubkey() {
-            println!(
-                "Account {:?} does not exist. Generating new keypair...",
-                info_pubkey
-            );
+            println!("Account {info_pubkey:?} does not exist. Generating new keypair...");
             info_pubkey = info_keypair.pubkey();
         }
         vec![config.signers[0], &info_keypair]
@@ -362,8 +350,8 @@ pub fn process_set_validator_info(
     tx.try_sign(&signers, latest_blockhash)?;
     let signature_str = rpc_client.send_and_confirm_transaction_with_spinner(&tx)?;
 
-    println!("Success! Validator info published at: {:?}", info_pubkey);
-    println!("{}", signature_str);
+    println!("Success! Validator info published at: {info_pubkey:?}");
+    println!("{signature_str}");
     Ok("".to_string())
 }
 
@@ -428,8 +416,7 @@ mod tests {
         assert_eq!(
             check_details_length(long_details),
             Err(format!(
-                "validator details longer than {:?}-byte limit",
-                MAX_LONG_FIELD_LENGTH
+                "validator details longer than {MAX_LONG_FIELD_LENGTH:?}-byte limit"
             ))
         );
     }
@@ -454,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_verify_keybase_username_not_string() {
-        let pubkey = safecoin_sdk::pubkey::new_rand();
+        let pubkey = solana_sdk::pubkey::new_rand();
         let value = Value::Bool(true);
 
         assert_eq!(
@@ -516,7 +503,7 @@ mod tests {
 
     #[test]
     fn test_parse_validator_info() {
-        let pubkey = safecoin_sdk::pubkey::new_rand();
+        let pubkey = solana_sdk::pubkey::new_rand();
         let keys = vec![(validator_info::id(), false), (pubkey, true)];
         let config = ConfigKeys { keys };
 
@@ -545,7 +532,7 @@ mod tests {
         assert!(parse_validator_info(
             &Pubkey::default(),
             &Account {
-                owner: safecoin_sdk::pubkey::new_rand(),
+                owner: solana_sdk::pubkey::new_rand(),
                 ..Account::default()
             }
         )

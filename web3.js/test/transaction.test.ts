@@ -1,19 +1,23 @@
 import bs58 from 'bs58';
 import {Buffer} from 'buffer';
-import nacl from 'tweetnacl';
 import {expect} from 'chai';
 
 import {Connection} from '../src/connection';
 import {Keypair} from '../src/keypair';
 import {PublicKey} from '../src/publickey';
-import {Transaction, TransactionInstruction} from '../src/transaction';
-import {StakeProgram} from '../src/stake-program';
-import {SystemProgram} from '../src/system-program';
+import {
+  Transaction,
+  TransactionInstruction,
+  TransactionMessage,
+  VersionedTransaction,
+} from '../src/transaction';
+import {StakeProgram, SystemProgram} from '../src/programs';
 import {Message} from '../src/message';
-import invariant from '../src/util/assert';
-import {toBuffer} from '../src/util/to-buffer';
+import invariant from '../src/utils/assert';
+import {toBuffer} from '../src/utils/to-buffer';
 import {helpers} from './mocks/rpc-http';
 import {url} from './url';
+import {sign} from '../src/utils/ed25519';
 
 describe('Transaction', () => {
   describe('compileMessage', () => {
@@ -288,6 +292,7 @@ describe('Transaction', () => {
               foundIndex = ii;
               return true;
             }
+            return;
           });
           return foundIndex;
         })(),
@@ -338,6 +343,7 @@ describe('Transaction', () => {
               foundIndex = ii;
               return true;
             }
+            return;
           });
           return foundIndex;
         })(),
@@ -415,7 +421,7 @@ describe('Transaction', () => {
     expect(partialTransaction).to.eql(transaction);
 
     invariant(partialTransaction.signatures[0].signature);
-    partialTransaction.signatures[0].signature[0] = 0;
+    partialTransaction.signatures[0].signature.fill(1);
     expect(() =>
       partialTransaction.serialize({requireAllSignatures: false}),
     ).to.throw();
@@ -728,6 +734,28 @@ describe('Transaction', () => {
     expect(transaction.lastValidBlockHeight).to.eq(lastValidBlockHeight);
   });
 
+  it('constructs a transaction with nonce information', () => {
+    const nonceAuthority = new PublicKey(1);
+    const nonceAccountPubkey = new PublicKey(2);
+    const nonceValue = 'EETubP5AKHgjPAhzPAFcb8BAY1hMH639CWCFTqi3hq1k';
+    const nonceInfo = {
+      nonce: nonceValue,
+      nonceInstruction: SystemProgram.nonceAdvance({
+        noncePubkey: nonceAccountPubkey,
+        authorizedPubkey: nonceAuthority,
+      }),
+    };
+    const minContextSlot = 1234;
+    const transaction = new Transaction({
+      nonceInfo,
+      minContextSlot,
+    });
+    expect(transaction.recentBlockhash).to.be.undefined;
+    expect(transaction.lastValidBlockHeight).to.be.undefined;
+    expect(transaction.minNonceContextSlot).to.eq(minContextSlot);
+    expect(transaction.nonceInfo).to.eq(nonceInfo);
+  });
+
   it('constructs a transaction with only a recent blockhash', () => {
     const recentBlockhash = 'EETubP5AKHgjPAhzPAFcb8BAY1hMH639CWCFTqi3hq1k';
     const transaction = new Transaction({
@@ -819,6 +847,127 @@ describe('Transaction', () => {
     expect(expectedTransaction.signatures).to.have.length(1);
   });
 
+  describe('partially signed transaction signature verification tests', () => {
+    const sender = Keypair.fromSeed(Uint8Array.from(Array(32).fill(8))); // Arbitrary known account
+    const feePayer = Keypair.fromSeed(Uint8Array.from(Array(32).fill(9))); // Arbitrary known account
+    const fakeKey = Keypair.fromSeed(Uint8Array.from(Array(32).fill(10))); // Arbitrary known account
+    const recentBlockhash = 'EETubP5AKHgjPAhzPAFcb8BAY1hMH639CWCFTqi3hq1k'; // Arbitrary known recentBlockhash
+    const recipient = new PublicKey(
+      'J3dxNj7nDRRqRRXuEMynDG57DkZK4jYRuv3Garmb1i99',
+    ); // Arbitrary known public key
+    const transfer = SystemProgram.transfer({
+      fromPubkey: sender.publicKey,
+      toPubkey: recipient,
+      lamports: 49,
+    });
+    let expectedTransaction: Transaction;
+    beforeEach(() => {
+      expectedTransaction = new Transaction({
+        blockhash: recentBlockhash,
+        lastValidBlockHeight: 9999,
+      }).add(transfer);
+      // To have 2 required signers we add a feepayer
+      expectedTransaction.feePayer = feePayer.publicKey;
+    });
+
+    it('verifies for no sigs', () => {
+      expect(expectedTransaction.signatures).to.have.length(0);
+
+      // No extra param should require all sigs, should be false for no sigs
+      expect(expectedTransaction.verifySignatures()).to.be.false;
+
+      // True should require all sigs, should be false for no sigs
+      expect(expectedTransaction.verifySignatures(true)).to.be.false;
+
+      // False should verify only the available sigs, should be true for no sigs
+      expect(expectedTransaction.verifySignatures(false)).to.be.true;
+    });
+
+    it('verifies for one sig', () => {
+      // Add one required sig
+      expectedTransaction.partialSign(sender);
+
+      expect(
+        expectedTransaction.signatures.filter(sig => sig.signature !== null),
+      ).to.have.length(1);
+
+      // No extra param should require all sigs, should be false for one missing sig
+      expect(expectedTransaction.verifySignatures()).to.be.false;
+
+      // True should require all sigs, should be false one missing sigs
+      expect(expectedTransaction.verifySignatures(true)).to.be.false;
+
+      // False should verify only the available sigs, should be true one valid sig
+      expect(expectedTransaction.verifySignatures(false)).to.be.true;
+    });
+
+    it('verifies for all sigs', () => {
+      // Add all required sigs
+      expectedTransaction.partialSign(sender);
+      expectedTransaction.partialSign(feePayer);
+
+      expect(
+        expectedTransaction.signatures.filter(sig => sig.signature !== null),
+      ).to.have.length(2);
+
+      // No extra param should require all sigs, should be true for no missing sig
+      expect(expectedTransaction.verifySignatures()).to.be.true;
+
+      // True should require all sigs, should be true for no missing sig
+      expect(expectedTransaction.verifySignatures(true)).to.be.true;
+
+      // False should verify only the available sigs, should be true for no missing sig
+      expect(expectedTransaction.verifySignatures(false)).to.be.true;
+    });
+
+    it('throws for wrong sig with only one sig present', () => {
+      // Add one required sigs
+      expectedTransaction.partialSign(feePayer);
+
+      // Add a wrong signature
+      expectedTransaction.signatures[0].publicKey = fakeKey.publicKey;
+
+      // No extra param should require all sigs, should throw for wrong sig
+      expect(() => expectedTransaction.verifySignatures()).to.throw(
+        'unknown signer: ' + fakeKey.publicKey.toBase58(),
+      );
+
+      // True should require all sigs, should throw for wrong sig
+      expect(() => expectedTransaction.verifySignatures(true)).to.throw(
+        'unknown signer: ' + fakeKey.publicKey.toBase58(),
+      );
+
+      // False should verify only the available sigs, should throw for wrong sig
+      expect(() => expectedTransaction.verifySignatures(false)).to.throw(
+        'unknown signer: ' + fakeKey.publicKey.toBase58(),
+      );
+    });
+
+    it('throws for wrong sig with all sigs present', () => {
+      // Add all required sigs
+      expectedTransaction.partialSign(sender);
+      expectedTransaction.partialSign(feePayer);
+
+      // Add a wrong signature
+      expectedTransaction.signatures[0].publicKey = fakeKey.publicKey;
+
+      // No extra param should require all sigs, should throw for wrong sig
+      expect(() => expectedTransaction.verifySignatures()).to.throw(
+        'unknown signer: ' + fakeKey.publicKey.toBase58(),
+      );
+
+      // True should require all sigs, should throw for wrong sig
+      expect(() => expectedTransaction.verifySignatures(true)).to.throw(
+        'unknown signer: ' + fakeKey.publicKey.toBase58(),
+      );
+
+      // False should verify only the available sigs, should throw for wrong sig
+      expect(() => expectedTransaction.verifySignatures(false)).to.throw(
+        'unknown signer: ' + fakeKey.publicKey.toBase58(),
+      );
+    });
+  });
+
   it('deprecated - externally signed stake delegate', () => {
     const authority = Keypair.fromSeed(Uint8Array.from(Array(32).fill(1)));
     const stake = new PublicKey(2);
@@ -833,7 +982,7 @@ describe('Transaction', () => {
     tx.recentBlockhash = bs58.encode(recentBlockhash);
     tx.setSigners(from.publicKey);
     const tx_bytes = tx.serializeMessage();
-    const signature = nacl.sign.detached(tx_bytes, from.secretKey);
+    const signature = sign(tx_bytes, from.secretKey);
     tx.addSignature(from.publicKey, toBuffer(signature));
     expect(tx.verifySignatures()).to.be.true;
   });
@@ -852,7 +1001,7 @@ describe('Transaction', () => {
     tx.recentBlockhash = bs58.encode(recentBlockhash);
     tx.feePayer = from.publicKey;
     const tx_bytes = tx.serializeMessage();
-    const signature = nacl.sign.detached(tx_bytes, from.secretKey);
+    const signature = sign(tx_bytes, from.secretKey);
     tx.addSignature(from.publicKey, toBuffer(signature));
     expect(tx.verifySignatures()).to.be.true;
   });
@@ -938,5 +1087,99 @@ describe('Transaction', () => {
     const t1 = Transaction.from(t0.serialize({requireAllSignatures: false}));
     t1.partialSign(signer);
     t1.serialize();
+  });
+});
+
+describe('VersionedTransaction', () => {
+  it('deserializes versioned transactions', () => {
+    const serializedVersionedTx = Buffer.from(
+      'AdTIDASR42TgVuXKkd7mJKk373J3LPVp85eyKMVcrboo9KTY8/vm6N/Cv0NiHqk2I8iYw6VX5ZaBKG8z' +
+        '9l1XjwiAAQACA+6qNbqfjaIENwt9GzEK/ENiB/ijGwluzBUmQ9xlTAMcCaS0ctnyxTcXXlJr7u2qtnaM' +
+        'gIAO2/c7RBD0ipHWUcEDBkZv5SEXMv/srbpyw5vnvIzlu8X3EmssQ5s6QAAAAJbI7VNs6MzREUlnzRaJ' +
+        'pBKP8QQoDn2dWQvD0KIgHFDiAwIACQAgoQcAAAAAAAIABQEAAAQAATYPBwAKBDIBAyQWIw0oCxIdCA4i' +
+        'JzQRKwUZHxceHCohMBUJJiwpMxAaGC0TLhQxGyAMBiU2NS8VDgAAAADuAgAAAAAAAAIAAAAAAAAAAdGCT' +
+        'Qiq5yw3+3m1sPoRNj0GtUNNs0FIMocxzt3zuoSZHQABAwQFBwgLDA8RFBcYGhwdHh8iIyUnKiwtLi8yF' +
+        'wIGCQoNDhASExUWGRsgISQmKCkrMDEz',
+      'base64',
+    );
+
+    expect(() => Transaction.from(serializedVersionedTx)).to.throw(
+      'Versioned messages must be deserialized with VersionedMessage.deserialize()',
+    );
+
+    const versionedTx = VersionedTransaction.deserialize(serializedVersionedTx);
+    expect(versionedTx.message.version).to.eq(0);
+  });
+
+  describe('addSignature', () => {
+    const signer1 = Keypair.generate();
+    const signer2 = Keypair.generate();
+    const signer3 = Keypair.generate();
+
+    const recentBlockhash = new PublicKey(3).toBuffer();
+
+    const message = new TransactionMessage({
+      payerKey: signer1.publicKey,
+      instructions: [
+        new TransactionInstruction({
+          data: Buffer.from('Hello!'),
+          keys: [
+            {
+              pubkey: signer1.publicKey,
+              isSigner: true,
+              isWritable: true,
+            },
+            {
+              pubkey: signer2.publicKey,
+              isSigner: true,
+              isWritable: true,
+            },
+            {
+              pubkey: signer3.publicKey,
+              isSigner: false,
+              isWritable: false,
+            },
+          ],
+          programId: new PublicKey(
+            'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+          ),
+        }),
+      ],
+      recentBlockhash: bs58.encode(recentBlockhash),
+    });
+
+    const transaction = new VersionedTransaction(message.compileToV0Message());
+
+    it('appends externally generated signatures at correct indexes', () => {
+      const signature1 = sign(
+        transaction.message.serialize(),
+        signer1.secretKey,
+      );
+      const signature2 = sign(
+        transaction.message.serialize(),
+        signer2.secretKey,
+      );
+
+      transaction.addSignature(signer2.publicKey, signature2);
+      transaction.addSignature(signer1.publicKey, signature1);
+
+      expect(transaction.signatures).to.have.length(2);
+      expect(transaction.signatures[0]).to.eq(signature1);
+      expect(transaction.signatures[1]).to.eq(signature2);
+    });
+
+    it('fatals when the signature is the wrong length', () => {
+      expect(() => {
+        transaction.addSignature(signer1.publicKey, new Uint8Array(32));
+      }).to.throw('Signature must be 64 bytes long');
+    });
+
+    it('fatals when adding a signature for a public key that has not been marked as a signer', () => {
+      expect(() => {
+        transaction.addSignature(signer3.publicKey, new Uint8Array(64));
+      }).to.throw(
+        `Can not add signature; \`${signer3.publicKey.toBase58()}\` is not required to sign this transaction`,
+      );
+    });
   });
 });

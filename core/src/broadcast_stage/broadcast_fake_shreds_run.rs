@@ -1,8 +1,8 @@
 use {
     super::*,
     solana_entry::entry::Entry,
-    solana_ledger::shred::{ProcessShredsStats, Shredder},
-    safecoin_sdk::{hash::Hash, signature::Keypair},
+    solana_ledger::shred::{ProcessShredsStats, ReedSolomonCache, Shredder},
+    solana_sdk::{hash::Hash, signature::Keypair},
 };
 
 #[derive(Clone)]
@@ -11,6 +11,7 @@ pub(super) struct BroadcastFakeShredsRun {
     partition: usize,
     shred_version: u16,
     next_code_index: u32,
+    reed_solomon_cache: Arc<ReedSolomonCache>,
 }
 
 impl BroadcastFakeShredsRun {
@@ -20,6 +21,7 @@ impl BroadcastFakeShredsRun {
             partition,
             shred_version,
             next_code_index: 0,
+            reed_solomon_cache: Arc::<ReedSolomonCache>::default(),
         }
     }
 }
@@ -60,6 +62,8 @@ impl BroadcastRun for BroadcastFakeShredsRun {
             last_tick_height == bank.max_tick_height(),
             next_shred_index,
             self.next_code_index,
+            true, // merkle_variant
+            &self.reed_solomon_cache,
             &mut ProcessShredsStats::default(),
         );
 
@@ -79,6 +83,8 @@ impl BroadcastRun for BroadcastFakeShredsRun {
             last_tick_height == bank.max_tick_height(),
             next_shred_index,
             self.next_code_index,
+            true, // merkle_variant
+            &self.reed_solomon_cache,
             &mut ProcessShredsStats::default(),
         );
 
@@ -134,7 +140,7 @@ impl BroadcastRun for BroadcastFakeShredsRun {
                 if fake == (i <= self.partition) {
                     // Send fake shreds to the first N peers
                     data_shreds.iter().for_each(|b| {
-                        sock.send_to(b.payload(), &peer.tvu_forwards).unwrap();
+                        sock.send_to(b.payload(), peer.tvu_forwards).unwrap();
                     });
                 }
             });
@@ -153,35 +159,25 @@ impl BroadcastRun for BroadcastFakeShredsRun {
 mod tests {
     use {
         super::*,
-        safecoin_gossip::contact_info::ContactInfo,
+        solana_gossip::contact_info::ContactInfo,
+        solana_sdk::signature::Signer,
         solana_streamer::socket::SocketAddrSpace,
         std::net::{IpAddr, Ipv4Addr, SocketAddr},
     };
 
     #[test]
     fn test_tvu_peers_ordering() {
-        let cluster = ClusterInfo::new(
-            ContactInfo::new_localhost(&safecoin_sdk::pubkey::new_rand(), 0),
-            Arc::new(Keypair::new()),
-            SocketAddrSpace::Unspecified,
-        );
-        cluster.insert_info(ContactInfo::new_with_socketaddr(&SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)),
-            8080,
-        )));
-        cluster.insert_info(ContactInfo::new_with_socketaddr(&SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 2)),
-            8080,
-        )));
-        cluster.insert_info(ContactInfo::new_with_socketaddr(&SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 3)),
-            8080,
-        )));
-        cluster.insert_info(ContactInfo::new_with_socketaddr(&SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 4)),
-            8080,
-        )));
-
+        let cluster = {
+            let keypair = Arc::new(Keypair::new());
+            let contact_info = ContactInfo::new_localhost(&keypair.pubkey(), 0);
+            ClusterInfo::new(contact_info, keypair, SocketAddrSpace::Unspecified)
+        };
+        for k in 1..5 {
+            cluster.insert_info(ContactInfo::new_with_socketaddr(
+                &Keypair::new().pubkey(),
+                &SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, k)), 8080),
+            ));
+        }
         let tvu_peers1 = cluster.tvu_peers();
         (0..5).for_each(|_| {
             cluster

@@ -1,7 +1,7 @@
-import { TransactionInstruction } from "@safecoin/web3.js";
+import { TransactionInstruction } from "@solana/web3.js";
 
 export const PROGRAM_IDS: string[] = [
-  "LENeX3L4CE1euBZp4zUNuicLP2SUZCbgXYZgBpZ9hWZ", // mainnet / testnet / devnet
+  "LendZqTs7gn5CTSJU1jWKhKuVpjJGom45nnwPb2AMTi", // mainnet / testnet / devnet
 ];
 
 const INSTRUCTION_LOOKUP: { [key: number]: string } = {

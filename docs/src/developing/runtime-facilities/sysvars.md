@@ -2,11 +2,11 @@
 title: Sysvar Cluster Data
 ---
 
-Safecoin exposes a variety of cluster state data to programs via
+Solana exposes a variety of cluster state data to programs via
 [`sysvar`](terminology.md#sysvar) accounts. These accounts are populated at
 known addresses published along with the account layouts in the
-[`safecoin-program`
-crate](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/sysvar/index.html),
+[`solana-program`
+crate](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/sysvar/index.html),
 and outlined below.
 
 There are two ways for a program to access a sysvar.
@@ -39,7 +39,7 @@ The Clock sysvar contains data on cluster time, including the current slot,
 epoch, and estimated wall-clock Unix timestamp. It is updated every slot.
 
 - Address: `SysvarC1ock11111111111111111111111111111111`
-- Layout: [Clock](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/clock/struct.Clock.html)
+- Layout: [Clock](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/clock/struct.Clock.html)
 - Fields:
 
   - `slot`: the current slot
@@ -72,7 +72,7 @@ for a given slot, etc. (Note: the epoch schedule is distinct from the [`leader s
 
 - Address: `SysvarEpochSchedu1e111111111111111111111111`
 - Layout:
-  [EpochSchedule](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/epoch_schedule/struct.EpochSchedule.html)
+  [EpochSchedule](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/epoch_schedule/struct.EpochSchedule.html)
 
 ## Fees
 
@@ -81,7 +81,7 @@ every slot, based on the fee-rate governor.
 
 - Address: `SysvarFees111111111111111111111111111111111`
 - Layout:
-  [Fees](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/sysvar/fees/struct.Fees.html)
+  [Fees](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/sysvar/fees/struct.Fees.html)
 
 ## Instructions
 
@@ -92,7 +92,7 @@ other instructions in the same transaction. Read more information on
 
 - Address: `Sysvar1nstructions1111111111111111111111111`
 - Layout:
-  [Instructions](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/sysvar/instructions/struct.Instructions.html)
+  [Instructions](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/sysvar/instructions/struct.Instructions.html)
 
 ## RecentBlockhashes
 
@@ -103,7 +103,7 @@ and the last entry holds an old block hash.
 
 - Address: `SysvarRecentB1ockHashes11111111111111111111`
 - Layout:
-  [RecentBlockhashes](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/sysvar/recent_blockhashes/struct.RecentBlockhashes.html)
+  [RecentBlockhashes](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/sysvar/recent_blockhashes/struct.RecentBlockhashes.html)
 
 ## Rent
 
@@ -112,7 +112,7 @@ in genesis. The Rent burn percentage is modified by manual feature activation.
 
 - Address: `SysvarRent111111111111111111111111111111111`
 - Layout:
-  [Rent](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/rent/struct.Rent.html)
+  [Rent](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/rent/struct.Rent.html)
 
 ## SlotHashes
 
@@ -121,7 +121,7 @@ banks. It is updated every slot.
 
 - Address: `SysvarS1otHashes111111111111111111111111111`
 - Layout:
-  [SlotHashes](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/slot_hashes/struct.SlotHashes.html)
+  [SlotHashes](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/slot_hashes/struct.SlotHashes.html)
 
 ## SlotHistory
 
@@ -130,7 +130,7 @@ epoch. It is updated every slot.
 
 - Address: `SysvarS1otHistory11111111111111111111111111`
 - Layout:
-  [SlotHistory](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/slot_history/struct.SlotHistory.html)
+  [SlotHistory](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/slot_history/struct.SlotHistory.html)
 
 ## StakeHistory
 
@@ -139,4 +139,4 @@ and de-activations per epoch. It is updated at the start of every epoch.
 
 - Address: `SysvarStakeHistory1111111111111111111111111`
 - Layout:
-  [StakeHistory](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/stake_history/struct.StakeHistory.html)
+  [StakeHistory](https://docs.rs/solana-program/VERSION_FOR_DOCS_RS/solana_program/stake_history/struct.StakeHistory.html)

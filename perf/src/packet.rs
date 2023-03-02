@@ -1,10 +1,10 @@
 //! The `packet` module defines data structures and methods to pull data from the network.
-pub use safecoin_sdk::packet::{Meta, Packet, PacketFlags, PACKET_DATA_SIZE};
+pub use solana_sdk::packet::{Meta, Packet, PacketFlags, PACKET_DATA_SIZE};
 use {
     crate::{cuda_runtime::PinnedVec, recycler::Recycler},
     bincode::config::Options,
     rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator},
-    serde::{de::DeserializeOwned, Serialize},
+    serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{
         io::Read,
         net::SocketAddr,
@@ -18,7 +18,7 @@ pub const NUM_PACKETS: usize = 1024 * 8;
 pub const PACKETS_PER_BATCH: usize = 64;
 pub const NUM_RCVMMSGS: usize = 64;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct PacketBatch {
     packets: PinnedVec<Packet>,
 }
@@ -122,7 +122,7 @@ impl PacketBatch {
 
     pub fn set_addr(&mut self, addr: &SocketAddr) {
         for p in self.iter_mut() {
-            p.meta.set_socket_addr(addr);
+            p.meta_mut().set_socket_addr(addr);
         }
     }
 
@@ -247,7 +247,7 @@ where
 mod tests {
     use {
         super::*,
-        safecoin_sdk::{
+        solana_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},
             system_transaction,

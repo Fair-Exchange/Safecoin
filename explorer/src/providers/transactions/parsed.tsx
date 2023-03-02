@@ -2,15 +2,15 @@ import React from "react";
 import {
   Connection,
   TransactionSignature,
-  ParsedConfirmedTransaction,
-} from "@safecoin/web3.js";
+  ParsedTransactionWithMeta,
+} from "@solana/web3.js";
 import { useCluster, Cluster } from "../cluster";
 import * as Cache from "providers/cache";
 import { ActionType, FetchStatus } from "providers/cache";
 import { reportError } from "utils/sentry";
 
 export interface Details {
-  transaction?: ParsedConfirmedTransaction | null;
+  transactionWithMeta?: ParsedTransactionWithMeta | null;
 }
 
 type State = Cache.State<Details>;
@@ -53,11 +53,11 @@ async function fetchDetails(
   });
 
   let fetchStatus;
-  let transaction;
+  let transactionWithMeta;
   try {
-    transaction = await new Connection(url).getParsedConfirmedTransaction(
+    transactionWithMeta = await new Connection(url).getParsedTransaction(
       signature,
-      "confirmed"
+      { commitment: "confirmed", maxSupportedTransactionVersion: 0 }
     );
     fetchStatus = FetchStatus.Fetched;
   } catch (error) {
@@ -70,7 +70,7 @@ async function fetchDetails(
     type: ActionType.Update,
     status: fetchStatus,
     key: signature,
-    data: { transaction },
+    data: { transactionWithMeta },
     url,
   });
 }

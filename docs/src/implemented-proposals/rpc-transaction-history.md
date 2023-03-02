@@ -10,13 +10,13 @@ fall back to the external data store.
 
 The affected RPC endpoints are:
 
-- [getFirstAvailableBlock](developing/clients/jsonrpc-api.md#getfirstavailableblock)
-- [getConfirmedBlock](developing/clients/jsonrpc-api.md#getconfirmedblock)
-- [getConfirmedBlocks](developing/clients/jsonrpc-api.md#getconfirmedblocks)
-- [getConfirmedSignaturesForAddress](developing/clients/jsonrpc-api.md#getconfirmedsignaturesforaddress)
-- [getConfirmedTransaction](developing/clients/jsonrpc-api.md#getconfirmedtransaction)
-- [getSignatureStatuses](developing/clients/jsonrpc-api.md#getsignaturestatuses)
-- [getBlockTime](developing/clients/jsonrpc-api.md#getblocktime)
+- [getFirstAvailableBlock](../api/http#getfirstavailableblock)
+- [getConfirmedBlock](../api/http#getconfirmedblock)
+- [getConfirmedBlocks](../api/http#getconfirmedblocks)
+- [getConfirmedSignaturesForAddress](../api/http#getconfirmedsignaturesforaddress)
+- [getConfirmedTransaction](../api/http#getconfirmedtransaction)
+- [getSignatureStatuses](../api/http#getsignaturestatuses)
+- [getBlockTime](../api/http#getblocktime)
 
 Some system design constraints:
 
@@ -68,7 +68,7 @@ results of BigTable queries more complicated but is not a significant issue.
 ## Data Population
 
 The ongoing population of instance data will occur on an epoch cadence through the
-use of a new `safecoin-ledger-tool` command that will convert rocksdb data for a
+use of a new `solana-ledger-tool` command that will convert rocksdb data for a
 given slot range into the instance schema.
 
 The same process will be run once, manually, to backfill the existing ledger

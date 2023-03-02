@@ -1,13 +1,13 @@
-//! A future Safecoin message format.
+//! A future Solana message format.
 //!
 //! This crate defines two versions of `Message` in their own modules:
-//! [`legacy`] and [`v0`]. `legacy` is the current version as of Safecoin 1.10.0.
+//! [`legacy`] and [`v0`]. `legacy` is the current version as of Solana 1.10.0.
 //! `v0` is a [future message format] that encodes more account keys into a
 //! transaction than the legacy format.
 //!
 //! [`legacy`]: crate::message::legacy
 //! [`v0`]: crate::message::v0
-//! [future message format]: https://docs.solana.com/proposals/transactions-v2
+//! [future message format]: https://docs.solana.com/proposals/versioned-transactions
 
 use crate::{
     address_lookup_table_account::AddressLookupTableAccount,
@@ -15,8 +15,9 @@ use crate::{
     hash::Hash,
     instruction::{CompiledInstruction, Instruction},
     message::{
-        compiled_keys::CompileError, legacy::is_builtin_key_or_sysvar, AccountKeys, CompiledKeys,
-        MessageHeader, MESSAGE_VERSION_PREFIX,
+        compiled_keys::{CompileError, CompiledKeys},
+        legacy::is_builtin_key_or_sysvar,
+        AccountKeys, MessageHeader, MESSAGE_VERSION_PREFIX,
     },
     pubkey::Pubkey,
     sanitize::SanitizeError,
@@ -41,7 +42,7 @@ pub struct MessageAddressTableLookup {
     pub readonly_indexes: Vec<u8>,
 }
 
-/// A Safecoin transaction message (v0).
+/// A Solana transaction message (v0).
 ///
 /// This message format supports succinct account loading with
 /// on-chain address lookup tables.
@@ -129,6 +130,8 @@ impl Message {
 
         // the combined number of static and dynamic account keys must be <= 256
         // since account indices are encoded as `u8`
+        // Note that this is different from the per-transaction account load cap
+        // as defined in `Bank::get_transaction_account_lock_limit`
         let total_account_keys = num_static_account_keys.saturating_add(num_dynamic_account_keys);
         if total_account_keys > 256 {
             return Err(SanitizeError::IndexOutOfBounds);
@@ -179,25 +182,25 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_address_lookup_table_program`], [`safecoin_client`], [`safecoin_sdk`], and [`anyhow`] crates.
+    /// This example uses the [`solana_address_lookup_table_program`], [`solana_rpc_client`], [`solana_sdk`], and [`anyhow`] crates.
     ///
-    /// [`solana_address_lookup_table_program`]: https://docs.rs/safecoin-address-lookup-table-program
-    /// [`safecoin_client`]: https://docs.rs/safecoin-client
-    /// [`safecoin_sdk`]: https://docs.rs/safecoin-sdk
+    /// [`solana_address_lookup_table_program`]: https://docs.rs/solana-address-lookup-table-program
+    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+    /// [`solana_sdk`]: https://docs.rs/solana-sdk
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use safecoin_program::example_mocks::{
+    /// # use solana_program::example_mocks::{
     /// #     solana_address_lookup_table_program,
-    /// #     safecoin_client,
-    /// #     safecoin_sdk,
+    /// #     solana_rpc_client,
+    /// #     solana_sdk,
     /// # };
     /// # use std::borrow::Cow;
-    /// # use safecoin_sdk::account::Account;
+    /// # use solana_sdk::account::Account;
     /// use anyhow::Result;
     /// use solana_address_lookup_table_program::state::AddressLookupTable;
-    /// use safecoin_client::rpc_client::RpcClient;
-    /// use safecoin_sdk::{
+    /// use solana_rpc_client::rpc_client::RpcClient;
+    /// use solana_sdk::{
     ///      address_lookup_table_account::AddressLookupTableAccount,
     ///      instruction::{AccountMeta, Instruction},
     ///      message::{VersionedMessage, v0},

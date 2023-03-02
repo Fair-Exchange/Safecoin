@@ -7,22 +7,22 @@ use {
         cluster_info_vote_listener::VerifiedVoteReceiver,
         completed_data_sets_service::CompletedDataSetsSender,
         repair_response,
-        repair_service::{OutstandingShredRepairs, RepairInfo, RepairService},
+        repair_service::{DumpedSlotsReceiver, OutstandingShredRepairs, RepairInfo, RepairService},
         result::{Error, Result},
     },
     crossbeam_channel::{unbounded, Receiver, RecvTimeoutError, Sender},
     rayon::{prelude::*, ThreadPool},
-    safecoin_gossip::cluster_info::ClusterInfo,
+    solana_gossip::cluster_info::ClusterInfo,
     solana_ledger::{
         blockstore::{Blockstore, BlockstoreInsertionMetrics},
         leader_schedule_cache::LeaderScheduleCache,
-        shred::{self, Nonce, Shred},
+        shred::{self, Nonce, ReedSolomonCache, Shred},
     },
-    safecoin_measure::measure::Measure,
+    solana_measure::measure::Measure,
     solana_metrics::inc_new_counter_error,
     solana_perf::packet::{Packet, PacketBatch},
-    safecoin_rayon_threadlimit::get_thread_count,
-    safecoin_sdk::clock::Slot,
+    solana_rayon_threadlimit::get_thread_count,
+    solana_sdk::clock::Slot,
     std::{
         cmp::Reverse,
         collections::{HashMap, HashSet},
@@ -173,7 +173,7 @@ fn verify_repair(
                 .register_response(
                     repair_meta.nonce,
                     shred,
-                    safecoin_sdk::timing::timestamp(),
+                    solana_sdk::timing::timestamp(),
                     |_| (),
                 )
                 .is_some()
@@ -220,6 +220,7 @@ fn run_insert<F>(
     completed_data_sets_sender: &CompletedDataSetsSender,
     retransmit_sender: &Sender<Vec<ShredPayload>>,
     outstanding_requests: &RwLock<OutstandingShredRepairs>,
+    reed_solomon_cache: &ReedSolomonCache,
 ) -> Result<()>
 where
     F: Fn(Shred),
@@ -232,14 +233,14 @@ where
     ws_metrics.shred_receiver_elapsed_us += shred_receiver_elapsed.as_us();
     ws_metrics.run_insert_count += 1;
     let handle_packet = |packet: &Packet| {
-        if packet.meta.discard() {
+        if packet.meta().discard() {
             return None;
         }
         let shred = shred::layout::get_shred(packet)?;
         let shred = Shred::new_from_serialized_shred(shred.to_vec()).ok()?;
-        if packet.meta.repair() {
+        if packet.meta().repair() {
             let repair_info = RepairMeta {
-                _from_addr: packet.meta.socket_addr(),
+                _from_addr: packet.meta().socket_addr(),
                 // If can't parse the nonce, dump the packet.
                 nonce: repair_response::nonce(packet)?,
             };
@@ -260,7 +261,7 @@ where
     ws_metrics.num_repairs += repair_infos.iter().filter(|r| r.is_some()).count();
     ws_metrics.num_shreds_received += shreds.len();
     for packet in packets.iter().flat_map(PacketBatch::iter) {
-        let addr = packet.meta.socket_addr();
+        let addr = packet.meta().socket_addr();
         *ws_metrics.addrs.entry(addr).or_default() += 1;
     }
 
@@ -275,20 +276,16 @@ where
     prune_shreds_elapsed.stop();
     ws_metrics.prune_shreds_elapsed_us += prune_shreds_elapsed.as_us();
 
-    let (completed_data_sets, inserted_indices) = blockstore.insert_shreds_handle_duplicate(
+    let completed_data_sets = blockstore.insert_shreds_handle_duplicate(
         shreds,
         repairs,
         Some(leader_schedule_cache),
         false, // is_trusted
         Some(retransmit_sender),
         &handle_duplicate,
+        reed_solomon_cache,
         metrics,
     )?;
-    for index in inserted_indices {
-        if repair_infos[index].is_some() {
-            metrics.num_repair += 1;
-        }
-    }
 
     completed_data_sets_sender.try_send(completed_data_sets)?;
     Ok(())
@@ -320,6 +317,7 @@ impl WindowService {
         completed_data_sets_sender: CompletedDataSetsSender,
         duplicate_slots_sender: DuplicateSlotSender,
         ancestor_hashes_replay_update_receiver: AncestorHashesReplayUpdateReceiver,
+        dumped_slots_receiver: DumpedSlotsReceiver,
     ) -> WindowService {
         let outstanding_requests = Arc::<RwLock<OutstandingShredRepairs>>::default();
 
@@ -334,6 +332,7 @@ impl WindowService {
             verified_vote_receiver,
             outstanding_requests.clone(),
             ancestor_hashes_replay_update_receiver,
+            dumped_slots_receiver,
         );
 
         let (duplicate_sender, duplicate_receiver) = unbounded();
@@ -408,9 +407,10 @@ impl WindowService {
         };
         let thread_pool = rayon::ThreadPoolBuilder::new()
             .num_threads(get_thread_count().min(8))
-            .thread_name(|i| format!("solWinInsert{:02}", i))
+            .thread_name(|i| format!("solWinInsert{i:02}"))
             .build()
             .unwrap();
+        let reed_solomon_cache = ReedSolomonCache::default();
         Builder::new()
             .name("solWinInsert".to_string())
             .spawn(move || {
@@ -426,12 +426,13 @@ impl WindowService {
                         &verified_receiver,
                         &blockstore,
                         &leader_schedule_cache,
-                        &handle_duplicate,
+                        handle_duplicate,
                         &mut metrics,
                         &mut ws_metrics,
                         &completed_data_sets_sender,
                         &retransmit_sender,
                         &outstanding_requests,
+                        &reed_solomon_cache,
                     ) {
                         ws_metrics.record_error(&e);
                         if Self::should_exit_on_error(e, &handle_error) {
@@ -479,13 +480,13 @@ mod test {
     use {
         super::*,
         solana_entry::entry::{create_ticks, Entry},
-        safecoin_gossip::contact_info::ContactInfo,
+        solana_gossip::contact_info::ContactInfo,
         solana_ledger::{
             blockstore::{make_many_slot_entries, Blockstore},
             get_tmp_ledger_path,
             shred::{ProcessShredsStats, Shredder},
         },
-        safecoin_sdk::{
+        solana_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},
             timing::timestamp,
@@ -506,6 +507,8 @@ mod test {
             true, // is_last_in_slot
             0,    // next_shred_index
             0,    // next_code_index
+            true, // merkle_variant
+            &ReedSolomonCache::default(),
             &mut ProcessShredsStats::default(),
         );
         data_shreds
@@ -539,8 +542,11 @@ mod test {
         blockstore
             .insert_shreds(shreds.clone(), None, false)
             .unwrap();
-        let mut duplicate_shred = shreds[1].clone();
-        duplicate_shred.set_slot(shreds[0].slot());
+        let duplicate_shred = {
+            let (mut shreds, _) = make_many_slot_entries(5, 1, 10);
+            shreds.swap_remove(0)
+        };
+        assert_eq!(duplicate_shred.slot(), shreds[0].slot());
         let duplicate_shred_slot = duplicate_shred.slot();
         sender.send(duplicate_shred).unwrap();
         assert!(!blockstore.has_duplicate_shreds_in_slot(duplicate_shred_slot));
@@ -583,7 +589,7 @@ mod test {
             0,   // version
         );
         let mut shreds = vec![shred.clone(), shred.clone(), shred];
-        let _from_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
+        let _from_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8080);
         let repair_meta = RepairMeta {
             _from_addr,
             nonce: 0,

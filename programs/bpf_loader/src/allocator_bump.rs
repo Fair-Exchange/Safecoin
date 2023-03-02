@@ -1,22 +1,22 @@
 #![allow(clippy::integer_arithmetic)]
 
 use {
-    safecoin_program_runtime::invoke_context::{Alloc, AllocErr},
-    solana_rbpf::aligned_memory::AlignedMemory,
+    solana_program_runtime::invoke_context::{Alloc, AllocErr},
+    solana_rbpf::{aligned_memory::AlignedMemory, ebpf::HOST_ALIGN},
     std::alloc::Layout,
 };
 
 #[derive(Debug)]
 pub struct BpfAllocator {
     #[allow(dead_code)]
-    heap: AlignedMemory,
+    heap: AlignedMemory<HOST_ALIGN>,
     start: u64,
     len: u64,
     pos: u64,
 }
 
 impl BpfAllocator {
-    pub fn new(heap: AlignedMemory, virtual_address: u64) -> Self {
+    pub fn new(heap: AlignedMemory<HOST_ALIGN>, virtual_address: u64) -> Self {
         let len = heap.len() as u64;
         Self {
             heap,
@@ -24,6 +24,10 @@ impl BpfAllocator {
             len,
             pos: 0,
         }
+    }
+
+    pub fn get_heap(&mut self) -> &mut [u8] {
+        self.heap.as_slice_mut()
     }
 }
 

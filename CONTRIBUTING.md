@@ -1,4 +1,4 @@
-# Safecoin Coding Guidelines
+# Solana Coding Guidelines
 
 The goal of these guidelines is to improve developer productivity by allowing
 developers to jump into any file in the codebase and not need to adapt to
@@ -45,14 +45,14 @@ $ git pull --rebase upstream master
 
 If there are no functional changes, PRs can be very large and that's no
 problem. If, however, your changes are making meaningful changes or additions,
-then about 1,000 lines of changes is about the most you should ask a Safecoin
+then about 1,000 lines of changes is about the most you should ask a Solana
 maintainer to review.
 
 ### Should I send small PRs as I develop large, new components?
 
 Add only code to the codebase that is ready to be deployed. If you are building
 a large library, consider developing it in a separate git repository. When it
-is ready to be integrated, the Safecoin maintainers will work with you to decide
+is ready to be integrated, the Solana Labs Maintainers will work with you to decide
 on a path forward. Smaller libraries may be copied in whereas very large ones
 may be pulled in with a package manager.
 
@@ -148,13 +148,13 @@ matches the logical flow in your PR description.
 
 ### The PR / Issue Labels
 Labels make it easier to manage and track PRs / issues.  Below some common labels
-that we use in Safecoin.  For the complete list of labels, please refer to the
-[label page](https://github.com/fair-exchange/safecoin/issues/labels):
+that we use in Solana.  For the complete list of labels, please refer to the
+[label page](https://github.com/solana-labs/solana/issues/labels):
 
 * "feature-gate": when you add a new feature gate or modify the behavior of
 an existing feature gate, please add the "feature-gate" label to your PR.
 New feature gates should also always have a corresponding tracking issue
-(go to "New Issue" -> "Feature Gate Tracker [Get Started](https://github.com/fair-exchange/safecoin/issues/new?assignees=&labels=feature-gate&template=1-feature-gate.yml&title=Feature+Gate%3A+)")
+(go to "New Issue" -> "Feature Gate Tracker [Get Started](https://github.com/solana-labs/solana/issues/new?assignees=&labels=feature-gate&template=1-feature-gate.yml&title=Feature+Gate%3A+)")
 and should be updated each time the feature is activated on a cluster.
 
 * "automerge": When a PR is labelled with "automerge", the PR will be
@@ -197,7 +197,7 @@ when you feel your PR is ready for another pass.
 ## Draft Pull Requests
 
 If you want early feedback on your PR, use GitHub's "Draft Pull Request"
-mechanism. Draft PRs are a convenient way to collaborate with the Safecoin
+mechanism. Draft PRs are a convenient way to collaborate with the Solana
 maintainers without triggering notifications as you make changes. When you feel
 your PR is ready for a broader audience, you can transition your draft PR to a
 standard PR with the click of a button.
@@ -207,6 +207,41 @@ approvals when you click "Ready for Review", so a review that meant "I approve
 of the direction" suddenly has the appearance of "I approve of these changes."
 Instead, add a comment that mentions the usernames that you would like a review
 from. Ask explicitly what you would like feedback on.
+
+## Crate Creation
+
+If your PR includes a new crate, you must publish its v0.0.1 version
+before the PR can be merged.  Here are the steps:
+
+* Create a sub-directory for your new crate.
+* Under the newly-created directory, create a Cargo.toml file.  Below is an
+  example template:
+
+```
+[package]
+name = "solana-<PACKAGE_NAME>"
+version = "0.0.1"
+description = "<DESCRIPTION>"
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/solana-labs/solana"
+homepage = "https://solana.com/"
+documentation = "https://docs.rs/solana-<PACKAGE_NAME>"
+license = "Apache-2.0"
+edition = "2021"
+```
+
+* Submit the PR for initial review.  You should see the crate-check CI
+  job fails because the newly created crate is not yet published.
+
+* Once all review feedback has been addressed, publish v0.0.1 of the crate
+  under your personal crates.io account, and then transfer the crate ownership
+  to solana-grimes.
+  https://crates.io/policies#package-ownership
+
+* After successful publication, update the PR by replacing the v0.0.1 version
+  number with the correct version.  At this time you should see the crate-check
+  CI job passes, and your published crate should be available under
+  https://crates.io/crates/.
 
 ## Rust coding conventions
 
@@ -250,20 +285,12 @@ confused with 3-letter acronyms.
 
 ## Design Proposals
 
-Safecoin's architecture is described by docs generated from markdown files in
-the `docs/src/` directory, maintained by an *editor* (currently @garious). To
-add a design proposal, you'll need to include it in the
-[Accepted Design Proposals](https://docs.solana.com/proposals/accepted-design-proposals)
-section of the Safecoin docs.  Here's the full process:
+Solana's architecture is described by docs generated from markdown files in the `docs/src/`
+directory and viewable on the official [Solana Documentation](https://docs.solana.com) website.
 
-1. Propose a design by creating a PR that adds a markdown document to the
-   `docs/src/proposals` directory and references it from the [table of
-   contents](docs/src/SUMMARY.md). Add any relevant *maintainers* to the PR
-   review.
-2. The PR being merged indicates your proposed change was accepted and that the
-   maintainers support your plan of attack.
-3. Submit PRs that implement the proposal. When the implementation reveals the
-   need for tweaks to the proposal, be sure to update the proposal and have that
-   change reviewed by the same people as in step 1.
-4. Once the implementation is complete, submit a PR that moves the link from
-   the Accepted Proposals to the Implemented Proposals section.
+Current design proposals may be viewed on the docs site:
+
+1. [Accepted Proposals](https://docs.solana.com/proposals/accepted-design-proposals)
+2. [Implemented Proposals](https://docs.solana.com/implemented-proposals/implemented-proposals)
+
+New design proposals should follow this guide on [how to submit a design proposal](./docs/src/proposals.md#submit-a-design-proposal).

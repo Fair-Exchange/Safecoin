@@ -30,8 +30,8 @@ plugin implementation for the PostgreSQL database.
 
 [`solana-geyser-plugin-interface`]: https://docs.rs/solana-geyser-plugin-interface
 [`solana-accountsdb-plugin-postgres`]: https://docs.rs/solana-accountsdb-plugin-postgres
-[`safecoin-sdk`]: https://docs.rs/safecoin-sdk
-[`safecoin-transaction-status`]: https://docs.rs/safecoin-transaction-status
+[`solana-sdk`]: https://docs.rs/solana-sdk
+[`solana-transaction-status`]: https://docs.rs/solana-transaction-status
 
 ## The Plugin Interface
 
@@ -160,7 +160,7 @@ pub struct ReplicaTransactionInfo<'a> {
 }
 ```
 For details of `SanitizedTransaction` and `TransactionStatusMeta `,
-please refer to [`safecoin-sdk`] and [`safecoin-transaction-status`]
+please refer to [`solana-sdk`] and [`solana-transaction-status`]
 
 The `slot` points to the slot the transaction is executed at.
 For more details, please refer to the Rust documentation in
@@ -318,7 +318,7 @@ full_page_writes = off                 # recover from partial page writes
 max_wal_senders = 0                    # max number of walsender processes
 ```
 
-The sample [postgresql.conf](https://github.com/fair-exchange/safecoin/blob/7ac43b16d2c766df61ae0a06d7aaf14ba61996ac/accountsdb-plugin-postgres/scripts/postgresql.conf)
+The sample [postgresql.conf](https://github.com/solana-labs/solana/blob/7ac43b16d2c766df61ae0a06d7aaf14ba61996ac/accountsdb-plugin-postgres/scripts/postgresql.conf)
 can be used for reference.
 
 #### Create the Database Instance and the Role
@@ -332,7 +332,7 @@ sudo systemctl start postgresql@14-main
 Create the database. For example, the following creates a database named 'solana':
 
 ```
-sudo -u postgres createdb safecoin -p 5433
+sudo -u postgres createdb solana -p 5433
 ```
 
 Create the database user. For example, the following creates a regular user named 'solana':
@@ -346,24 +346,24 @@ PostgreSQL has the ip 10.138.0.9, the following command will land in a shell whe
 SQL commands can be entered:
 
 ```
-psql -U safecoin -p 5433 -h 10.138.0.9 -w -d solana
+psql -U solana -p 5433 -h 10.138.0.9 -w -d solana
 ```
 
 #### Create the Schema Objects
 
-Use the [create_schema.sql](https://github.com/fair-exchange/safecoin/blob/a70eb098f4ae9cd359c1e40bbb7752b3dd61de8d/accountsdb-plugin-postgres/scripts/create_schema.sql)
+Use the [create_schema.sql](https://github.com/solana-labs/solana/blob/a70eb098f4ae9cd359c1e40bbb7752b3dd61de8d/accountsdb-plugin-postgres/scripts/create_schema.sql)
 to create the objects for storing accounts and slots.
 
 Download the script from github:
 
 ```
-wget https://raw.githubusercontent.com/fair-exchange/safecoin/a70eb098f4ae9cd359c1e40bbb7752b3dd61de8d/accountsdb-plugin-postgres/scripts/create_schema.sql
+wget https://raw.githubusercontent.com/solana-labs/solana/a70eb098f4ae9cd359c1e40bbb7752b3dd61de8d/accountsdb-plugin-postgres/scripts/create_schema.sql
 ```
 
 Then run the script:
 
 ```
-psql -U safecoin -p 5433 -h 10.138.0.9 -w -d safecoin -f create_schema.sql
+psql -U solana -p 5433 -h 10.138.0.9 -w -d solana -f create_schema.sql
 ```
 
 After this, start the validator with the plugin by using the `--geyser-plugin-config`
@@ -372,11 +372,11 @@ argument mentioned above.
 #### Destroy the Schema Objects
 
 To destroy the database objects, created by `create_schema.sql`, use
-[drop_schema.sql](https://github.com/fair-exchange/safecoin/blob/a70eb098f4ae9cd359c1e40bbb7752b3dd61de8d/accountsdb-plugin-postgres/scripts/drop_schema.sql).
+[drop_schema.sql](https://github.com/solana-labs/solana/blob/a70eb098f4ae9cd359c1e40bbb7752b3dd61de8d/accountsdb-plugin-postgres/scripts/drop_schema.sql).
 For example,
 
 ```
-psql -U safecoin -p 5433 -h 10.138.0.9 -w -d safecoin -f drop_schema.sql
+psql -U solana -p 5433 -h 10.138.0.9 -w -d solana -f drop_schema.sql
 ```
 
 ### Capture Historical Account Data

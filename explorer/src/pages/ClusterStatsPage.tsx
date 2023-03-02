@@ -7,7 +7,7 @@ import {
   usePerformanceInfo,
   useStatsProvider,
 } from "providers/stats/solanaClusterStats";
-import { abbreviatedNumber, lamportsToSafe, slotsToHumanString } from "utils";
+import { abbreviatedNumber, lamportsToSol, slotsToHumanString } from "utils";
 import { ClusterStatus, useCluster } from "providers/cluster";
 import { LiveTransactionStatsCard } from "components/LiveTransactionStatsCard";
 import { displayTimestampWithoutDate } from "utils/date";
@@ -44,7 +44,7 @@ function StakingComponent() {
   const { status } = useCluster();
   const supply = useSupply();
   const fetchSupply = useFetchSupply();
-  const coinInfo = useCoinGecko("safe-coin-2");
+  const coinInfo = useCoinGecko("solana");
   const { fetchVoteAccounts, voteAccounts } = useVoteAccounts();
 
   function fetchData() {
@@ -198,7 +198,7 @@ function StakingComponent() {
 }
 
 function displayLamports(value: number) {
-  return abbreviatedNumber(lamportsToSafe(value));
+  return abbreviatedNumber(lamportsToSol(value));
 }
 
 function StatsCardBody() {

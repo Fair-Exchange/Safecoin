@@ -2,7 +2,7 @@ use {
     crate::{HEADER_LENGTH, IP_ECHO_SERVER_RESPONSE_LENGTH},
     log::*,
     serde_derive::{Deserialize, Serialize},
-    safecoin_sdk::deserialize_utils::default_on_eof,
+    solana_sdk::deserialize_utils::default_on_eof,
     std::{
         io,
         net::{IpAddr, SocketAddr},
@@ -87,7 +87,7 @@ async fn process_connection(
         }
         return Err(io::Error::new(
             io::ErrorKind::Other,
-            format!("Bad request header: {}", request_header),
+            format!("Bad request header: {request_header}"),
         ));
     }
 
@@ -95,7 +95,7 @@ async fn process_connection(
         bincode::deserialize::<IpEchoServerMessage>(&data[HEADER_LENGTH..]).map_err(|err| {
             io::Error::new(
                 io::ErrorKind::Other,
-                format!("Failed to deserialize IpEchoServerMessage: {:?}", err),
+                format!("Failed to deserialize IpEchoServerMessage: {err:?}"),
             )
         })?;
 
@@ -130,7 +130,7 @@ async fn process_connection(
             .await??;
 
             debug!("Connection established to tcp/{}", *tcp_port);
-            let _ = tcp_stream.shutdown();
+            tcp_stream.shutdown().await?;
         }
     }
     let response = IpEchoServerResponse {

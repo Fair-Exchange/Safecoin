@@ -1,11 +1,25 @@
 ---
 title: "Transactions"
+description: "A Solana transaction consists of one or more instructions, an array of accounts to read and write data from, and one or more signatures."
 ---
 
-Program execution begins with a [transaction](terminology.md#transaction) being
-submitted to the cluster. The Safecoin runtime will execute a program to process
-each of the [instructions](terminology.md#instruction) contained in the
-transaction, in order, and atomically.
+On the Solana blockchain, program execution begins with a [transaction](./../../terminology.md#transaction) being submitted to the cluster. With each transaction consisting of one or many [instructions](./../../terminology.md#instruction), the runtime will process each of the instructions contained within the transaction, in order, and atomically. If any part of an instruction fails, then the entire transaction will fail.
+
+## Overview of a Transaction
+
+On Solana, clients update the runtime (for example, debiting an account) by submitting a transaction to the cluster.
+
+This transaction consists of three parts:
+
+- one or more instructions
+- an array of accounts to read or write from
+- one or more signatures
+
+An [instruction](./../../terminology.md#instruction) is the smallest execution logic on Solana. Instructions are basically a call to update the global Solana state. Instructions invoke programs that make calls to the Solana runtime to update the state (for example, calling the token program to transfer tokens from your account to another account).
+
+[Programs](./../intro/programs.md) on Solana don’t store data/state; rather, data/state is stored in accounts.
+
+[Signatures](./../../terminology.md#signature) verify that we have the authority to read or write data to the accounts that we list.
 
 ## Anatomy of a Transaction
 
@@ -15,7 +29,7 @@ This section covers the binary format of a transaction.
 
 A transaction contains a [compact-array](#compact-array-format) of signatures,
 followed by a [message](#message-format). Each item in the signatures array is
-a [digital signature](#signature-format) of the given message. The Safecoin
+a [digital signature](#signature-format) of the given message. The Solana
 runtime verifies that the number of signatures matches the number in the first
 8 bits of the [message header](#message-header-format). It also verifies that
 each signature was signed by the private key corresponding to the public key at
@@ -95,7 +109,7 @@ entire transaction to fail immediately.
 Programs typically provide helper functions to construct instructions they
 support. For example, the system program provides the following Rust helper to
 construct a
-[`SystemInstruction::CreateAccount`](https://github.com/fair-exchange/safecoin/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L63)
+[`SystemInstruction::CreateAccount`](https://github.com/solana-labs/solana/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L63)
 instruction:
 
 ```rust
@@ -124,29 +138,29 @@ pub fn create_account(
 
 Which can be found here:
 
-https://github.com/fair-exchange/safecoin/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L220
+https://github.com/solana-labs/solana/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L220
 
 ### Program Id
 
-The instruction's [program id](terminology.md#program-id) specifies which
+The instruction's [program id](./../../terminology.md#program-id) specifies which
 program will process this instruction. The program's account's owner specifies
 which loader should be used to load and execute the program, and the data
 contains information about how the runtime should execute the program.
 
-In the case of [on-chain BPF programs](developing/on-chain-programs/overview.md),
-the owner is the BPF Loader and the account data holds the BPF bytecode. Program
+In the case of [on-chain SBF programs](./../on-chain-programs/overview.md),
+the owner is the SBF Loader and the account data holds the BPF bytecode. Program
 accounts are permanently marked as executable by the loader once they are
 successfully deployed. The runtime will reject transactions that specify programs
 that are not executable.
 
-Unlike on-chain programs, [Native Programs](developing/runtime-facilities/programs.md)
-are handled differently in that they are built directly into the Safecoin runtime.
+Unlike on-chain programs, [Native Programs](../runtime-facilities/programs.md)
+are handled differently in that they are built directly into the Solana runtime.
 
 ### Accounts
 
 The accounts referenced by an instruction represent on-chain state and serve as
 both the inputs and outputs of a program. More information about accounts can be
-found in the [Accounts](accounts.md) section.
+found in the [Accounts](./accounts.md) section.
 
 ### Instruction data
 
@@ -162,11 +176,11 @@ overhead of decoding, since that step is performed by the program on-chain. It's
 been observed that some common encodings (Rust's bincode for example) are very
 inefficient.
 
-The [Safecoin Program Library's Token
-program](https://github.com/fair-exchange/safecoin-program-library/tree/master/token)
+The [Solana Program Library's Token
+program](https://github.com/solana-labs/solana-program-library/tree/master/token)
 gives one example of how instruction data can be encoded efficiently, but note
 that this method only supports fixed sized types. Token utilizes the
-[Pack](https://github.com/fair-exchange/safecoin/blob/master/sdk/program/src/program_pack.rs)
+[Pack](https://github.com/solana-labs/solana/blob/master/sdk/program/src/program_pack.rs)
 trait to encode/decode instruction data for both token instructions as well as
 token account states.
 
@@ -198,11 +212,11 @@ by a transaction signature. Those signatures signal on-chain programs that the
 account holder has authorized the transaction. Typically, the program uses the
 authorization to permit debiting the account or modifying its data. More
 information about how the authorization is communicated to a program can be
-found in [Accounts](accounts.md#signers)
+found in [Accounts](./accounts.md#signers)
 
 ## Recent Blockhash
 
-A transaction includes a recent [blockhash](terminology.md#blockhash) to prevent
+A transaction includes a recent [blockhash](../../terminology.md#blockhash) to prevent
 duplication and to give transactions lifetimes. Any transaction that is
 completely identical to a previous one is rejected, so adding a newer blockhash
 allows multiple transactions to repeat the exact same action. Transactions also

@@ -1,7 +1,7 @@
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(min_specialization))]
 #![allow(clippy::integer_arithmetic)]
 #![recursion_limit = "2048"]
-//! The `solana` library implements the Safecoin high-performance blockchain architecture.
+//! The `solana` library implements the Solana high-performance blockchain architecture.
 //! It includes a full Rust implementation of the architecture (see
 //! [Validator](server/struct.Validator.html)) as well as hooks to GPU implementations of its most
 //! paralellizable components (i.e. [SigVerify](sigverify/index.html)).  It also includes
@@ -11,6 +11,7 @@
 pub mod accounts_hash_verifier;
 pub mod ancestor_hashes_service;
 pub mod banking_stage;
+pub mod banking_trace;
 pub mod broadcast_stage;
 pub mod cache_block_meta_service;
 pub mod cluster_info_vote_listener;
@@ -30,19 +31,25 @@ pub mod fork_choice;
 pub mod forward_packet_batches_by_accounts;
 pub mod gen_keys;
 pub mod heaviest_subtree_fork_choice;
+pub mod immutable_deserialized_packet;
+mod latest_unprocessed_votes;
 pub mod latest_validator_votes_for_frozen_banks;
 pub mod leader_slot_banking_stage_metrics;
 pub mod leader_slot_banking_stage_timing_metrics;
 pub mod ledger_cleanup_service;
 pub mod ledger_metric_report_service;
+pub mod multi_iterator_scanner;
+pub mod next_leader;
 pub mod optimistic_confirmation_verifier;
 pub mod outstanding_requests;
+pub mod packet_deserializer;
 mod packet_hasher;
 pub mod packet_threshold;
 pub mod poh_timing_report_service;
 pub mod poh_timing_reporter;
 pub mod progress_map;
 pub mod qos_service;
+pub mod read_write_account_set;
 pub mod repair_generic_traversal;
 pub mod repair_response;
 pub mod repair_service;
@@ -68,11 +75,11 @@ mod tower1_7_14;
 pub mod tower_storage;
 pub mod tpu;
 pub mod tracer_packet_stats;
-pub mod transaction_priority_details;
 pub mod tree_diff;
 pub mod tvu;
 pub mod unfrozen_gossip_verified_vote_hashes;
 pub mod unprocessed_packet_batches;
+pub mod unprocessed_transaction_storage;
 pub mod validator;
 pub mod verified_vote_packets;
 pub mod vote_simulator;
@@ -94,7 +101,7 @@ extern crate serde_derive;
 extern crate solana_metrics;
 
 #[macro_use]
-extern crate safecoin_frozen_abi_macro;
+extern crate solana_frozen_abi_macro;
 
 #[cfg(test)]
 #[macro_use]

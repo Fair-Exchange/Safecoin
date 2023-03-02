@@ -1,20 +1,14 @@
 #![allow(clippy::integer_arithmetic)]
+
 use {
     log::*,
-    safecoin_cli_output::CliAccount,
-    safecoin_client::{
-        connection_cache::{
-            DEFAULT_TPU_CONNECTION_POOL_SIZE, DEFAULT_TPU_ENABLE_UDP, DEFAULT_TPU_USE_QUIC,
-        },
-        nonblocking,
-        rpc_client::RpcClient,
-        rpc_request::MAX_MULTIPLE_ACCOUNTS,
-    },
+    solana_cli_output::CliAccount,
+    solana_client::rpc_request::MAX_MULTIPLE_ACCOUNTS,
     solana_core::{
         tower_storage::TowerStorage,
         validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     },
-    safecoin_gossip::{
+    solana_gossip::{
         cluster_info::{ClusterInfo, Node},
         gossip_service::discover_cluster,
         socketaddr,
@@ -24,15 +18,16 @@ use {
         create_new_tmp_ledger,
     },
     solana_net_utils::PortRange,
-    safecoin_program_runtime::compute_budget::ComputeBudget,
+    solana_program_runtime::compute_budget::ComputeBudget,
     solana_rpc::{rpc::JsonRpcConfig, rpc_pubsub_service::PubSubConfig},
+    solana_rpc_client::{nonblocking, rpc_client::RpcClient},
     solana_runtime::{
         accounts_db::AccountsDbConfig, accounts_index::AccountsIndexConfig, bank_forks::BankForks,
         genesis_utils::create_genesis_config_with_leader_ex,
         hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE, runtime_config::RuntimeConfig,
-        snapshot_config::SnapshotConfig,
+        snapshot_config::SnapshotConfig, snapshot_utils::create_accounts_run_and_snapshot_dirs,
     },
-    safecoin_sdk::{
+    solana_sdk::{
         account::{Account, AccountSharedData},
         clock::{Slot, DEFAULT_MS_PER_SLOT},
         commitment_config::CommitmentConfig,
@@ -49,6 +44,9 @@ use {
         signature::{read_keypair_file, write_keypair_file, Keypair, Signer},
     },
     solana_streamer::socket::SocketAddrSpace,
+    solana_tpu_client::tpu_client::{
+        DEFAULT_TPU_CONNECTION_POOL_SIZE, DEFAULT_TPU_ENABLE_UDP, DEFAULT_TPU_USE_QUIC,
+    },
     std::{
         collections::{HashMap, HashSet},
         ffi::OsStr,
@@ -89,7 +87,7 @@ impl Default for TestValidatorNodeConfig {
         const MIN_PORT_RANGE: u16 = 1024;
         const MAX_PORT_RANGE: u16 = 65535;
 
-        let bind_ip_addr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+        let bind_ip_addr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
         let port_range = (MIN_PORT_RANGE, MAX_PORT_RANGE);
 
         Self {
@@ -118,13 +116,14 @@ pub struct TestValidatorGenesis {
     pub validator_exit: Arc<RwLock<Exit>>,
     pub start_progress: Arc<RwLock<ValidatorStartProgress>>,
     pub authorized_voter_keypairs: Arc<RwLock<Vec<Arc<Keypair>>>>,
+    pub staked_nodes_overrides: Arc<RwLock<HashMap<Pubkey, u64>>>,
     pub max_ledger_shreds: Option<u64>,
     pub max_genesis_archive_unpacked_size: Option<u64>,
     pub geyser_plugin_config_files: Option<Vec<PathBuf>>,
-    pub accounts_db_caching_enabled: bool,
     deactivate_feature_set: HashSet<Pubkey>,
     compute_unit_limit: Option<u64>,
     pub log_messages_bytes_limit: Option<usize>,
+    pub transaction_account_lock_limit: Option<usize>,
     pub tpu_enable_udp: bool,
 }
 
@@ -148,13 +147,14 @@ impl Default for TestValidatorGenesis {
             validator_exit: Arc::<RwLock<Exit>>::default(),
             start_progress: Arc::<RwLock<ValidatorStartProgress>>::default(),
             authorized_voter_keypairs: Arc::<RwLock<Vec<Arc<Keypair>>>>::default(),
+            staked_nodes_overrides: Arc::new(RwLock::new(HashMap::new())),
             max_ledger_shreds: Option::<u64>::default(),
             max_genesis_archive_unpacked_size: Option::<u64>::default(),
             geyser_plugin_config_files: Option::<Vec<PathBuf>>::default(),
-            accounts_db_caching_enabled: bool::default(),
             deactivate_feature_set: HashSet::<Pubkey>::default(),
             compute_unit_limit: Option::<u64>::default(),
             log_messages_bytes_limit: Option::<usize>::default(),
+            transaction_account_lock_limit: Option::<usize>::default(),
             tpu_enable_udp: DEFAULT_TPU_ENABLE_UDP,
         }
     }
@@ -289,7 +289,7 @@ impl TestValidatorGenesis {
         addresses: T,
         rpc_client: &RpcClient,
         skip_missing: bool,
-    ) -> &mut Self
+    ) -> Result<&mut Self, String>
     where
         T: IntoIterator<Item = Pubkey>,
     {
@@ -298,31 +298,29 @@ impl TestValidatorGenesis {
             info!("Fetching {:?} over RPC...", chunk);
             let responses = rpc_client
                 .get_multiple_accounts(chunk)
-                .unwrap_or_else(|err| {
-                    error!("Failed to fetch: {}", err);
-                    solana_core::validator::abort();
-                });
+                .map_err(|err| format!("Failed to fetch: {err}"))?;
             for (address, res) in chunk.iter().zip(responses) {
                 if let Some(account) = res {
                     self.add_account(*address, AccountSharedData::from(account));
                 } else if skip_missing {
                     warn!("Could not find {}, skipping.", address);
                 } else {
-                    error!("Failed to fetch {}", address);
-                    solana_core::validator::abort();
+                    return Err(format!("Failed to fetch {address}"));
                 }
             }
         }
-        self
+        Ok(self)
     }
 
-    pub fn add_accounts_from_json_files(&mut self, accounts: &[AccountInfo]) -> &mut Self {
+    pub fn add_accounts_from_json_files(
+        &mut self,
+        accounts: &[AccountInfo],
+    ) -> Result<&mut Self, String> {
         for account in accounts {
-            let account_path =
-                safecoin_program_test::find_file(account.filename).unwrap_or_else(|| {
-                    error!("Unable to locate {}", account.filename);
-                    solana_core::validator::abort();
-                });
+            let account_path = match solana_program_test::find_file(account.filename) {
+                Some(path) => path,
+                None => return Err(format!("Unable to locate {}", account.filename)),
+            };
             let mut file = File::open(&account_path).unwrap();
             let mut account_info_raw = String::new();
             file.read_to_string(&mut account_info_raw).unwrap();
@@ -330,12 +328,11 @@ impl TestValidatorGenesis {
             let result: serde_json::Result<CliAccount> = serde_json::from_str(&account_info_raw);
             let account_info = match result {
                 Err(err) => {
-                    error!(
+                    return Err(format!(
                         "Unable to deserialize {}: {}",
                         account_path.to_str().unwrap(),
                         err
-                    );
-                    solana_core::validator::abort();
+                    ));
                 }
                 Ok(deserialized) => deserialized,
             };
@@ -351,25 +348,24 @@ impl TestValidatorGenesis {
 
             self.add_account(address, account);
         }
-        self
+        Ok(self)
     }
 
-    pub fn add_accounts_from_directories<T, P>(&mut self, dirs: T) -> &mut Self
+    pub fn add_accounts_from_directories<T, P>(&mut self, dirs: T) -> Result<&mut Self, String>
     where
         T: IntoIterator<Item = P>,
         P: AsRef<Path> + Display,
     {
         let mut json_files: HashSet<String> = HashSet::new();
         for dir in dirs {
-            let matched_files = fs::read_dir(&dir)
-                .unwrap_or_else(|err| {
-                    error!("Cannot read directory {}: {}", dir, err);
-                    solana_core::validator::abort();
-                })
-                .flatten()
-                .map(|entry| entry.path())
-                .filter(|path| path.is_file() && path.extension() == Some(OsStr::new("json")))
-                .map(|path| String::from(path.to_string_lossy()));
+            let matched_files = match fs::read_dir(&dir) {
+                Ok(dir) => dir,
+                Err(e) => return Err(format!("Cannot read directory {}: {}", &dir, e)),
+            }
+            .flatten()
+            .map(|entry| entry.path())
+            .filter(|path| path.is_file() && path.extension() == Some(OsStr::new("json")))
+            .map(|path| String::from(path.to_string_lossy()));
 
             json_files.extend(matched_files);
         }
@@ -384,9 +380,9 @@ impl TestValidatorGenesis {
             })
             .collect();
 
-        self.add_accounts_from_json_files(&accounts);
+        self.add_accounts_from_json_files(&accounts)?;
 
-        self
+        Ok(self)
     }
 
     /// Add an account to the test environment with the account data in the provided `filename`
@@ -401,9 +397,9 @@ impl TestValidatorGenesis {
             address,
             AccountSharedData::from(Account {
                 lamports,
-                data: safecoin_program_test::read_file(
-                    safecoin_program_test::find_file(filename).unwrap_or_else(|| {
-                        panic!("Unable to locate {}", filename);
+                data: solana_program_test::read_file(
+                    solana_program_test::find_file(filename).unwrap_or_else(|| {
+                        panic!("Unable to locate {filename}");
                     }),
                 ),
                 owner,
@@ -427,7 +423,7 @@ impl TestValidatorGenesis {
             AccountSharedData::from(Account {
                 lamports,
                 data: base64::decode(data_base64)
-                    .unwrap_or_else(|err| panic!("Failed to base64 decode: {}", err)),
+                    .unwrap_or_else(|err| panic!("Failed to base64 decode: {err}")),
                 owner,
                 executable: false,
                 rent_epoch: 0,
@@ -435,17 +431,17 @@ impl TestValidatorGenesis {
         )
     }
 
-    /// Add a BPF program to the test environment.
+    /// Add a SBF program to the test environment.
     ///
-    /// `program_name` will also used to locate the BPF shared object in the current or fixtures
+    /// `program_name` will also used to locate the SBF shared object in the current or fixtures
     /// directory.
     pub fn add_program(&mut self, program_name: &str, program_id: Pubkey) -> &mut Self {
-        let program_path = safecoin_program_test::find_file(&format!("{}.so", program_name))
-            .unwrap_or_else(|| panic!("Unable to locate program {}", program_name));
+        let program_path = solana_program_test::find_file(&format!("{program_name}.so"))
+            .unwrap_or_else(|| panic!("Unable to locate program {program_name}"));
 
         self.programs.push(ProgramInfo {
             program_id,
-            loader: safecoin_sdk::bpf_loader::id(),
+            loader: solana_sdk::bpf_loader::id(),
             program_path,
         });
         self
@@ -502,7 +498,7 @@ impl TestValidatorGenesis {
         let mint_keypair = Keypair::new();
         self.start_with_mint_address(mint_keypair.pubkey(), socket_addr_space)
             .map(|test_validator| (test_validator, mint_keypair))
-            .unwrap_or_else(|err| panic!("Test validator failed to start: {}", err))
+            .unwrap_or_else(|err| panic!("Test validator failed to start: {err}"))
     }
 
     pub async fn start_async(&self) -> (TestValidator, Keypair) {
@@ -522,7 +518,7 @@ impl TestValidatorGenesis {
                 test_validator.wait_for_nonzero_fees().await;
                 (test_validator, mint_keypair)
             }
-            Err(err) => panic!("Test validator failed to start: {}", err),
+            Err(err) => panic!("Test validator failed to start: {err}"),
         }
     }
 }
@@ -602,7 +598,7 @@ impl TestValidator {
     }
 
     /// allow tests to indicate that validator has completed initialization
-    pub fn set_startup_verification_complete(&self) {
+    pub fn set_startup_verification_complete_for_tests(&self) {
         self.bank_forks()
             .read()
             .unwrap()
@@ -623,16 +619,16 @@ impl TestValidator {
         let validator_identity = Keypair::new();
         let validator_vote_account = Keypair::new();
         let validator_stake_account = Keypair::new();
-        let validator_identity_lamports = sol_to_lamports(33_406_471.);
-        let validator_stake_lamports = sol_to_lamports(10_000.);
-        let mint_lamports = sol_to_lamports(500.);
+        let validator_identity_lamports = sol_to_lamports(500.);
+        let validator_stake_lamports = sol_to_lamports(1_000_000.);
+        let mint_lamports = sol_to_lamports(500_000_000.);
 
         let mut accounts = config.accounts.clone();
-        for (address, account) in safecoin_program_test::programs::spl_programs(&config.rent) {
+        for (address, account) in solana_program_test::programs::spl_programs(&config.rent) {
             accounts.entry(address).or_insert(account);
         }
         for program in &config.programs {
-            let data = safecoin_program_test::read_file(&program.program_path);
+            let data = solana_program_test::read_file(&program.program_path);
             accounts.insert(
                 program.program_id,
                 AccountSharedData::from(Account {
@@ -655,7 +651,7 @@ impl TestValidator {
             validator_identity_lamports,
             config.fee_rate_governor.clone(),
             config.rent,
-            safecoin_sdk::genesis_config::ClusterType::Development,
+            solana_sdk::genesis_config::ClusterType::Development,
             accounts.into_iter().collect(),
         );
         genesis_config.epoch_schedule = config
@@ -754,15 +750,16 @@ impl TestValidator {
             config.node_config.bind_ip_addr,
         );
         if let Some((rpc, rpc_pubsub)) = config.rpc_ports {
-            node.info.rpc = SocketAddr::new(node.info.gossip.ip(), rpc);
-            node.info.rpc_pubsub = SocketAddr::new(node.info.gossip.ip(), rpc_pubsub);
+            let addr = node.info.gossip().unwrap().ip();
+            node.info.set_rpc((addr, rpc)).unwrap();
+            node.info.set_rpc_pubsub((addr, rpc_pubsub)).unwrap();
         }
 
         let vote_account_address = validator_vote_account.pubkey();
-        let rpc_url = format!("http://{}", node.info.rpc);
-        let rpc_pubsub_url = format!("ws://{}/", node.info.rpc_pubsub);
-        let tpu = node.info.tpu;
-        let gossip = node.info.gossip;
+        let rpc_url = format!("http://{}", node.info.rpc().unwrap());
+        let rpc_pubsub_url = format!("ws://{}/", node.info.rpc_pubsub().unwrap());
+        let tpu = node.info.tpu().unwrap();
+        let gossip = node.info.gossip().unwrap();
 
         {
             let mut authorized_voter_keypairs = config.authorized_voter_keypairs.write().unwrap();
@@ -791,39 +788,47 @@ impl TestValidator {
                     ..ComputeBudget::default()
                 }),
             log_messages_bytes_limit: config.log_messages_bytes_limit,
+            transaction_account_lock_limit: config.transaction_account_lock_limit,
         };
 
         let mut validator_config = ValidatorConfig {
             geyser_plugin_config_files: config.geyser_plugin_config_files.clone(),
-            accounts_db_caching_enabled: config.accounts_db_caching_enabled,
             rpc_addrs: Some((
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), node.info.rpc.port()),
                 SocketAddr::new(
-                    IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-                    node.info.rpc_pubsub.port(),
+                    IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+                    node.info.rpc().unwrap().port(),
+                ),
+                SocketAddr::new(
+                    IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+                    node.info.rpc_pubsub().unwrap().port(),
                 ),
             )),
             rpc_config: config.rpc_config.clone(),
             pubsub_config: config.pubsub_config.clone(),
             accounts_hash_interval_slots: 100,
-            account_paths: vec![ledger_path.join("accounts")],
+            account_paths: vec![
+                create_accounts_run_and_snapshot_dirs(ledger_path.join("accounts"))
+                    .unwrap()
+                    .0,
+            ],
             poh_verify: false, // Skip PoH verification of ledger on startup for speed
-            snapshot_config: Some(SnapshotConfig {
+            snapshot_config: SnapshotConfig {
                 full_snapshot_archive_interval_slots: 100,
                 incremental_snapshot_archive_interval_slots: Slot::MAX,
                 bank_snapshots_dir: ledger_path.join("snapshot"),
                 full_snapshot_archives_dir: ledger_path.to_path_buf(),
                 incremental_snapshot_archives_dir: ledger_path.to_path_buf(),
                 ..SnapshotConfig::default()
-            }),
+            },
             enforce_ulimit_nofile: false,
             warp_slot: config.warp_slot,
             validator_exit: config.validator_exit.clone(),
-            rocksdb_compaction_interval: Some(100), // Compact every 100 slots
             max_ledger_shreds: config.max_ledger_shreds,
             no_wait_for_vote_to_start_leader: true,
+            staked_nodes_overrides: config.staked_nodes_overrides.clone(),
             accounts_db_config,
             runtime_config,
+            account_indexes: config.rpc_config.account_indexes.clone(),
             ..ValidatorConfig::default_for_test()
         };
         if let Some(ref tower_storage) = config.tower_storage {
@@ -844,12 +849,12 @@ impl TestValidator {
             DEFAULT_TPU_USE_QUIC,
             DEFAULT_TPU_CONNECTION_POOL_SIZE,
             config.tpu_enable_udp,
-        ));
+        )?);
 
         // Needed to avoid panics in `solana-responder-gossip` in tests that create a number of
         // test validators concurrently...
         discover_cluster(&gossip, 1, socket_addr_space)
-            .map_err(|err| format!("TestValidator startup failed: {:?}", err))?;
+            .map_err(|err| format!("TestValidator startup failed: {err:?}"))?;
 
         let test_validator = TestValidator {
             ledger_path,
@@ -887,7 +892,7 @@ impl TestValidator {
             if num_tries > MAX_TRIES {
                 break;
             }
-            println!("Waiting for fees to stabilize {:?}...", num_tries);
+            println!("Waiting for fees to stabilize {num_tries:?}...");
             match rpc_client.get_latest_blockhash().await {
                 Ok(blockhash) => {
                     message.recent_blockhash = blockhash;
@@ -977,6 +982,10 @@ impl TestValidator {
     pub fn bank_forks(&self) -> Arc<RwLock<BankForks>> {
         self.validator.as_ref().unwrap().bank_forks.clone()
     }
+
+    pub fn repair_whitelist(&self) -> Arc<RwLock<HashSet<Pubkey>>> {
+        Arc::new(RwLock::new(HashSet::default()))
+    }
 }
 
 impl Drop for TestValidator {
@@ -1003,7 +1012,7 @@ mod test {
     #[test]
     fn get_health() {
         let (test_validator, _payer) = TestValidatorGenesis::default().start();
-        test_validator.set_startup_verification_complete();
+        test_validator.set_startup_verification_complete_for_tests();
         let rpc_client = test_validator.get_rpc_client();
         rpc_client.get_health().expect("health");
     }
@@ -1011,7 +1020,7 @@ mod test {
     #[tokio::test]
     async fn nonblocking_get_health() {
         let (test_validator, _payer) = TestValidatorGenesis::default().start_async().await;
-        test_validator.set_startup_verification_complete();
+        test_validator.set_startup_verification_complete_for_tests();
         let rpc_client = test_validator.get_async_rpc_client();
         rpc_client.get_health().await.expect("health");
     }

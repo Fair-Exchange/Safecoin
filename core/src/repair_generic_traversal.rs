@@ -4,7 +4,7 @@ use {
         serve_repair::ShredRepairType, tree_diff::TreeDiff,
     },
     solana_ledger::{blockstore::Blockstore, blockstore_meta::SlotMeta},
-    safecoin_sdk::{clock::Slot, hash::Hash},
+    solana_sdk::{clock::Slot, hash::Hash},
     std::collections::{HashMap, HashSet},
 };
 
@@ -17,7 +17,7 @@ impl<'a> GenericTraversal<'a> {
     pub fn new(tree: &'a HeaviestSubtreeForkChoice) -> Self {
         Self {
             tree,
-            pending: vec![tree.root().0],
+            pending: vec![tree.tree_root().0],
         }
     }
 }
@@ -31,7 +31,6 @@ impl<'a> Iterator for GenericTraversal<'a> {
                 .tree
                 .children(&(slot, Hash::default()))
                 .unwrap()
-                .iter()
                 .map(|(child_slot, _)| *child_slot)
                 .collect();
             self.pending.extend(children);
@@ -40,6 +39,8 @@ impl<'a> Iterator for GenericTraversal<'a> {
     }
 }
 
+/// Does a generic traversal and inserts all slots that have a missing last index prioritized by how
+/// many shreds have been received
 pub fn get_unknown_last_index(
     tree: &HeaviestSubtreeForkChoice,
     blockstore: &Blockstore,
@@ -78,6 +79,8 @@ pub fn get_unknown_last_index(
         .collect()
 }
 
+/// Path of broken parents from start_slot to earliest ancestor not yet seen
+/// Uses blockstore for fork information
 fn get_unrepaired_path(
     start_slot: Slot,
     blockstore: &Blockstore,
@@ -103,6 +106,8 @@ fn get_unrepaired_path(
     path
 }
 
+/// Finds repairs for slots that are closest to completion (# of missing shreds).
+/// Additionaly we repair up to their oldest full ancestor (using blockstore fork info).
 pub fn get_closest_completion(
     tree: &HeaviestSubtreeForkChoice,
     blockstore: &Blockstore,
@@ -133,8 +138,7 @@ pub fn get_closest_completion(
                             (
                                 "error",
                                 format!(
-                                    "last_index + 1 < shred_count. last_index={} shred_count={}",
-                                    last_index, shred_count,
+                                    "last_index + 1 < shred_count. last_index={last_index} shred_count={shred_count}",
                                 ),
                                 String
                             ),
@@ -196,11 +200,11 @@ pub mod test {
     use {
         super::*,
         solana_ledger::{
-            blockstore::{Blockstore, MAX_TURBINE_PROPAGATION_IN_MS},
+            blockstore::{Blockstore, MAX_TURBINE_PROPAGATION},
             get_tmp_ledger_path,
         },
-        safecoin_sdk::hash::Hash,
-        std::{thread::sleep, time::Duration},
+        solana_sdk::hash::Hash,
+        std::thread::sleep,
         trees::{tr, Tree, TreeWalk},
     };
 
@@ -252,7 +256,7 @@ pub mod test {
             Hash::default(),
         );
         let heaviest_subtree_fork_choice = HeaviestSubtreeForkChoice::new_from_tree(forks);
-        sleep(Duration::from_millis(MAX_TURBINE_PROPAGATION_IN_MS));
+        sleep(MAX_TURBINE_PROPAGATION);
         let mut slot_meta_cache = HashMap::default();
         let mut processed_slots = HashSet::default();
         let repairs = get_closest_completion(
@@ -307,6 +311,7 @@ pub mod test {
                     parent.unwrap_or(slot),
                     is_slot_complete,
                     0,
+                    true, // merkle_variant
                 );
 
                 // remove next to last shred

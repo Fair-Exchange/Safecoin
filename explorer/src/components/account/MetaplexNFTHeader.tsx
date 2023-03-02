@@ -1,5 +1,4 @@
 import React from "react";
-import "bootstrap/dist/js/bootstrap.min.js";
 import {
   NFTData,
   useFetchAccountInfo,
@@ -11,9 +10,9 @@ import { InfoTooltip } from "components/common/InfoTooltip";
 import { clusterPath } from "utils/url";
 import { Link } from "react-router-dom";
 import { EditionInfo } from "providers/accounts/utils/getEditionInfo";
-import { PublicKey } from "@safecoin/web3.js";
+import { PublicKey } from "@solana/web3.js";
 
-export function NFTHeader({
+export function MetaplexNFTHeader({
   nftData,
   address,
 }: {
@@ -26,7 +25,7 @@ export function NFTHeader({
 
   React.useEffect(() => {
     if (collectionAddress && !collectionMintInfo) {
-      fetchAccountInfo(new PublicKey(collectionAddress));
+      fetchAccountInfo(new PublicKey(collectionAddress), "parsed");
     }
   }, [fetchAccountInfo, collectionAddress]); // eslint-disable-line react-hooks/exhaustive-deps
 

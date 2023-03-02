@@ -1,17 +1,22 @@
 use {
+    crate::spl_convert::FromOtherSolana,
     clap::{crate_description, crate_name, App, Arg, ArgMatches},
-    safecoin_clap_utils::input_validators::{is_url, is_url_or_moniker},
-    safecoin_cli_config::{ConfigInput, CONFIG_FILE},
-    safecoin_client::connection_cache::{DEFAULT_TPU_CONNECTION_POOL_SIZE, DEFAULT_TPU_USE_QUIC},
-    safecoin_sdk::{
+    solana_clap_utils::input_validators::{is_url, is_url_or_moniker, is_within_range},
+    solana_cli_config::{ConfigInput, CONFIG_FILE},
+    solana_sdk::{
         fee_calculator::FeeRateGovernor,
         pubkey::Pubkey,
         signature::{read_keypair_file, Keypair},
     },
-    std::{net::SocketAddr, process::exit, time::Duration},
+    solana_tpu_client::tpu_client::{DEFAULT_TPU_CONNECTION_POOL_SIZE, DEFAULT_TPU_USE_QUIC},
+    std::{
+        net::{Ipv4Addr, SocketAddr},
+        process::exit,
+        time::Duration,
+    },
 };
 
-const NUM_LAMPORTS_PER_ACCOUNT_DEFAULT: u64 = safecoin_sdk::native_token::LAMPORTS_PER_SAFE;
+const NUM_LAMPORTS_PER_ACCOUNT_DEFAULT: u64 = solana_sdk::native_token::LAMPORTS_PER_SOL;
 
 pub enum ExternalClientType {
     // Submits transactions to an Rpc node using an RpcClient
@@ -28,6 +33,11 @@ impl Default for ExternalClientType {
     fn default() -> Self {
         Self::ThinClient
     }
+}
+
+pub struct InstructionPaddingConfig {
+    pub program_id: Pubkey,
+    pub data_size: u32,
 }
 
 /// Holds the configuration for a single run of the benchmark
@@ -54,12 +64,16 @@ pub struct Config {
     pub external_client_type: ExternalClientType,
     pub use_quic: bool,
     pub tpu_connection_pool_size: usize,
+    pub use_randomized_compute_unit_price: bool,
+    pub use_durable_nonce: bool,
+    pub instruction_padding_config: Option<InstructionPaddingConfig>,
+    pub num_conflict_groups: Option<usize>,
 }
 
 impl Default for Config {
     fn default() -> Config {
         Config {
-            entrypoint_addr: SocketAddr::from(([127, 0, 0, 1], 10015)),
+            entrypoint_addr: SocketAddr::from((Ipv4Addr::LOCALHOST, 8001)),
             json_rpc_url: ConfigInput::default().json_rpc_url,
             websocket_url: ConfigInput::default().websocket_url,
             id: Keypair::new(),
@@ -81,12 +95,16 @@ impl Default for Config {
             external_client_type: ExternalClientType::default(),
             use_quic: DEFAULT_TPU_USE_QUIC,
             tpu_connection_pool_size: DEFAULT_TPU_CONNECTION_POOL_SIZE,
+            use_randomized_compute_unit_price: false,
+            use_durable_nonce: false,
+            instruction_padding_config: None,
+            num_conflict_groups: None,
         }
     }
 }
 
 /// Defines and builds the CLI args for a run of the benchmark
-pub fn build_args<'a, 'b>(version: &'b str) -> App<'a, 'b> {
+pub fn build_args<'a>(version: &'_ str) -> App<'a, '_> {
     App::new(crate_name!()).about(crate_description!())
         .version(version)
         .arg({
@@ -112,7 +130,7 @@ pub fn build_args<'a, 'b>(version: &'b str) -> App<'a, 'b> {
                 .global(true)
                 .validator(is_url_or_moniker)
                 .help(
-                    "URL for Safecoin's JSON RPC or moniker (or their first letter): \
+                    "URL for Solana's JSON RPC or moniker (or their first letter): \
                        [mainnet-beta, testnet, devnet, localhost]",
                 ),
         )
@@ -123,7 +141,7 @@ pub fn build_args<'a, 'b>(version: &'b str) -> App<'a, 'b> {
                 .takes_value(true)
                 .global(true)
                 .validator(is_url)
-                .help("WebSocket URL for the safecoin cluster"),
+                .help("WebSocket URL for the solana cluster"),
         )
         .arg(
             Arg::with_name("rpc_addr")
@@ -151,7 +169,7 @@ pub fn build_args<'a, 'b>(version: &'b str) -> App<'a, 'b> {
                 .long("entrypoint")
                 .value_name("HOST:PORT")
                 .takes_value(true)
-                .help("Rendezvous with the cluster at this entry point; defaults to 127.0.0.1:10015"),
+                .help("Rendezvous with the cluster at this entry point; defaults to 127.0.0.1:8001"),
         )
         .arg(
             Arg::with_name("faucet")
@@ -303,6 +321,38 @@ pub fn build_args<'a, 'b>(version: &'b str) -> App<'a, 'b> {
                 .help("Controls the connection pool size per remote address; only affects ThinClient (default) \
                     or TpuClient sends"),
         )
+        .arg(
+            Arg::with_name("use_randomized_compute_unit_price")
+                .long("use-randomized-compute-unit-price")
+                .takes_value(false)
+                .help("Sets random compute-unit-price in range [0..100] to transfer transactions"),
+        )
+        .arg(
+            Arg::with_name("use_durable_nonce")
+                .long("use-durable-nonce")
+                .help("Use durable transaction nonce instead of recent blockhash"),
+        )
+        .arg(
+            Arg::with_name("instruction_padding_program_id")
+                .long("instruction-padding-program-id")
+                .requires("instruction_padding_data_size")
+                .takes_value(true)
+                .value_name("PUBKEY")
+                .help("If instruction data is padded, optionally specify the padding program id to target"),
+        )
+        .arg(
+            Arg::with_name("instruction_padding_data_size")
+                .long("instruction-padding-data-size")
+                .takes_value(true)
+                .help("If set, wraps all instructions in the instruction padding program, with the given amount of padding bytes in instruction data."),
+        )
+        .arg(
+            Arg::with_name("num_conflict_groups")
+                .long("num-conflict-groups")
+                .takes_value(true)
+                .validator(|arg| is_within_range(arg, 1, usize::MAX - 1))
+                .help("The number of unique destination accounts per transactions 'chunk'. Lower values will result in more transaction conflicts.")
+        )
 }
 
 /// Parses a clap `ArgMatches` structure into a `Config`
@@ -314,9 +364,9 @@ pub fn extract_args(matches: &ArgMatches) -> Config {
     let mut args = Config::default();
 
     let config = if let Some(config_file) = matches.value_of("config_file") {
-        safecoin_cli_config::Config::load(config_file).unwrap_or_default()
+        solana_cli_config::Config::load(config_file).unwrap_or_default()
     } else {
-        safecoin_cli_config::Config::default()
+        solana_cli_config::Config::default()
     };
     let (_, json_rpc_url) = ConfigInput::compute_json_rpc_url_setting(
         matches.value_of("json_rpc_url").unwrap_or(""),
@@ -361,7 +411,7 @@ pub fn extract_args(matches: &ArgMatches) -> Config {
 
     if let Some(addr) = matches.value_of("entrypoint") {
         args.entrypoint_addr = solana_net_utils::parse_host_port(addr).unwrap_or_else(|e| {
-            eprintln!("failed to parse entrypoint address: {}", e);
+            eprintln!("failed to parse entrypoint address: {e}");
             exit(1)
         });
     }
@@ -431,6 +481,36 @@ pub fn extract_args(matches: &ArgMatches) -> Config {
             .to_string()
             .parse()
             .expect("can't parse target slots per epoch");
+    }
+
+    if matches.is_present("use_randomized_compute_unit_price") {
+        args.use_randomized_compute_unit_price = true;
+    }
+
+    if matches.is_present("use_durable_nonce") {
+        args.use_durable_nonce = true;
+    }
+
+    if let Some(data_size) = matches.value_of("instruction_padding_data_size") {
+        let program_id = matches
+            .value_of("instruction_padding_program_id")
+            .map(|target_str| target_str.parse().unwrap())
+            .unwrap_or_else(|| FromOtherSolana::from(spl_instruction_padding::ID));
+        args.instruction_padding_config = Some(InstructionPaddingConfig {
+            program_id,
+            data_size: data_size
+                .to_string()
+                .parse()
+                .expect("Can't parse padded instruction data size"),
+        });
+    }
+
+    if let Some(num_conflict_groups) = matches.value_of("num_conflict_groups") {
+        args.num_conflict_groups = Some(
+            num_conflict_groups
+                .parse()
+                .expect("Can't parse conflict groups"),
+        );
     }
 
     args

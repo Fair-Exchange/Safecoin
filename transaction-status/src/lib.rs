@@ -1,14 +1,14 @@
 #![allow(clippy::integer_arithmetic)]
 
-pub use {crate::extract_memos::extract_and_fmt_memos, safecoin_sdk::reward_type::RewardType};
+pub use {crate::extract_memos::extract_and_fmt_memos, solana_sdk::reward_type::RewardType};
 use {
     crate::{
         option_serializer::OptionSerializer,
         parse_accounts::{parse_legacy_message_accounts, parse_v0_message_accounts, ParsedAccount},
         parse_instruction::{parse, ParsedInstruction},
     },
-    safecoin_account_decoder::parse_token::UiTokenAmount,
-    safecoin_sdk::{
+    solana_account_decoder::parse_token::UiTokenAmount,
+    solana_sdk::{
         clock::{Slot, UnixTimestamp},
         commitment_config::CommitmentConfig,
         instruction::CompiledInstruction,
@@ -36,6 +36,7 @@ extern crate serde_derive;
 pub mod extract_memos;
 pub mod option_serializer;
 pub mod parse_accounts;
+pub mod parse_address_lookup_table;
 pub mod parse_associated_token;
 pub mod parse_bpf_loader;
 pub mod parse_instruction;
@@ -110,7 +111,7 @@ impl fmt::Display for UiTransactionEncoding {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let v = serde_json::to_value(self).map_err(|_| fmt::Error)?;
         let s = v.as_str().ok_or(fmt::Error)?;
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -138,13 +139,17 @@ pub enum UiInstruction {
 }
 
 impl UiInstruction {
-    fn parse(instruction: &CompiledInstruction, account_keys: &AccountKeys) -> Self {
+    fn parse(
+        instruction: &CompiledInstruction,
+        account_keys: &AccountKeys,
+        stack_height: Option<u32>,
+    ) -> Self {
         let program_id = &account_keys[instruction.program_id_index as usize];
-        if let Ok(parsed_instruction) = parse(program_id, instruction, account_keys) {
+        if let Ok(parsed_instruction) = parse(program_id, instruction, account_keys, stack_height) {
             UiInstruction::Parsed(UiParsedInstruction::Parsed(parsed_instruction))
         } else {
             UiInstruction::Parsed(UiParsedInstruction::PartiallyDecoded(
-                UiPartiallyDecodedInstruction::from(instruction, account_keys),
+                UiPartiallyDecodedInstruction::from(instruction, account_keys, stack_height),
             ))
         }
     }
@@ -164,14 +169,16 @@ pub struct UiCompiledInstruction {
     pub program_id_index: u8,
     pub accounts: Vec<u8>,
     pub data: String,
+    pub stack_height: Option<u32>,
 }
 
-impl From<&CompiledInstruction> for UiCompiledInstruction {
-    fn from(instruction: &CompiledInstruction) -> Self {
+impl UiCompiledInstruction {
+    fn from(instruction: &CompiledInstruction, stack_height: Option<u32>) -> Self {
         Self {
             program_id_index: instruction.program_id_index,
             accounts: instruction.accounts.clone(),
-            data: bs58::encode(instruction.data.clone()).into_string(),
+            data: bs58::encode(&instruction.data).into_string(),
+            stack_height,
         }
     }
 }
@@ -183,10 +190,15 @@ pub struct UiPartiallyDecodedInstruction {
     pub program_id: String,
     pub accounts: Vec<String>,
     pub data: String,
+    pub stack_height: Option<u32>,
 }
 
 impl UiPartiallyDecodedInstruction {
-    fn from(instruction: &CompiledInstruction, account_keys: &AccountKeys) -> Self {
+    fn from(
+        instruction: &CompiledInstruction,
+        account_keys: &AccountKeys,
+        stack_height: Option<u32>,
+    ) -> Self {
         Self {
             program_id: account_keys[instruction.program_id_index as usize].to_string(),
             accounts: instruction
@@ -195,6 +207,7 @@ impl UiPartiallyDecodedInstruction {
                 .map(|&i| account_keys[i as usize].to_string())
                 .collect(),
             data: bs58::encode(instruction.data.clone()).into_string(),
+            stack_height,
         }
     }
 }
@@ -204,7 +217,15 @@ pub struct InnerInstructions {
     /// Transaction instruction index
     pub index: u8,
     /// List of inner instructions
-    pub instructions: Vec<CompiledInstruction>,
+    pub instructions: Vec<InnerInstruction>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InnerInstruction {
+    /// Compiled instruction
+    pub instruction: CompiledInstruction,
+    /// Invocation stack height of the instruction,
+    pub stack_height: Option<u32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -223,7 +244,14 @@ impl UiInnerInstructions {
             instructions: inner_instructions
                 .instructions
                 .iter()
-                .map(|ix| UiInstruction::parse(ix, account_keys))
+                .map(
+                    |InnerInstruction {
+                         instruction: ix,
+                         stack_height,
+                     }| {
+                        UiInstruction::parse(ix, account_keys, *stack_height)
+                    },
+                )
                 .collect(),
         }
     }
@@ -236,7 +264,14 @@ impl From<InnerInstructions> for UiInnerInstructions {
             instructions: inner_instructions
                 .instructions
                 .iter()
-                .map(|ix| UiInstruction::Compiled(ix.into()))
+                .map(
+                    |InnerInstruction {
+                         instruction: ix,
+                         stack_height,
+                     }| {
+                        UiInstruction::Compiled(UiCompiledInstruction::from(ix, *stack_height))
+                    },
+                )
                 .collect(),
         }
     }
@@ -329,7 +364,7 @@ impl Default for TransactionStatusMeta {
 #[serde(rename_all = "camelCase")]
 pub struct UiTransactionStatusMeta {
     pub err: Option<TransactionError>,
-    pub status: TransactionResult<()>, // This field is deprecated.  See https://github.com/fair-exchange/safecoin/issues/9302
+    pub status: TransactionResult<()>, // This field is deprecated.  See https://github.com/solana-labs/solana/issues/9302
     pub fee: u64,
     pub pre_balances: Vec<u64>,
     pub post_balances: Vec<u64>,
@@ -569,6 +604,12 @@ pub struct Reward {
 
 pub type Rewards = Vec<Reward>;
 
+#[derive(Debug, Error)]
+pub enum ConvertBlockError {
+    #[error("transactions missing after converted, before: {0}, after: {1}")]
+    TransactionsMissing(usize, usize),
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConfirmedBlock {
     pub previous_blockhash: String,
@@ -608,6 +649,40 @@ impl From<VersionedConfirmedBlock> for ConfirmedBlock {
             block_time: block.block_time,
             block_height: block.block_height,
         }
+    }
+}
+
+impl TryFrom<ConfirmedBlock> for VersionedConfirmedBlock {
+    type Error = ConvertBlockError;
+
+    fn try_from(block: ConfirmedBlock) -> Result<Self, Self::Error> {
+        let expected_transaction_count = block.transactions.len();
+
+        let txs: Vec<_> = block
+            .transactions
+            .into_iter()
+            .filter_map(|tx| match tx {
+                TransactionWithStatusMeta::MissingMetadata(_) => None,
+                TransactionWithStatusMeta::Complete(tx) => Some(tx),
+            })
+            .collect();
+
+        if txs.len() != expected_transaction_count {
+            return Err(ConvertBlockError::TransactionsMissing(
+                expected_transaction_count,
+                txs.len(),
+            ));
+        }
+
+        Ok(Self {
+            previous_blockhash: block.previous_blockhash,
+            blockhash: block.blockhash,
+            parent_slot: block.parent_slot,
+            transactions: txs,
+            rewards: block.rewards,
+            block_time: block.block_time,
+            block_height: block.block_height,
+        })
     }
 }
 
@@ -701,7 +776,7 @@ impl From<UiConfirmedBlock> for EncodedConfirmedBlock {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UiConfirmedBlock {
     pub previous_blockhash: String,
@@ -1090,7 +1165,7 @@ impl Encodable for Message {
                 instructions: self
                     .instructions
                     .iter()
-                    .map(|instruction| UiInstruction::parse(instruction, &account_keys))
+                    .map(|instruction| UiInstruction::parse(instruction, &account_keys, None))
                     .collect(),
                 address_table_lookups: None,
             })
@@ -1099,7 +1174,11 @@ impl Encodable for Message {
                 header: self.header,
                 account_keys: self.account_keys.iter().map(ToString::to_string).collect(),
                 recent_blockhash: self.recent_blockhash.to_string(),
-                instructions: self.instructions.iter().map(Into::into).collect(),
+                instructions: self
+                    .instructions
+                    .iter()
+                    .map(|ix| UiCompiledInstruction::from(ix, None))
+                    .collect(),
                 address_table_lookups: None,
             })
         }
@@ -1122,7 +1201,7 @@ impl EncodableWithMeta for v0::Message {
                 instructions: self
                     .instructions
                     .iter()
-                    .map(|instruction| UiInstruction::parse(instruction, &account_keys))
+                    .map(|instruction| UiInstruction::parse(instruction, &account_keys, None))
                     .collect(),
                 address_table_lookups: Some(
                     self.address_table_lookups.iter().map(Into::into).collect(),
@@ -1137,7 +1216,11 @@ impl EncodableWithMeta for v0::Message {
             header: self.header,
             account_keys: self.account_keys.iter().map(ToString::to_string).collect(),
             recent_blockhash: self.recent_blockhash.to_string(),
-            instructions: self.instructions.iter().map(Into::into).collect(),
+            instructions: self
+                .instructions
+                .iter()
+                .map(|ix| UiCompiledInstruction::from(ix, None))
+                .collect(),
             address_table_lookups: Some(
                 self.address_table_lookups.iter().map(Into::into).collect(),
             ),
@@ -1433,7 +1516,7 @@ mod test {
         .unwrap();
         let ui_meta_from: UiTransactionStatusMeta = meta.clone().into();
         assert_eq!(
-            serde_json::to_value(&ui_meta_from).unwrap(),
+            serde_json::to_value(ui_meta_from).unwrap(),
             expected_json_output_value
         );
 
@@ -1454,13 +1537,13 @@ mod test {
         .unwrap();
         let ui_meta_parse_with_rewards = UiTransactionStatusMeta::parse(meta.clone(), &[], true);
         assert_eq!(
-            serde_json::to_value(&ui_meta_parse_with_rewards).unwrap(),
+            serde_json::to_value(ui_meta_parse_with_rewards).unwrap(),
             expected_json_output_value
         );
 
         let ui_meta_parse_no_rewards = UiTransactionStatusMeta::parse(meta, &[], false);
         assert_eq!(
-            serde_json::to_value(&ui_meta_parse_no_rewards).unwrap(),
+            serde_json::to_value(ui_meta_parse_no_rewards).unwrap(),
             expected_json_output_value
         );
     }

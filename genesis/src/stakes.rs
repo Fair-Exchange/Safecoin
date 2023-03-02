@@ -4,7 +4,7 @@ use {
         address_generator::AddressGenerator,
         unlocks::{UnlockInfo, Unlocks},
     },
-    safecoin_sdk::{
+    solana_sdk::{
         account::Account,
         clock::Slot,
         genesis_config::GenesisConfig,
@@ -165,7 +165,7 @@ pub fn create_and_add_stakes(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, safecoin_sdk::rent::Rent};
+    use {super::*, solana_sdk::rent::Rent};
 
     fn create_and_check_stakes(
         genesis_config: &mut GenesisConfig,
@@ -183,8 +183,8 @@ mod tests {
         assert_eq!(
             genesis_config
                 .accounts
-                .iter()
-                .map(|(_pubkey, account)| account.lamports)
+                .values()
+                .map(|account| account.lamports)
                 .sum::<u64>(),
             total_lamports,
         );
@@ -216,7 +216,7 @@ mod tests {
     //        print(
     //            "\n\"{}\", // {:?}",
     //            hex,
-    //            Pubkey::new(&hex::decode(hex).unwrap())
+    //            Pubkey::try_from(&hex::decode(hex).unwrap()).unwrap()
     //        );
     //    });
     //    println();

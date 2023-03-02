@@ -5,7 +5,7 @@ import {
   ParsedTransaction,
   PublicKey,
   ParsedInstruction,
-} from "@safecoin/web3.js";
+} from "@solana/web3.js";
 
 import { UnknownDetailsCard } from "../UnknownDetailsCard";
 import { InstructionCard } from "../InstructionCard";
@@ -96,13 +96,13 @@ function TokenInstruction(props: InfoProps) {
 
   React.useEffect(() => {
     if (tokenAddress && !tokenInfo) {
-      fetchAccountInfo(new PublicKey(tokenAddress));
+      fetchAccountInfo(new PublicKey(tokenAddress), "parsed");
     }
   }, [fetchAccountInfo, tokenAddress]); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
     if (mintAddress && !mintInfo) {
-      fetchAccountInfo(new PublicKey(mintAddress));
+      fetchAccountInfo(new PublicKey(mintAddress), "parsed");
     }
   }, [fetchAccountInfo, mintAddress]); // eslint-disable-line react-hooks/exhaustive-deps
 

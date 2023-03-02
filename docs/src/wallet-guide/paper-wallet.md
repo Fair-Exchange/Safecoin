@@ -2,21 +2,21 @@
 title: Paper Wallet
 ---
 
-This document describes how to create and use a paper wallet with the Safecoin CLI
+This document describes how to create and use a paper wallet with the Solana CLI
 tools.
 
 > We do not intend to advise on how to _securely_ create or manage paper wallets. Please research the security concerns carefully.
 
 ## Overview
 
-Safecoin provides a key generation tool to derive keys from
+Solana provides a key generation tool to derive keys from
 [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)-compliant
-seed phrases. Safecoin CLI commands for running a validator and staking tokens all
+seed phrases. Solana CLI commands for running a validator and staking tokens all
 support keypair input via seed phrases.
 
 ## Paper Wallet Usage
 
-Safecoin commands can be run without ever saving a keypair to disk on a machine.
+Solana commands can be run without ever saving a keypair to disk on a machine.
 If avoiding writing a private key to disk is a security concern of yours, you've
 come to the right place.
 
@@ -24,19 +24,19 @@ come to the right place.
 
 ## Before You Begin
 
-- [Install the Safecoin command-line tools](../cli/install-solana-cli-tools.md)
+- [Install the Solana command-line tools](../cli/install-solana-cli-tools.md)
 
 ### Check your installation
 
-Check that `safecoin-keygen` is installed correctly by running:
+Check that `solana-keygen` is installed correctly by running:
 
 ```bash
-safecoin-keygen --version
+solana-keygen --version
 ```
 
 ## Creating a Paper Wallet
 
-Using the `safecoin-keygen` tool, it is possible to generate new seed phrases as
+Using the `solana-keygen` tool, it is possible to generate new seed phrases as
 well as derive a keypair from an existing seed phrase and (optional) passphrase.
 The seed phrase and passphrase can be used together as a paper wallet. As long
 as you keep your seed phrase and passphrase stored safely, you can use them to
@@ -46,7 +46,7 @@ access your account.
 
 ### Seed Phrase Generation
 
-Generating a new keypair can be done using the `safecoin-keygen new` command. The
+Generating a new keypair can be done using the `solana-keygen new` command. The
 command will generate a random seed phrase, ask you to enter an optional
 passphrase, and then will display the derived public key and the generated seed
 phrase for your paper wallet.
@@ -56,10 +56,10 @@ After copying down your seed phrase, you can use the
 have not made any errors.
 
 ```bash
-safecoin-keygen new --no-outfile
+solana-keygen new --no-outfile
 ```
 
-> If the `--no-outfile` flag is **omitted**, the default behavior is to write the keypair to `~/.config/safecoin/id.json`, resulting in a [file system wallet](file-system-wallet.md).
+> If the `--no-outfile` flag is **omitted**, the default behavior is to write the keypair to `~/.config/solana/id.json`, resulting in a [file system wallet](file-system-wallet.md).
 
 The output of this command will display a line like this:
 
@@ -77,7 +77,7 @@ and "wallet address" are sometimes used interchangably.
 For full usage details, run:
 
 ```bash
-safecoin-keygen new --help
+solana-keygen new --help
 ```
 
 
@@ -85,28 +85,28 @@ safecoin-keygen new --help
 
 Public keys can be derived from a seed phrase and a passphrase if you choose to
 use one. This is useful for using an offline-generated seed phrase to derive a
-valid public key. The `safecoin-keygen pubkey` command will walk you through how
+valid public key. The `solana-keygen pubkey` command will walk you through how
 to use your seed phrase (and a passphrase if you chose to use one) as a signer
-with the safecoin command-line tools using the `prompt` URI scheme.
+with the solana command-line tools using the `prompt` URI scheme.
 
 ```bash
-safecoin-keygen pubkey prompt://
+solana-keygen pubkey prompt://
 ```
 
 > Note that you could potentially use different passphrases for the same seed phrase. Each unique passphrase will yield a different keypair.
 
-The `safecoin-keygen` tool uses the same BIP39 standard English word list as it
+The `solana-keygen` tool uses the same BIP39 standard English word list as it
 does to generate seed phrases. If your seed phrase was generated with another
-tool that uses a different word list, you can still use `safecoin-keygen`, but
+tool that uses a different word list, you can still use `solana-keygen`, but
 will need to pass the `--skip-seed-phrase-validation` argument and forego this
 validation.
 
 ```bash
-safecoin-keygen pubkey prompt:// --skip-seed-phrase-validation
+solana-keygen pubkey prompt:// --skip-seed-phrase-validation
 ```
 
-After entering your seed phrase with `safecoin-keygen pubkey prompt://` the console
-will display a string of base-58 characters. This is the [derived](#hierarchical-derivation) safecoin BIP44 _wallet address_
+After entering your seed phrase with `solana-keygen pubkey prompt://` the console
+will display a string of base-58 characters. This is the [derived](#hierarchical-derivation) solana BIP44 _wallet address_
 associated with your seed phrase.
 
 > Copy the derived address to a USB stick for easy usage on networked computers
@@ -114,7 +114,7 @@ associated with your seed phrase.
 If needed, you can access the legacy, raw keypair's pubkey by instead passing the `ASK` keyword:
 
 ```bash
-safecoin-keygen pubkey ASK
+solana-keygen pubkey ASK
 ```
 
 > A common next step is to [check the balance](#checking-account-balance) of the account associated with a public key
@@ -122,7 +122,7 @@ safecoin-keygen pubkey ASK
 For full usage details, run:
 
 ```bash
-safecoin-keygen pubkey --help
+solana-keygen pubkey --help
 ```
 
 ### Hierarchical Derivation
@@ -133,20 +133,20 @@ The solana-cli supports
 hierarchical derivation of private keys from your seed phrase and passphrase by
 adding either the `?key=` query string or the `?full-path=` query string.
 
-By default, `prompt:` will derive solana's base derivation path `m/44'/19165'`. To
+By default, `prompt:` will derive solana's base derivation path `m/44'/501'`. To
 derive a child key, supply the `?key=<ACCOUNT>/<CHANGE>` query string.
 
 ```bash
-safecoin-keygen pubkey prompt://?key=0/1
+solana-keygen pubkey prompt://?key=0/1
 ```
 
 To use a derivation path other than solana's standard BIP44, you can supply `?full-path=m/<PURPOSE>/<COIN_TYPE>/<ACCOUNT>/<CHANGE>`.
 
 ```bash
-safecoin-keygen pubkey prompt://?full-path=m/44/2017/0/1
+solana-keygen pubkey prompt://?full-path=m/44/2017/0/1
 ```
 
-Because Safecoin uses Ed25519 keypairs, as per
+Because Solana uses Ed25519 keypairs, as per
 [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) all
 derivation-path indexes will be promoted to hardened indexes -- eg.
 `?key=0'/0'`, `?full-path=m/44'/2017'/0'/1'` -- regardless of whether ticks are
@@ -155,10 +155,10 @@ included in the query-string input.
 ## Verifying the Keypair
 
 To verify you control the private key of a paper wallet address, use
-`safecoin-keygen verify`:
+`solana-keygen verify`:
 
 ```bash
-safecoin-keygen verify <PUBKEY> prompt://
+solana-keygen verify <PUBKEY> prompt://
 ```
 
 where `<PUBKEY>` is replaced with the wallet address and the keyword `prompt://`
@@ -181,13 +181,13 @@ Next, configure the `solana` CLI tool to
 [connect to a particular cluster](../cli/choose-a-cluster.md):
 
 ```bash
-safecoin config set --url <CLUSTER URL> # (i.e. https://api.mainnet-beta.safecoin.org)
+solana config set --url <CLUSTER URL> # (i.e. https://api.mainnet-beta.solana.com)
 ```
 
 Finally, to check the balance, run the following command:
 
 ```bash
-safecoin balance <PUBKEY>
+solana balance <PUBKEY>
 ```
 
 ## Creating Multiple Paper Wallet Addresses

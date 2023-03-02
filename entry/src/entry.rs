@@ -12,7 +12,7 @@ use {
     rand::{thread_rng, Rng},
     rayon::{prelude::*, ThreadPool},
     serde::{Deserialize, Serialize},
-    safecoin_measure::measure::Measure,
+    solana_measure::measure::Measure,
     solana_merkle_tree::MerkleTree,
     solana_metrics::*,
     solana_perf::{
@@ -22,8 +22,8 @@ use {
         recycler::Recycler,
         sigverify,
     },
-    safecoin_rayon_threadlimit::get_max_thread_count,
-    safecoin_sdk::{
+    solana_rayon_threadlimit::get_max_thread_count,
+    solana_sdk::{
         hash::Hash,
         packet::Meta,
         timing,
@@ -35,6 +35,7 @@ use {
     std::{
         cmp,
         ffi::OsStr,
+        iter::repeat_with,
         sync::{Arc, Mutex, Once},
         thread::{self, JoinHandle},
         time::Instant,
@@ -42,11 +43,11 @@ use {
 };
 
 // get_max_thread_count to match number of threads in the old code.
-// see: https://github.com/fair-exchange/safecoin/pull/24853
+// see: https://github.com/solana-labs/solana/pull/24853
 lazy_static! {
     static ref PAR_THREAD_POOL: ThreadPool = rayon::ThreadPoolBuilder::new()
         .num_threads(get_max_thread_count())
-        .thread_name(|ix| format!("solEntry{:02}", ix))
+        .thread_name(|ix| format!("solEntry{ix:02}"))
         .build()
         .unwrap();
 }
@@ -511,7 +512,7 @@ pub fn start_verify_transactions(
                         .map(|tx| tx.to_versioned_transaction());
 
                     let res = packet_batch.par_iter_mut().zip(entry_tx_iter).all(|pair| {
-                        pair.0.meta = Meta::default();
+                        *pair.0.meta_mut() = Meta::default();
                         Packet::populate_packet(pair.0, None, &pair.1).is_ok()
                     });
                     if res {
@@ -538,7 +539,7 @@ pub fn start_verify_transactions(
                     );
                     let verified = packet_batches
                         .iter()
-                        .all(|batch| batch.iter().all(|p| !p.meta.discard()));
+                        .all(|batch| batch.iter().all(|p| !p.meta().discard()));
                     verify_time.stop();
                     (verified, verify_time.as_us())
                 })
@@ -628,7 +629,7 @@ impl EntrySlice for [Entry] {
     }
 
     fn verify_cpu_x86_simd(&self, start_hash: &Hash, simd_len: usize) -> EntryVerificationState {
-        use safecoin_sdk::hash::HASH_BYTES;
+        use solana_sdk::hash::HASH_BYTES;
         let now = Instant::now();
         let genesis = [Entry {
             num_hashes: 0,
@@ -678,7 +679,7 @@ impl EntrySlice for [Entry] {
                             );
                         },
                         _ => {
-                            panic!("unsupported simd len: {}", simd_len);
+                            panic!("unsupported simd len: {simd_len}");
                         }
                     }
                     let entry_start = i * simd_len;
@@ -736,12 +737,11 @@ impl EntrySlice for [Entry] {
         recyclers: VerifyRecyclers,
     ) -> EntryVerificationState {
         let start = Instant::now();
-        let api = perf_libs::api();
-        if api.is_none() {
-            return self.verify_cpu(start_hash);
-        }
-        let api = api.unwrap();
-        inc_new_counter_info!("entry_verify-num_entries", self.len() as usize);
+        let api = match perf_libs::api() {
+            None => return self.verify_cpu(start_hash),
+            Some(api) => api,
+        };
+        inc_new_counter_info!("entry_verify-num_entries", self.len());
 
         let genesis = [Entry {
             num_hashes: 0,
@@ -860,27 +860,19 @@ pub fn next_entry_mut(start: &mut Hash, num_hashes: u64, transactions: Vec<Trans
     entry
 }
 
-#[allow(clippy::same_item_push)]
 pub fn create_ticks(num_ticks: u64, hashes_per_tick: u64, mut hash: Hash) -> Vec<Entry> {
-    let mut ticks = Vec::with_capacity(num_ticks as usize);
-    for _ in 0..num_ticks {
-        let new_tick = next_entry_mut(&mut hash, hashes_per_tick, vec![]);
-        ticks.push(new_tick);
-    }
-
-    ticks
+    repeat_with(|| next_entry_mut(&mut hash, hashes_per_tick, vec![]))
+        .take(num_ticks as usize)
+        .collect()
 }
 
-#[allow(clippy::same_item_push)]
 pub fn create_random_ticks(num_ticks: u64, max_hashes_per_tick: u64, mut hash: Hash) -> Vec<Entry> {
-    let mut ticks = Vec::with_capacity(num_ticks as usize);
-    for _ in 0..num_ticks {
+    repeat_with(|| {
         let hashes_per_tick = thread_rng().gen_range(1, max_hashes_per_tick);
-        let new_tick = next_entry_mut(&mut hash, hashes_per_tick, vec![]);
-        ticks.push(new_tick);
-    }
-
-    ticks
+        next_entry_mut(&mut hash, hashes_per_tick, vec![])
+    })
+    .take(num_ticks as usize)
+    .collect()
 }
 
 /// Creates the next Tick or Transaction Entry `num_hashes` after `start_hash`.
@@ -908,7 +900,7 @@ mod tests {
     use {
         super::*,
         solana_perf::test_tx::{test_invalid_tx, test_tx},
-        safecoin_sdk::{
+        solana_sdk::{
             hash::{hash, Hash},
             pubkey::Pubkey,
             signature::{Keypair, Signer},
@@ -1062,7 +1054,7 @@ mod tests {
 
     #[test]
     fn test_transaction_signing() {
-        use safecoin_sdk::signature::Signature;
+        use solana_sdk::signature::Signature;
         let zero = Hash::default();
 
         let keypair = Keypair::new();

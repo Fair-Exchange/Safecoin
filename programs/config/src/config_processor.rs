@@ -3,16 +3,16 @@
 use {
     crate::ConfigKeys,
     bincode::deserialize,
-    safecoin_program_runtime::{ic_msg, invoke_context::InvokeContext},
-    safecoin_sdk::{
+    solana_program_runtime::{ic_msg, invoke_context::InvokeContext},
+    solana_sdk::{
         feature_set, instruction::InstructionError, program_utils::limited_deserialize,
-        pubkey::Pubkey,
+        pubkey::Pubkey, transaction_context::IndexOfAccount,
     },
     std::collections::BTreeSet,
 };
 
 pub fn process_instruction(
-    _first_instruction_account: usize,
+    _first_instruction_account: IndexOfAccount,
     invoke_context: &mut InvokeContext,
 ) -> Result<(), InstructionError> {
     let transaction_context = &invoke_context.transaction_context;
@@ -61,7 +61,7 @@ pub fn process_instruction(
         counter += 1;
         if signer != config_account_key {
             let signer_account = instruction_context
-                .try_borrow_instruction_account(transaction_context, counter)
+                .try_borrow_instruction_account(transaction_context, counter as IndexOfAccount)
                 .map_err(|_| {
                     ic_msg!(
                         invoke_context,
@@ -143,8 +143,8 @@ mod tests {
         crate::{config_instruction, get_config_data, id, ConfigKeys, ConfigState},
         bincode::serialized_size,
         serde_derive::{Deserialize, Serialize},
-        safecoin_program_runtime::invoke_context::mock_process_instruction,
-        safecoin_sdk::{
+        solana_program_runtime::invoke_context::mock_process_instruction,
+        solana_sdk::{
             account::{AccountSharedData, ReadableAccount},
             instruction::AccountMeta,
             pubkey::Pubkey,

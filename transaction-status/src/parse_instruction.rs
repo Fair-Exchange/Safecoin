@@ -1,6 +1,7 @@
 use {
     crate::{
-        extract_memos::{safe_memo_id_v1, safe_memo_id_v3},
+        extract_memos::{spl_memo_id_v1, spl_memo_id_v3},
+        parse_address_lookup_table::parse_address_lookup_table,
         parse_associated_token::{parse_associated_token, spl_associated_token_id},
         parse_bpf_loader::{parse_bpf_loader, parse_bpf_upgradeable_loader},
         parse_stake::parse_stake,
@@ -10,10 +11,10 @@ use {
     },
     inflector::Inflector,
     serde_json::Value,
-    safecoin_account_decoder::parse_token::safe_token_ids,
-    safecoin_sdk::{
+    solana_account_decoder::parse_token::spl_token_ids,
+    solana_sdk::{
         instruction::CompiledInstruction, message::AccountKeys, pubkey::Pubkey, stake,
-        system_program,
+        system_program, vote,
     },
     std::{
         collections::HashMap,
@@ -23,24 +24,29 @@ use {
 };
 
 lazy_static! {
+    static ref ADDRESS_LOOKUP_PROGRAM_ID: Pubkey = solana_address_lookup_table_program::id();
     static ref ASSOCIATED_TOKEN_PROGRAM_ID: Pubkey = spl_associated_token_id();
-    static ref BPF_LOADER_PROGRAM_ID: Pubkey = safecoin_sdk::bpf_loader::id();
-    static ref BPF_UPGRADEABLE_LOADER_PROGRAM_ID: Pubkey = safecoin_sdk::bpf_loader_upgradeable::id();
-    static ref MEMO_V1_PROGRAM_ID: Pubkey = safe_memo_id_v1();
-    static ref MEMO_V3_PROGRAM_ID: Pubkey = safe_memo_id_v3();
+    static ref BPF_LOADER_PROGRAM_ID: Pubkey = solana_sdk::bpf_loader::id();
+    static ref BPF_UPGRADEABLE_LOADER_PROGRAM_ID: Pubkey = solana_sdk::bpf_loader_upgradeable::id();
+    static ref MEMO_V1_PROGRAM_ID: Pubkey = spl_memo_id_v1();
+    static ref MEMO_V3_PROGRAM_ID: Pubkey = spl_memo_id_v3();
     static ref STAKE_PROGRAM_ID: Pubkey = stake::program::id();
     static ref SYSTEM_PROGRAM_ID: Pubkey = system_program::id();
-    static ref VOTE_PROGRAM_ID: Pubkey = solana_vote_program::id();
+    static ref VOTE_PROGRAM_ID: Pubkey = vote::program::id();
     static ref PARSABLE_PROGRAM_IDS: HashMap<Pubkey, ParsableProgram> = {
         let mut m = HashMap::new();
         m.insert(
-            *ASSOCIATED_TOKEN_PROGRAM_ID,
-            ParsableProgram::SafeAssociatedTokenAccount,
+            *ADDRESS_LOOKUP_PROGRAM_ID,
+            ParsableProgram::AddressLookupTable,
         );
-        m.insert(*MEMO_V1_PROGRAM_ID, ParsableProgram::SafeMemo);
-        m.insert(*MEMO_V3_PROGRAM_ID, ParsableProgram::SafeMemo);
-        for safe_token_id in safe_token_ids() {
-            m.insert(safe_token_id, ParsableProgram::SafeToken);
+        m.insert(
+            *ASSOCIATED_TOKEN_PROGRAM_ID,
+            ParsableProgram::SplAssociatedTokenAccount,
+        );
+        m.insert(*MEMO_V1_PROGRAM_ID, ParsableProgram::SplMemo);
+        m.insert(*MEMO_V3_PROGRAM_ID, ParsableProgram::SplMemo);
+        for spl_token_id in spl_token_ids() {
+            m.insert(spl_token_id, ParsableProgram::SplToken);
         }
         m.insert(*BPF_LOADER_PROGRAM_ID, ParsableProgram::BpfLoader);
         m.insert(
@@ -75,6 +81,7 @@ pub struct ParsedInstruction {
     pub program: String,
     pub program_id: String,
     pub parsed: Value,
+    pub stack_height: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -89,9 +96,10 @@ pub struct ParsedInstructionEnum {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum ParsableProgram {
-    SafeAssociatedTokenAccount,
-    SafeMemo,
-    SafeToken,
+    AddressLookupTable,
+    SplAssociatedTokenAccount,
+    SplMemo,
+    SplToken,
     BpfLoader,
     BpfUpgradeableLoader,
     Stake,
@@ -103,16 +111,20 @@ pub fn parse(
     program_id: &Pubkey,
     instruction: &CompiledInstruction,
     account_keys: &AccountKeys,
+    stack_height: Option<u32>,
 ) -> Result<ParsedInstruction, ParseInstructionError> {
     let program_name = PARSABLE_PROGRAM_IDS
         .get(program_id)
         .ok_or(ParseInstructionError::ProgramNotParsable)?;
     let parsed_json = match program_name {
-        ParsableProgram::SafeAssociatedTokenAccount => {
+        ParsableProgram::AddressLookupTable => {
+            serde_json::to_value(parse_address_lookup_table(instruction, account_keys)?)?
+        }
+        ParsableProgram::SplAssociatedTokenAccount => {
             serde_json::to_value(parse_associated_token(instruction, account_keys)?)?
         }
-        ParsableProgram::SafeMemo => parse_memo(instruction)?,
-        ParsableProgram::SafeToken => serde_json::to_value(parse_token(instruction, account_keys)?)?,
+        ParsableProgram::SplMemo => parse_memo(instruction)?,
+        ParsableProgram::SplToken => serde_json::to_value(parse_token(instruction, account_keys)?)?,
         ParsableProgram::BpfLoader => {
             serde_json::to_value(parse_bpf_loader(instruction, account_keys)?)?
         }
@@ -124,16 +136,17 @@ pub fn parse(
         ParsableProgram::Vote => serde_json::to_value(parse_vote(instruction, account_keys)?)?,
     };
     Ok(ParsedInstruction {
-        program: format!("{:?}", program_name).to_kebab_case(),
+        program: format!("{program_name:?}").to_kebab_case(),
         program_id: program_id.to_string(),
         parsed: parsed_json,
+        stack_height,
     })
 }
 
 fn parse_memo(instruction: &CompiledInstruction) -> Result<Value, ParseInstructionError> {
     parse_memo_data(&instruction.data)
         .map(Value::String)
-        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeMemo))
+        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SplMemo))
 }
 
 pub fn parse_memo_data(data: &[u8]) -> Result<String, Utf8Error> {
@@ -167,24 +180,26 @@ mod test {
             data: vec![240, 159, 166, 150],
         };
         assert_eq!(
-            parse(&MEMO_V1_PROGRAM_ID, &memo_instruction, &no_keys).unwrap(),
+            parse(&MEMO_V1_PROGRAM_ID, &memo_instruction, &no_keys, None).unwrap(),
             ParsedInstruction {
-                program: "safe-memo".to_string(),
+                program: "spl-memo".to_string(),
                 program_id: MEMO_V1_PROGRAM_ID.to_string(),
                 parsed: json!("🦖"),
+                stack_height: None,
             }
         );
         assert_eq!(
-            parse(&MEMO_V3_PROGRAM_ID, &memo_instruction, &no_keys).unwrap(),
+            parse(&MEMO_V3_PROGRAM_ID, &memo_instruction, &no_keys, Some(1)).unwrap(),
             ParsedInstruction {
-                program: "safe-memo".to_string(),
+                program: "spl-memo".to_string(),
                 program_id: MEMO_V3_PROGRAM_ID.to_string(),
                 parsed: json!("🦖"),
+                stack_height: Some(1),
             }
         );
 
-        let non_parsable_program_id = Pubkey::new(&[1; 32]);
-        assert!(parse(&non_parsable_program_id, &memo_instruction, &no_keys).is_err());
+        let non_parsable_program_id = Pubkey::from([1; 32]);
+        assert!(parse(&non_parsable_program_id, &memo_instruction, &no_keys, None).is_err());
     }
 
     #[test]

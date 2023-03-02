@@ -1,6 +1,6 @@
 use {
     crate::{blockstore::*, blockstore_meta::SlotMeta},
-    safecoin_sdk::clock::Slot,
+    solana_sdk::clock::Slot,
 };
 
 pub struct NextSlotsIterator<'a> {
@@ -38,7 +38,7 @@ impl<'a> Iterator for NextSlotsIterator<'a> {
 mod tests {
     use {
         super::*, crate::blockstore_processor::fill_blockstore_slot_with_ticks,
-        safecoin_sdk::hash::Hash, std::collections::HashSet,
+        solana_sdk::hash::Hash, std::collections::HashSet,
     };
 
     #[test]

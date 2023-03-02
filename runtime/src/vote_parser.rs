@@ -1,6 +1,6 @@
 use {
     crate::vote_transaction::VoteTransaction,
-    safecoin_sdk::{
+    solana_sdk::{
         hash::Hash,
         program_utils::limited_deserialize,
         pubkey::Pubkey,
@@ -23,15 +23,7 @@ pub(crate) fn is_simple_vote_transaction(transaction: &SanitizedTransaction) -> 
         if program_pubkey == &solana_vote_program::id() {
             if let Ok(vote_instruction) = limited_deserialize::<VoteInstruction>(&instruction.data)
             {
-                return matches!(
-                    vote_instruction,
-                    VoteInstruction::Vote(_)
-                        | VoteInstruction::VoteSwitch(_, _)
-                        | VoteInstruction::UpdateVoteState(_)
-                        | VoteInstruction::UpdateVoteStateSwitch(_, _)
-                        | VoteInstruction::CompactUpdateVoteState(_)
-                        | VoteInstruction::CompactUpdateVoteStateSwitch(..)
-                );
+                return vote_instruction.is_simple_vote();
             }
         }
     }
@@ -103,7 +95,7 @@ fn parse_vote_instruction_data(
 mod test {
     use {
         super::*,
-        safecoin_sdk::{
+        solana_sdk::{
             hash::hash,
             signature::{Keypair, Signer},
         },

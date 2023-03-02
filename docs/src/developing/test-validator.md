@@ -1,10 +1,10 @@
 ---
-title: Safecoin Test Validator
+title: Solana Test Validator
 ---
 
 During early stage development, it is often convenient to target a cluster with
 fewer restrictions and more configuration options than the public offerings
-provide. This is easily achieved with the `safecoin-test-validator` binary, which
+provide. This is easily achieved with the `solana-test-validator` binary, which
 starts a full-featured, single-node cluster on the developer's workstation.
 
 ## Advantages
@@ -21,7 +21,7 @@ starts a full-featured, single-node cluster on the developer's workstation.
 
 ## Installation
 
-The `safecoin-test-validator` binary ships with the Safecoin CLI Tool Suite.
+The `solana-test-validator` binary ships with the Solana CLI Tool Suite.
 [Install](/cli/install-solana-cli-tools) before continuing.
 
 ## Running
@@ -29,13 +29,13 @@ The `safecoin-test-validator` binary ships with the Safecoin CLI Tool Suite.
 First take a look at the configuration options
 
 ```
-safecoin-test-validator --help
+solana-test-validator --help
 ```
 
 Next start the test validator
 
 ```
-safecoin-test-validator
+solana-test-validator
 ```
 
 By default, basic status information is printed while the process is running.
@@ -50,55 +50,55 @@ Version: 1.6.7
 Shred Version: 13286
 Gossip Address: 127.0.0.1:1024
 TPU Address: 127.0.0.1:1027
-JSON RPC URL: http://127.0.0.1:8328
+JSON RPC URL: http://127.0.0.1:8899
 ⠈ 00:36:02 | Processed Slot: 5142 | Confirmed Slot: 5142 | Finalized Slot: 5110 | Snapshot Slot: 5100 | Transactions: 5142 | ◎499.974295000
 ```
 
-Leave `safecoin-test-validator` running in its own terminal. When it is no longer
+Leave `solana-test-validator` running in its own terminal. When it is no longer
 needed, it can be stopped with ctrl-c.
 
 ## Interacting
 
-Open a new terminal to interact with a [running](#running) `safecoin-test-validator`
-instance using other binaries from the Safecoin CLI Tool Suite or your own client
+Open a new terminal to interact with a [running](#running) `solana-test-validator`
+instance using other binaries from the Solana CLI Tool Suite or your own client
 software.
 
 #### Configure the CLI Tool Suite to target a local cluster by default
 
 ```
-safecoin config set --url http://127.0.0.1:8328
+solana config set --url http://127.0.0.1:8899
 ```
 
 #### Verify the CLI Tool Suite configuration
 
 ```
-safecoin genesis-hash
+solana genesis-hash
 ```
 
 - **NOTE:** The result should match the `Genesis Hash:` field in the
-  `safecoin-test-validator` status output
+  `solana-test-validator` status output
 
 #### Check the wallet balance
 
 ```
-safecoin balance
+solana balance
 ```
 
 - **NOTE:** `Error: No such file or directory (os error 2)` means that the default
-  wallet does not yet exist. Create it with `safecoin-keygen new`.
-- **NOTE:** If the wallet has a zero SAFE balance, airdrop some localnet SAFE with
-  `safecoin airdrop 10`
+  wallet does not yet exist. Create it with `solana-keygen new`.
+- **NOTE:** If the wallet has a zero SOL balance, airdrop some localnet SOL with
+  `solana airdrop 10`
 
 #### Perform a basic transfer transaction
 
 ```
-safecoin transfer EPhgPANa5Rh2wa4V2jxt7YbtWa3Uyw4sTeZ13cQjDDB8 1
+solana transfer EPhgPANa5Rh2wa4V2jxt7YbtWa3Uyw4sTeZ13cQjDDB8 1
 ```
 
 #### Monitor `msg!()` output from on-chain programs
 
 ```
-safecoin logs
+solana logs
 ```
 
 - **NOTE:** This command needs to be running when the target transaction is
@@ -136,11 +136,11 @@ Version: 1.6.7
 ```
 Gossip Address: 127.0.0.1:1024
 TPU Address: 127.0.0.1:1027
-JSON RPC URL: http://127.0.0.1:8328
+JSON RPC URL: http://127.0.0.1:8899
 ```
 
 - The network address of the [Gossip](/validator/gossip#gossip-overview),
-  [Transaction Processing Unit](/validator/tpu) and [JSON RPC](clients/jsonrpc-api#json-rpc-api-reference)
+  [Transaction Processing Unit](/validator/tpu) and [JSON RPC](../api/http#json-rpc-api-reference)
   service, respectively
 
 ```
@@ -148,7 +148,7 @@ JSON RPC URL: http://127.0.0.1:8328
 ```
 
 - Session running time, current slot of the the three block
-  [commitment levels](clients/jsonrpc-api#configuring-state-commitment),
+  [commitment levels](../api/http#configuring-state-commitment),
   slot height of the last snapshot, transaction count,
   [voting authority](/running-validator/vote-accounts#vote-authority) balance
 
@@ -156,14 +156,14 @@ JSON RPC URL: http://127.0.0.1:8328
 
 By default, the test validator runs with all [runtime features](programming-model/runtime#features) activated.
 
-You can verify this using the [Safecoin command-line tools](cli/install-solana-cli-tools.md):
+You can verify this using the [Solana command-line tools](cli/install-solana-cli-tools.md):
 
 ```bash
-safecoin feature status -ul
+solana feature status -ul
 ```
 
 Since this may not always be desired, especially when testing programs meant for deployment to mainnet, the CLI provides an option to deactivate specific features:
 
 ```bash
-safecoin-test-validator --deactivate-feature <FEATURE_PUBKEY_1> --deactivate-feature <FEATURE_PUBKEY_2>
+solana-test-validator --deactivate-feature <FEATURE_PUBKEY_1> --deactivate-feature <FEATURE_PUBKEY_2>
 ```

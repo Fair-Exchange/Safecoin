@@ -1,4 +1,4 @@
-//! safecoin-sdk Javascript interface
+//! solana-sdk Javascript interface
 #![cfg(target_arch = "wasm32")]
 
 pub mod keypair;

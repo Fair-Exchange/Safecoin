@@ -1,6 +1,6 @@
 use {
-    super::Bank, safecoin_program_runtime::sysvar_cache::SysvarCache,
-    safecoin_sdk::account::ReadableAccount,
+    super::Bank, solana_program_runtime::sysvar_cache::SysvarCache,
+    solana_sdk::account::ReadableAccount,
 };
 
 impl Bank {
@@ -27,7 +27,7 @@ impl Bank {
 mod tests {
     use {
         super::*,
-        safecoin_sdk::{genesis_config::create_genesis_config, pubkey::Pubkey},
+        solana_sdk::{genesis_config::create_genesis_config, pubkey::Pubkey},
         std::sync::Arc,
     };
 

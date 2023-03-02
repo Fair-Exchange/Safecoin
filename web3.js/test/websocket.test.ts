@@ -5,7 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 
 import {Connection} from '../src';
 import {url, wsUrl} from './url';
-import {sleep} from '../src/util/sleep';
+import {sleep} from '../src/utils/sleep';
 
 use(chaiAsPromised);
 
@@ -23,7 +23,15 @@ if (process.env.TEST_LIVE) {
       expect(connection._rpcWebSocketHeartbeat).not.to.eq(null);
 
       // test if socket is open
-      await connection._rpcWebSocket.notify('ping');
+      let open = false;
+      while (!open) {
+        try {
+          await connection._rpcWebSocket.notify('ping');
+          open = true;
+        } catch {
+          continue;
+        }
+      }
 
       await connection.removeSignatureListener(id);
       expect(connection._rpcWebSocketConnected).to.eq(false);
@@ -38,7 +46,7 @@ if (process.env.TEST_LIVE) {
 
       // test if socket is closed
       await expect(connection._rpcWebSocket.notify('ping')).to.be.rejectedWith(
-        'socket not ready',
+        'Tried to send a JSON-RPC notification `ping` but the socket was not `CONNECTING` or `OPEN` (`readyState` was 3)',
       );
     });
 

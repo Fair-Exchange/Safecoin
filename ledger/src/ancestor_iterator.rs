@@ -1,6 +1,6 @@
 use {
     crate::blockstore::*,
-    safecoin_sdk::{clock::Slot, hash::Hash},
+    solana_sdk::{clock::Slot, hash::Hash},
 };
 
 pub struct AncestorIterator<'a> {
@@ -76,7 +76,7 @@ impl<'a> Iterator for AncestorIteratorWithHash<'a> {
 mod tests {
     use {
         super::*,
-        safecoin_sdk::hash::Hash,
+        solana_sdk::hash::Hash,
         std::{collections::HashMap, path::Path},
         trees::tr,
     };
@@ -124,11 +124,11 @@ mod tests {
         let ledger_path = get_tmp_ledger_path_auto_delete!();
         let blockstore = Blockstore::open(ledger_path.path()).unwrap();
 
-        let (shreds, _) = make_slot_entries(0, 0, 42);
+        let (shreds, _) = make_slot_entries(0, 0, 42, /*merkle_variant:*/ true);
         blockstore.insert_shreds(shreds, None, false).unwrap();
-        let (shreds, _) = make_slot_entries(1, 0, 42);
+        let (shreds, _) = make_slot_entries(1, 0, 42, /*merkle_variant:*/ true);
         blockstore.insert_shreds(shreds, None, false).unwrap();
-        let (shreds, _) = make_slot_entries(2, 1, 42);
+        let (shreds, _) = make_slot_entries(2, 1, 42, /*merkle_variant:*/ true);
         blockstore.insert_shreds(shreds, None, false).unwrap();
 
         assert_eq!(

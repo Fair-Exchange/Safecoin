@@ -3,7 +3,7 @@ use {
         consensus::{Result, Tower, TowerError, TowerVersions},
         tower1_7_14::SavedTower1_7_14,
     },
-    safecoin_sdk::{
+    solana_sdk::{
         pubkey::Pubkey,
         signature::{Signature, Signer},
     },
@@ -138,13 +138,13 @@ impl FileTowerStorage {
     // Old filename for towers pre 1.9 (VoteStateUpdate)
     pub fn old_filename(&self, node_pubkey: &Pubkey) -> PathBuf {
         self.tower_path
-            .join(format!("tower-{}", node_pubkey))
+            .join(format!("tower-{node_pubkey}"))
             .with_extension("bin")
     }
 
     pub fn filename(&self, node_pubkey: &Pubkey) -> PathBuf {
         self.tower_path
-            .join(format!("tower-1_9-{}", node_pubkey))
+            .join(format!("tower-1_9-{node_pubkey}"))
             .with_extension("bin")
     }
 
@@ -173,7 +173,7 @@ impl TowerStorage for FileTowerStorage {
         trace!("load {}", filename.display());
 
         // Ensure to create parent dir here, because restore() precedes save() always
-        fs::create_dir_all(&filename.parent().unwrap())?;
+        fs::create_dir_all(filename.parent().unwrap())?;
 
         if let Ok(file) = File::open(&filename) {
             // New format
@@ -184,7 +184,7 @@ impl TowerStorage for FileTowerStorage {
                 .and_then(|t: SavedTowerVersions| t.try_into_tower(node_pubkey))
         } else {
             // Old format
-            let file = File::open(&self.old_filename(node_pubkey))?;
+            let file = File::open(self.old_filename(node_pubkey))?;
             let mut stream = BufReader::new(file);
             bincode::deserialize_from(&mut stream)
                 .map_err(|e| e.into())
@@ -260,14 +260,14 @@ impl EtcdTowerStorage {
 
         Ok(Self {
             client: tokio::sync::Mutex::new(client),
-            instance_id: safecoin_sdk::timing::timestamp().to_le_bytes(),
+            instance_id: solana_sdk::timing::timestamp().to_le_bytes(),
             runtime,
         })
     }
 
     fn get_keys(node_pubkey: &Pubkey) -> (String, String) {
-        let instance_key = format!("{}/instance", node_pubkey);
-        let tower_key = format!("{}/tower", node_pubkey);
+        let instance_key = format!("{node_pubkey}/instance");
+        let tower_key = format!("{node_pubkey}/tower");
         (instance_key, tower_key)
     }
 
@@ -311,7 +311,7 @@ impl TowerStorage for EtcdTowerStorage {
         if !response.succeeded() {
             return Err(TowerError::IoError(io::Error::new(
                 io::ErrorKind::Other,
-                format!("Lost etcd instance lock for {}", node_pubkey),
+                format!("Lost etcd instance lock for {node_pubkey}"),
             )));
         }
 
@@ -374,7 +374,7 @@ pub mod test {
             consensus::Tower,
             tower1_7_14::{SavedTower1_7_14, Tower1_7_14},
         },
-        safecoin_sdk::{hash::Hash, signature::Keypair},
+        solana_sdk::{hash::Hash, signature::Keypair},
         solana_vote_program::vote_state::{
             BlockTimestamp, Lockout, Vote, VoteState, VoteTransaction, MAX_LOCKOUT_HISTORY,
         },

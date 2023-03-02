@@ -1,7 +1,9 @@
+//! Fee structures.
+
 use crate::native_token::sol_to_lamports;
 
 /// A fee and its associated compute unit limit
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct FeeBin {
     /// maximum compute units for which this fee will be charged
     pub limit: u64,
@@ -10,7 +12,7 @@ pub struct FeeBin {
 }
 
 /// Information used to calculate fees
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FeeStructure {
     /// lamports per signature
     pub lamports_per_signature: u64,
@@ -60,7 +62,7 @@ impl Default for FeeStructure {
 }
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-impl ::safecoin_frozen_abi::abi_example::AbiExample for FeeStructure {
+impl ::solana_frozen_abi::abi_example::AbiExample for FeeStructure {
     fn example() -> Self {
         FeeStructure::default()
     }

@@ -2,25 +2,25 @@
 title: Inflation Schedule
 ---
 
-**Subject to change. Follow most recent economic discussions in the Safecoin forums: https://forums.solana.com**
+**Subject to change. Follow most recent economic discussions in the Solana forums: https://forums.solana.com**
 
-Validator-clients have two functional roles in the Safecoin network:
+Validator-clients have two functional roles in the Solana network:
 
 - Validate \(vote\) the current global state of their observed PoH.
 - Be elected as ‘leader’ on a stake-weighted round-robin schedule during which time they are responsible for collecting outstanding transactions and incorporating them into their observed PoH, thus updating the global state of the network and providing chain continuity.
 
-Validator-client rewards for these services are to be distributed at the end of each Safecoin epoch. As previously discussed, compensation for validator-clients is provided via a commission charged on the protocol-based annual inflation rate dispersed in proportion to the stake-weight of each validator-node \(see below\) along with leader-claimed transaction fees available during each leader rotation. I.e. during the time a given validator-client is elected as leader, it has the opportunity to keep a portion of each transaction fee, less a protocol-specified amount that is destroyed \(see [Validation-client State Transaction Fees](ed_vce_state_validation_transaction_fees.md)\).
+Validator-client rewards for these services are to be distributed at the end of each Solana epoch. As previously discussed, compensation for validator-clients is provided via a commission charged on the protocol-based annual inflation rate dispersed in proportion to the stake-weight of each validator-node \(see below\) along with leader-claimed transaction fees available during each leader rotation. I.e. during the time a given validator-client is elected as leader, it has the opportunity to keep a portion of each transaction fee, less a protocol-specified amount that is destroyed \(see [Validation-client State Transaction Fees](ed_vce_state_validation_transaction_fees.md)\).
 
 The effective protocol-based annual staking yield \(%\) per epoch received by validation-clients is to be a function of:
 
 - the current global inflation rate, derived from the pre-determined dis-inflationary issuance schedule \(see [Validation-client Economics](ed_vce_overview.md)\)
-- the fraction of staked SAFEs out of the current total circulating supply,
+- the fraction of staked SOLs out of the current total circulating supply,
 - the commission charged by the validation service,
 - the up-time/participation \[% of available slots that validator had opportunity to vote on\] of a given validator over the previous epoch.
 
 The first factor is a function of protocol parameters only \(i.e. independent of validator behavior in a given epoch\) and results in an inflation schedule designed to incentivize early participation, provide clear monetary stability and provide optimal security in the network.
 
-As a first step to understanding the impact of the _Inflation Schedule_ on the Safecoin economy, we’ve simulated the upper and lower ranges of what token issuance over time might look like given the current ranges of Inflation Schedule parameters under study.
+As a first step to understanding the impact of the _Inflation Schedule_ on the Solana economy, we’ve simulated the upper and lower ranges of what token issuance over time might look like given the current ranges of Inflation Schedule parameters under study.
 
 Specifically:
 
@@ -37,23 +37,23 @@ From these simulated _Inflation Schedules_, we can also project ranges for token
 
 ![](/img/p_total_supply_ranges.png)
 
-Finally we can estimate the _Staked Yield_ on staked SAFE, if we introduce an additional parameter, previously discussed, _% of Staked SAFE_:
+Finally we can estimate the _Staked Yield_ on staked SOL, if we introduce an additional parameter, previously discussed, _% of Staked SOL_:
 
 $$
-\%~\text{SAFE Staked} = \frac{\text{Total SAFE Staked}}{\text{Total Current Supply}}
+\%~\text{SOL Staked} = \frac{\text{Total SOL Staked}}{\text{Total Current Supply}}
 $$
 
-In this case, because _% of Staked SAFE_ is a parameter that must be estimated (unlike the _Inflation Schedule_ parameters), it is easier to use specific _Inflation Schedule_ parameters and explore a range of _% of Staked SAFE_. For the below example, we’ve chosen the middle of the parameter ranges explored above:
+In this case, because _% of Staked SOL_ is a parameter that must be estimated (unlike the _Inflation Schedule_ parameters), it is easier to use specific _Inflation Schedule_ parameters and explore a range of _% of Staked SOL_. For the below example, we’ve chosen the middle of the parameter ranges explored above:
 
 - _Initial Inflation Rate_: 8%
 - _Dis-inflation Rate_: -15%
 - _Long-term Inflation Rate_: 1.5%
 
-The values of _% of Staked SAFE_ range from 60% - 90%, which we feel covers the likely range we expect to observe, based on feedback from the investor and validator communities as well as what is observed on comparable Proof-of-Stake protocols.
+The values of _% of Staked SOL_ range from 60% - 90%, which we feel covers the likely range we expect to observe, based on feedback from the investor and validator communities as well as what is observed on comparable Proof-of-Stake protocols.
 
 ![](/img/p_ex_staked_yields.png)
 
-Again, the above shows an example _Staked Yield_ that a staker might expect over time on the Safecoin network with the _Inflation Schedule_ as specified. This is an idealized _Staked Yield_ as it neglects validator uptime impact on rewards, validator commissions, potential yield throttling and potential slashing incidents. It additionally ignores that _% of Staked SAFE_ is dynamic by design - the economic incentives set up by this _Inflation Schedule_.
+Again, the above shows an example _Staked Yield_ that a staker might expect over time on the Solana network with the _Inflation Schedule_ as specified. This is an idealized _Staked Yield_ as it neglects validator uptime impact on rewards, validator commissions, potential yield throttling and potential slashing incidents. It additionally ignores that _% of Staked SOL_ is dynamic by design - the economic incentives set up by this _Inflation Schedule_.
 
 ### Adjusted Staking Yield
 

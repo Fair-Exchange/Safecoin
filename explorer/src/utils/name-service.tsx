@@ -1,4 +1,4 @@
-import { PublicKey, Connection } from "@safecoin/web3.js";
+import { PublicKey, Connection } from "@solana/web3.js";
 import {
   getFilteredProgramAccounts,
   getHashedName,
@@ -10,8 +10,8 @@ import {
 import { useState, useEffect } from "react";
 import { Cluster, useCluster } from "providers/cluster";
 
-// Address of the SAFE TLD
-const SAFE_TLD_AUTHORITY = new PublicKey(
+// Address of the SOL TLD
+const SOL_TLD_AUTHORITY = new PublicKey(
   "58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9JPkx"
 );
 
@@ -42,7 +42,7 @@ export async function getDomainInfo(domain: string, connection: Connection) {
   const domainKey = await getDomainKey(
     domain.slice(0, -4), // remove .sol
     undefined,
-    SAFE_TLD_AUTHORITY
+    SOL_TLD_AUTHORITY
   );
   try {
     const registry = await getNameOwner(connection, domainKey);
@@ -66,7 +66,7 @@ async function getUserDomainAddresses(
     {
       memcmp: {
         offset: 0,
-        bytes: SAFE_TLD_AUTHORITY.toBase58(),
+        bytes: SOL_TLD_AUTHORITY.toBase58(),
       },
     },
     // owner

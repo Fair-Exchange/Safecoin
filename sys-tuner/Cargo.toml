@@ -1,33 +1,33 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
-name = "safecoin-sys-tuner"
-description = "The safecoin cluster system tuner daemon"
-version = "1.14.3"
-repository = "https://github.com/fair-exchange/safecoin"
+name = "solana-sys-tuner"
+description = "The solana cluster system tuner daemon"
+version = "1.15.3"
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/safecoin-sys-tuner"
+homepage = "https://solana.com/"
+documentation = "https://docs.rs/solana-sys-tuner"
 publish = true
 
 [dependencies]
 clap = "2.33.1"
-libc = "0.2.126"
+libc = "0.2.131"
 log = "0.4.17"
-safecoin-logger = { path = "../logger", version = "=1.14.3" }
-safecoin-version = { path = "../version", version = "=1.14.3" }
+solana-logger = { path = "../logger", version = "=1.15.3" }
+solana-version = { path = "../version", version = "=1.15.3" }
 
 [target."cfg(unix)".dependencies]
 unix_socket2 = "0.5.4"
 users = "0.10.0"
-nix = "0.24.2"
+nix = "0.25.0"
 sysctl = "0.4.4"
 
 [lib]
 name = "solana_sys_tuner"
 
 [[bin]]
-name = "safecoin-sys-tuner"
+name = "solana-sys-tuner"
 path = "src/main.rs"
 
 [package.metadata.docs.rs]

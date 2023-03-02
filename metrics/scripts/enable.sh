@@ -1,6 +1,6 @@
 # |source| this file to enable metrics in the current shell
 
-echoSafecoinMetricsConfig() {
+echoSolanaMetricsConfig() {
   declare metrics_config_sh
   metrics_config_sh="$(dirname "${BASH_SOURCE[0]}")"/lib/config.sh
   if [[ ! -f "$metrics_config_sh" ]]; then
@@ -10,13 +10,13 @@ echoSafecoinMetricsConfig() {
   (
     # shellcheck source=/dev/null
     source "$metrics_config_sh"
-    echo "host=http://localhost:10016,db=testnet,u=$INFLUXDB_WRITE_USER,p=$INFLUXDB_WRITE_PASSWORD"
+    echo "host=http://localhost:8086,db=testnet,u=$INFLUXDB_WRITE_USER,p=$INFLUXDB_WRITE_PASSWORD"
   )
 }
 
-SAFECOIN_METRICS_CONFIG=$(echoSafecoinMetricsConfig)
-export SAFECOIN_METRICS_CONFIG
-unset -f echoSafecoinMetricsConfig
+SOLANA_METRICS_CONFIG=$(echoSolanaMetricsConfig)
+export SOLANA_METRICS_CONFIG
+unset -f echoSolanaMetricsConfig
 
 __configure_metrics_sh="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. || true; pwd)"/scripts/configure-metrics.sh
 if [[ -f $__configure_metrics_sh ]]; then

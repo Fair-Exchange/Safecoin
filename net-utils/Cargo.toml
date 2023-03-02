@@ -1,12 +1,12 @@
 [package]
-name = "safecoin-net-utils"
-version = "1.14.3"
-description = "Safecoin Network Utilities"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/fair-exchange/safecoin"
+name = "solana-net-utils"
+version = "1.15.3"
+description = "Solana Network Utilities"
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/safecoin-net-utils"
+homepage = "https://solana.com/"
+documentation = "https://docs.rs/solana-net-utils"
 edition = "2021"
 
 [dependencies]
@@ -14,14 +14,14 @@ bincode = "1.3.3"
 clap = { version = "3.1.5", features = ["cargo"] }
 crossbeam-channel = "0.5"
 log = "0.4.17"
-nix = "0.24.2"
+nix = "0.25.0"
 rand = "0.7.0"
-serde = "1.0.138"
+serde = "1.0.144"
 serde_derive = "1.0.103"
-socket2 = "0.4.4"
-safecoin-logger = { path = "../logger", version = "=1.14.3" }
-safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
-safecoin-version = { path = "../version", version = "=1.14.3" }
+socket2 = "0.4.7"
+solana-logger = { path = "../logger", version = "=1.15.3" }
+solana-sdk = { path = "../sdk", version = "=1.15.3" }
+solana-version = { path = "../version", version = "=1.15.3" }
 tokio = { version = "1", features = ["full"] }
 url = "2.2.2"
 
@@ -29,11 +29,11 @@ url = "2.2.2"
 name = "solana_net_utils"
 
 [[bin]]
-name = "safecoin-ip-address"
+name = "solana-ip-address"
 path = "src/bin/ip_address.rs"
 
 [[bin]]
-name = "safecoin-ip-address-server"
+name = "solana-ip-address-server"
 path = "src/bin/ip_address_server.rs"
 
 [package.metadata.docs.rs]

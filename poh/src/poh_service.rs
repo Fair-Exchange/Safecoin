@@ -5,8 +5,8 @@ use {
     crossbeam_channel::Receiver,
     log::*,
     solana_entry::poh::Poh,
-    safecoin_measure::{measure, measure::Measure},
-    safecoin_sdk::poh_config::PohConfig,
+    solana_measure::{measure, measure::Measure},
+    solana_sdk::poh_config::PohConfig,
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -96,7 +96,7 @@ impl PohTiming {
 impl PohService {
     pub fn new(
         poh_recorder: Arc<RwLock<PohRecorder>>,
-        poh_config: &Arc<PohConfig>,
+        poh_config: &PohConfig,
         poh_exit: &Arc<AtomicBool>,
         ticks_per_slot: u64,
         pinned_cpu_core: usize,
@@ -390,10 +390,10 @@ mod tests {
             get_tmp_ledger_path,
             leader_schedule_cache::LeaderScheduleCache,
         },
-        safecoin_measure::measure::Measure,
+        solana_measure::measure::Measure,
         solana_perf::test_tx::test_tx,
         solana_runtime::bank::Bank,
-        safecoin_sdk::{
+        solana_sdk::{
             clock, hash::hash, pubkey::Pubkey, timing, transaction::VersionedTransaction,
         },
         std::{thread::sleep, time::Duration},
@@ -414,11 +414,11 @@ mod tests {
             let default_target_tick_duration =
                 timing::duration_as_us(&PohConfig::default().target_tick_duration);
             let target_tick_duration = Duration::from_micros(default_target_tick_duration);
-            let poh_config = Arc::new(PohConfig {
+            let poh_config = PohConfig {
                 hashes_per_tick: Some(clock::DEFAULT_HASHES_PER_TICK),
                 target_tick_duration,
                 target_tick_count: None,
-            });
+            };
             let exit = Arc::new(AtomicBool::new(false));
 
             let ticks_per_slot = bank.ticks_per_slot();

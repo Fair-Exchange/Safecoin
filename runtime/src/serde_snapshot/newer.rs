@@ -5,11 +5,12 @@ use {
         *,
     },
     crate::{
+        accounts_hash::AccountsHash,
         ancestors::AncestorsForSerialization,
         stakes::{serde_stakes_enum_compat, StakesEnum},
     },
-    safecoin_measure::measure::Measure,
-    safecoin_sdk::{deserialize_utils::ignore_eof_error, stake::state::Delegation},
+    solana_measure::measure::Measure,
+    solana_sdk::{deserialize_utils::ignore_eof_error, stake::state::Delegation},
     std::{cell::RefCell, collections::HashSet, sync::RwLock},
 };
 
@@ -181,7 +182,7 @@ impl<'a> From<crate::bank::BankFieldsToSerialize<'a>> for SerializableVersionedB
 }
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-impl<'a> safecoin_frozen_abi::abi_example::IgnoreAsHelper for SerializableVersionedBank<'a> {}
+impl<'a> solana_frozen_abi::abi_example::IgnoreAsHelper for SerializableVersionedBank<'a> {}
 
 #[derive(PartialEq, Eq)]
 pub(super) struct Context {}
@@ -202,7 +203,7 @@ impl<'a> TypeContext<'a> for Context {
         (
             SerializableVersionedBank::from(fields),
             SerializableAccountsDb::<'a, Self> {
-                accounts_db: &*serializable_bank.bank.rc.accounts.accounts_db,
+                accounts_db: &serializable_bank.bank.rc.accounts.accounts_db,
                 slot: serializable_bank.bank.rc.slot,
                 account_storage_entries: serializable_bank.snapshot_storages,
                 phantom: std::marker::PhantomData::default(),
@@ -211,7 +212,11 @@ impl<'a> TypeContext<'a> for Context {
             // we can grab it on restart.
             // TODO: if we do a snapshot version bump, consider moving this out.
             lamports_per_signature,
-            // None::<BankIncrementalSnapshotPersistence>, this will be saved starting in 1.12
+            None::<BankIncrementalSnapshotPersistence>,
+            serializable_bank
+                .bank
+                .get_epoch_accounts_hash_to_serialize()
+                .map(|epoch_accounts_hash| *epoch_accounts_hash.as_ref()),
         )
             .serialize(serializer)
     }
@@ -229,7 +234,7 @@ impl<'a> TypeContext<'a> for Context {
         (
             SerializableVersionedBank::from(fields),
             SerializableAccountsDb::<'a, Self> {
-                accounts_db: &*serializable_bank.bank.rc.accounts.accounts_db,
+                accounts_db: &serializable_bank.bank.rc.accounts.accounts_db,
                 slot: serializable_bank.bank.rc.slot,
                 account_storage_entries: serializable_bank.snapshot_storages,
                 phantom: std::marker::PhantomData::default(),
@@ -265,14 +270,10 @@ impl<'a> TypeContext<'a> for Context {
                 )
             }));
         let slot = serializable_db.slot;
-        let hash: BankHashInfo = serializable_db
+        let bank_hash_info = serializable_db
             .accounts_db
-            .bank_hashes
-            .read()
-            .unwrap()
-            .get(&serializable_db.slot)
-            .unwrap_or_else(|| panic!("No bank_hashes entry for slot {}", serializable_db.slot))
-            .clone();
+            .get_bank_hash_info(serializable_db.slot)
+            .unwrap_or_else(|| panic!("No bank_hashes entry for slot {}", serializable_db.slot));
 
         let historical_roots = serializable_db
             .accounts_db
@@ -289,7 +290,7 @@ impl<'a> TypeContext<'a> for Context {
             entries,
             version,
             slot,
-            hash,
+            bank_hash_info,
             historical_roots,
             historical_roots_with_hash,
         )
@@ -342,8 +343,8 @@ impl<'a> TypeContext<'a> for Context {
     fn reserialize_bank_fields_with_hash<R, W>(
         stream_reader: &mut BufReader<R>,
         stream_writer: &mut BufWriter<W>,
-        accounts_hash: &Hash,
-        _incremental_snapshot_persistence: Option<&BankIncrementalSnapshotPersistence>,
+        accounts_hash: &AccountsHash,
+        incremental_snapshot_persistence: Option<&BankIncrementalSnapshotPersistence>,
     ) -> std::result::Result<(), Box<bincode::ErrorKind>>
     where
         R: Read,
@@ -351,11 +352,12 @@ impl<'a> TypeContext<'a> for Context {
     {
         let (bank_fields, mut accounts_db_fields) =
             Self::deserialize_bank_fields(stream_reader).unwrap();
-        accounts_db_fields.3.snapshot_hash = *accounts_hash;
-        let rhs = bank_fields;
-        let blockhash_queue = RwLock::new(rhs.blockhash_queue.clone());
-        let hard_forks = RwLock::new(rhs.hard_forks.clone());
+        accounts_db_fields.3.accounts_hash = *accounts_hash;
+        let mut rhs = bank_fields;
+        let blockhash_queue = RwLock::new(std::mem::take(&mut rhs.blockhash_queue));
+        let hard_forks = RwLock::new(std::mem::take(&mut rhs.hard_forks));
         let lamports_per_signature = rhs.fee_rate_governor.lamports_per_signature;
+        let epoch_accounts_hash = rhs.epoch_accounts_hash.as_ref();
 
         let bank = SerializableVersionedBank {
             blockhash_queue: &blockhash_queue,
@@ -398,7 +400,8 @@ impl<'a> TypeContext<'a> for Context {
                 bank,
                 accounts_db_fields,
                 lamports_per_signature,
-                // incremental_snapshot_persistence, this will be saved starting in 1.12
+                incremental_snapshot_persistence,
+                epoch_accounts_hash,
             ),
         )
     }

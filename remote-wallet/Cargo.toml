@@ -1,17 +1,17 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
-name = "safecoin-remote-wallet"
-description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.14.3"
-repository = "https://github.com/fair-exchange/safecoin"
+name = "solana-remote-wallet"
+description = "Blockchain, Rebuilt for Scale"
+version = "1.15.3"
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/safecoin-remote-wallet"
+homepage = "https://solana.com/"
+documentation = "https://docs.rs/solana-remote-wallet"
 
 [dependencies]
 console = "0.15.0"
-dialoguer = "0.10.1"
+dialoguer = "0.10.2"
 hidapi = { version = "1.4.1", default-features = false, optional = true }
 log = "0.4.17"
 num-derive = { version = "0.3" }
@@ -19,7 +19,7 @@ num-traits = { version = "0.2" }
 parking_lot = "0.12"
 qstring = "0.7.2"
 semver = "1.0"
-safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
+solana-sdk = { path = "../sdk", version = "=1.15.3" }
 thiserror = "1.0"
 uriparse = "0.6.4"
 
@@ -31,7 +31,7 @@ linux-shared-libusb = ["hidapi/linux-shared-libusb"]
 linux-shared-hidraw = ["hidapi/linux-shared-hidraw"]
 
 [[bin]]
-name = "safecoin-ledger-udev"
+name = "solana-ledger-udev"
 path = "src/bin/ledger-udev.rs"
 
 [package.metadata.docs.rs]

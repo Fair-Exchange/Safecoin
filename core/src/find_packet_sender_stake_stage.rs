@@ -1,8 +1,8 @@
 use {
     crossbeam_channel::{Receiver, RecvTimeoutError, Sender},
-    safecoin_measure::measure::Measure,
+    solana_measure::measure::Measure,
     solana_perf::packet::PacketBatch,
-    safecoin_sdk::timing::timestamp,
+    solana_sdk::timing::timestamp,
     solana_streamer::streamer::{self, StakedNodes, StreamerError},
     std::{
         collections::HashMap,
@@ -150,8 +150,8 @@ impl FindPacketSenderStakeStage {
             .iter_mut()
             .flat_map(|batch| batch.iter_mut())
             .for_each(|packet| {
-                packet.meta.sender_stake = ip_to_stake
-                    .get(&packet.meta.addr)
+                packet.meta_mut().sender_stake = ip_to_stake
+                    .get(&packet.meta().addr)
                     .copied()
                     .unwrap_or_default();
             });

@@ -4,7 +4,7 @@ use {
     fnv::FnvHasher,
     rand::{self, Rng},
     serde::{Deserialize, Serialize},
-    safecoin_sdk::sanitize::{Sanitize, SanitizeError},
+    solana_sdk::sanitize::{Sanitize, SanitizeError},
     std::{
         cmp, fmt,
         hash::Hasher,
@@ -199,19 +199,6 @@ impl<T: BloomHashIndex> AtomicBloom<T> {
             bit.store(0u64, Ordering::Relaxed);
         });
     }
-
-    // Only for tests and simulations.
-    pub fn mock_clone(&self) -> Self {
-        Self {
-            keys: self.keys.clone(),
-            bits: self
-                .bits
-                .iter()
-                .map(|v| AtomicU64::new(v.load(Ordering::Relaxed)))
-                .collect(),
-            ..*self
-        }
-    }
 }
 
 impl<T: BloomHashIndex> From<AtomicBloom<T>> for Bloom<T> {
@@ -238,7 +225,7 @@ mod test {
     use {
         super::*,
         rayon::prelude::*,
-        safecoin_sdk::hash::{hash, Hash},
+        solana_sdk::hash::{hash, Hash},
     };
 
     #[test]
@@ -308,7 +295,7 @@ mod test {
         let mut b: Bloom<Hash> = Bloom::new(3, vec![100]);
         b.add(&Hash::default());
         assert_eq!(
-            format!("{:?}", b),
+            format!("{b:?}"),
             "Bloom { keys.len: 1 bits.len: 3 num_set: 1 bits: 001 }"
         );
 
@@ -316,7 +303,7 @@ mod test {
         b.add(&Hash::default());
         b.add(&hash(&[1, 2]));
         assert_eq!(
-            format!("{:?}", b),
+            format!("{b:?}"),
             "Bloom { keys.len: 1 bits.len: 1000 num_set: 2 bits: 0000000000.. }"
         );
     }
@@ -324,7 +311,7 @@ mod test {
     #[test]
     fn test_atomic_bloom() {
         let mut rng = rand::thread_rng();
-        let hash_values: Vec<_> = std::iter::repeat_with(|| safecoin_sdk::hash::new_rand(&mut rng))
+        let hash_values: Vec<_> = std::iter::repeat_with(|| solana_sdk::hash::new_rand(&mut rng))
             .take(1200)
             .collect();
         let bloom: AtomicBloom<_> = Bloom::<Hash>::random(1287, 0.1, 7424).into();
@@ -341,11 +328,11 @@ mod test {
         for hash_value in hash_values {
             assert!(bloom.contains(&hash_value));
         }
-        let false_positive = std::iter::repeat_with(|| safecoin_sdk::hash::new_rand(&mut rng))
+        let false_positive = std::iter::repeat_with(|| solana_sdk::hash::new_rand(&mut rng))
             .take(10_000)
             .filter(|hash_value| bloom.contains(hash_value))
             .count();
-        assert!(false_positive < 2_000, "false_positive: {}", false_positive);
+        assert!(false_positive < 2_000, "false_positive: {false_positive}");
     }
 
     #[test]
@@ -353,14 +340,14 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<_> = std::iter::repeat_with(|| rng.gen()).take(5).collect();
         let mut bloom = Bloom::<Hash>::new(9731, keys.clone());
-        let hash_values: Vec<_> = std::iter::repeat_with(|| safecoin_sdk::hash::new_rand(&mut rng))
+        let hash_values: Vec<_> = std::iter::repeat_with(|| solana_sdk::hash::new_rand(&mut rng))
             .take(1000)
             .collect();
         for hash_value in &hash_values {
             bloom.add(hash_value);
         }
         let num_bits_set = bloom.num_bits_set;
-        assert!(num_bits_set > 2000, "# bits set: {}", num_bits_set);
+        assert!(num_bits_set > 2000, "# bits set: {num_bits_set}");
         // Round-trip with no inserts.
         let bloom: AtomicBloom<_> = bloom.into();
         assert_eq!(bloom.num_bits, 9731);
@@ -389,7 +376,7 @@ mod test {
         }
         // Round trip, inserting new hash values.
         let more_hash_values: Vec<_> =
-            std::iter::repeat_with(|| safecoin_sdk::hash::new_rand(&mut rng))
+            std::iter::repeat_with(|| solana_sdk::hash::new_rand(&mut rng))
                 .take(1000)
                 .collect();
         let bloom: AtomicBloom<_> = bloom.into();
@@ -404,11 +391,11 @@ mod test {
         for hash_value in &more_hash_values {
             assert!(bloom.contains(hash_value));
         }
-        let false_positive = std::iter::repeat_with(|| safecoin_sdk::hash::new_rand(&mut rng))
+        let false_positive = std::iter::repeat_with(|| solana_sdk::hash::new_rand(&mut rng))
             .take(10_000)
             .filter(|hash_value| bloom.contains(hash_value))
             .count();
-        assert!(false_positive < 2000, "false_positive: {}", false_positive);
+        assert!(false_positive < 2000, "false_positive: {false_positive}");
         let bloom: Bloom<_> = bloom.into();
         assert_eq!(bloom.bits.len(), 9731);
         assert!(bloom.num_bits_set > num_bits_set);
@@ -423,11 +410,11 @@ mod test {
         for hash_value in &more_hash_values {
             assert!(bloom.contains(hash_value));
         }
-        let false_positive = std::iter::repeat_with(|| safecoin_sdk::hash::new_rand(&mut rng))
+        let false_positive = std::iter::repeat_with(|| solana_sdk::hash::new_rand(&mut rng))
             .take(10_000)
             .filter(|hash_value| bloom.contains(hash_value))
             .count();
-        assert!(false_positive < 2000, "false_positive: {}", false_positive);
+        assert!(false_positive < 2000, "false_positive: {false_positive}");
         // Assert that the bits vector precisely match if no atomic ops were
         // used.
         let bits = bloom.bits;

@@ -1,11 +1,11 @@
 use {
     crate::{
-        cli::*, cluster_query::*, feature::*, inflation::*, nonce::*, program::*, stake::*,
-        validator_info::*, vote::*, wallet::*,
+        address_lookup_table::AddressLookupTableSubCommands, cli::*, cluster_query::*, feature::*,
+        inflation::*, nonce::*, program::*, stake::*, validator_info::*, vote::*, wallet::*,
     },
     clap::{App, AppSettings, Arg, ArgGroup, SubCommand},
-    safecoin_clap_utils::{self, input_validators::*, keypair::*},
-    safecoin_cli_config::CONFIG_FILE,
+    solana_clap_utils::{self, input_validators::*, keypair::*},
+    solana_cli_config::CONFIG_FILE,
 };
 
 pub fn get_clap_app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> App<'ab, 'v> {
@@ -36,7 +36,7 @@ pub fn get_clap_app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> A
                 .global(true)
                 .validator(is_url_or_moniker)
                 .help(
-                    "URL for Safecoin's JSON RPC or moniker (or their first letter): \
+                    "URL for Solana's JSON RPC or moniker (or their first letter): \
                        [mainnet-beta, testnet, devnet, localhost]",
                 ),
         )
@@ -47,7 +47,7 @@ pub fn get_clap_app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> A
                 .takes_value(true)
                 .global(true)
                 .validator(is_url)
-                .help("WebSocket URL for the safecoin cluster"),
+                .help("WebSocket URL for the solana cluster"),
         )
         .arg(
             Arg::with_name("keypair")
@@ -83,6 +83,19 @@ pub fn get_clap_app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> A
                 .short("v")
                 .global(true)
                 .help("Show additional information"),
+        )
+        .arg(
+            Arg::with_name("use_quic")
+                .long("use-quic")
+                .global(true)
+                .help("Use QUIC when sending transactions."),
+        )
+        .arg(
+            Arg::with_name("use_udp")
+                .long("use-udp")
+                .global(true)
+                .conflicts_with("use_quic")
+                .help("Use UDP when sending transactions."),
         )
         .arg(
             Arg::with_name("no_address_labels")
@@ -130,13 +143,14 @@ pub fn get_clap_app<'ab, 'v>(name: &str, about: &'ab str, version: &'v str) -> A
         .inflation_subcommands()
         .nonce_subcommands()
         .program_subcommands()
+        .address_lookup_table_subcommands()
         .stake_subcommands()
         .validator_info_subcommands()
         .vote_subcommands()
         .wallet_subcommands()
         .subcommand(
             SubCommand::with_name("config")
-                .about("Safecoin command-line tool configuration settings")
+                .about("Solana command-line tool configuration settings")
                 .aliases(&["get", "set"])
                 .setting(AppSettings::SubcommandRequiredElseHelp)
                 .subcommand(

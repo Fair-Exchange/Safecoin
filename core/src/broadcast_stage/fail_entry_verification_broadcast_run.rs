@@ -1,13 +1,13 @@
 use {
     super::*,
     crate::cluster_nodes::ClusterNodesCache,
-    solana_ledger::shred::{ProcessShredsStats, Shredder},
-    safecoin_sdk::{hash::Hash, signature::Keypair},
+    solana_ledger::shred::{ProcessShredsStats, ReedSolomonCache, Shredder},
+    solana_sdk::{hash::Hash, signature::Keypair},
     std::{thread::sleep, time::Duration},
 };
 
 pub const NUM_BAD_SLOTS: u64 = 10;
-pub const SLOT_TO_RESAFEVE: u64 = 32;
+pub const SLOT_TO_RESOLVE: u64 = 32;
 
 #[derive(Clone)]
 pub(super) struct FailEntryVerificationBroadcastRun {
@@ -17,6 +17,7 @@ pub(super) struct FailEntryVerificationBroadcastRun {
     next_shred_index: u32,
     next_code_index: u32,
     cluster_nodes_cache: Arc<ClusterNodesCache<BroadcastStage>>,
+    reed_solomon_cache: Arc<ReedSolomonCache>,
 }
 
 impl FailEntryVerificationBroadcastRun {
@@ -32,6 +33,7 @@ impl FailEntryVerificationBroadcastRun {
             next_shred_index: 0,
             next_code_index: 0,
             cluster_nodes_cache,
+            reed_solomon_cache: Arc::<ReedSolomonCache>::default(),
         }
     }
 }
@@ -56,9 +58,9 @@ impl BroadcastRun for FailEntryVerificationBroadcastRun {
             self.current_slot = bank.slot();
         }
 
-        // 2) If we're past SLOT_TO_RESAFEVE, insert the correct shreds so validators can repair
+        // 2) If we're past SLOT_TO_RESOLVE, insert the correct shreds so validators can repair
         // and make progress
-        if bank.slot() > SLOT_TO_RESAFEVE && !self.good_shreds.is_empty() {
+        if bank.slot() > SLOT_TO_RESOLVE && !self.good_shreds.is_empty() {
             info!("Resolving bad shreds");
             let shreds = std::mem::take(&mut self.good_shreds);
             blockstore_sender.send((Arc::new(shreds), None))?;
@@ -91,6 +93,8 @@ impl BroadcastRun for FailEntryVerificationBroadcastRun {
             last_tick_height == bank.max_tick_height() && last_entries.is_none(),
             self.next_shred_index,
             self.next_code_index,
+            true, // merkle_variant
+            &self.reed_solomon_cache,
             &mut ProcessShredsStats::default(),
         );
 
@@ -105,6 +109,8 @@ impl BroadcastRun for FailEntryVerificationBroadcastRun {
                 true,
                 self.next_shred_index,
                 self.next_code_index,
+                true, // merkle_variant
+                &self.reed_solomon_cache,
                 &mut ProcessShredsStats::default(),
             );
             // Don't mark the last shred as last so that validators won't know
@@ -116,6 +122,8 @@ impl BroadcastRun for FailEntryVerificationBroadcastRun {
                 false,
                 self.next_shred_index,
                 self.next_code_index,
+                true, // merkle_variant
+                &self.reed_solomon_cache,
                 &mut ProcessShredsStats::default(),
             );
             self.next_shred_index += 1;

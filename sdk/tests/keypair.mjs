@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { safecoin_program_init, Keypair } from "crate";
-safecoin_program_init();
+import { solana_program_init, Keypair } from "crate";
+solana_program_init();
 
 describe("Keypair", function () {
   it("works", () => {

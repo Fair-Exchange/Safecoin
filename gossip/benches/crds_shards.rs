@@ -4,12 +4,12 @@ extern crate test;
 
 use {
     rand::{thread_rng, Rng},
-    safecoin_gossip::{
+    solana_gossip::{
         crds::{Crds, GossipRoute, VersionedCrdsValue},
         crds_shards::CrdsShards,
         crds_value::CrdsValue,
     },
-    safecoin_sdk::timing::timestamp,
+    solana_sdk::timing::timestamp,
     std::iter::repeat_with,
     test::Bencher,
 };

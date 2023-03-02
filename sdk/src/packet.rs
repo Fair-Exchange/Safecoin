@@ -1,7 +1,10 @@
+//! The definition of a Solana network packet.
+
 use {
     bincode::{Options, Result},
     bitflags::bitflags,
-    serde::Serialize,
+    serde::{Deserialize, Serialize},
+    serde_with::{serde_as, Bytes},
     std::{
         fmt, io,
         net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -19,6 +22,7 @@ pub const PACKET_DATA_SIZE: usize = 1280 - 40 - 8;
 
 bitflags! {
     #[repr(C)]
+    #[derive(Serialize, Deserialize)]
     pub struct PacketFlags: u8 {
         const DISCARD        = 0b0000_0001;
         const FORWARDED      = 0b0000_0010;
@@ -28,7 +32,7 @@ bitflags! {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(C)]
 pub struct Meta {
     pub size: usize,
@@ -38,13 +42,40 @@ pub struct Meta {
     pub sender_stake: u64,
 }
 
-#[derive(Clone, Eq)]
+// serde_as is used as a work around because array isn't supported by serde
+// (and serde_bytes).
+//
+// the root cause is of a historical special handling for [T; 0] in rust's
+// `Default` and supposedly mirrored serde's `Serialize` (macro) impls,
+// pre-dating stabilized const generics, meaning it'll take long time...:
+//   https://github.com/rust-lang/rust/issues/61415
+//   https://github.com/rust-lang/rust/issues/88744#issuecomment-1138678928
+//
+// Due to the nature of the root cause, the current situation is complicated.
+// All in all, the serde_as solution is chosen for good perf and low maintenance
+// need at the cost of another crate dependency..
+//
+// For details, please refer to the below various links...
+//
+// relevant merged/published pr for this serde_as functionality used here:
+//   https://github.com/jonasbb/serde_with/pull/277
+// open pr at serde_bytes:
+//   https://github.com/serde-rs/bytes/pull/28
+// open issue at serde:
+//   https://github.com/serde-rs/serde/issues/1937
+// closed pr at serde (due to the above mentioned [N; 0] issue):
+//   https://github.com/serde-rs/serde/pull/1860
+// ryoqun's dirty experiments:
+//   https://github.com/ryoqun/serde-array-comparisons
+#[serde_as]
+#[derive(Clone, Eq, Serialize, Deserialize)]
 #[repr(C)]
 pub struct Packet {
     // Bytes past Packet.meta.size are not valid to read from.
     // Use Packet.data(index) to read from the buffer.
+    #[serde_as(as = "Bytes")]
     buffer: [u8; PACKET_DATA_SIZE],
-    pub meta: Meta,
+    meta: Meta,
 }
 
 impl Packet {
@@ -79,6 +110,16 @@ impl Packet {
     pub fn buffer_mut(&mut self) -> &mut [u8] {
         debug_assert!(!self.meta.discard());
         &mut self.buffer[..]
+    }
+
+    #[inline]
+    pub fn meta(&self) -> &Meta {
+        &self.meta
+    }
+
+    #[inline]
+    pub fn meta_mut(&mut self) -> &mut Meta {
+        &mut self.meta
     }
 
     pub fn from_data<T: Serialize>(dest: Option<&SocketAddr>, data: T) -> Result<Self> {
@@ -130,8 +171,9 @@ impl fmt::Debug for Packet {
 #[allow(clippy::uninit_assumed_init)]
 impl Default for Packet {
     fn default() -> Packet {
+        let buffer = std::mem::MaybeUninit::<[u8; PACKET_DATA_SIZE]>::uninit();
         Packet {
-            buffer: unsafe { std::mem::MaybeUninit::uninit().assume_init() },
+            buffer: unsafe { buffer.assume_init() },
             meta: Meta::default(),
         }
     }
@@ -139,7 +181,7 @@ impl Default for Packet {
 
 impl PartialEq for Packet {
     fn eq(&self, other: &Packet) -> bool {
-        self.meta == other.meta && self.data(..) == other.data(..)
+        self.meta() == other.meta() && self.data(..) == other.data(..)
     }
 }
 
@@ -166,6 +208,11 @@ impl Meta {
     #[inline]
     pub fn set_tracer(&mut self, is_tracer: bool) {
         self.flags.set(PacketFlags::TRACER_PACKET, is_tracer);
+    }
+
+    #[inline]
+    pub fn set_simple_vote(&mut self, is_simple_vote: bool) {
+        self.flags.set(PacketFlags::SIMPLE_VOTE_TX, is_simple_vote);
     }
 
     #[inline]

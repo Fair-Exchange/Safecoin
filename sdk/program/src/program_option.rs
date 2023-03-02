@@ -1,5 +1,5 @@
 //! A C representation of Rust's `Option`, used across the FFI
-//! boundary for Safecoin program interfaces.
+//! boundary for Solana program interfaces.
 //!
 //! This implementation mostly matches `std::option` except iterators since the iteration
 //! trait requires returning `std::option::Option`
@@ -954,16 +954,6 @@ impl<T> From<Option<T>> for COption<T> {
 impl<T> From<COption<T>> for Option<T> {
     fn from(coption: COption<T>) -> Self {
         match coption {
-            COption::Some(value) => Some(value),
-            COption::None => None,
-        }
-    }
-}
-
-#[rustversion::before(1.49.0)] // Remove `Into` once the BPF toolchain upgrades to 1.49.0 or newer
-impl<T> Into<Option<T>> for COption<T> {
-    fn into(self) -> Option<T> {
-        match self {
             COption::Some(value) => Some(value),
             COption::None => None,
         }

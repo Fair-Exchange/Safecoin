@@ -2,9 +2,9 @@ use {
     crate::geyser_plugin_manager::GeyserPluginManager,
     log::*,
     solana_geyser_plugin_interface::geyser_plugin_interface::SlotStatus,
-    safecoin_measure::measure::Measure,
+    solana_measure::measure::Measure,
     solana_metrics::*,
-    safecoin_sdk::clock::Slot,
+    solana_sdk::clock::Slot,
     std::sync::{Arc, RwLock},
 };
 

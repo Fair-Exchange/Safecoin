@@ -1,9 +1,11 @@
 #pragma once
 /**
- * @brief Safecoin C-based BPF program types and utility functions
+ * @brief Solana C-based BPF program types and utility functions
  */
 
+#include <sol/alt_bn128.h>
 #include <sol/assert.h>
+#include <sol/big_mod_exp.h>
 #include <sol/blake3.h>
 #include <sol/cpi.h>
 #include <sol/deserialize.h>

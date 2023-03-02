@@ -1,8 +1,8 @@
 use {
     crate::error::AddressLookupError,
     serde::{Deserialize, Serialize},
-    safecoin_frozen_abi_macro::{AbiEnumVisitor, AbiExample},
-    safecoin_program::{
+    solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample},
+    solana_program::{
         clock::Slot,
         instruction::InstructionError,
         pubkey::Pubkey,
@@ -218,7 +218,7 @@ impl<'a> AddressLookupTable<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, safecoin_sdk::hash::Hash};
+    use {super::*, solana_sdk::hash::Hash};
 
     impl AddressLookupTable<'_> {
         fn new_for_tests(meta: LookupTableMeta, num_addresses: usize) -> Self {

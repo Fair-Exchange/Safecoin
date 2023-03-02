@@ -16,10 +16,11 @@ import {
   ParsedInstruction,
   Secp256k1Program,
   Ed25519Program,
-} from "@safecoin/web3.js";
+} from "@solana/web3.js";
 import { Cluster } from "providers/cluster";
 import { SerumMarketRegistry } from "serumMarketRegistry";
-import { TokenInfoMap } from "@safecoin/safe-token-registry";
+import { TokenInfoMap } from "@solana/spl-token-registry";
+import { OPEN_BOOK_PROGRAM_ID } from "components/instruction/serum/types";
 
 export enum PROGRAM_NAMES {
   // native built-ins
@@ -49,8 +50,7 @@ export enum PROGRAM_NAMES {
 
   // other
   ACUMEN = "Acumen Program",
-  BONFIDA_POOL = "Bonfida Pool Program",
-  BREAK_SAFECOIN = "Break Safecoin Program",
+  BREAK_SOLANA = "Break Solana Program",
   CHAINLINK_ORACLE = "Chainlink OCR2 Oracle Program",
   CHAINLINK_STORE = "Chainlink Store Program",
   MANGO_GOVERNANCE = "Mango Governance Program",
@@ -87,15 +87,20 @@ export enum PROGRAM_NAMES {
   SERUM_2 = "Serum Dex Program v2",
   SERUM_3 = "Serum Dex Program v3",
   SERUM_SWAP = "Serum Swap Program",
-  SAFEEND = "Safeend Program",
-  SAFEIDO = "Lido for Safecoin Program",
+  SERUM_POOL = "Serum Pool",
+  SOLEND = "Solend Program",
+  SOLIDO = "Lido for Solana Program",
   STEP_SWAP = "Step Finance Swap Program",
   SWIM_SWAP = "Swim Swap Program",
   SWITCHBOARD = "Switchboard Oracle Program",
   WORMHOLE = "Wormhole",
-  SAFECOINRT = "Safecoinrt",
-  SAFECOINRT_GO = "Safecoinrt - Global offers",
+  WORMHOLE_CORE = "Wormhole Core Bridge",
+  WORMHOLE_TOKEN = "Wormhole Token Bridge",
+  WORMHOLE_NFT = "Wormhole NFT Bridge",
+  SOLANART = "Solanart",
+  SOLANART_GO = "Solanart - Global offers",
   STEPN_DEX = "STEPN Dex",
+  OPENBOOK_DEX = "OpenBook Dex",
 }
 
 const ALL_CLUSTERS = [
@@ -150,23 +155,23 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
   },
 
   // spl
-  AToD9iqHSc2fhEP9Jp7UYA6mRjHQ4CTWyzCsw8X3tH7K: {
+  ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL: {
     name: PROGRAM_NAMES.ASSOCIATED_TOKEN,
     deployments: ALL_CLUSTERS,
   },
-  FEAj1Fwb2c9Kx9uHLGB2WH4Qhp2vACsJoudMVYHfE3ek: {
+  Feat1YXHhH6t1juaWF74WLcfv4XoNocjXA6sPWHNgAse: {
     name: PROGRAM_NAMES.FEATURE_PROPOSAL,
     deployments: ALL_CLUSTERS,
   },
-  LENeX3L4CE1euBZp4zUNuicLP2SUZCbgXYZgBpZ9hWZ: {
+  LendZqTs7gn5CTSJU1jWKhKuVpjJGom45nnwPb2AMTi: {
     name: PROGRAM_NAMES.LENDING,
     deployments: LIVE_CLUSTERS,
   },
-  MEMDqRW2fYAU19mcFnoDVoqG4Br4t7TdyWjjv38P6Nc: {
+  Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo: {
     name: PROGRAM_NAMES.MEMO,
     deployments: ALL_CLUSTERS,
   },
-  MEMWKbqsjEB8o972BvDHExZFSauzGZKvB4xHDVPFowh: {
+  MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr: {
     name: PROGRAM_NAMES.MEMO_2,
     deployments: ALL_CLUSTERS,
   },
@@ -178,11 +183,11 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
     name: PROGRAM_NAMES.STAKE_POOL,
     deployments: LIVE_CLUSTERS,
   },
-  SWPUnynS7FHA1koTbvmRktQgCDs7Tf4RkqwH19e2qSP: {
+  SwaPpA9LAaLfeLi3a68M4DjnLqgtticKg6CnyNwgAC8: {
     name: PROGRAM_NAMES.SWAP,
     deployments: LIVE_CLUSTERS,
   },
-  ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN: {
+  TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA: {
     name: PROGRAM_NAMES.TOKEN,
     deployments: ALL_CLUSTERS,
   },
@@ -200,12 +205,12 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
     name: PROGRAM_NAMES.ACUMEN,
     deployments: [Cluster.MainnetBeta],
   },
-  BoNd368PVJ4KLKRjUAzq3QXxeSjMqP3AxSwF8xK4FLa2: {
-    name: PROGRAM_NAMES.BONFIDA_POOL,
+  WvmTNLpGMVbwJVYztYL4Hnsy82cJhQorxjnnXcRm3b6: {
+    name: PROGRAM_NAMES.SERUM_POOL,
     deployments: [Cluster.MainnetBeta],
   },
-  BRKvqZwnXaukqUsUZK8MuDExAV3CLnMSmLwnGcahjWbk: {
-    name: PROGRAM_NAMES.BREAK_SAFECOIN,
+  BrEAK7zGZ6dM71zUDACDqJnekihmwF15noTddWTsknjC: {
+    name: PROGRAM_NAMES.BREAK_SOLANA,
     deployments: LIVE_CLUSTERS,
   },
   cjg3oHmg9uuPsP8D6g29NWvhySJkdYdAo9D25PRbKXJ: {
@@ -316,15 +321,15 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
     name: PROGRAM_NAMES.RAYDIUM_IDO,
     deployments: [Cluster.MainnetBeta],
   },
-  RAYFrn8s4Bsx7NY6gXQPpnWax5dDgd3MCayubNVcZvd: {
+  RVKd61ztZW9GUwhRbbLoYVRE5Xf1B2tVscKqwZqXgEr: {
     name: PROGRAM_NAMES.RAYDIUM_LP_1,
     deployments: [Cluster.MainnetBeta],
   },
-  "RAYFZ91CAQSREwhzPVssQM6w33uYPfKM5Nea6o4mH1t": {
+  "27haf8L6oxUeXrHrgEgsexjSY5hbVUWEmvv9Nyxg8vQv": {
     name: PROGRAM_NAMES.RAYDIUM_LP_2,
     deployments: [Cluster.MainnetBeta],
   },
-  RAYqdf1KnhLXkfvhvxQXajuRY2Gq3pHvv3Ucr7WwM6t: {
+  EhhTKczWMGQt46ynNeRX1WfeagwwJd7ufHvCDjRxjo5Q: {
     name: PROGRAM_NAMES.RAYDIUM_STAKING,
     deployments: [Cluster.MainnetBeta],
   },
@@ -336,15 +341,15 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
     name: PROGRAM_NAMES.SABER_SWAP,
     deployments: [Cluster.Devnet, Cluster.MainnetBeta],
   },
-  SRMGrk9ZtEfUfh6vNYGxbNsZULnXSiAHx9SPvMbY2mU: {
+  BJ3jrUzddfuSrZHXSCxMUUQsjKEyLmuuyZebkcaFp2fg: {
     name: PROGRAM_NAMES.SERUM_1,
     deployments: [Cluster.MainnetBeta],
   },
-  SRMijGeYEx7F7Wjq8kpwCUx9zuUECye3wyk3oGwqpXu: {
+  EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o: {
     name: PROGRAM_NAMES.SERUM_2,
     deployments: [Cluster.MainnetBeta],
   },
-  "SRMrEgnzRgGMQ8QzcL8cjWr5xpdVs1KQCQ58Jkkq1qx": {
+  "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin": {
     name: PROGRAM_NAMES.SERUM_3,
     deployments: [Cluster.MainnetBeta],
   },
@@ -353,11 +358,11 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
     deployments: [Cluster.MainnetBeta],
   },
   So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo: {
-    name: PROGRAM_NAMES.SAFEEND,
+    name: PROGRAM_NAMES.SOLEND,
     deployments: [Cluster.MainnetBeta],
   },
   CrX7kMhLC3cSsXJdT7JDgqrRVWGnUpX3gfEfxxU2NVLi: {
-    name: PROGRAM_NAMES.SAFEIDO,
+    name: PROGRAM_NAMES.SOLIDO,
     deployments: [Cluster.MainnetBeta],
   },
   SSwpMgqNDsyV7mAgN9ady4bDVu5ySjmmXejXvy2vLt1: {
@@ -372,20 +377,48 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
     name: PROGRAM_NAMES.SWITCHBOARD,
     deployments: [Cluster.MainnetBeta],
   },
-  WRMYas5GNR2R6YJjHSbkttRghwxf3hYMhZWnhRdfXXy: {
+  WormT3McKhFJ2RkiGpdw9GKvNCrB2aB54gb2uV9MfQC: {
     name: PROGRAM_NAMES.WORMHOLE,
     deployments: [Cluster.MainnetBeta],
   },
+  worm2ZoG2kUd4vFXhvjh93UUH596ayRfgQ2MgjNMTth: {
+    name: PROGRAM_NAMES.WORMHOLE_CORE,
+    deployments: [Cluster.MainnetBeta],
+  },
+  "3u8hJUVTA4jH1wYAyUur7FFZVQ8H635K3tSHHF4ssjQ5": {
+    name: PROGRAM_NAMES.WORMHOLE_CORE,
+    deployments: [Cluster.Devnet],
+  },
+  wormDTUJ6AWPNvk59vGQbDvGJmqbDTdgWgAqcLBCgUb: {
+    name: PROGRAM_NAMES.WORMHOLE_TOKEN,
+    deployments: [Cluster.MainnetBeta],
+  },
+  DZnkkTmCiFWfYTfT41X3Rd1kDgozqzxWaHqsw6W4x2oe: {
+    name: PROGRAM_NAMES.WORMHOLE_TOKEN,
+    deployments: [Cluster.Devnet],
+  },
+  WnFt12ZrnzZrFZkt2xsNsaNWoQribnuQ5B5FrDbwDhD: {
+    name: PROGRAM_NAMES.WORMHOLE_NFT,
+    deployments: [Cluster.MainnetBeta],
+  },
+  "2rHhojZ7hpu1zA91nvZmT8TqWWvMcKmmNBCr2mKTtMq4": {
+    name: PROGRAM_NAMES.WORMHOLE_NFT,
+    deployments: [Cluster.Devnet],
+  },
   CJsLwbP1iu5DuUikHEJnLfANgKy6stB2uFgvBBHoyxwz: {
-    name: PROGRAM_NAMES.SAFECOINRT,
+    name: PROGRAM_NAMES.SOLANART,
     deployments: [Cluster.MainnetBeta],
   },
   "5ZfZAwP2m93waazg8DkrrVmsupeiPEvaEHowiUP7UAbJ": {
-    name: PROGRAM_NAMES.SAFECOINRT_GO,
+    name: PROGRAM_NAMES.SOLANART_GO,
     deployments: [Cluster.MainnetBeta],
   },
   Dooar9JkhdZ7J3LHN3A7YCuoGRUggXhQaG4kijfLGU2j: {
     name: PROGRAM_NAMES.STEPN_DEX,
+    deployments: [Cluster.MainnetBeta],
+  },
+  [OPEN_BOOK_PROGRAM_ID]: {
+    name: PROGRAM_NAMES.OPENBOOK_DEX,
     deployments: [Cluster.MainnetBeta],
   },
 };

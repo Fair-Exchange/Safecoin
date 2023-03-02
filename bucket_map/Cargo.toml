@@ -1,28 +1,28 @@
 [package]
-name = "safecoin-bucket-map"
-version = "1.14.3"
-description = "safecoin-bucket-map"
-homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/safecoin-bucket-map"
+name = "solana-bucket-map"
+version = "1.15.3"
+description = "solana-bucket-map"
+homepage = "https://solana.com/"
+documentation = "https://docs.rs/solana-bucket-map"
 readme = "../README.md"
-repository = "https://github.com/fair-exchange/safecoin"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/solana-labs/solana"
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
 license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
 log = { version = "0.4.17" }
-memmap2 = "0.5.3"
+memmap2 = "0.5.8"
 modular-bitfield = "0.11.2"
 rand = "0.7.0"
-safecoin-measure = { path = "../measure", version = "=1.14.3" }
-safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
+solana-measure = { path = "../measure", version = "=1.15.3" }
+solana-sdk = { path = "../sdk", version = "=1.15.3" }
 tempfile = "3.3.0"
 
 [dev-dependencies]
 fs_extra = "1.2.0"
 rayon = "1.5.3"
-safecoin-logger = { path = "../logger", version = "=1.14.3" }
+solana-logger = { path = "../logger", version = "=1.15.3" }
 
 [lib]
 crate-type = ["lib"]

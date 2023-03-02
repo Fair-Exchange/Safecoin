@@ -18,7 +18,7 @@ const MAX_BASE58_LEN: usize = 44;
 
 /// A hash; the 32-byte output of a hashing algorithm.
 ///
-/// This struct is used most often in `safecoin-sdk` and related crates to contain
+/// This struct is used most often in `solana-sdk` and related crates to contain
 /// a [SHA-256] hash, but may instead contain a [blake3] hash, as created by the
 /// [`blake3`] module (and used in [`Message::hash`]).
 ///
@@ -61,9 +61,7 @@ impl Hasher {
         }
     }
     pub fn result(self) -> Hash {
-        // At the time of this writing, the sha2 library is stuck on an old version
-        // of generic_array (0.9.0). Decouple ourselves with a clone to our version.
-        Hash(<[u8; HASH_BYTES]>::try_from(self.hasher.finalize().as_slice()).unwrap())
+        Hash(self.hasher.finalize().into())
     }
 }
 

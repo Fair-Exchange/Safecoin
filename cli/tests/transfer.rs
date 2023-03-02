@@ -7,14 +7,11 @@ use {
         spend_utils::SpendAmount,
         test_utils::check_ready,
     },
-    safecoin_cli_output::{parse_sign_only_reply_string, OutputFormat},
-    safecoin_client::{
-        blockhash_query::{self, BlockhashQuery},
-        nonce_utils,
-        rpc_client::RpcClient,
-    },
-    safecoin_faucet::faucet::run_local_faucet,
-    safecoin_sdk::{
+    solana_cli_output::{parse_sign_only_reply_string, OutputFormat},
+    solana_faucet::faucet::run_local_faucet,
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_rpc_client_nonce_utils::blockhash_query::{self, BlockhashQuery},
+    solana_sdk::{
         commitment_config::CommitmentConfig,
         fee::FeeStructure,
         native_token::sol_to_lamports,
@@ -53,7 +50,7 @@ fn test_transfer() {
     config.signers = vec![&default_signer];
 
     let sender_pubkey = config.signers[0].pubkey();
-    let recipient_pubkey = Pubkey::new(&[1u8; 32]);
+    let recipient_pubkey = Pubkey::from([1u8; 32]);
 
     request_and_confirm_airdrop(&rpc_client, &config, &sender_pubkey, sol_to_lamports(5.0))
         .unwrap();
@@ -198,12 +195,12 @@ fn test_transfer() {
     );
 
     // Fetch nonce hash
-    let nonce_hash = nonce_utils::get_account_with_commitment(
+    let nonce_hash = solana_rpc_client_nonce_utils::get_account_with_commitment(
         &rpc_client,
         &nonce_account.pubkey(),
         CommitmentConfig::processed(),
     )
-    .and_then(|ref a| nonce_utils::data_from_account(a))
+    .and_then(|ref a| solana_rpc_client_nonce_utils::data_from_account(a))
     .unwrap()
     .blockhash();
 
@@ -236,12 +233,12 @@ fn test_transfer() {
         &sender_pubkey,
     );
     check_balance!(sol_to_lamports(2.5), &rpc_client, &recipient_pubkey);
-    let new_nonce_hash = nonce_utils::get_account_with_commitment(
+    let new_nonce_hash = solana_rpc_client_nonce_utils::get_account_with_commitment(
         &rpc_client,
         &nonce_account.pubkey(),
         CommitmentConfig::processed(),
     )
-    .and_then(|ref a| nonce_utils::data_from_account(a))
+    .and_then(|ref a| solana_rpc_client_nonce_utils::data_from_account(a))
     .unwrap()
     .blockhash();
     assert_ne!(nonce_hash, new_nonce_hash);
@@ -263,12 +260,12 @@ fn test_transfer() {
     );
 
     // Fetch nonce hash
-    let nonce_hash = nonce_utils::get_account_with_commitment(
+    let nonce_hash = solana_rpc_client_nonce_utils::get_account_with_commitment(
         &rpc_client,
         &nonce_account.pubkey(),
         CommitmentConfig::processed(),
     )
-    .and_then(|ref a| nonce_utils::data_from_account(a))
+    .and_then(|ref a| solana_rpc_client_nonce_utils::data_from_account(a))
     .unwrap()
     .blockhash();
 
@@ -339,7 +336,7 @@ fn test_transfer_multisession_signing() {
         SocketAddrSpace::Unspecified,
     );
 
-    let to_pubkey = Pubkey::new(&[1u8; 32]);
+    let to_pubkey = Pubkey::from([1u8; 32]);
     let offline_from_signer = keypair_from_seed(&[2u8; 32]).unwrap();
     let offline_fee_payer_signer = keypair_from_seed(&[3u8; 32]).unwrap();
     let from_null_signer = NullSigner::new(&offline_from_signer.pubkey());
@@ -501,7 +498,7 @@ fn test_transfer_all() {
     config.signers = vec![&default_signer];
 
     let sender_pubkey = config.signers[0].pubkey();
-    let recipient_pubkey = Pubkey::new(&[1u8; 32]);
+    let recipient_pubkey = Pubkey::from([1u8; 32]);
 
     request_and_confirm_airdrop(&rpc_client, &config, &sender_pubkey, 500_000).unwrap();
     check_balance!(500_000, &rpc_client, &sender_pubkey);
@@ -555,7 +552,7 @@ fn test_transfer_unfunded_recipient() {
     config.signers = vec![&default_signer];
 
     let sender_pubkey = config.signers[0].pubkey();
-    let recipient_pubkey = Pubkey::new(&[1u8; 32]);
+    let recipient_pubkey = Pubkey::from([1u8; 32]);
 
     request_and_confirm_airdrop(&rpc_client, &config, &sender_pubkey, 50_000).unwrap();
     check_balance!(50_000, &rpc_client, &sender_pubkey);
@@ -610,7 +607,7 @@ fn test_transfer_with_seed() {
     config.signers = vec![&default_signer];
 
     let sender_pubkey = config.signers[0].pubkey();
-    let recipient_pubkey = Pubkey::new(&[1u8; 32]);
+    let recipient_pubkey = Pubkey::from([1u8; 32]);
     let derived_address_seed = "seed".to_string();
     let derived_address_program_id = stake::program::id();
     let derived_address = Pubkey::create_with_seed(

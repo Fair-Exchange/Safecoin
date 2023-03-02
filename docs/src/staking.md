@@ -1,12 +1,12 @@
 ---
-title: Staking on Safecoin
+title: Staking on Solana
 ---
 
 _Note before reading: All references to increases in values are in absolute
-terms with regards to balance of SAFE.
-This document makes no suggestion as to the monetary value of SAFE at any time._
+terms with regards to balance of SOL.
+This document makes no suggestion as to the monetary value of SOL at any time._
 
-By staking your SAFE tokens, you help secure the network and
+By staking your SOL tokens, you help secure the network and
 [earn rewards](implemented-proposals/staking-rewards.md) while doing so.
 
 You can stake by delegating your tokens to validators who process transactions and run the network.
@@ -46,22 +46,22 @@ Rewards and slashing align validator and token holder interests which helps keep
 secure, robust and performant.
 
 
-## How do I stake my SAFE tokens?
+## How do I stake my SOL tokens?
 
-You can stake SAFE by moving your tokens
+You can stake SOL by moving your tokens
 into a wallet that supports staking.   The wallet provides steps to create a stake account
 and do the delegation.
 
 #### Supported Wallets
 
-Many web and mobile wallets support Safecoin staking operations. Please check with
+Many web and mobile wallets support Solana staking operations. Please check with
 your favorite wallet's maintainers regarding status
 
-#### Safecoin command line tools
-- Safecoin command line tools can perform all stake operations in conjunction
+#### Solana command line tools
+- Solana command line tools can perform all stake operations in conjunction
   with a CLI-generated keypair file wallet, a paper wallet, or with a connected
   Ledger Nano.
-  [Staking commands using the Safecoin Command Line Tools](cli/delegate-stake.md).
+  [Staking commands using the Solana Command Line Tools](cli/delegate-stake.md).
 
 #### Create a Stake Account
 
@@ -75,7 +75,7 @@ information about potentially performant validators from the links below.
 The Solana Foundation does not recommend any particular validator.
 
 The Mainnet Beta validators introduce themselves and their services on this
-Safecoin Forum thread:
+Solana Forum thread:
 
 - https://forums.solana.com/t/validator-information-thread
 
@@ -86,12 +86,12 @@ performance statistics about each one.
 
 - https://solanabeach.io
 
-To view block production statistics, use the Safecoin command-line tools:
+To view block production statistics, use the Solana command-line tools:
 
-- `safecoin validators`
-- `safecoin block-production`
+- `solana validators`
+- `solana block-production`
 
-The Safecoin team does not make recommendations on how to interpret this
+The Solana team does not make recommendations on how to interpret this
 information. Do your own due diligence.
 
 #### Delegate your Stake

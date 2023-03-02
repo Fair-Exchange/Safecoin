@@ -22,11 +22,8 @@ doc
 # VIM swap files
 *.sw*
 
-# `safecoin-test-validator` ledger location
+# `solana-test-validator` ledger location
 test-ledger/
-
-# Flow
-module.flow.js
 
 # TypeScript
 declarations

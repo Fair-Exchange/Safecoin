@@ -49,8 +49,8 @@ pub enum UpgradeableLoaderInstruction {
     /// follows:
     ///
     /// ```
-    /// # use safecoin_program::pubkey::Pubkey;
-    /// # use safecoin_program::bpf_loader_upgradeable;
+    /// # use solana_program::pubkey::Pubkey;
+    /// # use solana_program::bpf_loader_upgradeable;
     /// # let program_address = &[];
     /// let (program_data_address, _) = Pubkey::find_program_address(
     ///      &[program_address],
@@ -74,7 +74,7 @@ pub enum UpgradeableLoaderInstruction {
     ///      authority
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
-    ///   6. `[]` System program (`safecoin_sdk::system_program::id()`).
+    ///   6. `[]` System program (`solana_sdk::system_program::id()`).
     ///   7. `[signer]` The program's authority
     DeployWithMaxDataLen {
         /// Maximum length that the program can be upgraded to.
@@ -128,7 +128,7 @@ pub enum UpgradeableLoaderInstruction {
     ///      is a ProgramData account.
     Close,
 
-    /// Extend a ProgramData account by the specified number of bytes.
+    /// Extend a program's ProgramData account by the specified number of bytes.
     /// Only upgradeable program's can be extended.
     ///
     /// The payer account must contain sufficient lamports to fund the
@@ -138,12 +138,26 @@ pub enum UpgradeableLoaderInstruction {
     ///
     /// # Account references
     ///   0. `[writable]` The ProgramData account.
-    ///   1. `[]` System program (`safecoin_sdk::system_program::id()`), optional, used to transfer
+    ///   1. `[writable]` The ProgramData account's associated Program account.
+    ///   2. `[]` System program (`solana_sdk::system_program::id()`), optional, used to transfer
     ///      lamports from the payer to the ProgramData account.
-    ///   2. `[signer]` The payer account, optional, that will pay necessary rent exemption costs
+    ///   3. `[signer]` The payer account, optional, that will pay necessary rent exemption costs
     ///      for the increased storage size.
-    ExtendProgramData {
+    ExtendProgram {
         /// Number of bytes to extend the program data.
         additional_bytes: u32,
     },
+
+    /// Set a new authority that is allowed to write the buffer or upgrade the
+    /// program.
+    ///
+    /// This instruction differs from SetAuthority in that the new authority is a
+    /// required signer.
+    ///
+    /// # Account references
+    ///   0. `[writable]` The Buffer or ProgramData account to change the
+    ///      authority of.
+    ///   1. `[signer]` The current authority.
+    ///   2. `[signer]` The new authority.
+    SetAuthorityChecked,
 }

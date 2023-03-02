@@ -1,4 +1,4 @@
-use {log::*, safecoin_measure::measure::Measure, safecoin_sdk::clock::Slot, std::result::Result};
+use {log::*, solana_measure::measure::Measure, solana_sdk::clock::Slot, std::result::Result};
 
 // Attempt to delete this many blocks in parallel
 const NUM_BLOCKS_TO_DELETE_IN_PARALLEL: usize = 32;
@@ -46,7 +46,7 @@ pub async fn delete_confirmed_blocks(
     measure.stop();
     info!("{}", measure);
     if failures > 0 {
-        Err(format!("Incomplete deletion, {} operations failed", failures).into())
+        Err(format!("Incomplete deletion, {failures} operations failed").into())
     } else {
         Ok(())
     }

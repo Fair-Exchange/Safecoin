@@ -11,7 +11,8 @@ use {
             ACCOUNTS_INDEX_CONFIG_FOR_BENCHMARKS,
         },
     },
-    safecoin_sdk::{account::AccountSharedData, pubkey},
+    solana_sdk::{account::AccountSharedData, pubkey},
+    std::sync::Arc,
     test::Bencher,
 };
 
@@ -23,7 +24,10 @@ fn bench_accounts_index(bencher: &mut Bencher) {
     const NUM_FORKS: u64 = 16;
 
     let mut reclaims = vec![];
-    let index = AccountsIndex::<AccountInfo>::new(Some(ACCOUNTS_INDEX_CONFIG_FOR_BENCHMARKS));
+    let index = AccountsIndex::<AccountInfo>::new(
+        Some(ACCOUNTS_INDEX_CONFIG_FOR_BENCHMARKS),
+        &Arc::default(),
+    );
     for f in 0..NUM_FORKS {
         for pubkey in pubkeys.iter().take(NUM_PUBKEYS) {
             index.upsert(
@@ -56,7 +60,7 @@ fn bench_accounts_index(bencher: &mut Bencher) {
             );
             reclaims.clear();
         }
-        index.add_root(root, false);
+        index.add_root(root);
         root += 1;
         fork += 1;
     });

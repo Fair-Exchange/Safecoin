@@ -1,30 +1,30 @@
 import React from "react";
 import { BigNumber } from "bignumber.js";
-import { SafeBalance } from "utils";
+import { SolBalance } from "components/common/SolBalance";
 
 export function BalanceDelta({
   delta,
-  isSafe = false,
+  isSol = false,
 }: {
   delta: BigNumber;
-  isSafe?: boolean;
+  isSol?: boolean;
 }) {
   let sols;
 
-  if (isSafe) {
-    sols = <SafeBalance lamports={delta.toNumber()} />;
+  if (isSol) {
+    sols = <SolBalance lamports={Math.abs(delta.toNumber())} />;
   }
 
   if (delta.gt(0)) {
     return (
       <span className="badge bg-success-soft">
-        +{isSafe ? sols : delta.toString()}
+        +{isSol ? sols : delta.toString()}
       </span>
     );
   } else if (delta.lt(0)) {
     return (
       <span className="badge bg-warning-soft">
-        {isSafe ? <>-{sols}</> : delta.toString()}
+        {isSol ? <>-{sols}</> : delta.toString()}
       </span>
     );
   }

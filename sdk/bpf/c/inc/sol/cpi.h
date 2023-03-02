@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Safecoin Cross-Program Invocation
+ * @brief Solana Cross-Program Invocation
  */
 
 #include <sol/types.h>
@@ -37,47 +37,47 @@ static const uint16_t MAX_CPI_ACCOUNT_INFOS = 128;
  * Account Meta
  */
 typedef struct {
-  SafePubkey *pubkey; /** An account's public key */
+  SolPubkey *pubkey; /** An account's public key */
   bool is_writable; /** True if the `pubkey` can be loaded as a read-write account */
   bool is_signer; /** True if an Instruction requires a Transaction signature matching `pubkey` */
-} SafeAccountMeta;
+} SolAccountMeta;
 
 /**
  * Instruction
  */
 typedef struct {
-  SafePubkey *program_id; /** Pubkey of the instruction processor that executes this instruction */
-  SafeAccountMeta *accounts; /** Metadata for what accounts should be passed to the instruction processor */
-  uint64_t account_len; /** Number of SafeAccountMetas */
+  SolPubkey *program_id; /** Pubkey of the instruction processor that executes this instruction */
+  SolAccountMeta *accounts; /** Metadata for what accounts should be passed to the instruction processor */
+  uint64_t account_len; /** Number of SolAccountMetas */
   uint8_t *data; /** Opaque data passed to the instruction processor */
   uint64_t data_len; /** Length of the data in bytes */
-} SafeInstruction;
+} SolInstruction;
 
 /**
  * Internal cross-program invocation function
  */
 /* DO NOT MODIFY THIS GENERATED FILE. INSTEAD CHANGE sdk/bpf/c/inc/sol/inc/cpi.inc AND RUN `cargo run --bin gen-headers` */
-#ifndef SAFE_SBFV2
+#ifndef SOL_SBFV2
 uint64_t sol_invoke_signed_c(
-  const SafeInstruction *,
-  const SafeAccountInfo *,
+  const SolInstruction *,
+  const SolAccountInfo *,
   int,
-  const SafeSignerSeeds *,
+  const SolSignerSeeds *,
   int
 );
 #else
 typedef uint64_t(*sol_invoke_signed_c_pointer_type)(
-  const SafeInstruction *,
-  const SafeAccountInfo *,
+  const SolInstruction *,
+  const SolAccountInfo *,
   int,
-  const SafeSignerSeeds *,
+  const SolSignerSeeds *,
   int
 );
 static uint64_t sol_invoke_signed_c(
-  const SafeInstruction * arg1,
-  const SafeAccountInfo * arg2,
+  const SolInstruction * arg1,
+  const SolAccountInfo * arg2,
   int arg3,
-  const SafeSignerSeeds * arg4,
+  const SolSignerSeeds * arg4,
   int
  arg5) {
   sol_invoke_signed_c_pointer_type sol_invoke_signed_c_pointer = (sol_invoke_signed_c_pointer_type) 2720767109;
@@ -95,10 +95,10 @@ static uint64_t sol_invoke_signed_c(
  * @param seeds_len Length of the seeds array
  */
 static uint64_t sol_invoke_signed(
-    const SafeInstruction *instruction,
-    const SafeAccountInfo *account_infos,
+    const SolInstruction *instruction,
+    const SolAccountInfo *account_infos,
     int account_infos_len,
-    const SafeSignerSeeds *signers_seeds,
+    const SolSignerSeeds *signers_seeds,
     int signers_seeds_len
 ) {
   return sol_invoke_signed_c(
@@ -117,11 +117,11 @@ static uint64_t sol_invoke_signed(
  * @param account_infos_len Length of account_infos array
 */
 static uint64_t sol_invoke(
-    const SafeInstruction *instruction,
-    const SafeAccountInfo *account_infos,
+    const SolInstruction *instruction,
+    const SolAccountInfo *account_infos,
     int account_infos_len
 ) {
-  const SafeSignerSeeds signers_seeds[] = {{}};
+  const SolSignerSeeds signers_seeds[] = {{}};
   return sol_invoke_signed(
     instruction,
     account_infos,

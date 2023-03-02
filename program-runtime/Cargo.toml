@@ -1,39 +1,41 @@
 [package]
-name = "safecoin-program-runtime"
-version = "1.14.3"
-description = "Safecoin program runtime"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/fair-exchange/safecoin"
+name = "solana-program-runtime"
+version = "1.15.3"
+description = "Solana program runtime"
+authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
-homepage = "https://safecoin.org/"
-documentation = "https://docs.rs/safecoin-program-runtime"
+homepage = "https://solana.com/"
+documentation = "https://docs.rs/solana-program-runtime"
 edition = "2021"
 
 [dependencies]
 base64 = "0.13"
 bincode = "1.3.3"
 eager = "0.1.0"
-itertools =  "0.10.1"
+enum-iterator = "1.2.0"
+itertools =  "0.10.5"
 libc = "0.2.101"
 libloading = "0.7.0"
-log = "0.4.14"
+log = "0.4.17"
 num-derive = { version = "0.3" }
 num-traits = { version = "0.2" }
+rand = "0.7.0"
 serde = { version = "1.0.129", features = ["derive", "rc"] }
-safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.14.3" }
-safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.14.3" }
-safecoin-measure = { path = "../measure", version = "=1.14.3" }
-safecoin-metrics = { path = "../metrics", version = "=1.14.3" }
-safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
+solana-frozen-abi = { path = "../frozen-abi", version = "=1.15.3" }
+solana-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.15.3" }
+solana-measure = { path = "../measure", version = "=1.15.3" }
+solana-metrics = { path = "../metrics", version = "=1.15.3" }
+solana-sdk = { path = "../sdk", version = "=1.15.3" }
+solana_rbpf = "=0.2.39"
 thiserror = "1.0"
-enum-iterator = "0.8.1"
 
 [dev-dependencies]
-safecoin-logger = { path = "../logger", version = "=1.14.3" }
+solana-logger = { path = "../logger", version = "=1.15.3" }
 
 [lib]
 crate-type = ["lib"]
-name = "safecoin_program_runtime"
+name = "solana_program_runtime"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

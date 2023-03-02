@@ -1,5 +1,5 @@
 import React from "react";
-import { SignatureResult, TransactionInstruction } from "@safecoin/web3.js";
+import { SignatureResult, TransactionInstruction } from "@solana/web3.js";
 import { useCluster } from "providers/cluster";
 import { reportError } from "utils/sentry";
 import { InstructionCard } from "../InstructionCard";
@@ -13,6 +13,7 @@ import InitMappingDetailsCard from "./InitMappingDetailsCard";
 import AddMappingDetailsCard from "./AddMappingDetailsCard";
 import AggregatePriceDetailsCard from "./AggregatePriceDetailsCard";
 import InitPriceDetailsCard from "./InitPriceDetailsCard";
+import SetMinPublishersDetailsCard from "./SetMinPublishersDetailsCard";
 
 export function PythDetailsCard(props: {
   ix: TransactionInstruction;
@@ -106,6 +107,13 @@ export function PythDetailsCard(props: {
         return (
           <InitPriceDetailsCard
             info={PythInstruction.decodeInitPrice(ix)}
+            {...props}
+          />
+        );
+      case "SetMinPublishers":
+        return (
+          <SetMinPublishersDetailsCard
+            info={PythInstruction.decodeSetMinPublishers(ix)}
             {...props}
           />
         );

@@ -1,10 +1,10 @@
 import React from "react";
 import {
-  ParsedConfirmedTransaction,
+  ParsedTransactionWithMeta,
   ParsedInstruction,
   PartiallyDecodedInstruction,
   PublicKey,
-} from "@safecoin/web3.js";
+} from "@solana/web3.js";
 import { useAccountHistory } from "providers/accounts";
 import { useTokenRegistry } from "providers/mints/token-registry";
 import { create } from "superstruct";
@@ -68,23 +68,23 @@ export function TokenTransfersCard({ pubkey }: { pubkey: PublicKey }) {
   const { hasTimestamps, detailsList } = React.useMemo(() => {
     const detailedHistoryMap =
       history?.data?.transactionMap ||
-      new Map<string, ParsedConfirmedTransaction>();
+      new Map<string, ParsedTransactionWithMeta>();
     const hasTimestamps = transactionRows.some((element) => element.blockTime);
     const detailsList: React.ReactNode[] = [];
     const mintMap = new Map<string, MintDetails>();
 
     transactionRows.forEach(
       ({ signature, blockTime, statusText, statusClass }) => {
-        const parsed = detailedHistoryMap.get(signature);
-        if (!parsed) return;
+        const transactionWithMeta = detailedHistoryMap.get(signature);
+        if (!transactionWithMeta) return;
 
         // Extract mint information from token deltas
         // (used to filter out non-checked tokens transfers not belonging to this mint)
-        extractMintDetails(parsed, mintMap);
+        extractMintDetails(transactionWithMeta, mintMap);
 
         // Extract all transfers from transaction
         let transfers: IndexedTransfer[] = [];
-        InstructionContainer.create(parsed).instructions.forEach(
+        InstructionContainer.create(transactionWithMeta).instructions.forEach(
           ({ instruction, inner }, index) => {
             const transfer = getTransfer(instruction, cluster, signature);
             if (transfer) {
@@ -250,7 +250,7 @@ function getTransfer(
   cluster: Cluster,
   signature: string
 ): Transfer | TransferChecked | undefined {
-  if ("parsed" in instruction && instruction.program === "safe-token") {
+  if ("parsed" in instruction && instruction.program === "spl-token") {
     try {
       const { type: rawType } = instruction.parsed;
       const type = create(rawType, TokenInstructionType);

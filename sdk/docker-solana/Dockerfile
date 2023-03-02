@@ -1,11 +1,11 @@
 FROM debian:bullseye
 
 # RPC JSON
-EXPOSE 8328/tcp
+EXPOSE 8899/tcp
 # RPC pubsub
-EXPOSE 8329/tcp
+EXPOSE 8900/tcp
 # entrypoint
-EXPOSE 10015/tcp
+EXPOSE 8001/tcp
 # (future) bank service
 EXPOSE 8901/tcp
 # bank service
@@ -15,7 +15,7 @@ EXPOSE 9900/tcp
 # tvu
 EXPOSE 8000/udp
 # gossip
-EXPOSE 10015/udp
+EXPOSE 8001/udp
 # tvu_forwards
 EXPOSE 8002/udp
 # tpu

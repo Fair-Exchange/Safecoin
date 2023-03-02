@@ -1,15 +1,14 @@
 import * as BufferLayout from '@solana/buffer-layout';
 import {Buffer} from 'buffer';
 
-import type {Blockhash} from './blockhash';
 import * as Layout from './layout';
 import {PublicKey} from './publickey';
 import type {FeeCalculator} from './fee-calculator';
 import {FeeCalculatorLayout} from './fee-calculator';
-import {toBuffer} from './util/to-buffer';
+import {toBuffer} from './utils/to-buffer';
 
 /**
- * See https://github.com/fair-exchange/safecoin/blob/0ea2843ec9cdc517572b8e62c959f41b55cf4453/sdk/src/nonce_state.rs#L29-L32
+ * See https://github.com/solana-labs/solana/blob/0ea2843ec9cdc517572b8e62c959f41b55cf4453/sdk/src/nonce_state.rs#L29-L32
  *
  * @internal
  */
@@ -36,9 +35,14 @@ const NonceAccountLayout = BufferLayout.struct<
 
 export const NONCE_ACCOUNT_LENGTH = NonceAccountLayout.span;
 
+/**
+ * A durable nonce is a 32 byte value encoded as a base58 string.
+ */
+export type DurableNonce = string;
+
 type NonceAccountArgs = {
   authorizedPubkey: PublicKey;
-  nonce: Blockhash;
+  nonce: DurableNonce;
   feeCalculator: FeeCalculator;
 };
 
@@ -47,7 +51,7 @@ type NonceAccountArgs = {
  */
 export class NonceAccount {
   authorizedPubkey: PublicKey;
-  nonce: Blockhash;
+  nonce: DurableNonce;
   feeCalculator: FeeCalculator;
 
   /**

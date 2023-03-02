@@ -1,17 +1,17 @@
 use {
     crate::cli::{CliCommand, CliCommandInfo, CliConfig, CliError, ProcessResult},
     clap::{App, Arg, ArgMatches, SubCommand},
-    safecoin_clap_utils::{
+    solana_clap_utils::{
         input_parsers::{pubkeys_of, value_of},
         input_validators::is_valid_pubkey,
         keypair::*,
     },
-    safecoin_cli_output::{
+    solana_cli_output::{
         CliEpochRewardshMetadata, CliInflation, CliKeyedEpochReward, CliKeyedEpochRewards,
     },
-    safecoin_client::rpc_client::RpcClient,
-    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
-    safecoin_sdk::{clock::Epoch, pubkey::Pubkey},
+    solana_remote_wallet::remote_wallet::RemoteWalletManager,
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_sdk::{clock::Epoch, pubkey::Pubkey},
     std::sync::Arc,
 };
 
@@ -107,9 +107,9 @@ fn process_rewards(
         .get_inflation_reward(addresses, rewards_epoch)
         .map_err(|err| {
             if let Some(epoch) = rewards_epoch {
-                format!("Rewards not available for epoch {}", epoch)
+                format!("Rewards not available for epoch {epoch}")
             } else {
-                format!("Rewards not available {}", err)
+                format!("Rewards not available {err}")
             }
         })?;
     let epoch_schedule = rpc_client.get_epoch_schedule()?;

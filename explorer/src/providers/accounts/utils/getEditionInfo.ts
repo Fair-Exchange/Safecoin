@@ -1,5 +1,5 @@
 import { programs } from "@metaplex/js";
-import { Connection } from "@safecoin/web3.js";
+import { Connection } from "@solana/web3.js";
 
 const {
   metadata: { Metadata, MasterEdition, MetadataKey },

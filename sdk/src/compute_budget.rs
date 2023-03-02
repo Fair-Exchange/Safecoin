@@ -1,3 +1,5 @@
+//! The compute budget native program.
+
 #![cfg(feature = "full")]
 
 use {
@@ -22,6 +24,7 @@ crate::declare_id!("ComputeBudget111111111111111111111111111111");
 )]
 pub enum ComputeBudgetInstruction {
     /// Deprecated
+    // TODO: after feature remove_deprecated_request_unit_ix::id() is activated, replace it with 'unused'
     RequestUnitsDeprecated {
         /// Units to request
         units: u32,
@@ -54,5 +57,12 @@ impl ComputeBudgetInstruction {
     /// Create a `ComputeBudgetInstruction::SetComputeUnitPrice` `Instruction`
     pub fn set_compute_unit_price(micro_lamports: u64) -> Instruction {
         Instruction::new_with_borsh(id(), &Self::SetComputeUnitPrice(micro_lamports), vec![])
+    }
+
+    /// Serialize Instruction using borsh, this is only used in runtime::cost_model::tests but compilation
+    /// can't be restricted as it's used across packages
+    // #[cfg(test)]
+    pub fn pack(self) -> Result<Vec<u8>, std::io::Error> {
+        self.try_to_vec()
     }
 }

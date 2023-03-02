@@ -1,11 +1,11 @@
 #![cfg(feature = "program")]
 
-pub use safecoin_program::log::*;
+pub use solana_program::log::*;
 
 #[macro_export]
 #[deprecated(
     since = "1.4.3",
-    note = "Please use `safecoin_program::log::info` instead"
+    note = "Please use `solana_program::log::info` instead"
 )]
 macro_rules! info {
     ($msg:expr) => {

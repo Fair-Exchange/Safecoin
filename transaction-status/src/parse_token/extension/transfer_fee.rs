@@ -1,4 +1,4 @@
-use {super::*, safe_token_2022::extension::transfer_fee::instruction::TransferFeeInstruction};
+use {super::*, spl_token_2022::extension::transfer_fee::instruction::TransferFeeInstruction};
 
 pub(in crate::parse_token) fn parse_transfer_fee_instruction(
     transfer_fee_instruction: TransferFeeInstruction,
@@ -159,9 +159,9 @@ mod test {
     use {
         super::*,
         crate::parse_token::test::*,
-        safecoin_sdk::pubkey::Pubkey,
-        safe_token_2022::{
-            extension::transfer_fee::instruction::*, safecoin_program::message::Message,
+        solana_sdk::pubkey::Pubkey,
+        spl_token_2022::{
+            extension::transfer_fee::instruction::*, solana_program::message::Message,
         },
     };
 
@@ -175,7 +175,7 @@ mod test {
 
         // InitializeTransferFeeConfig variations
         let init_transfer_fee_config_ix = initialize_transfer_fee_config(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             Some(&convert_pubkey(transfer_fee_config_authority)),
             Some(&convert_pubkey(withdraw_withheld_authority)),
@@ -204,7 +204,7 @@ mod test {
         );
 
         let init_transfer_fee_config_ix = initialize_transfer_fee_config(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             None,
             None,
@@ -238,7 +238,7 @@ mod test {
         let decimals = 2;
         let fee = 5;
         let transfer_checked_with_fee_ix = transfer_checked_with_fee(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(account_pubkey),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(recipient),
@@ -285,7 +285,7 @@ mod test {
         let multisig_signer0 = Pubkey::new_unique();
         let multisig_signer1 = Pubkey::new_unique();
         let transfer_checked_with_fee_ix = transfer_checked_with_fee(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(account_pubkey),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(recipient),
@@ -336,7 +336,7 @@ mod test {
 
         // Single authority WithdrawWithheldTokensFromMint
         let withdraw_withheld_tokens_from_mint_ix = withdraw_withheld_tokens_from_mint(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(recipient),
             &convert_pubkey(withdraw_withheld_authority),
@@ -363,7 +363,7 @@ mod test {
 
         // Multisig WithdrawWithheldTokensFromMint
         let withdraw_withheld_tokens_from_mint_ix = withdraw_withheld_tokens_from_mint(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(recipient),
             &convert_pubkey(multisig_pubkey),
@@ -399,7 +399,7 @@ mod test {
         let fee_account0 = Pubkey::new_unique();
         let fee_account1 = Pubkey::new_unique();
         let withdraw_withheld_tokens_from_accounts_ix = withdraw_withheld_tokens_from_accounts(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(recipient),
             &convert_pubkey(withdraw_withheld_authority),
@@ -431,7 +431,7 @@ mod test {
 
         // Multisig WithdrawWithheldTokensFromAccounts
         let withdraw_withheld_tokens_from_accounts_ix = withdraw_withheld_tokens_from_accounts(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(recipient),
             &convert_pubkey(multisig_pubkey),
@@ -470,7 +470,7 @@ mod test {
 
         // HarvestWithheldTokensToMint
         let harvest_withheld_tokens_to_mint_ix = harvest_withheld_tokens_to_mint(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &[&convert_pubkey(fee_account0), &convert_pubkey(fee_account1)],
         )
@@ -497,7 +497,7 @@ mod test {
 
         // Single authority SetTransferFee
         let set_transfer_fee_ix = set_transfer_fee(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(transfer_fee_config_authority),
             &[],
@@ -526,7 +526,7 @@ mod test {
 
         // Multisig WithdrawWithheldTokensFromMint
         let set_transfer_fee_ix = set_transfer_fee(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(multisig_pubkey),
             &[

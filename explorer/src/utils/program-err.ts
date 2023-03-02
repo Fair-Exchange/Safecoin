@@ -1,4 +1,4 @@
-import { TransactionError } from "@safecoin/web3.js";
+import { TransactionError } from "@solana/web3.js";
 
 const instructionErrorMessage: Map<string, string> = new Map([
   ["GenericError", "generic instruction error"],

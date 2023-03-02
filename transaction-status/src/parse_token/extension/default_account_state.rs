@@ -1,6 +1,6 @@
 use {
     super::*,
-    safe_token_2022::extension::default_account_state::instruction::{
+    spl_token_2022::extension::default_account_state::instruction::{
         decode_instruction, DefaultAccountStateInstruction,
     },
 };
@@ -12,14 +12,14 @@ pub(in crate::parse_token) fn parse_default_account_state_instruction(
 ) -> Result<ParsedInstructionEnum, ParseInstructionError> {
     let (default_account_state_instruction, account_state) = decode_instruction(instruction_data)
         .map_err(|_| {
-        ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeToken)
+        ParseInstructionError::InstructionNotParsable(ParsableProgram::SplToken)
     })?;
     let instruction_type = "DefaultAccountState";
     match default_account_state_instruction {
         DefaultAccountStateInstruction::Initialize => {
             check_num_token_accounts(account_indexes, 1)?;
             Ok(ParsedInstructionEnum {
-                instruction_type: format!("initialize{}", instruction_type),
+                instruction_type: format!("initialize{instruction_type}"),
                 info: json!({
                     "mint": account_keys[account_indexes[0] as usize].to_string(),
                     "accountState": UiAccountState::from(account_state),
@@ -42,7 +42,7 @@ pub(in crate::parse_token) fn parse_default_account_state_instruction(
                 "multisigFreezeAuthority",
             );
             Ok(ParsedInstructionEnum {
-                instruction_type: format!("update{}", instruction_type),
+                instruction_type: format!("update{instruction_type}"),
                 info: value,
             })
         }
@@ -54,12 +54,12 @@ mod test {
     use {
         super::*,
         crate::parse_token::test::*,
-        safecoin_sdk::pubkey::Pubkey,
-        safe_token_2022::{
+        solana_sdk::pubkey::Pubkey,
+        spl_token_2022::{
             extension::default_account_state::instruction::{
                 initialize_default_account_state, update_default_account_state,
             },
-            safecoin_program::message::Message,
+            solana_program::message::Message,
             state::AccountState,
         },
     };
@@ -68,7 +68,7 @@ mod test {
     fn test_parse_default_account_state_instruction() {
         let mint_pubkey = Pubkey::new_unique();
         let init_default_account_state_ix = initialize_default_account_state(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &AccountState::Frozen,
         )
@@ -93,7 +93,7 @@ mod test {
         // Single mint freeze_authority
         let mint_freeze_authority = Pubkey::new_unique();
         let update_default_account_state_ix = update_default_account_state(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(mint_freeze_authority),
             &[],
@@ -123,7 +123,7 @@ mod test {
         let multisig_signer0 = Pubkey::new_unique();
         let multisig_signer1 = Pubkey::new_unique();
         let update_default_account_state_ix = update_default_account_state(
-            &safe_token_2022::id(),
+            &spl_token_2022::id(),
             &convert_pubkey(mint_pubkey),
             &convert_pubkey(multisig_pubkey),
             &[

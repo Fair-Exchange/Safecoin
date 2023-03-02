@@ -2,7 +2,7 @@ use {num_derive::FromPrimitive, thiserror::Error};
 
 #[derive(Error, Debug, Clone, FromPrimitive, PartialEq, Eq)]
 pub enum LedgerError {
-    #[error("Safecoin app not open on Ledger device")]
+    #[error("Solana app not open on Ledger device")]
     NoAppResponse = 0x6700,
 
     #[error("Ledger sdk exception")]
@@ -68,14 +68,23 @@ pub enum LedgerError {
     #[error("Ledger operation rejected by the user")]
     UserCancel = 0x6985,
 
-    #[error("Ledger received invalid Safecoin message")]
-    SafecoinInvalidMessage = 0x6a80,
+    #[error("Ledger received invalid Solana message")]
+    SolanaInvalidMessage = 0x6a80,
 
-    #[error("Safecoin summary finalization failed on Ledger device")]
-    SafecoinSummaryFinalizeFailed = 0x6f00,
+    #[error("Ledger received message with invalid header")]
+    SolanaInvalidMessageHeader = 0x6a81,
 
-    #[error("Safecoin summary update failed on Ledger device")]
-    SafecoinSummaryUpdateFailed = 0x6f01,
+    #[error("Ledger received message in invalid format")]
+    SolanaInvalidMessageFormat = 0x6a82,
+
+    #[error("Ledger received message with invalid size")]
+    SolanaInvalidMessageSize = 0x6a83,
+
+    #[error("Solana summary finalization failed on Ledger device")]
+    SolanaSummaryFinalizeFailed = 0x6f00,
+
+    #[error("Solana summary update failed on Ledger device")]
+    SolanaSummaryUpdateFailed = 0x6f01,
 
     #[error("Ledger received unimplemented instruction")]
     UnimplementedInstruction = 0x6d00,

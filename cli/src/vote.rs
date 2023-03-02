@@ -12,7 +12,7 @@ use {
         stake::check_current_authority,
     },
     clap::{value_t_or_exit, App, Arg, ArgMatches, SubCommand},
-    safecoin_clap_utils::{
+    solana_clap_utils::{
         compute_unit_price::{compute_unit_price_arg, COMPUTE_UNIT_PRICE_ARG},
         fee_payer::{fee_payer_arg, FEE_PAYER_ARG},
         input_parsers::*,
@@ -22,16 +22,15 @@ use {
         nonce::*,
         offline::*,
     },
-    safecoin_cli_output::{
+    solana_cli_output::{
         return_signers_with_config, CliEpochVotingHistory, CliLockout, CliVoteAccount,
         ReturnSignersConfig,
     },
-    safecoin_client::{
-        blockhash_query::BlockhashQuery, nonce_utils, rpc_client::RpcClient,
-        rpc_config::RpcGetVoteAccountsConfig,
-    },
-    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
-    safecoin_sdk::{
+    solana_remote_wallet::remote_wallet::RemoteWalletManager,
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_rpc_client_api::config::RpcGetVoteAccountsConfig,
+    solana_rpc_client_nonce_utils::blockhash_query::BlockhashQuery,
+    solana_sdk::{
         account::Account, commitment_config::CommitmentConfig, message::Message,
         native_token::lamports_to_sol, pubkey::Pubkey, system_instruction::SystemError,
         transaction::Transaction,
@@ -326,7 +325,7 @@ impl VoteSubCommands for App<'_, '_> {
                     Arg::with_name("lamports")
                         .long("lamports")
                         .takes_value(false)
-                        .help("Display balance in lamports instead of SAFE"),
+                        .help("Display balance in lamports instead of SOL"),
                 )
                 .arg(
                     Arg::with_name("with_rewards")
@@ -360,7 +359,7 @@ impl VoteSubCommands for App<'_, '_> {
                         .index(2)
                         .value_name("RECIPIENT_ADDRESS")
                         .required(true),
-                        "The recipient of withdrawn SAFE. "),
+                        "The recipient of withdrawn SOL. "),
                 )
                 .arg(
                     Arg::with_name("amount")
@@ -369,7 +368,7 @@ impl VoteSubCommands for App<'_, '_> {
                         .takes_value(true)
                         .required(true)
                         .validator(is_amount_or_all)
-                        .help("The amount to withdraw, in SAFE; accepts keyword ALL, which for this command means account balance minus rent-exempt minimum"),
+                        .help("The amount to withdraw, in SOL; accepts keyword ALL, which for this command means account balance minus rent-exempt minimum"),
                 )
                 .arg(
                     Arg::with_name("authorized_withdrawer")
@@ -401,7 +400,7 @@ impl VoteSubCommands for App<'_, '_> {
                         .index(2)
                         .value_name("RECIPIENT_ADDRESS")
                         .required(true),
-                        "The recipient of all withdrawn SAFE. "),
+                        "The recipient of all withdrawn SOL. "),
                 )
                 .arg(
                     Arg::with_name("authorized_withdrawer")
@@ -861,11 +860,10 @@ pub fn process_create_vote_account(
         {
             if let Some(vote_account) = response.value {
                 let err_msg = if vote_account.owner == solana_vote_program::id() {
-                    format!("Vote account {} already exists", vote_account_address)
+                    format!("Vote account {vote_account_address} already exists")
                 } else {
                     format!(
-                        "Account {} already exists and is not a vote account",
-                        vote_account_address
+                        "Account {vote_account_address} already exists and is not a vote account"
                     )
                 };
                 return Err(CliError::BadParameter(err_msg).into());
@@ -873,7 +871,7 @@ pub fn process_create_vote_account(
         }
 
         if let Some(nonce_account) = &nonce_account {
-            let nonce_account = nonce_utils::get_account_with_commitment(
+            let nonce_account = solana_rpc_client_nonce_utils::get_account_with_commitment(
                 rpc_client,
                 nonce_account,
                 config.commitment,
@@ -944,8 +942,7 @@ pub fn process_vote_authorize(
                 if let Some(signer) = new_authorized_signer {
                     if signer.is_interactive() {
                         return Err(CliError::BadParameter(format!(
-                            "invalid new authorized vote signer {:?}. Interactive vote signers not supported",
-                            new_authorized_pubkey
+                            "invalid new authorized vote signer {new_authorized_pubkey:?}. Interactive vote signers not supported"
                         )).into());
                     }
                 }
@@ -1010,7 +1007,7 @@ pub fn process_vote_authorize(
     } else {
         tx.try_sign(&config.signers, recent_blockhash)?;
         if let Some(nonce_account) = &nonce_account {
-            let nonce_account = nonce_utils::get_account_with_commitment(
+            let nonce_account = solana_rpc_client_nonce_utils::get_account_with_commitment(
                 rpc_client,
                 nonce_account,
                 config.commitment,
@@ -1086,7 +1083,7 @@ pub fn process_vote_update_validator(
     } else {
         tx.try_sign(&config.signers, recent_blockhash)?;
         if let Some(nonce_account) = &nonce_account {
-            let nonce_account = nonce_utils::get_account_with_commitment(
+            let nonce_account = solana_rpc_client_nonce_utils::get_account_with_commitment(
                 rpc_client,
                 nonce_account,
                 config.commitment,
@@ -1155,7 +1152,7 @@ pub fn process_vote_update_commission(
     } else {
         tx.try_sign(&config.signers, recent_blockhash)?;
         if let Some(nonce_account) = &nonce_account {
-            let nonce_account = nonce_utils::get_account_with_commitment(
+            let nonce_account = solana_rpc_client_nonce_utils::get_account_with_commitment(
                 rpc_client,
                 nonce_account,
                 config.commitment,
@@ -1182,13 +1179,12 @@ pub(crate) fn get_vote_account(
         .get_account_with_commitment(vote_account_pubkey, commitment_config)?
         .value
         .ok_or_else(|| {
-            CliError::RpcRequestError(format!("{:?} account does not exist", vote_account_pubkey))
+            CliError::RpcRequestError(format!("{vote_account_pubkey:?} account does not exist"))
         })?;
 
     if vote_account.owner != solana_vote_program::id() {
         return Err(CliError::RpcRequestError(format!(
-            "{:?} is not a vote account",
-            vote_account_pubkey
+            "{vote_account_pubkey:?} is not a vote account"
         ))
         .into());
     }
@@ -1237,7 +1233,7 @@ pub fn process_show_vote_account(
             match crate::stake::fetch_epoch_rewards(rpc_client, vote_account_address, num_epochs) {
                 Ok(rewards) => Some(rewards),
                 Err(error) => {
-                    eprintln!("Failed to fetch epoch rewards: {:?}", error);
+                    eprintln!("Failed to fetch epoch rewards: {error:?}");
                     None
                 }
             }
@@ -1325,7 +1321,7 @@ pub fn process_withdraw_from_vote_account(
             let balance_remaining = current_balance.saturating_sub(withdraw_amount);
             if balance_remaining < minimum_balance && balance_remaining != 0 {
                 return Err(CliError::BadParameter(format!(
-                    "Withdraw amount too large. The vote account balance must be at least {} SAFE to remain rent exempt", lamports_to_sol(minimum_balance)
+                    "Withdraw amount too large. The vote account balance must be at least {} SOL to remain rent exempt", lamports_to_sol(minimum_balance)
                 ))
                 .into());
             }
@@ -1346,7 +1342,7 @@ pub fn process_withdraw_from_vote_account(
     } else {
         tx.try_sign(&config.signers, recent_blockhash)?;
         if let Some(nonce_account) = &nonce_account {
-            let nonce_account = nonce_utils::get_account_with_commitment(
+            let nonce_account = solana_rpc_client_nonce_utils::get_account_with_commitment(
                 rpc_client,
                 nonce_account,
                 config.commitment,
@@ -1388,8 +1384,7 @@ pub fn process_close_vote_account(
     {
         if vote_account.activated_stake != 0 {
             return Err(format!(
-                "Cannot close a vote account with active stake: {}",
-                vote_account_pubkey
+                "Cannot close a vote account with active stake: {vote_account_pubkey}"
             )
             .into());
         }
@@ -1428,8 +1423,8 @@ mod tests {
     use {
         super::*,
         crate::{clap_app::get_clap_app, cli::parse_command},
-        safecoin_client::blockhash_query,
-        safecoin_sdk::{
+        solana_rpc_client_nonce_utils::blockhash_query,
+        solana_sdk::{
             hash::Hash,
             signature::{read_keypair_file, write_keypair, Keypair, Signer},
             signer::presigner::Presigner,
@@ -1460,7 +1455,7 @@ mod tests {
         let default_signer = DefaultSigner::new("", &default_keypair_file);
 
         let blockhash = Hash::default();
-        let blockhash_string = format!("{}", blockhash);
+        let blockhash_string = format!("{blockhash}");
         let nonce_account = Pubkey::new_unique();
 
         // Test VoteAuthorize SubCommand
@@ -1867,7 +1862,7 @@ mod tests {
         );
 
         // test init with an authed voter
-        let authed = safecoin_sdk::pubkey::new_rand();
+        let authed = solana_sdk::pubkey::new_rand();
         let (keypair_file, mut tmp_file) = make_tmp_file();
         let keypair = Keypair::new();
         write_keypair(&keypair, tmp_file.as_file_mut()).unwrap();

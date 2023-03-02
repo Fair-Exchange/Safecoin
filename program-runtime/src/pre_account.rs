@@ -1,6 +1,6 @@
 use {
     crate::timings::ExecuteDetailsTimings,
-    safecoin_sdk::{
+    solana_sdk::{
         account::{AccountSharedData, ReadableAccount, WritableAccount},
         instruction::InstructionError,
         pubkey::Pubkey,
@@ -120,7 +120,6 @@ impl PreAccount {
 
         if outermost_call {
             timings.total_account_count = timings.total_account_count.saturating_add(1);
-            timings.total_data_size = timings.total_data_size.saturating_add(post.data().len());
             if owner_changed
                 || lamports_changed
                 || data_len_changed
@@ -129,8 +128,6 @@ impl PreAccount {
                 || self.changed
             {
                 timings.changed_account_count = timings.changed_account_count.saturating_add(1);
-                timings.data_size_changed =
-                    timings.data_size_changed.saturating_add(post.data().len());
             }
         }
 
@@ -178,7 +175,7 @@ impl PreAccount {
 mod tests {
     use {
         super::*,
-        safecoin_sdk::{account::Account, instruction::InstructionError, system_program},
+        solana_sdk::{account::Account, instruction::InstructionError, system_program},
     };
 
     #[test]
@@ -217,7 +214,7 @@ mod tests {
                 rent: Rent::default(),
                 is_writable: true,
                 pre: PreAccount::new(
-                    &safecoin_sdk::pubkey::new_rand(),
+                    &solana_sdk::pubkey::new_rand(),
                     AccountSharedData::from(Account {
                         owner: *owner,
                         lamports: std::u64::MAX,
@@ -274,8 +271,8 @@ mod tests {
     #[test]
     fn test_verify_account_changes_owner() {
         let system_program_id = system_program::id();
-        let alice_program_id = safecoin_sdk::pubkey::new_rand();
-        let mallory_program_id = safecoin_sdk::pubkey::new_rand();
+        let alice_program_id = solana_sdk::pubkey::new_rand();
+        let mallory_program_id = solana_sdk::pubkey::new_rand();
 
         assert_eq!(
             Change::new(&system_program_id, &system_program_id)
@@ -335,8 +332,8 @@ mod tests {
 
     #[test]
     fn test_verify_account_changes_executable() {
-        let owner = safecoin_sdk::pubkey::new_rand();
-        let mallory_program_id = safecoin_sdk::pubkey::new_rand();
+        let owner = solana_sdk::pubkey::new_rand();
+        let mallory_program_id = solana_sdk::pubkey::new_rand();
         let system_program_id = system_program::id();
 
         assert_eq!(
@@ -442,7 +439,7 @@ mod tests {
 
     #[test]
     fn test_verify_account_changes_data_len() {
-        let alice_program_id = safecoin_sdk::pubkey::new_rand();
+        let alice_program_id = solana_sdk::pubkey::new_rand();
 
         assert_eq!(
             Change::new(&system_program::id(), &system_program::id())
@@ -462,8 +459,8 @@ mod tests {
 
     #[test]
     fn test_verify_account_changes_data() {
-        let alice_program_id = safecoin_sdk::pubkey::new_rand();
-        let mallory_program_id = safecoin_sdk::pubkey::new_rand();
+        let alice_program_id = solana_sdk::pubkey::new_rand();
+        let mallory_program_id = solana_sdk::pubkey::new_rand();
 
         assert_eq!(
             Change::new(&alice_program_id, &alice_program_id)
@@ -491,7 +488,7 @@ mod tests {
 
     #[test]
     fn test_verify_account_changes_rent_epoch() {
-        let alice_program_id = safecoin_sdk::pubkey::new_rand();
+        let alice_program_id = solana_sdk::pubkey::new_rand();
 
         assert_eq!(
             Change::new(&alice_program_id, &system_program::id()).verify(),
@@ -509,8 +506,8 @@ mod tests {
 
     #[test]
     fn test_verify_account_changes_deduct_lamports_and_reassign_account() {
-        let alice_program_id = safecoin_sdk::pubkey::new_rand();
-        let bob_program_id = safecoin_sdk::pubkey::new_rand();
+        let alice_program_id = solana_sdk::pubkey::new_rand();
+        let bob_program_id = solana_sdk::pubkey::new_rand();
 
         // positive test of this capability
         assert_eq!(
@@ -526,7 +523,7 @@ mod tests {
 
     #[test]
     fn test_verify_account_changes_lamports() {
-        let alice_program_id = safecoin_sdk::pubkey::new_rand();
+        let alice_program_id = solana_sdk::pubkey::new_rand();
 
         assert_eq!(
             Change::new(&alice_program_id, &system_program::id())
@@ -564,7 +561,7 @@ mod tests {
 
     #[test]
     fn test_verify_account_changes_data_size_changed() {
-        let alice_program_id = safecoin_sdk::pubkey::new_rand();
+        let alice_program_id = solana_sdk::pubkey::new_rand();
 
         assert_eq!(
             Change::new(&alice_program_id, &system_program::id())
@@ -574,7 +571,7 @@ mod tests {
             "system program should not be able to change another program's account data size"
         );
         assert_eq!(
-            Change::new(&alice_program_id, &safecoin_sdk::pubkey::new_rand())
+            Change::new(&alice_program_id, &solana_sdk::pubkey::new_rand())
                 .data(vec![0], vec![0, 0])
                 .verify(),
             Err(InstructionError::AccountDataSizeChanged),
@@ -598,8 +595,8 @@ mod tests {
 
     #[test]
     fn test_verify_account_changes_owner_executable() {
-        let alice_program_id = safecoin_sdk::pubkey::new_rand();
-        let bob_program_id = safecoin_sdk::pubkey::new_rand();
+        let alice_program_id = solana_sdk::pubkey::new_rand();
+        let bob_program_id = solana_sdk::pubkey::new_rand();
 
         assert_eq!(
             Change::new(&alice_program_id, &alice_program_id)
