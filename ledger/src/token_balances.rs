@@ -6,7 +6,7 @@ use {
     safecoin_measure::measure::Measure,
     solana_metrics::datapoint_debug,
     solana_runtime::{bank::Bank, transaction_batch::TransactionBatch},
-    safecoin_sdk::{account::ReadableAccount, pubkey::Pubkey},
+    solana_sdk::{account::ReadableAccount, pubkey::Pubkey},
     safecoin_transaction_status::{
         token_balances::TransactionTokenBalances, TransactionTokenBalance,
     },
@@ -122,14 +122,14 @@ mod test {
     use {
         super::*,
         safecoin_account_decoder::parse_token::{pubkey_from_safe_token, safe_token_pubkey},
-        safecoin_sdk::{account::Account, genesis_config::create_genesis_config},
+        solana_sdk::{account::Account, genesis_config::create_genesis_config},
         safe_token_2022::{
             extension::{
                 immutable_owner::ImmutableOwner, memo_transfer::MemoTransfer,
                 mint_close_authority::MintCloseAuthority, ExtensionType, StateWithExtensionsMut,
             },
             pod::OptionalNonZeroPubkey,
-            safecoin_program::{program_option::COption, program_pack::Pack},
+            solana_program::{program_option::COption, program_pack::Pack},
         },
         std::collections::BTreeMap,
     };

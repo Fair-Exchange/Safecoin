@@ -7,11 +7,10 @@ use {
         program::{ProgramCliCommand, CLOSE_PROGRAM_WARNING},
     },
     safecoin_cli_output::OutputFormat,
-    safecoin_client::rpc_client::RpcClient,
     safecoin_faucet::faucet::run_local_faucet,
-    safecoin_sdk::{
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_sdk::{
         account_utils::StateMut,
-        bpf_loader,
         bpf_loader_upgradeable::{self, UpgradeableLoaderState},
         commitment_config::CommitmentConfig,
         pubkey::Pubkey,
@@ -44,8 +43,13 @@ fn test_cli_program_deploy_non_upgradeable() {
     let mut file = File::open(noop_path.to_str().unwrap()).unwrap();
     let mut program_data = Vec::new();
     file.read_to_end(&mut program_data).unwrap();
-    let minimum_balance_for_rent_exemption = rpc_client
-        .get_minimum_balance_for_rent_exemption(program_data.len())
+    let minimum_balance_for_programdata = rpc_client
+        .get_minimum_balance_for_rent_exemption(UpgradeableLoaderState::size_of_programdata(
+            program_data.len(),
+        ))
+        .unwrap();
+    let minimum_balance_for_program = rpc_client
+        .get_minimum_balance_for_rent_exemption(UpgradeableLoaderState::size_of_program())
         .unwrap();
 
     let mut config = CliConfig::recent_for_tests();
@@ -54,17 +58,22 @@ fn test_cli_program_deploy_non_upgradeable() {
     config.signers = vec![&keypair];
     config.command = CliCommand::Airdrop {
         pubkey: None,
-        lamports: 4 * minimum_balance_for_rent_exemption, // min balance for rent exemption for three programs + leftover for tx processing
+        lamports: 4 * minimum_balance_for_programdata, // min balance for rent exemption for three programs + leftover for tx processing
     };
     process_command(&config).unwrap();
 
-    config.command = CliCommand::Deploy {
-        program_location: noop_path.to_str().unwrap().to_string(),
-        address: None,
-        use_deprecated_loader: false,
+    config.command = CliCommand::Program(ProgramCliCommand::Deploy {
+        program_location: Some(noop_path.to_str().unwrap().to_string()),
+        program_signer_index: None,
+        program_pubkey: None,
+        buffer_signer_index: None,
+        buffer_pubkey: None,
         allow_excessive_balance: false,
+        upgrade_authority_signer_index: 0,
+        is_final: true,
+        max_len: None,
         skip_fee_check: false,
-    };
+    });
     config.output_format = OutputFormat::JsonCompact;
     let response = process_command(&config);
     let json: Value = serde_json::from_str(&response.unwrap()).unwrap();
@@ -77,70 +86,115 @@ fn test_cli_program_deploy_non_upgradeable() {
         .unwrap();
     let program_id = Pubkey::from_str(program_id_str).unwrap();
     let account0 = rpc_client.get_account(&program_id).unwrap();
-    assert_eq!(account0.lamports, minimum_balance_for_rent_exemption);
-    assert_eq!(account0.owner, bpf_loader::id());
+    assert_eq!(account0.lamports, minimum_balance_for_program);
+    assert_eq!(account0.owner, bpf_loader_upgradeable::id());
     assert!(account0.executable);
-    let mut file = File::open(noop_path.to_str().unwrap()).unwrap();
-    let mut elf = Vec::new();
-    file.read_to_end(&mut elf).unwrap();
-    assert_eq!(account0.data, elf);
+    let (programdata_pubkey, _) =
+        Pubkey::find_program_address(&[program_id.as_ref()], &bpf_loader_upgradeable::id());
+    let programdata_account = rpc_client.get_account(&programdata_pubkey).unwrap();
+    assert_eq!(
+        programdata_account.lamports,
+        minimum_balance_for_programdata
+    );
+    assert_eq!(programdata_account.owner, bpf_loader_upgradeable::id());
+    assert!(!programdata_account.executable);
+    assert_eq!(
+        programdata_account.data[UpgradeableLoaderState::size_of_programdata_metadata()..],
+        program_data[..]
+    );
 
     // Test custom address
     let custom_address_keypair = Keypair::new();
     config.signers = vec![&keypair, &custom_address_keypair];
-    config.command = CliCommand::Deploy {
-        program_location: noop_path.to_str().unwrap().to_string(),
-        address: Some(1),
-        use_deprecated_loader: false,
+    config.command = CliCommand::Program(ProgramCliCommand::Deploy {
+        program_location: Some(noop_path.to_str().unwrap().to_string()),
+        program_signer_index: Some(1),
+        program_pubkey: None,
+        buffer_signer_index: None,
+        buffer_pubkey: None,
         allow_excessive_balance: false,
+        upgrade_authority_signer_index: 0,
+        is_final: true,
+        max_len: None,
         skip_fee_check: false,
-    };
+    });
     process_command(&config).unwrap();
     let account1 = rpc_client
         .get_account(&custom_address_keypair.pubkey())
         .unwrap();
-    assert_eq!(account1.lamports, minimum_balance_for_rent_exemption);
-    assert_eq!(account1.owner, bpf_loader::id());
+    assert_eq!(account1.lamports, minimum_balance_for_program);
+    assert_eq!(account1.owner, bpf_loader_upgradeable::id());
     assert!(account1.executable);
-    assert_eq!(account1.data, account0.data);
+    let (programdata_pubkey, _) = Pubkey::find_program_address(
+        &[custom_address_keypair.pubkey().as_ref()],
+        &bpf_loader_upgradeable::id(),
+    );
+    let programdata_account = rpc_client.get_account(&programdata_pubkey).unwrap();
+    assert_eq!(
+        programdata_account.lamports,
+        minimum_balance_for_programdata
+    );
+    assert_eq!(programdata_account.owner, bpf_loader_upgradeable::id());
+    assert!(!programdata_account.executable);
+    assert_eq!(
+        programdata_account.data[UpgradeableLoaderState::size_of_programdata_metadata()..],
+        program_data[..]
+    );
 
     // Attempt to redeploy to the same address
-    process_command(&config).unwrap_err();
+    let err = process_command(&config).unwrap_err();
+    assert_eq!(
+        format!(
+            "Program {} is no longer upgradeable",
+            custom_address_keypair.pubkey()
+        ),
+        format!("{err}")
+    );
 
     // Attempt to deploy to account with excess balance
     let custom_address_keypair = Keypair::new();
     config.signers = vec![&custom_address_keypair];
     config.command = CliCommand::Airdrop {
         pubkey: None,
-        lamports: 2 * minimum_balance_for_rent_exemption, // Anything over minimum_balance_for_rent_exemption should trigger err
+        lamports: 2 * minimum_balance_for_programdata, // Anything over minimum_balance_for_programdata should trigger err
     };
     process_command(&config).unwrap();
     config.signers = vec![&keypair, &custom_address_keypair];
-    config.command = CliCommand::Deploy {
-        program_location: noop_path.to_str().unwrap().to_string(),
-        address: Some(1),
-        use_deprecated_loader: false,
+    config.command = CliCommand::Program(ProgramCliCommand::Deploy {
+        program_location: Some(noop_path.to_str().unwrap().to_string()),
+        program_signer_index: Some(1),
+        program_pubkey: None,
+        buffer_signer_index: None,
+        buffer_pubkey: None,
         allow_excessive_balance: false,
+        upgrade_authority_signer_index: 0,
+        is_final: true,
+        max_len: None,
         skip_fee_check: false,
-    };
-    process_command(&config).unwrap_err();
+    });
+    let err = process_command(&config).unwrap_err();
+    assert_eq!(
+        format!(
+            "Account {} is not an upgradeable program or already in use",
+            custom_address_keypair.pubkey()
+        ),
+        format!("{err}")
+    );
 
     // Use forcing parameter to deploy to account with excess balance
-    config.command = CliCommand::Deploy {
-        program_location: noop_path.to_str().unwrap().to_string(),
-        address: Some(1),
-        use_deprecated_loader: false,
+    config.command = CliCommand::Program(ProgramCliCommand::Deploy {
+        program_location: Some(noop_path.to_str().unwrap().to_string()),
+        program_signer_index: Some(1),
+        program_pubkey: None,
+        buffer_signer_index: None,
+        buffer_pubkey: None,
         allow_excessive_balance: true,
+        upgrade_authority_signer_index: 0,
+        is_final: true,
+        max_len: None,
         skip_fee_check: false,
-    };
-    process_command(&config).unwrap();
-    let account2 = rpc_client
-        .get_account(&custom_address_keypair.pubkey())
-        .unwrap();
-    assert_eq!(account2.lamports, 2 * minimum_balance_for_rent_exemption);
-    assert_eq!(account2.owner, bpf_loader::id());
-    assert!(account2.executable);
-    assert_eq!(account2.data, account0.data);
+    });
+    process_command(&config).unwrap_err();
 }
 
 #[test]
@@ -724,7 +778,7 @@ fn test_cli_program_write_buffer() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: None,
         buffer_pubkey: None,
-        buffer_authority_signer_index: None,
+        buffer_authority_signer_index: 0,
         max_len: None,
         skip_fee_check: false,
     });
@@ -759,7 +813,7 @@ fn test_cli_program_write_buffer() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: Some(1),
         buffer_pubkey: Some(buffer_keypair.pubkey()),
-        buffer_authority_signer_index: None,
+        buffer_authority_signer_index: 0,
         max_len: Some(max_len),
         skip_fee_check: false,
     });
@@ -821,7 +875,7 @@ fn test_cli_program_write_buffer() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: Some(1),
         buffer_pubkey: Some(buffer_keypair.pubkey()),
-        buffer_authority_signer_index: Some(2),
+        buffer_authority_signer_index: 2,
         max_len: None,
         skip_fee_check: false,
     });
@@ -859,7 +913,7 @@ fn test_cli_program_write_buffer() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: None,
         buffer_pubkey: None,
-        buffer_authority_signer_index: Some(2),
+        buffer_authority_signer_index: 2,
         max_len: None,
         skip_fee_check: false,
     });
@@ -933,7 +987,7 @@ fn test_cli_program_write_buffer() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: None,
         buffer_pubkey: None,
-        buffer_authority_signer_index: None,
+        buffer_authority_signer_index: 0,
         max_len: None,
         skip_fee_check: false,
     });
@@ -974,7 +1028,7 @@ fn test_cli_program_write_buffer() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: Some(1),
         buffer_pubkey: Some(buffer_keypair.pubkey()),
-        buffer_authority_signer_index: None,
+        buffer_authority_signer_index: 0,
         max_len: None, //Some(max_len),
         skip_fee_check: false,
     });
@@ -1046,7 +1100,7 @@ fn test_cli_program_set_buffer_authority() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: Some(1),
         buffer_pubkey: Some(buffer_keypair.pubkey()),
-        buffer_authority_signer_index: None,
+        buffer_authority_signer_index: 0,
         max_len: None,
         skip_fee_check: false,
     });
@@ -1162,7 +1216,7 @@ fn test_cli_program_mismatch_buffer_authority() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: Some(1),
         buffer_pubkey: Some(buffer_keypair.pubkey()),
-        buffer_authority_signer_index: Some(2),
+        buffer_authority_signer_index: 2,
         max_len: None,
         skip_fee_check: false,
     });
@@ -1258,7 +1312,7 @@ fn test_cli_program_show() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: Some(1),
         buffer_pubkey: Some(buffer_keypair.pubkey()),
-        buffer_authority_signer_index: Some(2),
+        buffer_authority_signer_index: 2,
         max_len: None,
         skip_fee_check: false,
     });
@@ -1445,7 +1499,7 @@ fn test_cli_program_dump() {
         program_location: noop_path.to_str().unwrap().to_string(),
         buffer_signer_index: Some(1),
         buffer_pubkey: Some(buffer_keypair.pubkey()),
-        buffer_authority_signer_index: Some(2),
+        buffer_authority_signer_index: 2,
         max_len: None,
         skip_fee_check: false,
     });

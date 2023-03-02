@@ -1,5 +1,5 @@
 use {
-    safecoin_sdk::{instruction::Instruction, pubkey::Pubkey},
+    solana_sdk::{instruction::Instruction, pubkey::Pubkey},
     safe_memo::id,
 };
 
@@ -12,7 +12,7 @@ impl WithMemo for Vec<Instruction> {
         if let Some(memo) = &memo {
             let memo = memo.as_ref();
             let memo_ix = Instruction {
-                program_id: Pubkey::new(&id().to_bytes()),
+                program_id: Pubkey::from(id().to_bytes()),
                 accounts: vec![],
                 data: memo.as_bytes().to_vec(),
             };

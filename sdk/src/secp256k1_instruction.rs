@@ -27,8 +27,8 @@
 //! syscall.
 //!
 //! [secp256k1]: https://en.bitcoin.it/wiki/Secp256k1
-//! [`secp256k1_program`]: safecoin_program::secp256k1_program
-//! [`secp256k1_recover`]: safecoin_program::secp256k1_recover
+//! [`secp256k1_program`]: solana_program::secp256k1_program
+//! [`secp256k1_recover`]: solana_program::secp256k1_recover
 //! [`ecrecover`]: https://docs.soliditylang.org/en/v0.8.14/units-and-global-variables.html?highlight=ecrecover#mathematical-and-cryptographic-functions
 //!
 //! Use cases for the secp256k1 instruction include:
@@ -93,11 +93,11 @@
 //! signature, message, and Ethereum address data. This is the technique used by
 //! `new_secp256k1_instruction` for simple signature verification.
 //!
-//! The `safecoin_sdk` crate provides few APIs for building the instructions and
+//! The `solana_sdk` crate provides few APIs for building the instructions and
 //! transactions necessary for properly using the secp256k1 native program.
 //! Many steps must be done manually.
 //!
-//! The `safecoin_program` crate provides no APIs to assist in interpreting
+//! The `solana_program` crate provides no APIs to assist in interpreting
 //! the the secp256k1 instruction data. It must be done manually.
 //!
 //! The secp256k1 program is implemented with the [`libsecp256k1`] crate,
@@ -207,7 +207,7 @@
 //!
 //! ```no_run
 //! mod secp256k1_defs {
-//!     use safecoin_program::program_error::ProgramError;
+//!     use solana_program::program_error::ProgramError;
 //!     use std::iter::Iterator;
 //!
 //!     pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
@@ -273,7 +273,7 @@
 //!
 //! ```no_run
 //! # mod secp256k1_defs {
-//! #     use safecoin_program::program_error::ProgramError;
+//! #     use solana_program::program_error::ProgramError;
 //! #     use std::iter::Iterator;
 //! #
 //! #     pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
@@ -321,7 +321,7 @@
 //! #             }))
 //! #     }
 //! # }
-//! use safecoin_program::{
+//! use solana_program::{
 //!     account_info::{next_account_info, AccountInfo},
 //!     entrypoint::ProgramResult,
 //!     msg,
@@ -417,10 +417,10 @@
 //! The client program:
 //!
 //! ```no_run
-//! # use safecoin_sdk::example_mocks::safecoin_client;
+//! # use solana_sdk::example_mocks::solana_rpc_client;
 //! use anyhow::Result;
-//! use safecoin_client::rpc_client::RpcClient;
-//! use safecoin_sdk::{
+//! use solana_rpc_client::rpc_client::RpcClient;
+//! use solana_sdk::{
 //!     instruction::{AccountMeta, Instruction},
 //!     secp256k1_instruction,
 //!     signature::{Keypair, Signer},
@@ -486,7 +486,7 @@
 //!
 //! ```no_run
 //! # mod secp256k1_defs {
-//! #     use safecoin_program::program_error::ProgramError;
+//! #     use solana_program::program_error::ProgramError;
 //! #     use std::iter::Iterator;
 //! #
 //! #     pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
@@ -534,7 +534,7 @@
 //! #             }))
 //! #     }
 //! # }
-//! use safecoin_program::{
+//! use solana_program::{
 //!     account_info::{next_account_info, AccountInfo},
 //!     entrypoint::ProgramResult,
 //!     msg,
@@ -633,10 +633,10 @@
 //! The client program:
 //!
 //! ```no_run
-//! # use safecoin_sdk::example_mocks::safecoin_client;
+//! # use solana_sdk::example_mocks::solana_rpc_client;
 //! use anyhow::Result;
-//! use safecoin_client::rpc_client::RpcClient;
-//! use safecoin_sdk::{
+//! use solana_rpc_client::rpc_client::RpcClient;
+//! use solana_sdk::{
 //!     instruction::{AccountMeta, Instruction},
 //!     keccak,
 //!     secp256k1_instruction::{
@@ -758,7 +758,7 @@
 //!
 //!     let secp256k1_instr_data = make_secp256k1_instruction_data(&signatures, 0)?;
 //!     let secp256k1_instr = Instruction::new_with_bytes(
-//!         safecoin_sdk::secp256k1_program::ID,
+//!         solana_sdk::secp256k1_program::ID,
 //!         &secp256k1_instr_data,
 //!         vec![],
 //!     );
@@ -798,7 +798,6 @@ use {
     },
     digest::Digest,
     serde_derive::{Deserialize, Serialize},
-    std::sync::Arc,
 };
 
 pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
@@ -811,7 +810,7 @@ pub const DATA_START: usize = SIGNATURE_OFFSETS_SERIALIZED_SIZE + 1;
 /// See the [module documentation][md] for a complete description.
 ///
 /// [md]: self
-#[derive(Default, Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct SecpSignatureOffsets {
     /// Offset to 64-byte signature plus 1-byte recovery ID.
     pub signature_offset: u16,
@@ -852,7 +851,7 @@ pub fn new_secp256k1_instruction(
     let secp_pubkey = libsecp256k1::PublicKey::from_secret_key(priv_key);
     let eth_pubkey = construct_eth_pubkey(&secp_pubkey);
     let mut hasher = sha3::Keccak256::new();
-    hasher.update(&message_arr);
+    hasher.update(message_arr);
     let message_hash = hasher.finalize();
     let mut message_hash_arr = [0u8; 32];
     message_hash_arr.copy_from_slice(message_hash.as_slice());
@@ -901,7 +900,7 @@ pub fn new_secp256k1_instruction(
     bincode::serialize_into(writer, &offsets).unwrap();
 
     Instruction {
-        program_id: safecoin_sdk::secp256k1_program::id(),
+        program_id: solana_sdk::secp256k1_program::id(),
         accounts: vec![],
         data: instruction_data,
     }
@@ -929,11 +928,11 @@ pub fn construct_eth_pubkey(
 /// `feature_set` is the set of active Safecoin features. It is used to enable or
 /// disable a few minor additional checks that were activated on chain
 /// subsequent to the addition of the secp256k1 native program. For many
-/// purposes passing `Arc::new<FeatureSet::all_enabled()>` is reasonable.
+/// purposes passing `FeatureSet::all_enabled()` is reasonable.
 pub fn verify(
     data: &[u8],
     instruction_datas: &[&[u8]],
-    feature_set: &Arc<FeatureSet>,
+    feature_set: &FeatureSet,
 ) -> Result<(), PrecompileError> {
     if data.is_empty() {
         return Err(PrecompileError::InvalidInstructionDataSize);
@@ -1061,7 +1060,6 @@ pub mod test {
             transaction::Transaction,
         },
         rand::{thread_rng, Rng},
-        std::sync::Arc,
     };
 
     fn test_case(
@@ -1080,7 +1078,7 @@ pub mod test {
             .inactive
             .insert(libsecp256k1_0_5_upgrade_enabled::id());
 
-        verify(&instruction_data, &[&[0u8; 100]], &Arc::new(feature_set))
+        verify(&instruction_data, &[&[0u8; 100]], &feature_set)
     }
 
     #[test]
@@ -1102,7 +1100,7 @@ pub mod test {
             .insert(libsecp256k1_0_5_upgrade_enabled::id());
 
         assert_eq!(
-            verify(&instruction_data, &[&[0u8; 100]], &Arc::new(feature_set)),
+            verify(&instruction_data, &[&[0u8; 100]], &feature_set),
             Err(PrecompileError::InvalidInstructionDataSize)
         );
 
@@ -1237,7 +1235,7 @@ pub mod test {
             .insert(libsecp256k1_0_5_upgrade_enabled::id());
 
         assert_eq!(
-            verify(&instruction_data, &[&[0u8; 100]], &Arc::new(feature_set)),
+            verify(&instruction_data, &[&[0u8; 100]], &feature_set),
             Err(PrecompileError::InvalidInstructionDataSize)
         );
     }
@@ -1262,7 +1260,7 @@ pub mod test {
         feature_set
             .inactive
             .insert(feature_set::libsecp256k1_0_5_upgrade_enabled::id());
-        let feature_set = Arc::new(feature_set);
+        let feature_set = feature_set;
 
         let tx = Transaction::new_signed_with_payer(
             &[secp_instruction.clone()],
@@ -1318,7 +1316,7 @@ pub mod test {
             data.extend(signature.serialize());
             data.push(recovery_id.serialize());
             let eth_address_offset = data.len();
-            data.extend(&eth_address);
+            data.extend(eth_address);
             let message_data_offset = data.len();
             data.extend(message);
 
@@ -1349,7 +1347,7 @@ pub mod test {
         verify(
             &instruction_data,
             &[&instruction_data],
-            &Arc::new(FeatureSet::all_enabled()),
+            &FeatureSet::all_enabled(),
         )
         .unwrap();
     }

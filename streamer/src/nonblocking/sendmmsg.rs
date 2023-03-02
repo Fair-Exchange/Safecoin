@@ -54,13 +54,13 @@ mod tests {
     use {
         crate::{
             nonblocking::{
-                recvmmsg::recv_mmsg,
+                recvmmsg::{recv_mmsg, recv_mmsg_exact},
                 sendmmsg::{batch_send, multi_target_send},
             },
             packet::Packet,
             sendmmsg::SendPktsError,
         },
-        safecoin_sdk::packet::PACKET_DATA_SIZE,
+        solana_sdk::packet::PACKET_DATA_SIZE,
         std::{
             io::ErrorKind,
             net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -81,7 +81,7 @@ mod tests {
         assert_eq!(sent, Some(()));
 
         let mut packets = vec![Packet::default(); 32];
-        let recv = recv_mmsg(&reader, &mut packets[..]).await.unwrap();
+        let recv = recv_mmsg_exact(&reader, &mut packets[..]).await.unwrap();
         assert_eq!(32, recv);
     }
 
@@ -111,12 +111,12 @@ mod tests {
         let sent = batch_send(&sender, &packet_refs[..]).await.ok();
         assert_eq!(sent, Some(()));
 
-        let mut packets = vec![Packet::default(); 32];
-        let recv = recv_mmsg(&reader, &mut packets[..]).await.unwrap();
+        let mut packets = vec![Packet::default(); 16];
+        let recv = recv_mmsg_exact(&reader, &mut packets[..]).await.unwrap();
         assert_eq!(16, recv);
 
-        let mut packets = vec![Packet::default(); 32];
-        let recv = recv_mmsg(&reader2, &mut packets[..]).await.unwrap();
+        let mut packets = vec![Packet::default(); 16];
+        let recv = recv_mmsg_exact(&reader2, &mut packets[..]).await.unwrap();
         assert_eq!(16, recv);
     }
 

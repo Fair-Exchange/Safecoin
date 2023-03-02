@@ -1,5 +1,5 @@
 #[allow(deprecated)]
-use safecoin_sdk::sysvar::{fees::Fees, recent_blockhashes::RecentBlockhashes};
+use solana_sdk::sysvar::{fees::Fees, recent_blockhashes::RecentBlockhashes};
 use {
     crate::{
         parse_account_data::{ParsableAccount, ParseAccountError},
@@ -7,7 +7,7 @@ use {
     },
     bincode::deserialize,
     bv::BitVec,
-    safecoin_sdk::{
+    solana_sdk::{
         clock::{Clock, Epoch, Slot, UnixTimestamp},
         epoch_schedule::EpochSchedule,
         pubkey::Pubkey,
@@ -221,10 +221,10 @@ pub struct UiStakeHistoryEntry {
 #[cfg(test)]
 mod test {
     #[allow(deprecated)]
-    use safecoin_sdk::sysvar::recent_blockhashes::IterItem;
+    use solana_sdk::sysvar::recent_blockhashes::IterItem;
     use {
         super::*,
-        safecoin_sdk::{account::create_account_for_test, fee_calculator::FeeCalculator, hash::Hash},
+        solana_sdk::{account::create_account_for_test, fee_calculator::FeeCalculator, hash::Hash},
     };
 
     #[test]
@@ -329,7 +329,7 @@ mod test {
             }]),
         );
 
-        let bad_pubkey = safecoin_sdk::pubkey::new_rand();
+        let bad_pubkey = solana_sdk::pubkey::new_rand();
         assert!(parse_sysvar(&stake_history_sysvar.data, &bad_pubkey).is_err());
 
         let bad_data = vec![0; 4];

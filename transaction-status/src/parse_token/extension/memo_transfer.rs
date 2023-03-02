@@ -31,7 +31,7 @@ pub(in crate::parse_token) fn parse_memo_transfer_instruction(
         "multisigOwner",
     );
     Ok(ParsedInstructionEnum {
-        instruction_type: format!("{}RequiredMemoTransfers", instruction_type_str),
+        instruction_type: format!("{instruction_type_str}RequiredMemoTransfers"),
         info: value,
     })
 }
@@ -41,12 +41,12 @@ mod test {
     use {
         super::*,
         crate::parse_token::test::*,
-        safecoin_sdk::pubkey::Pubkey,
+        solana_sdk::pubkey::Pubkey,
         safe_token_2022::{
             extension::memo_transfer::instruction::{
                 disable_required_transfer_memos, enable_required_transfer_memos,
             },
-            safecoin_program::message::Message,
+            solana_program::message::Message,
         },
     };
 

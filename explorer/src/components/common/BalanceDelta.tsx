@@ -1,6 +1,6 @@
 import React from "react";
 import { BigNumber } from "bignumber.js";
-import { SafeBalance } from "utils";
+import { SafeBalance } from "components/common/SafeBalance";
 
 export function BalanceDelta({
   delta,
@@ -12,7 +12,7 @@ export function BalanceDelta({
   let sols;
 
   if (isSafe) {
-    sols = <SafeBalance lamports={delta.toNumber()} />;
+    sols = <SafeBalance lamports={Math.abs(delta.toNumber())} />;
   }
 
   if (delta.gt(0)) {

@@ -5,7 +5,7 @@ use {
     safecoin_measure::measure::Measure,
     solana_poh::poh_recorder::PohRecorder,
     solana_runtime::bank_forks::BankForks,
-    safecoin_sdk::{clock::Slot, transaction::Transaction},
+    solana_sdk::{clock::Slot, transaction::Transaction},
     std::{
         sync::{Arc, RwLock},
         thread::{self, Builder, JoinHandle},
@@ -82,9 +82,9 @@ impl VotingService {
         }
 
         let pubkey_and_target_address = if send_to_tpu_vote_port {
-            crate::banking_stage::next_leader_tpu_vote(cluster_info, poh_recorder)
+            crate::next_leader::next_leader_tpu_vote(cluster_info, poh_recorder)
         } else {
-            crate::banking_stage::next_leader_tpu(cluster_info, poh_recorder)
+            crate::next_leader::next_leader_tpu(cluster_info, poh_recorder)
         };
         let _ = cluster_info.send_transaction(
             vote_op.tx(),

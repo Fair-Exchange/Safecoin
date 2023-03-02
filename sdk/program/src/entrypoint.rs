@@ -1,4 +1,4 @@
-//! The Rust-based BPF program entry point supported by the latest BPF loader.
+//! The Rust-based BPF program entrypoint supported by the latest BPF loader.
 //!
 //! For more information see the [`bpf_loader`] module.
 //!
@@ -39,7 +39,7 @@ pub const HEAP_LENGTH: usize = 32 * 1024;
 /// Value used to indicate that a serialized account is not a duplicate
 pub const NON_DUP_MARKER: u8 = u8::MAX;
 
-/// Declare the program entry point and set up global handlers.
+/// Declare the program entrypoint and set up global handlers.
 ///
 /// This macro emits the common boilerplate necessary to begin program
 /// execution, calling a provided function to process the program instruction
@@ -47,6 +47,9 @@ pub const NON_DUP_MARKER: u8 = u8::MAX;
 ///
 /// It also sets up a [global allocator] and [panic handler], using the
 /// [`custom_heap_default`] and [`custom_panic_default`] macros.
+///
+/// [`custom_heap_default`]: crate::custom_heap_default
+/// [`custom_panic_default`]: crate::custom_panic_default
 ///
 /// [global allocator]: https://doc.rust-lang.org/stable/std/alloc/trait.GlobalAlloc.html
 /// [panic handler]: https://doc.rust-lang.org/nomicon/panic-handler.html
@@ -88,7 +91,7 @@ pub const NON_DUP_MARKER: u8 = u8::MAX;
 ///
 /// # Examples
 ///
-/// Defining an entry point and making it conditional on the `no-entrypoint`
+/// Defining an entrypoint and making it conditional on the `no-entrypoint`
 /// feature. Although the `entrypoint` module is written inline in this example,
 /// it is common to put it into its own file.
 ///
@@ -96,7 +99,7 @@ pub const NON_DUP_MARKER: u8 = u8::MAX;
 /// #[cfg(not(feature = "no-entrypoint"))]
 /// pub mod entrypoint {
 ///
-///     use safecoin_program::{
+///     use solana_program::{
 ///         account_info::AccountInfo,
 ///         entrypoint,
 ///         entrypoint::ProgramResult,

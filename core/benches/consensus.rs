@@ -8,7 +8,7 @@ use {
         consensus::Tower, tower_storage::FileTowerStorage, vote_simulator::VoteSimulator,
     },
     solana_runtime::{bank::Bank, bank_forks::BankForks},
-    safecoin_sdk::{
+    solana_sdk::{
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     },

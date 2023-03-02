@@ -1,9 +1,9 @@
 /**
- * @brief Example C based BPF program that prints out the parameters
+ * @brief Example C based SBF program that prints out the parameters
  * passed to it
  */
 
-#include <safecoin_sdk.h>
+#include <solana_sdk.h>
 #include <sol/deserialize_deprecated.h>
 
 extern uint64_t entrypoint(const uint8_t *input) {

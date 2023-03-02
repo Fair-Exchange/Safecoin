@@ -11,7 +11,7 @@ Safecoin's Rust crates are [published to crates.io][crates.io] and can be found
 Some important crates:
 
 - [`safecoin-program`] &mdash; Imported by programs running on Safecoin, compiled
-  to BPF. This crate contains many fundamental data types and is re-exported from
+  to SBF. This crate contains many fundamental data types and is re-exported from
   [`safecoin-sdk`], which cannot be imported from a Safecoin program.
 
 - [`safecoin-sdk`] &mdash; The basic off-chain SDK, it re-exports
@@ -19,7 +19,7 @@ Some important crates:
   that do not run on-chain will import this.
 
 - [`safecoin-client`] &mdash; For interacting with a Safecoin node via the
-  [JSON RPC API](jsonrpc-api).
+  [JSON RPC API](/api).
 
 - [`safecoin-cli-config`] &mdash; Loading and saving the Safecoin CLI configuration
   file.

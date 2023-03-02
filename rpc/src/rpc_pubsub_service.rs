@@ -194,7 +194,7 @@ pub struct TestBroadcastReceiver {
 impl TestBroadcastReceiver {
     pub fn recv(&mut self) -> String {
         match self.recv_timeout(std::time::Duration::from_secs(10)) {
-            Err(err) => panic!("broadcast receiver error: {}", err),
+            Err(err) => panic!("broadcast receiver error: {err}"),
             Ok(str) => str,
         }
     }
@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn test_pubsub_new() {
-        let pubsub_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0);
+        let pubsub_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
         let exit = Arc::new(AtomicBool::new(false));
         let max_complete_transaction_status_slot = Arc::new(AtomicU64::default());
         let GenesisConfigInfo { genesis_config, .. } = create_genesis_config(10_000);

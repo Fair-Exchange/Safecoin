@@ -1,5 +1,4 @@
 import chai from 'chai';
-import {Client} from 'rpc-websockets';
 import {stub, SinonStubbedInstance, SinonSpy, spy} from 'sinon';
 import sinonChai from 'sinon-chai';
 
@@ -15,6 +14,7 @@ import {
   SlotChangeCallback,
   SlotUpdateCallback,
 } from '../src';
+import type Client from '../src/rpc-websocket';
 import {url} from './url';
 
 chai.use(sinonChai);
@@ -97,6 +97,7 @@ describe('Subscriptions', () => {
               lamports: 0,
               owner: PublicKey.default.toBase58(),
               rentEpoch: 0,
+              space: 0,
             },
           },
         });
@@ -148,7 +149,7 @@ describe('Subscriptions', () => {
             value: {
               err: null,
               logs: [
-                'BPF program 83astBRguLMdt2h5U1Tpdq5tjFoJ6noeGwaY3mDLVcri success',
+                'SBF program 83astBRguLMdt2h5U1Tpdq5tjFoJ6noeGwaY3mDLVcri success',
               ],
               signature:
                 '5h6xBEauJ3PK6SWCZ1PGjBvj8vDdWG3KpwATGy1ARAXFSDwt8GFXM7W5Ncn16wmqokgpiKRLuS83KUxyZyv2sUYv',
@@ -210,6 +211,7 @@ describe('Subscriptions', () => {
                 lamports: 0,
                 owner: PublicKey.default.toBase58(),
                 rentEpoch: 0,
+                space: 0,
               },
             },
           },
@@ -549,7 +551,7 @@ describe('Subscriptions', () => {
                   });
                 });
                 describe('upon the socket connection reopening', () => {
-                  let fatalPriorUnubscribe;
+                  let fatalPriorUnubscribe: () => void;
                   beforeEach(() => {
                     fatalPriorUnubscribe = fatalUnsubscribe;
                     stubbedSocket.call.resetHistory();
@@ -697,7 +699,7 @@ describe('Subscriptions', () => {
               });
             });
             describe('upon the socket connection reopening', () => {
-              let fatalPriorSubscription;
+              let fatalPriorSubscription: () => void;
               beforeEach(() => {
                 fatalPriorSubscription = fatalSubscription;
                 stubbedSocket.call.resetHistory();

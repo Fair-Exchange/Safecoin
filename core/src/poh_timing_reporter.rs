@@ -2,7 +2,7 @@
 //! structs.
 use {
     solana_metrics::{datapoint_info, poh_timing_point::PohTimingPoint},
-    safecoin_sdk::clock::Slot,
+    solana_sdk::clock::Slot,
     std::{collections::HashMap, fmt},
 };
 
@@ -234,6 +234,6 @@ mod test {
     #[test]
     fn test_slot_poh_timestamp_fmt() {
         let t = SlotPohTimestamp::default();
-        assert_eq!(format!("{}", t), "SlotPohTimestamp: start=0 end=0 full=0");
+        assert_eq!(format!("{t}"), "SlotPohTimestamp: start=0 end=0 full=0");
     }
 }

@@ -75,6 +75,13 @@ NDEBUG=1 SAFECOIN_CUDA=1 ./multinode-demo/bootstrap-validator.sh
 NDEBUG=1 SAFECOIN_CUDA=1 ./multinode-demo/validator.sh
 ```
 
+To run multiple nodes on the same machine using loopback IP address, pass parameter to allow private addresses
+
+```bash
+NDEBUG=1 ./multinode-demo/bootstrap-validator.sh --allow-private-addr
+NDEBUG=1 ./multinode-demo/validator-x.sh --allow-private-addr
+```
+
 ### Testnet Client Demo
 
 Now that your singlenode or multinode testnet is up and running let's send it some transactions!
@@ -99,7 +106,7 @@ For example
   export RUST_LOG=solana=info,solana::banking_stage=debug
   ```
 
-- To enable BPF program logging:
+- To enable SBF program logging:
 
   ```bash
   export RUST_LOG=solana_bpf_loader=trace

@@ -1,9 +1,9 @@
 use {
     crate::rpc_subscriptions::RpcSubscriptions,
     crossbeam_channel::RecvTimeoutError,
-    safecoin_client::rpc_response::SlotUpdate,
     solana_ledger::blockstore::CompletedSlotsReceiver,
-    safecoin_sdk::timing::timestamp,
+    solana_rpc_client_api::response::SlotUpdate,
+    solana_sdk::timing::timestamp,
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},

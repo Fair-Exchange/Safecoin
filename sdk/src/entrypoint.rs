@@ -1,9 +1,15 @@
-pub use safecoin_program::entrypoint::*;
+//! The Rust-based BPF program entrypoint supported by the latest BPF loader.
+//!
+//! For more information see the [`bpf_loader`] module.
+//!
+//! [`bpf_loader`]: crate::bpf_loader
+
+pub use solana_program::entrypoint::*;
 
 #[macro_export]
 #[deprecated(
     since = "1.4.3",
-    note = "use safecoin_program::entrypoint::entrypoint instead"
+    note = "use solana_program::entrypoint::entrypoint instead"
 )]
 macro_rules! entrypoint {
     ($process_instruction:ident) => {

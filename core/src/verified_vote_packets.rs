@@ -5,7 +5,7 @@ use {
         bank::Bank,
         vote_transaction::{VoteTransaction, VoteTransaction::VoteStateUpdate},
     },
-    safecoin_sdk::{
+    solana_sdk::{
         account::from_account,
         clock::Slot,
         feature_set::{allow_votes_to_directly_update_vote_state, FeatureSet},
@@ -298,7 +298,7 @@ mod tests {
         crate::{result::Error, vote_simulator::VoteSimulator},
         crossbeam_channel::unbounded,
         solana_perf::packet::Packet,
-        safecoin_sdk::slot_hashes::MAX_ENTRIES,
+        solana_sdk::slot_hashes::MAX_ENTRIES,
         solana_vote_program::vote_state::{Lockout, Vote, VoteStateUpdate},
         std::collections::VecDeque,
     };
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn test_verified_vote_packets_receive_and_process_vote_packets() {
         let (s, r) = unbounded();
-        let vote_account_key = safecoin_sdk::pubkey::new_rand();
+        let vote_account_key = solana_sdk::pubkey::new_rand();
 
         // Construct the buffer
         let mut verified_vote_packets = VerifiedVotePackets(HashMap::new());
@@ -409,7 +409,7 @@ mod tests {
     #[test]
     fn test_verified_vote_packets_receive_and_process_vote_packets_max_len() {
         let (s, r) = unbounded();
-        let vote_account_key = safecoin_sdk::pubkey::new_rand();
+        let vote_account_key = solana_sdk::pubkey::new_rand();
 
         // Construct the buffer
         let mut verified_vote_packets = VerifiedVotePackets(HashMap::new());
@@ -600,7 +600,7 @@ mod tests {
     #[test]
     fn test_only_latest_vote_is_sent_with_feature() {
         let (s, r) = unbounded();
-        let vote_account_key = safecoin_sdk::pubkey::new_rand();
+        let vote_account_key = solana_sdk::pubkey::new_rand();
 
         // Send three vote state updates that are out of order
         let first_vote = VoteStateUpdate::from(vec![(2, 4), (4, 3), (6, 2), (7, 1)]);
@@ -681,7 +681,7 @@ mod tests {
     #[test]
     fn test_latest_vote_feature_upgrade() {
         let (s, r) = unbounded();
-        let vote_account_key = safecoin_sdk::pubkey::new_rand();
+        let vote_account_key = solana_sdk::pubkey::new_rand();
 
         // Send incremental votes
         for i in 0..100 {
@@ -713,11 +713,9 @@ mod tests {
         // Now send some new votes
         for i in 101..201 {
             let slots = std::iter::zip((i - 30)..(i + 1), (1..32).rev())
-                .map(|(slot, confirmation_count)| Lockout {
-                    slot,
-                    confirmation_count,
+                .map(|(slot, confirmation_count)| {
+                    Lockout::new_with_confirmation_count(slot, confirmation_count)
                 })
-                .into_iter()
                 .collect::<VecDeque<Lockout>>();
             let vote = VoteTransaction::from(VoteStateUpdate::new(
                 slots,
@@ -749,7 +747,7 @@ mod tests {
     #[test]
     fn test_incremental_votes_with_feature_active() {
         let (s, r) = unbounded();
-        let vote_account_key = safecoin_sdk::pubkey::new_rand();
+        let vote_account_key = solana_sdk::pubkey::new_rand();
         let mut verified_vote_packets = VerifiedVotePackets(HashMap::new());
 
         let hash = Hash::new_unique();
@@ -780,7 +778,7 @@ mod tests {
     #[test]
     fn test_latest_votes_downgrade_full_to_incremental() {
         let (s, r) = unbounded();
-        let vote_account_key = safecoin_sdk::pubkey::new_rand();
+        let vote_account_key = solana_sdk::pubkey::new_rand();
         let mut verified_vote_packets = VerifiedVotePackets(HashMap::new());
 
         let vote = VoteTransaction::from(VoteStateUpdate::from(vec![(42, 1)]));

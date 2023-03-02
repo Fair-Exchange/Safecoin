@@ -12,17 +12,20 @@ pub use {
 use {
     borsh::BorshDeserialize,
     futures::{future::join_all, Future, FutureExt, TryFutureExt},
-    solana_banks_interface::{BanksRequest, BanksResponse, BanksTransactionResultWithSimulation},
-    safecoin_program::{
+    solana_banks_interface::{
+        BanksRequest, BanksResponse, BanksTransactionResultWithMetadata,
+        BanksTransactionResultWithSimulation,
+    },
+    solana_program::{
         clock::Slot, fee_calculator::FeeCalculator, hash::Hash, program_pack::Pack, pubkey::Pubkey,
         rent::Rent, sysvar::Sysvar,
     },
-    safecoin_sdk::{
+    solana_sdk::{
         account::{from_account, Account},
         commitment_config::CommitmentLevel,
         message::Message,
         signature::Signature,
-        transaction::{self, Transaction},
+        transaction::{self, Transaction, VersionedTransaction},
     },
     tarpc::{
         client::{self, NewClient, RequestDispatch},
@@ -59,10 +62,10 @@ impl BanksClient {
     pub fn send_transaction_with_context(
         &mut self,
         ctx: Context,
-        transaction: Transaction,
+        transaction: impl Into<VersionedTransaction>,
     ) -> impl Future<Output = Result<(), BanksClientError>> + '_ {
         self.inner
-            .send_transaction_with_context(ctx, transaction)
+            .send_transaction_with_context(ctx, transaction.into())
             .map_err(Into::into)
     }
 
@@ -114,39 +117,50 @@ impl BanksClient {
     pub fn process_transaction_with_commitment_and_context(
         &mut self,
         ctx: Context,
-        transaction: Transaction,
+        transaction: impl Into<VersionedTransaction>,
         commitment: CommitmentLevel,
     ) -> impl Future<Output = Result<Option<transaction::Result<()>>, BanksClientError>> + '_ {
         self.inner
-            .process_transaction_with_commitment_and_context(ctx, transaction, commitment)
+            .process_transaction_with_commitment_and_context(ctx, transaction.into(), commitment)
             .map_err(Into::into)
     }
 
     pub fn process_transaction_with_preflight_and_commitment_and_context(
         &mut self,
         ctx: Context,
-        transaction: Transaction,
+        transaction: impl Into<VersionedTransaction>,
         commitment: CommitmentLevel,
     ) -> impl Future<Output = Result<BanksTransactionResultWithSimulation, BanksClientError>> + '_
     {
         self.inner
             .process_transaction_with_preflight_and_commitment_and_context(
                 ctx,
-                transaction,
+                transaction.into(),
                 commitment,
             )
+            .map_err(Into::into)
+    }
+
+    pub fn process_transaction_with_metadata_and_context(
+        &mut self,
+        ctx: Context,
+        transaction: impl Into<VersionedTransaction>,
+    ) -> impl Future<Output = Result<BanksTransactionResultWithMetadata, BanksClientError>> + '_
+    {
+        self.inner
+            .process_transaction_with_metadata_and_context(ctx, transaction.into())
             .map_err(Into::into)
     }
 
     pub fn simulate_transaction_with_commitment_and_context(
         &mut self,
         ctx: Context,
-        transaction: Transaction,
+        transaction: impl Into<VersionedTransaction>,
         commitment: CommitmentLevel,
     ) -> impl Future<Output = Result<BanksTransactionResultWithSimulation, BanksClientError>> + '_
     {
         self.inner
-            .simulate_transaction_with_commitment_and_context(ctx, transaction, commitment)
+            .simulate_transaction_with_commitment_and_context(ctx, transaction.into(), commitment)
             .map_err(Into::into)
     }
 
@@ -166,9 +180,9 @@ impl BanksClient {
     /// blockhash expires.
     pub fn send_transaction(
         &mut self,
-        transaction: Transaction,
+        transaction: impl Into<VersionedTransaction>,
     ) -> impl Future<Output = Result<(), BanksClientError>> + '_ {
-        self.send_transaction_with_context(context::current(), transaction)
+        self.send_transaction_with_context(context::current(), transaction.into())
     }
 
     /// Return the fee parameters associated with a recent, rooted blockhash. The cluster
@@ -229,6 +243,17 @@ impl BanksClient {
                 )),
                 Some(transaction_result) => Ok(transaction_result?),
             })
+    }
+
+    /// Process a transaction and return the result with metadata.
+    pub fn process_transaction_with_metadata(
+        &mut self,
+        transaction: impl Into<VersionedTransaction>,
+    ) -> impl Future<Output = Result<BanksTransactionResultWithMetadata, BanksClientError>> + '_
+    {
+        let mut ctx = context::current();
+        ctx.deadline += Duration::from_secs(50);
+        self.process_transaction_with_metadata_and_context(ctx, transaction.into())
     }
 
     /// Send a transaction and return any preflight (sanitization or simulation) errors, or return
@@ -512,7 +537,7 @@ mod tests {
             bank::Bank, bank_forks::BankForks, commitment::BlockCommitmentCache,
             genesis_utils::create_genesis_config,
         },
-        safecoin_sdk::{message::Message, signature::Signer, system_instruction},
+        solana_sdk::{message::Message, signature::Signer, system_instruction},
         std::sync::{Arc, RwLock},
         tarpc::transport,
         tokio::{runtime::Runtime, time::sleep},
@@ -525,6 +550,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::result_large_err)]
     fn test_banks_server_transfer_via_server() -> Result<(), BanksClientError> {
         // This test shows the preferred way to interact with BanksServer.
         // It creates a runtime explicitly (no globals via tokio macros) and calls
@@ -538,7 +564,7 @@ mod tests {
         ));
         let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
 
-        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
+        let bob_pubkey = solana_sdk::pubkey::new_rand();
         let mint_pubkey = genesis.mint_keypair.pubkey();
         let instruction = system_instruction::transfer(&mint_pubkey, &bob_pubkey, 1);
         let message = Message::new(&[instruction], Some(&mint_pubkey));
@@ -563,6 +589,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::result_large_err)]
     fn test_banks_server_transfer_via_client() -> Result<(), BanksClientError> {
         // The caller may not want to hold the connection open until the transaction
         // is processed (or blockhash expires). In this test, we verify the
@@ -577,7 +604,7 @@ mod tests {
         let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
 
         let mint_pubkey = &genesis.mint_keypair.pubkey();
-        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
+        let bob_pubkey = solana_sdk::pubkey::new_rand();
         let instruction = system_instruction::transfer(mint_pubkey, &bob_pubkey, 1);
         let message = Message::new(&[instruction], Some(mint_pubkey));
 

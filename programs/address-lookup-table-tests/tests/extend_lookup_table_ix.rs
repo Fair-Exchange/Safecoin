@@ -7,8 +7,8 @@ use {
         instruction::extend_lookup_table,
         state::{AddressLookupTable, LookupTableMeta},
     },
-    safecoin_program_test::*,
-    safecoin_sdk::{
+    solana_program_test::*,
+    solana_sdk::{
         account::{ReadableAccount, WritableAccount},
         clock::Clock,
         instruction::{Instruction, InstructionError},

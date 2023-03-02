@@ -10,7 +10,7 @@ if [[ -n $APPVEYOR ]]; then
 
   appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
   export USERPROFILE="D:\\"
-  ./rustup-init -yv --default-toolchain $rust_stable --default-host x86_64-pc-windows-msvc
+  ./rustup-init -yv --default-toolchain "$rust_stable" --default-host x86_64-pc-windows-msvc
   export PATH="$PATH:/d/.cargo/bin"
   rustc -vV
   cargo -vV
@@ -58,6 +58,8 @@ windows)
     git config core.symlinks true
     find . -type l -delete
     git reset --hard
+    # patched crossbeam doesn't build on windows
+    sed -i 's/^crossbeam-epoch/#crossbeam-epoch/' Cargo.toml
   )
   ;;
 *)
@@ -100,10 +102,10 @@ MAYBE_TARBALLS=
 if [[ "$CI_OS_NAME" = linux ]]; then
   (
     set -x
-    sdk/bpf/scripts/package.sh
-    [[ -f bpf-sdk.tar.bz2 ]]
+    sdk/sbf/scripts/package.sh
+    [[ -f sbf-sdk.tar.bz2 ]]
   )
-  MAYBE_TARBALLS="bpf-sdk.tar.bz2"
+  MAYBE_TARBALLS="sbf-sdk.tar.bz2"
 fi
 
 source ci/upload-ci-artifact.sh

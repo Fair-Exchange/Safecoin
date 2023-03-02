@@ -8,12 +8,12 @@ use {
     },
     safecoin_clap_utils::{
         input_parsers::{pubkey_of_signer, value_of},
-        input_validators::{is_amount, is_valid_pubkey, is_valid_signer},
+        input_validators::{is_amount, is_url_or_moniker, is_valid_pubkey, is_valid_signer},
         keypair::{pubkey_from_path, signer_from_path},
     },
     safecoin_cli_config::CONFIG_FILE,
     safecoin_remote_wallet::remote_wallet::maybe_wallet_manager,
-    safecoin_sdk::native_token::sol_to_lamports,
+    solana_sdk::native_token::sol_to_lamports,
     std::{error::Error, ffi::OsString, process::exit},
 };
 
@@ -28,6 +28,7 @@ where
         .version(solana_version::version!())
         .arg(
             Arg::with_name("config_file")
+                .short("C")
                 .long("config")
                 .takes_value(true)
                 .value_name("FILEPATH")
@@ -35,12 +36,17 @@ where
                 .help("Config file"),
         )
         .arg(
-            Arg::with_name("url")
+            Arg::with_name("json_rpc_url")
+                .short("u")
                 .long("url")
-                .global(true)
+                .value_name("URL_OR_MONIKER")
                 .takes_value(true)
-                .value_name("URL")
-                .help("RPC entrypoint address. i.e. http://api.devnet.safecoin.org"),
+                .global(true)
+                .validator(is_url_or_moniker)
+                .help(
+                    "URL for Safecoin's JSON RPC or moniker (or their first letter): \
+                       [mainnet-beta, testnet, devnet, localhost]",
+                ),
         )
         .subcommand(
             SubCommand::with_name("distribute-tokens")

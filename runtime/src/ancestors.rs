@@ -1,7 +1,7 @@
 use {
     crate::rolling_bit_field::RollingBitField,
     core::fmt::{Debug, Formatter},
-    safecoin_sdk::clock::Slot,
+    solana_sdk::clock::Slot,
     std::collections::HashMap,
 };
 
@@ -63,10 +63,6 @@ impl From<&Ancestors> for HashMap<Slot, usize> {
 impl Ancestors {
     pub fn keys(&self) -> Vec<Slot> {
         self.ancestors.get_all()
-    }
-
-    pub fn get(&self, slot: &Slot) -> bool {
-        self.ancestors.contains(slot)
     }
 
     pub fn remove(&mut self, slot: &Slot) {
@@ -182,10 +178,10 @@ pub mod tests {
             let key = item.0;
             min = std::cmp::min(min, *key);
             max = std::cmp::max(max, *key);
-            assert!(ancestors.get(key));
+            assert!(ancestors.contains_key(key));
         }
         for slot in min - 1..max + 2 {
-            assert_eq!(ancestors.get(&slot), hashset.contains(&slot));
+            assert_eq!(ancestors.contains_key(&slot), hashset.contains(&slot));
         }
     }
 

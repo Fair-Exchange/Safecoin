@@ -1,6 +1,6 @@
 use {
     crate::{parse_instruction::parse_memo_data, VersionedTransactionWithStatusMeta},
-    safecoin_sdk::{
+    solana_sdk::{
         instruction::CompiledInstruction,
         message::{AccountKeys, Message, SanitizedMessage},
         pubkey::Pubkey,
@@ -8,13 +8,13 @@ use {
 };
 
 // A helper function to convert safe_memo::v1::id() as spl_sdk::pubkey::Pubkey to
-// safecoin_sdk::pubkey::Pubkey
+// solana_sdk::pubkey::Pubkey
 pub fn safe_memo_id_v1() -> Pubkey {
     *MEMO_PROGRAM_ID_V1
 }
 
 // A helper function to convert safe_memo::id() as spl_sdk::pubkey::Pubkey to
-// safecoin_sdk::pubkey::Pubkey
+// solana_sdk::pubkey::Pubkey
 pub fn safe_memo_id_v3() -> Pubkey {
     *MEMO_PROGRAM_ID_V3
 }
@@ -36,7 +36,7 @@ pub fn extract_and_fmt_memos<T: ExtractMemos>(message: &T) -> Option<String> {
 fn extract_and_fmt_memo_data(data: &[u8]) -> String {
     let memo_len = data.len();
     let parsed_memo = parse_memo_data(data).unwrap_or_else(|_| "(unparseable)".to_string());
-    format!("[{}] {}", memo_len, parsed_memo)
+    format!("[{memo_len}] {parsed_memo}")
 }
 
 pub trait ExtractMemos {

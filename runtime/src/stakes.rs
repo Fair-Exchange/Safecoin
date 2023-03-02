@@ -12,7 +12,7 @@ use {
     num_derive::ToPrimitive,
     num_traits::ToPrimitive,
     rayon::{prelude::*, ThreadPool},
-    safecoin_sdk::{
+    solana_sdk::{
         account::{AccountSharedData, ReadableAccount},
         clock::{Epoch, Slot},
         pubkey::Pubkey,
@@ -141,7 +141,7 @@ impl StakesCache {
             datapoint_warn!(
                 "bank-stake_delegation_accounts-invalid-account",
                 ("slot", current_slot as i64, i64),
-                ("stake-address", format!("{:?}", stake_pubkey), String),
+                ("stake-address", format!("{stake_pubkey:?}"), String),
                 ("reason", reason.to_i64().unwrap_or_default(), i64),
             );
         }
@@ -151,7 +151,7 @@ impl StakesCache {
             datapoint_warn!(
                 "bank-stake_delegation_accounts-invalid-account",
                 ("slot", current_slot as i64, i64),
-                ("vote-address", format!("{:?}", vote_pubkey), String),
+                ("vote-address", format!("{vote_pubkey:?}"), String),
                 ("reason", reason.to_i64().unwrap_or_default(), i64),
             );
         }
@@ -159,9 +159,9 @@ impl StakesCache {
 }
 
 /// The generic type T is either Delegation or StakeAccount.
-/// Stake<Delegation> is equivalent to the old code and is used for backward
-/// compatibility in BankFieldsToDeserialize.
-/// But banks cache Stakes<StakeAccount> which includes the entire stake
+/// [`Stakes<Delegation>`] is equivalent to the old code and is used for backward
+/// compatibility in [`crate::bank::BankFieldsToDeserialize`].
+/// But banks cache [`Stakes<StakeAccount>`] which includes the entire stake
 /// account and StakeState deserialized from the account. Doing so, will remove
 /// the need to load the stake account from accounts-db when working with
 /// stake-delegations.
@@ -235,18 +235,9 @@ impl Stakes<StakeAccount> {
                 None => return Err(Error::VoteAccountNotFound(*pubkey)),
                 Some(account) => account,
             };
-            // Ignoring rent_epoch until the feature for
-            // preserve_rent_epoch_for_rent_exempt_accounts is activated.
             let vote_account = vote_account.account();
-            if vote_account.lamports() != account.lamports()
-                || vote_account.owner() != account.owner()
-                || vote_account.executable() != account.executable()
-                || vote_account.data() != account.data()
-            {
-                error!(
-                    "vote account mismatch: {}, {:?}, {:?}",
-                    pubkey, vote_account, account
-                );
+            if vote_account != &account {
+                error!("vote account mismatch: {pubkey}, {vote_account:?}, {account:?}");
                 return Err(Error::VoteAccountMismatch(*pubkey));
             }
         }
@@ -266,7 +257,7 @@ impl Stakes<StakeAccount> {
             if VoteState::is_correct_size_and_initialized(account.data())
                 && VoteAccount::try_from(account.clone()).is_ok()
             {
-                error!("vote account not cached: {}, {:?}", pubkey, account);
+                error!("vote account not cached: {pubkey}, {account:?}");
                 return Err(Error::VoteAccountNotCached(pubkey));
             }
         }
@@ -518,7 +509,7 @@ pub(crate) mod tests {
         super::*,
         rand::Rng,
         rayon::ThreadPoolBuilder,
-        safecoin_sdk::{account::WritableAccount, pubkey::Pubkey, rent::Rent, stake},
+        solana_sdk::{account::WritableAccount, pubkey::Pubkey, rent::Rent, stake},
         solana_stake_program::stake_state,
         solana_vote_program::vote_state::{self, VoteState, VoteStateVersions},
     };
@@ -527,12 +518,16 @@ pub(crate) mod tests {
     pub(crate) fn create_staked_node_accounts(
         stake: u64,
     ) -> ((Pubkey, AccountSharedData), (Pubkey, AccountSharedData)) {
-        let vote_pubkey = safecoin_sdk::pubkey::new_rand();
+        let vote_pubkey = solana_sdk::pubkey::new_rand();
         let vote_account =
-            vote_state::create_account(&vote_pubkey, &safecoin_sdk::pubkey::new_rand(), 0, 1);
+            vote_state::create_account(&vote_pubkey, &solana_sdk::pubkey::new_rand(), 0, 1);
+        let stake_pubkey = solana_sdk::pubkey::new_rand();
         (
             (vote_pubkey, vote_account),
-            create_stake_account(stake, &vote_pubkey),
+            (
+                stake_pubkey,
+                create_stake_account(stake, &vote_pubkey, &stake_pubkey),
+            ),
         )
     }
 
@@ -540,17 +535,14 @@ pub(crate) mod tests {
     pub(crate) fn create_stake_account(
         stake: u64,
         vote_pubkey: &Pubkey,
-    ) -> (Pubkey, AccountSharedData) {
-        let stake_pubkey = safecoin_sdk::pubkey::new_rand();
-        (
+        stake_pubkey: &Pubkey,
+    ) -> AccountSharedData {
+        stake_state::create_account(
             stake_pubkey,
-            stake_state::create_account(
-                &stake_pubkey,
-                vote_pubkey,
-                &vote_state::create_account(vote_pubkey, &safecoin_sdk::pubkey::new_rand(), 0, 1),
-                &Rent::free(),
-                stake,
-            ),
+            vote_pubkey,
+            &vote_state::create_account(vote_pubkey, &solana_sdk::pubkey::new_rand(), 0, 1),
+            &Rent::free(),
+            stake,
         )
     }
 
@@ -558,9 +550,9 @@ pub(crate) mod tests {
         stake: u64,
         epoch: Epoch,
     ) -> ((Pubkey, AccountSharedData), (Pubkey, AccountSharedData)) {
-        let vote_pubkey = safecoin_sdk::pubkey::new_rand();
+        let vote_pubkey = solana_sdk::pubkey::new_rand();
         let vote_account =
-            vote_state::create_account(&vote_pubkey, &safecoin_sdk::pubkey::new_rand(), 0, 1);
+            vote_state::create_account(&vote_pubkey, &solana_sdk::pubkey::new_rand(), 0, 1);
         (
             (vote_pubkey, vote_account),
             create_warming_stake_account(stake, epoch, &vote_pubkey),
@@ -573,13 +565,13 @@ pub(crate) mod tests {
         epoch: Epoch,
         vote_pubkey: &Pubkey,
     ) -> (Pubkey, AccountSharedData) {
-        let stake_pubkey = safecoin_sdk::pubkey::new_rand();
+        let stake_pubkey = solana_sdk::pubkey::new_rand();
         (
             stake_pubkey,
             stake_state::create_account_with_activation_epoch(
                 &stake_pubkey,
                 vote_pubkey,
-                &vote_state::create_account(vote_pubkey, &safecoin_sdk::pubkey::new_rand(), 0, 1),
+                &vote_state::create_account(vote_pubkey, &solana_sdk::pubkey::new_rand(), 0, 1),
                 &Rent::free(),
                 stake,
                 epoch,
@@ -624,7 +616,8 @@ pub(crate) mod tests {
             }
 
             // activate more
-            let (_stake_pubkey, mut stake_account) = create_stake_account(42, &vote_pubkey);
+            let mut stake_account =
+                create_stake_account(42, &vote_pubkey, &solana_sdk::pubkey::new_rand());
             stakes_cache.check_and_store(&stake_pubkey, &stake_account);
             let stake = stake_state::stake_from(&stake_account).unwrap();
             {
@@ -666,7 +659,7 @@ pub(crate) mod tests {
         stakes_cache.check_and_store(&vote11_pubkey, &vote11_account);
         stakes_cache.check_and_store(&stake11_pubkey, &stake11_account);
 
-        let vote11_node_pubkey = VoteState::from(&vote11_account).unwrap().node_pubkey;
+        let vote11_node_pubkey = vote_state::from(&vote11_account).unwrap().node_pubkey;
 
         let highest_staked_node = stakes_cache.stakes().highest_staked_node();
         assert_eq!(highest_staked_node, Some(vote11_node_pubkey));
@@ -729,7 +722,7 @@ pub(crate) mod tests {
         // Vote account uninitialized
         let default_vote_state = VoteState::default();
         let versioned = VoteStateVersions::new_current(default_vote_state);
-        VoteState::to(&versioned, &mut vote_account).unwrap();
+        vote_state::to(&versioned, &mut vote_account).unwrap();
         stakes_cache.check_and_store(&vote_pubkey, &vote_account);
 
         {
@@ -808,7 +801,8 @@ pub(crate) mod tests {
         let ((vote_pubkey, vote_account), (stake_pubkey, stake_account)) =
             create_staked_node_accounts(10);
 
-        let (stake_pubkey2, stake_account2) = create_stake_account(10, &vote_pubkey);
+        let stake_pubkey2 = solana_sdk::pubkey::new_rand();
+        let stake_account2 = create_stake_account(10, &vote_pubkey, &stake_pubkey2);
 
         stakes_cache.check_and_store(&vote_pubkey, &vote_account);
 
@@ -955,16 +949,16 @@ pub(crate) mod tests {
             ..Stakes::default()
         });
         for _ in 0..rng.gen_range(5usize, 10) {
-            let vote_pubkey = safecoin_sdk::pubkey::new_rand();
+            let vote_pubkey = solana_sdk::pubkey::new_rand();
             let vote_account = vote_state::create_account(
                 &vote_pubkey,
-                &safecoin_sdk::pubkey::new_rand(), // node_pubkey
+                &solana_sdk::pubkey::new_rand(), // node_pubkey
                 rng.gen_range(0, 101),           // commission
                 rng.gen_range(0, 1_000_000),     // lamports
             );
             stakes_cache.check_and_store(&vote_pubkey, &vote_account);
             for _ in 0..rng.gen_range(10usize, 20) {
-                let stake_pubkey = safecoin_sdk::pubkey::new_rand();
+                let stake_pubkey = solana_sdk::pubkey::new_rand();
                 let rent = Rent::with_slots_per_epoch(rng.gen());
                 let stake_account = stake_state::create_account(
                     &stake_pubkey, // authorized

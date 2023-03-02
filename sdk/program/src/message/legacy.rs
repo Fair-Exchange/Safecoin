@@ -7,7 +7,7 @@
 //!
 //! [`legacy`]: crate::message::legacy
 //! [`v0`]: crate::message::v0
-//! [future message format]: https://docs.solana.com/proposals/transactions-v2
+//! [future message format]: https://docs.solana.com/proposals/versioned-transactions
 
 #![allow(clippy::integer_arithmetic)]
 
@@ -16,7 +16,7 @@ use {
         bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable,
         hash::Hash,
         instruction::{CompiledInstruction, Instruction},
-        message::{CompiledKeys, MessageHeader},
+        message::{compiled_keys::CompiledKeys, MessageHeader},
         pubkey::Pubkey,
         sanitize::{Sanitize, SanitizeError},
         short_vec, system_instruction, system_program, sysvar, wasm_bindgen,
@@ -169,19 +169,19 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`safecoin_sdk`], [`safecoin_client`] and [`anyhow`] crates.
+    /// This example uses the [`solana_sdk`], [`solana_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`safecoin_sdk`]: https://docs.rs/safecoin-sdk
-    /// [`safecoin_client`]: https://docs.rs/safecoin-client
+    /// [`solana_sdk`]: https://docs.rs/safecoin-sdk
+    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use safecoin_program::example_mocks::safecoin_sdk;
-    /// # use safecoin_program::example_mocks::safecoin_client;
+    /// # use solana_program::example_mocks::solana_sdk;
+    /// # use solana_program::example_mocks::solana_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use safecoin_client::rpc_client::RpcClient;
-    /// use safecoin_sdk::{
+    /// use solana_rpc_client::rpc_client::RpcClient;
+    /// use solana_sdk::{
     ///     instruction::Instruction,
     ///     message::Message,
     ///     pubkey::Pubkey,
@@ -240,19 +240,19 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`safecoin_sdk`], [`safecoin_client`] and [`anyhow`] crates.
+    /// This example uses the [`solana_sdk`], [`solana_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`safecoin_sdk`]: https://docs.rs/safecoin-sdk
-    /// [`safecoin_client`]: https://docs.rs/safecoin-client
+    /// [`solana_sdk`]: https://docs.rs/safecoin-sdk
+    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use safecoin_program::example_mocks::safecoin_sdk;
-    /// # use safecoin_program::example_mocks::safecoin_client;
+    /// # use solana_program::example_mocks::solana_sdk;
+    /// # use solana_program::example_mocks::solana_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use safecoin_client::rpc_client::RpcClient;
-    /// use safecoin_sdk::{
+    /// use solana_rpc_client::rpc_client::RpcClient;
+    /// use solana_sdk::{
     ///     instruction::Instruction,
     ///     message::Message,
     ///     pubkey::Pubkey,
@@ -336,19 +336,19 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`safecoin_sdk`], [`safecoin_client`] and [`anyhow`] crates.
+    /// This example uses the [`solana_sdk`], [`solana_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`safecoin_sdk`]: https://docs.rs/safecoin-sdk
-    /// [`safecoin_client`]: https://docs.rs/safecoin-client
+    /// [`solana_sdk`]: https://docs.rs/safecoin-sdk
+    /// [`solana_rpc_client`]: https://docs.rs/safecoin-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use safecoin_program::example_mocks::safecoin_sdk;
-    /// # use safecoin_program::example_mocks::safecoin_client;
+    /// # use solana_program::example_mocks::solana_sdk;
+    /// # use solana_program::example_mocks::solana_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use safecoin_client::rpc_client::RpcClient;
-    /// use safecoin_sdk::{
+    /// use solana_rpc_client::rpc_client::RpcClient;
+    /// use solana_sdk::{
     ///     hash::Hash,
     ///     instruction::Instruction,
     ///     message::Message,
@@ -627,7 +627,7 @@ mod tests {
         let keys: HashSet<Pubkey> = BUILTIN_PROGRAMS_KEYS.iter().copied().collect();
         assert_eq!(keys.len(), 10);
         for k in keys {
-            let k = format!("{}", k);
+            let k = format!("{k}");
             assert!(k.ends_with("11111111111111111111111"));
         }
     }

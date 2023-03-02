@@ -44,15 +44,15 @@ fn id_to_tokens(
     tokens: &mut proc_macro2::TokenStream,
 ) {
     tokens.extend(quote! {
-        /// The static program ID
+        /// The static program ID.
         pub static ID: #pubkey_type = #id;
 
-        /// Confirms that a given pubkey is equivalent to the program ID
+        /// Returns `true` if given pubkey is the program ID.
         pub fn check_id(id: &#pubkey_type) -> bool {
             id == &ID
         }
 
-        /// Returns the program ID
+        /// Returns the program ID.
         pub fn id() -> #pubkey_type {
             ID
         }
@@ -71,16 +71,16 @@ fn deprecated_id_to_tokens(
     tokens: &mut proc_macro2::TokenStream,
 ) {
     tokens.extend(quote! {
-        /// The static program ID
+        /// The static program ID.
         pub static ID: #pubkey_type = #id;
 
-        /// Confirms that a given pubkey is equivalent to the program ID
+        /// Returns `true` if given pubkey is the program ID.
         #[deprecated()]
         pub fn check_id(id: &#pubkey_type) -> bool {
             id == &ID
         }
 
-        /// Returns the program ID
+        /// Returns the program ID.
         #[deprecated()]
         pub fn id() -> #pubkey_type {
             ID
@@ -99,7 +99,7 @@ struct SdkPubkey(proc_macro2::TokenStream);
 
 impl Parse for SdkPubkey {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::safecoin_sdk::pubkey::Pubkey }).map(Self)
+        parse_id(input, quote! { ::solana_sdk::pubkey::Pubkey }).map(Self)
     }
 }
 
@@ -114,7 +114,7 @@ struct ProgramSdkPubkey(proc_macro2::TokenStream);
 
 impl Parse for ProgramSdkPubkey {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::safecoin_program::pubkey::Pubkey }).map(Self)
+        parse_id(input, quote! { ::solana_program::pubkey::Pubkey }).map(Self)
     }
 }
 
@@ -129,13 +129,13 @@ struct Id(proc_macro2::TokenStream);
 
 impl Parse for Id {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::safecoin_sdk::pubkey::Pubkey }).map(Self)
+        parse_id(input, quote! { ::solana_sdk::pubkey::Pubkey }).map(Self)
     }
 }
 
 impl ToTokens for Id {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        id_to_tokens(&self.0, quote! { ::safecoin_sdk::pubkey::Pubkey }, tokens)
+        id_to_tokens(&self.0, quote! { ::solana_sdk::pubkey::Pubkey }, tokens)
     }
 }
 
@@ -143,39 +143,39 @@ struct IdDeprecated(proc_macro2::TokenStream);
 
 impl Parse for IdDeprecated {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::safecoin_sdk::pubkey::Pubkey }).map(Self)
+        parse_id(input, quote! { ::solana_sdk::pubkey::Pubkey }).map(Self)
     }
 }
 
 impl ToTokens for IdDeprecated {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        deprecated_id_to_tokens(&self.0, quote! { ::safecoin_sdk::pubkey::Pubkey }, tokens)
+        deprecated_id_to_tokens(&self.0, quote! { ::solana_sdk::pubkey::Pubkey }, tokens)
     }
 }
 
 struct ProgramSdkId(proc_macro2::TokenStream);
 impl Parse for ProgramSdkId {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::safecoin_program::pubkey::Pubkey }).map(Self)
+        parse_id(input, quote! { ::solana_program::pubkey::Pubkey }).map(Self)
     }
 }
 
 impl ToTokens for ProgramSdkId {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        id_to_tokens(&self.0, quote! { ::safecoin_program::pubkey::Pubkey }, tokens)
+        id_to_tokens(&self.0, quote! { ::solana_program::pubkey::Pubkey }, tokens)
     }
 }
 
 struct ProgramSdkIdDeprecated(proc_macro2::TokenStream);
 impl Parse for ProgramSdkIdDeprecated {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::safecoin_program::pubkey::Pubkey }).map(Self)
+        parse_id(input, quote! { ::solana_program::pubkey::Pubkey }).map(Self)
     }
 }
 
 impl ToTokens for ProgramSdkIdDeprecated {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        deprecated_id_to_tokens(&self.0, quote! { ::safecoin_program::pubkey::Pubkey }, tokens)
+        deprecated_id_to_tokens(&self.0, quote! { ::solana_program::pubkey::Pubkey }, tokens)
     }
 }
 
@@ -291,10 +291,10 @@ fn parse_pubkey(
 ) -> Result<proc_macro2::TokenStream> {
     let id_vec = bs58::decode(id_literal.value())
         .into_vec()
-        .map_err(|_| syn::Error::new_spanned(&id_literal, "failed to decode base58 string"))?;
+        .map_err(|_| syn::Error::new_spanned(id_literal, "failed to decode base58 string"))?;
     let id_array = <[u8; 32]>::try_from(<&[u8]>::clone(&&id_vec[..])).map_err(|_| {
         syn::Error::new_spanned(
-            &id_literal,
+            id_literal,
             format!("pubkey array is not 32 bytes long: len={}", id_vec.len()),
         )
     })?;
@@ -314,7 +314,7 @@ struct Pubkeys {
 impl Parse for Pubkeys {
     fn parse(input: ParseStream) -> Result<Self> {
         let pubkey_type = quote! {
-            ::safecoin_sdk::pubkey::Pubkey
+            ::solana_sdk::pubkey::Pubkey
         };
 
         let method = input.parse()?;
@@ -354,7 +354,7 @@ impl ToTokens for Pubkeys {
         } = self;
 
         let pubkey_type = quote! {
-            ::safecoin_sdk::pubkey::Pubkey
+            ::solana_sdk::pubkey::Pubkey
         };
         if *num == 1 {
             tokens.extend(quote! {
@@ -379,7 +379,7 @@ pub fn pubkeys(input: TokenStream) -> TokenStream {
 }
 
 // The normal `wasm_bindgen` macro generates a .bss section which causes the resulting
-// BPF program to fail to load, so for now this stub should be used when building for BPF
+// SBF program to fail to load, so for now this stub should be used when building for SBF
 #[proc_macro_attribute]
 pub fn wasm_bindgen_stub(_attr: TokenStream, item: TokenStream) -> TokenStream {
     match parse_macro_input!(item as syn::Item) {
@@ -402,6 +402,41 @@ pub fn wasm_bindgen_stub(_attr: TokenStream, item: TokenStream) -> TokenStream {
         item => {
             quote!(#item)
         }
+    }
+    .into()
+}
+
+// Sets padding in structures to zero explicitly.
+// Otherwise padding could be inconsistent across the network and lead to divergence / consensus failures.
+#[proc_macro_derive(CloneZeroed)]
+pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    match parse_macro_input!(input as syn::Item) {
+        syn::Item::Struct(item_struct) => {
+            let clone_statements = match item_struct.fields {
+                syn::Fields::Named(ref fields) => fields.named.iter().map(|f| {
+                    let name = &f.ident;
+                    quote! {
+                        std::ptr::addr_of_mut!((*ptr).#name).write(self.#name);
+                    }
+                }),
+                _ => unimplemented!(),
+            };
+            let name = &item_struct.ident;
+            quote! {
+                impl Clone for #name {
+                    fn clone(&self) -> Self {
+                        let mut value = std::mem::MaybeUninit::<Self>::uninit();
+                        unsafe {
+                            std::ptr::write_bytes(&mut value, 0, 1);
+                            let ptr = value.as_mut_ptr();
+                            #(#clone_statements)*
+                            value.assume_init()
+                        }
+                    }
+                }
+            }
+        }
+        _ => unimplemented!(),
     }
     .into()
 }

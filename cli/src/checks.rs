@@ -1,10 +1,8 @@
 use {
     crate::cli::CliError,
-    safecoin_client::{
-        client_error::{ClientError, Result as ClientResult},
-        rpc_client::RpcClient,
-    },
-    safecoin_sdk::{
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_rpc_client_api::client_error::{Error as ClientError, Result as ClientResult},
+    solana_sdk::{
         commitment_config::CommitmentConfig, message::Message, native_token::lamports_to_sol,
         pubkey::Pubkey,
     },
@@ -114,7 +112,7 @@ pub fn get_fee_for_messages(
 ) -> Result<u64, CliError> {
     Ok(messages
         .iter()
-        .map(|message| rpc_client.get_fee_for_message(message))
+        .map(|message| rpc_client.get_fee_for_message(*message))
         .collect::<Result<Vec<_>, _>>()?
         .iter()
         .sum())
@@ -167,11 +165,11 @@ mod tests {
     use {
         super::*,
         serde_json::json,
-        safecoin_client::{
-            rpc_request::RpcRequest,
-            rpc_response::{Response, RpcResponseContext},
+        solana_rpc_client_api::{
+            request::RpcRequest,
+            response::{Response, RpcResponseContext},
         },
-        safecoin_sdk::system_instruction,
+        solana_sdk::system_instruction,
         std::collections::HashMap,
     };
 
@@ -185,10 +183,10 @@ mod tests {
             },
             value: json!(account_balance),
         });
-        let pubkey = safecoin_sdk::pubkey::new_rand();
+        let pubkey = solana_sdk::pubkey::new_rand();
 
-        let pubkey0 = Pubkey::new(&[0; 32]);
-        let pubkey1 = Pubkey::new(&[1; 32]);
+        let pubkey0 = Pubkey::from([0; 32]);
+        let pubkey1 = Pubkey::from([1; 32]);
         let ix0 = system_instruction::transfer(&pubkey0, &pubkey1, 1);
         let message0 = Message::new(&[ix0], Some(&pubkey0));
 
@@ -264,7 +262,7 @@ mod tests {
             },
             value: json!(account_balance),
         });
-        let pubkey = safecoin_sdk::pubkey::new_rand();
+        let pubkey = solana_sdk::pubkey::new_rand();
 
         let mut mocks = HashMap::new();
         mocks.insert(RpcRequest::GetBalance, account_balance_response);
@@ -292,8 +290,8 @@ mod tests {
         assert_eq!(get_fee_for_messages(&rpc_client, &[]).unwrap(), 0);
 
         // One message w/ one signature, a fee.
-        let pubkey0 = Pubkey::new(&[0; 32]);
-        let pubkey1 = Pubkey::new(&[1; 32]);
+        let pubkey0 = Pubkey::from([0; 32]);
+        let pubkey1 = Pubkey::from([1; 32]);
         let ix0 = system_instruction::transfer(&pubkey0, &pubkey1, 1);
         let message0 = Message::new(&[ix0], Some(&pubkey0));
         assert_eq!(get_fee_for_messages(&rpc_client, &[&message0]).unwrap(), 1);
@@ -318,9 +316,9 @@ mod tests {
 
     #[test]
     fn test_check_unique_pubkeys() {
-        let pubkey0 = safecoin_sdk::pubkey::new_rand();
+        let pubkey0 = solana_sdk::pubkey::new_rand();
         let pubkey_clone = pubkey0;
-        let pubkey1 = safecoin_sdk::pubkey::new_rand();
+        let pubkey1 = solana_sdk::pubkey::new_rand();
 
         check_unique_pubkeys((&pubkey0, "foo".to_string()), (&pubkey1, "bar".to_string()))
             .expect("unexpected result");

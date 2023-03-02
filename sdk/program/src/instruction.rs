@@ -249,13 +249,17 @@ pub enum InstructionError {
     #[error("Provided owner is not allowed")]
     IllegalOwner,
 
-    /// Account data allocation exceeded the maximum accounts data size limit
-    #[error("Account data allocation exceeded the maximum accounts data size limit")]
-    MaxAccountsDataSizeExceeded,
+    /// Accounts data allocations exceeded the maximum allowed per transaction
+    #[error("Accounts data allocations exceeded the maximum allowed per transaction")]
+    MaxAccountsDataAllocationsExceeded,
 
     /// Max accounts exceeded
     #[error("Max accounts exceeded")]
     MaxAccountsExceeded,
+
+    /// Max instruction trace length exceeded
+    #[error("Max instruction trace length exceeded")]
+    MaxInstructionTraceLengthExceeded,
     // Note: For any new error added here an equivalent ProgramError and its
     // conversions must also be added
 }
@@ -351,7 +355,7 @@ impl Instruction {
     /// # Examples
     ///
     /// ```
-    /// # use safecoin_program::{
+    /// # use solana_program::{
     /// #     pubkey::Pubkey,
     /// #     instruction::{AccountMeta, Instruction},
     /// # };
@@ -403,7 +407,7 @@ impl Instruction {
     /// # Examples
     ///
     /// ```
-    /// # use safecoin_program::{
+    /// # use solana_program::{
     /// #     pubkey::Pubkey,
     /// #     instruction::{AccountMeta, Instruction},
     /// # };
@@ -456,7 +460,7 @@ impl Instruction {
     /// # Examples
     ///
     /// ```
-    /// # use safecoin_program::{
+    /// # use solana_program::{
     /// #     pubkey::Pubkey,
     /// #     instruction::{AccountMeta, Instruction},
     /// # };
@@ -545,7 +549,7 @@ impl AccountMeta {
     /// # Examples
     ///
     /// ```
-    /// # use safecoin_program::{
+    /// # use solana_program::{
     /// #     pubkey::Pubkey,
     /// #     instruction::{AccountMeta, Instruction},
     /// # };
@@ -580,7 +584,7 @@ impl AccountMeta {
     /// # Examples
     ///
     /// ```
-    /// # use safecoin_program::{
+    /// # use solana_program::{
     /// #     pubkey::Pubkey,
     /// #     instruction::{AccountMeta, Instruction},
     /// # };
@@ -661,7 +665,7 @@ impl CompiledInstruction {
 /// Use to query and convey information about the sibling instruction components
 /// when calling the `sol_get_processed_sibling_instruction` syscall.
 #[repr(C)]
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct ProcessedSiblingInstruction {
     /// Length of the instruction data
     pub data_len: u64,

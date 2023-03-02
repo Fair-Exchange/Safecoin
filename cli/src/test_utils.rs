@@ -1,6 +1,6 @@
 use {
-    safecoin_client::rpc_client::RpcClient,
-    safecoin_sdk::{
+    solana_rpc_client::rpc_client::RpcClient,
+    solana_sdk::{
         clock::{Epoch, DEFAULT_MS_PER_SLOT},
         commitment_config::CommitmentConfig,
     },

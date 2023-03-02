@@ -6,9 +6,9 @@ use {
         replay_stage::SUPERMINORITY_THRESHOLD,
     },
     solana_ledger::blockstore_processor::{ConfirmationProgress, ConfirmationTiming},
-    safecoin_program_runtime::{report_execute_timings, timings::ExecuteTimingType},
+    solana_program_runtime::{report_execute_timings, timings::ExecuteTimingType},
     solana_runtime::{bank::Bank, bank_forks::BankForks, vote_account::VoteAccountsHashMap},
-    safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey},
+    solana_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey},
     std::{
         collections::{BTreeMap, HashMap, HashSet},
         ops::Index,
@@ -39,6 +39,7 @@ impl ReplaySlotStats {
     pub fn report_stats(
         &self,
         slot: Slot,
+        num_txs: usize,
         num_entries: usize,
         num_shreds: u64,
         bank_complete_time_us: u64,
@@ -71,6 +72,7 @@ impl ReplaySlotStats {
                     i64
                 ),
                 ("bank_complete_time_us", bank_complete_time_us, i64),
+                ("total_transactions", num_txs as i64, i64),
                 ("total_entries", num_entries as i64, i64),
                 ("total_shreds", num_shreds as i64, i64),
                 // Everything inside the `eager!` block will be eagerly expanded before
@@ -397,7 +399,7 @@ impl ProgressMap {
 
     pub fn get_propagated_stats_must_exist(&self, slot: Slot) -> &PropagatedStats {
         self.get_propagated_stats(slot)
-            .unwrap_or_else(|| panic!("slot={} must exist in ProgressMap", slot))
+            .unwrap_or_else(|| panic!("slot={slot} must exist in ProgressMap"))
     }
 
     pub fn get_fork_stats(&self, slot: Slot) -> Option<&ForkStats> {
@@ -529,7 +531,7 @@ mod test {
     use {
         super::*,
         solana_runtime::vote_account::VoteAccount,
-        safecoin_sdk::account::{Account, AccountSharedData},
+        solana_sdk::account::{Account, AccountSharedData},
     };
 
     fn new_test_vote_account() -> VoteAccount {
@@ -543,7 +545,7 @@ mod test {
     #[test]
     fn test_add_vote_pubkey() {
         let mut stats = PropagatedStats::default();
-        let mut vote_pubkey = safecoin_sdk::pubkey::new_rand();
+        let mut vote_pubkey = solana_sdk::pubkey::new_rand();
 
         // Add a vote pubkey, the number of references in all_pubkeys
         // should be 2
@@ -557,7 +559,7 @@ mod test {
         assert_eq!(stats.propagated_validators_stake, 1);
 
         // Adding another pubkey should succeed
-        vote_pubkey = safecoin_sdk::pubkey::new_rand();
+        vote_pubkey = solana_sdk::pubkey::new_rand();
         stats.add_vote_pubkey(vote_pubkey, 2);
         assert!(stats.propagated_validators.contains(&vote_pubkey));
         assert_eq!(stats.propagated_validators_stake, 3);
@@ -567,7 +569,7 @@ mod test {
     fn test_add_node_pubkey_internal() {
         let num_vote_accounts = 10;
         let staked_vote_accounts = 5;
-        let vote_account_pubkeys: Vec<_> = std::iter::repeat_with(safecoin_sdk::pubkey::new_rand)
+        let vote_account_pubkeys: Vec<_> = std::iter::repeat_with(solana_sdk::pubkey::new_rand)
             .take(num_vote_accounts)
             .collect();
         let epoch_vote_accounts: HashMap<_, _> = vote_account_pubkeys
@@ -577,7 +579,7 @@ mod test {
             .collect();
 
         let mut stats = PropagatedStats::default();
-        let mut node_pubkey = safecoin_sdk::pubkey::new_rand();
+        let mut node_pubkey = solana_sdk::pubkey::new_rand();
 
         // Add a vote pubkey, the number of references in all_pubkeys
         // should be 2
@@ -598,7 +600,7 @@ mod test {
 
         // Adding another pubkey with same vote accounts should succeed, but stake
         // shouldn't increase
-        node_pubkey = safecoin_sdk::pubkey::new_rand();
+        node_pubkey = solana_sdk::pubkey::new_rand();
         stats.add_node_pubkey_internal(&node_pubkey, &vote_account_pubkeys, &epoch_vote_accounts);
         assert!(stats.propagated_node_ids.contains(&node_pubkey));
         assert_eq!(
@@ -608,8 +610,8 @@ mod test {
 
         // Adding another pubkey with different vote accounts should succeed
         // and increase stake
-        node_pubkey = safecoin_sdk::pubkey::new_rand();
-        let vote_account_pubkeys: Vec<_> = std::iter::repeat_with(safecoin_sdk::pubkey::new_rand)
+        node_pubkey = solana_sdk::pubkey::new_rand();
+        let vote_account_pubkeys: Vec<_> = std::iter::repeat_with(solana_sdk::pubkey::new_rand)
             .take(num_vote_accounts)
             .collect();
         let epoch_vote_accounts: HashMap<_, _> = vote_account_pubkeys

@@ -11,7 +11,7 @@ use {
         crds_gossip_pull::{CrdsFilter, CrdsGossipPull},
         crds_value::CrdsValue,
     },
-    safecoin_sdk::hash,
+    solana_sdk::hash,
     std::sync::RwLock,
     test::Bencher,
 };

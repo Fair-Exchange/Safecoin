@@ -28,7 +28,8 @@ maybeFullRpc="${19}"
 waitForNodeInit="${20}"
 extraPrimordialStakes="${21:=0}"
 tmpfsAccounts="${22:false}"
-enableUdp="${23}"
+disableQuic="${23}"
+enableUdp="${24}"
 
 set +x
 
@@ -265,7 +266,7 @@ EOF
       safecoin-ledger-tool -l config/bootstrap-validator shred-version --max-genesis-archive-unpacked-size 1073741824 | tee config/shred-version
 
       if [[ -n "$maybeWaitForSupermajority" ]]; then
-        bankHash=$(safecoin-ledger-tool -l config/bootstrap-validator bank-hash)
+        bankHash=$(safecoin-ledger-tool -l config/bootstrap-validator bank-hash --halt-at-slot 0)
         extraNodeArgs="$extraNodeArgs --expected-bank-hash $bankHash"
         echo "$bankHash" > config/bank-hash
       fi
@@ -283,6 +284,11 @@ EOF
     if $maybeFullRpc; then
       args+=(--enable-rpc-transaction-history)
       args+=(--enable-extended-tx-metadata-storage)
+    fi
+
+
+    if $disableQuic; then
+      args+=(--tpu-disable-quic)
     fi
 
     if $enableUdp; then
@@ -342,7 +348,7 @@ EOF
     args=(
       --entrypoint "$entrypointIp:10015"
       --gossip-port 10015
-      --rpc-port 8328
+      --rpc-port 8899
       --expected-shred-version "$(cat "$SAFECOIN_CONFIG_DIR"/shred-version)"
     )
     if [[ $nodeType = blockstreamer ]]; then
@@ -417,6 +423,10 @@ EOF
       args+=(--enable-extended-tx-metadata-storage)
     fi
 
+    if $disableQuic; then
+      args+=(--tpu-disable-quic)
+    fi
+
     if $enableUdp; then
       args+=(--tpu-enable-udp)
     fi
@@ -437,10 +447,10 @@ EOF
     if [[ $skipSetup != true && $nodeType != blockstreamer && -z $maybeSkipAccountsCreation ]]; then
       # Wait for the validator to catch up to the bootstrap validator before
       # delegating stake to it
-      safecoin --url http://"$entrypointIp":8328 catchup config/validator-identity.json
+      safecoin --url http://"$entrypointIp":8899 catchup config/validator-identity.json
 
       args=(
-        --url http://"$entrypointIp":8328
+        --url http://"$entrypointIp":8899
       )
       if [[ $airdropsEnabled != true ]]; then
         args+=(--no-airdrop)
@@ -453,6 +463,7 @@ EOF
         echo "0 Primordial stakes, staking with $internalNodesStakeLamports"
         multinode-demo/delegate-stake.sh --vote-account "$SAFECOIN_CONFIG_DIR"/vote-account.json \
                                          --stake-account "$SAFECOIN_CONFIG_DIR"/stake-account.json \
+                                         --force \
                                          "${args[@]}" "$internalNodesStakeLamports"
       else
         echo "Skipping staking with extra stakes: ${extraPrimordialStakes}"

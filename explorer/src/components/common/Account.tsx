@@ -1,7 +1,7 @@
 import React from "react";
 import { Address } from "./Address";
 import { Account } from "providers/accounts";
-import { SafeBalance } from "utils";
+import { SafeBalance } from "components/common/SafeBalance";
 
 type AccountHeaderProps = {
   title: string;

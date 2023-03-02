@@ -10,7 +10,7 @@ use {
         packet::{Packet, PacketBatch},
         recycler_cache::RecyclerCache,
     },
-    safecoin_sdk::signature::Keypair,
+    solana_sdk::signature::Keypair,
     std::sync::Arc,
     test::Bencher,
 };

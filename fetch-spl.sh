@@ -6,6 +6,8 @@
 
 set -e
 
+upgradeableLoader=BPFLoaderUpgradeab1e11111111111111111111111
+
 fetch_program() {
   declare name=$1
   declare version=$2
@@ -14,7 +16,11 @@ fetch_program() {
 
   declare so=spl_$name-$version.so
 
-  genesis_args+=(--bpf-program "$address" "$loader" "$so")
+  if [[ $loader == "$upgradeableLoader" ]]; then
+    genesis_args+=(--upgradeable-program "$address" "$loader" "$so" none)
+  else
+    genesis_args+=(--bpf-program "$address" "$loader" "$so")
+  fi
 
   if [[ -r $so ]]; then
     return
@@ -39,9 +45,10 @@ fetch_program() {
 }
 
 fetch_program token 3.5.0 ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN BPFLoader2111111111111111111111111111111111
+fetch_program token-2022 0.5.0 ZToGWcF1Qh9H7te1MmABiGsFUKvj5zXPQ2QnTqoHpHN BPFLoaderUpgradeab1e11111111111111111111111
 fetch_program memo  1.0.0 MEMDqRW2fYAU19mcFnoDVoqG4Br4t7TdyWjjv38P6Nc BPFLoader1111111111111111111111111111111111
 fetch_program memo  3.0.0 MEMWKbqsjEB8o972BvDHExZFSauzGZKvB4xHDVPFowh BPFLoader2111111111111111111111111111111111
-fetch_program associated-token-account 1.1.1 AToD9iqHSc2fhEP9Jp7UYA6mRjHQ4CTWyzCsw8X3tH7K BPFLoader2111111111111111111111111111111111
+fetch_program associated-token-account 1.1.2 AToD9iqHSc2fhEP9Jp7UYA6mRjHQ4CTWyzCsw8X3tH7K BPFLoader2111111111111111111111111111111111
 fetch_program feature-proposal 1.0.0 FEAj1Fwb2c9Kx9uHLGB2WH4Qhp2vACsJoudMVYHfE3ek BPFLoader2111111111111111111111111111111111
 
 echo "${genesis_args[@]}" > spl-genesis-args.sh

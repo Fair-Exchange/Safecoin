@@ -3,12 +3,14 @@ use {
     solana_runtime::{
         bank::Bank,
         bank_client::BankClient,
+        epoch_accounts_hash::EpochAccountsHash,
         genesis_utils::{create_genesis_config_with_leader, GenesisConfigInfo},
     },
-    safecoin_sdk::{
+    solana_sdk::{
         account::from_account,
         account_utils::StateMut,
         client::SyncClient,
+        hash::Hash,
         message::Message,
         pubkey::Pubkey,
         rent::Rent,
@@ -61,7 +63,7 @@ fn fill_epoch_with_votes(
             &[vote_instruction::vote(
                 &vote_pubkey,
                 &vote_pubkey,
-                Vote::new(vec![parent.slot() as u64], parent.hash()),
+                Vote::new(vec![parent.slot()], parent.hash()),
             )],
             Some(&mint_pubkey),
         );
@@ -111,7 +113,7 @@ fn test_stake_create_and_split_single_signature() {
         ..
     } = create_genesis_config_with_leader(
         100_000_000_000,
-        &safecoin_sdk::pubkey::new_rand(),
+        &solana_sdk::pubkey::new_rand(),
         1_000_000,
     );
 
@@ -187,7 +189,7 @@ fn test_stake_create_and_split_to_existing_system_account() {
         ..
     } = create_genesis_config_with_leader(
         100_000_000_000,
-        &safecoin_sdk::pubkey::new_rand(),
+        &solana_sdk::pubkey::new_rand(),
         1_000_000,
     );
 
@@ -275,13 +277,20 @@ fn test_stake_account_lifetime() {
         ..
     } = create_genesis_config_with_leader(
         100_000_000_000,
-        &safecoin_sdk::pubkey::new_rand(),
+        &solana_sdk::pubkey::new_rand(),
         2_000_000_000,
     );
     genesis_config.rent = Rent::default();
     let bank = Bank::new_for_tests(&genesis_config);
     let mint_pubkey = mint_keypair.pubkey();
     let mut bank = Arc::new(bank);
+    // Need to set the EAH to Valid so that `Bank::new_from_parent()` doesn't panic during freeze
+    // when parent is in the EAH calculation window.
+    bank.rc
+        .accounts
+        .accounts_db
+        .epoch_accounts_hash_manager
+        .set_valid(EpochAccountsHash::new(Hash::new_unique()), bank.slot());
     let bank_client = BankClient::new_shared(&bank);
 
     let (vote_balance, stake_rent_exempt_reserve, stake_minimum_delegation) = {
@@ -348,7 +357,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &stake_pubkey,
             &stake_pubkey,
-            &safecoin_sdk::pubkey::new_rand(),
+            &solana_sdk::pubkey::new_rand(),
             1,
             None,
         )],
@@ -454,7 +463,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &split_stake_pubkey,
             &stake_pubkey,
-            &safecoin_sdk::pubkey::new_rand(),
+            &solana_sdk::pubkey::new_rand(),
             split_starting_delegation + 1,
             None,
         )],
@@ -477,7 +486,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &split_stake_pubkey,
             &stake_pubkey,
-            &safecoin_sdk::pubkey::new_rand(),
+            &solana_sdk::pubkey::new_rand(),
             split_balance,
             None,
         )],
@@ -494,7 +503,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &split_stake_pubkey,
             &stake_pubkey,
-            &safecoin_sdk::pubkey::new_rand(),
+            &solana_sdk::pubkey::new_rand(),
             split_unstaked,
             None,
         )],
@@ -519,7 +528,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &split_stake_pubkey,
             &stake_pubkey,
-            &safecoin_sdk::pubkey::new_rand(),
+            &solana_sdk::pubkey::new_rand(),
             split_remaining_balance,
             None,
         )],
@@ -547,7 +556,7 @@ fn test_create_stake_account_from_seed() {
         ..
     } = create_genesis_config_with_leader(
         100_000_000_000,
-        &safecoin_sdk::pubkey::new_rand(),
+        &solana_sdk::pubkey::new_rand(),
         1_000_000,
     );
     let bank = Bank::new_for_tests(&genesis_config);

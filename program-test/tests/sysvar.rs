@@ -1,6 +1,6 @@
 use {
-    safecoin_program_test::{processor, ProgramTest},
-    safecoin_sdk::{
+    solana_program_test::{processor, ProgramTest},
+    solana_sdk::{
         account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
         epoch_schedule::EpochSchedule, instruction::Instruction, msg, pubkey::Pubkey, rent::Rent,
         signature::Signer, sysvar::Sysvar, transaction::Transaction,

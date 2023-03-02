@@ -2,7 +2,7 @@ use {
     crate::cluster_info_vote_listener::VoteTracker,
     solana_ledger::blockstore::Blockstore,
     solana_runtime::bank::Bank,
-    safecoin_sdk::{clock::Slot, hash::Hash, timing::timestamp},
+    solana_sdk::{clock::Slot, hash::Hash, timing::timestamp},
     std::{collections::BTreeSet, time::Instant},
 };
 
@@ -93,7 +93,7 @@ impl OptimisticConfirmationVerifier {
     }
 
     pub fn format_optimistic_confirmed_slot_violation_log(slot: Slot) -> String {
-        format!("Optimistically confirmed slot {} was not rooted", slot)
+        format!("Optimistically confirmed slot {slot} was not rooted")
     }
 
     pub fn log_unrooted_optimistic_slots(
@@ -158,7 +158,7 @@ mod test {
     use {
         super::*, crate::vote_simulator::VoteSimulator,
         solana_ledger::get_tmp_ledger_path_auto_delete, solana_runtime::bank::Bank,
-        safecoin_sdk::pubkey::Pubkey, std::collections::HashMap, trees::tr,
+        solana_sdk::pubkey::Pubkey, std::collections::HashMap, trees::tr,
     };
 
     #[test]

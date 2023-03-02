@@ -7,9 +7,9 @@ use {
         },
         UiAccount, UiAccountData, UiAccountEncoding,
     },
-    safecoin_client::rpc_response::RpcKeyedAccount,
+    solana_rpc_client_api::response::RpcKeyedAccount,
     solana_runtime::bank::Bank,
-    safecoin_sdk::{
+    solana_sdk::{
         account::{AccountSharedData, ReadableAccount},
         pubkey::Pubkey,
     },

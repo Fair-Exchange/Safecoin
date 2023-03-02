@@ -20,7 +20,7 @@ where
 
 #[cfg(test)]
 pub mod tests {
-    use {super::*, safecoin_program::system_instruction::SystemInstruction};
+    use {super::*, solana_program::system_instruction::SystemInstruction};
 
     #[test]
     fn test_limited_deserialize_advance_nonce_account() {

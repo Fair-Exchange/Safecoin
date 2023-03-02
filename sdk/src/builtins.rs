@@ -1,4 +1,4 @@
-//! Safecoin builtin helper macros
+//! Safecoin helper macros for declaring built-in programs.
 
 #[rustversion::since(1.46.0)]
 #[macro_export]
@@ -31,13 +31,13 @@ macro_rules! declare_builtin_name {
                 // This should use `crate::respan!` once
                 // https://github.com/rust-lang/rust/pull/72121 is merged:
                 // see https://github.com/fair-exchange/safecoin/issues/10933.
-                // For now, we need to use `::safecoin_sdk`
+                // For now, we need to use `::solana_sdk`
                 //
                 // `respan!` respans the path `$crate::id`, which we then call (hence the extra
                 // parens)
                 (
                     stringify!($name).to_string(),
-                    ::safecoin_sdk::respan!($crate::$id, $name)(),
+                    ::solana_sdk::respan!($crate::$id, $name)(),
                     $entrypoint,
                 )
             };
@@ -58,74 +58,13 @@ macro_rules! declare_builtin_name {
     };
 }
 
-/// Convenience macro to declare a builtin
+/// Convenience macro to declare a built-in program.
 ///
 /// bs58_string: bs58 string representation the program's id
 /// name: Name of the program
 /// entrypoint: Program's entrypoint, must be of `type Entrypoint`
 /// id: Path to the program id access function, used if this macro is not
 ///     called in `src/lib`
-///
-/// # Examples
-///
-/// ```
-/// use std::str::FromStr;
-/// // wrapper is used so that the macro invocation occurs in the item position
-/// // rather than in the statement position which isn't allowed.
-/// mod item_wrapper {
-/// use safecoin_sdk::keyed_account::KeyedAccount;
-/// use safecoin_sdk::instruction::InstructionError;
-/// use safecoin_sdk::pubkey::Pubkey;
-/// use safecoin_sdk::declare_builtin;
-///
-/// fn my_process_instruction(
-///     first_instruction_account: usize,
-///     keyed_accounts: &[KeyedAccount],
-/// ) -> Result<(), InstructionError> {
-///   // Process an instruction
-///   Ok(())
-/// }
-///
-/// declare_builtin!(
-///     "My11111111111111111111111111111111111111111",
-///     solana_my_program,
-///     my_process_instruction
-/// );
-///
-/// # }
-/// # use safecoin_sdk::pubkey::Pubkey;
-/// # use item_wrapper::id;
-/// let my_id = Pubkey::from_str("My11111111111111111111111111111111111111111").unwrap();
-/// assert_eq!(id(), my_id);
-/// ```
-/// ```
-/// use std::str::FromStr;
-/// # // wrapper is used so that the macro invocation occurs in the item position
-/// # // rather than in the statement position which isn't allowed.
-/// # mod item_wrapper {
-/// use safecoin_sdk::keyed_account::KeyedAccount;
-/// use safecoin_sdk::instruction::InstructionError;
-/// use safecoin_sdk::pubkey::Pubkey;
-/// use safecoin_sdk::declare_builtin;
-///
-/// fn my_process_instruction(
-///     first_instruction_account: usize,
-///     keyed_accounts: &[KeyedAccount],
-/// ) -> Result<(), InstructionError> {
-///   // Process an instruction
-///   Ok(())
-/// }
-///
-/// declare_builtin!(
-///     safecoin_sdk::system_program::ID,
-///     solana_my_program,
-///     my_process_instruction
-/// );
-/// }
-///
-/// # use item_wrapper::id;
-/// assert_eq!(id(), safecoin_sdk::system_program::ID);
-/// ```
 #[macro_export]
 macro_rules! declare_builtin {
     ($bs58_string:expr, $name:ident, $entrypoint:expr) => {

@@ -5,8 +5,8 @@ use {
         processor::process_instruction,
         state::{AddressLookupTable, LookupTableMeta},
     },
-    safecoin_program_test::*,
-    safecoin_sdk::{
+    solana_program_test::*,
+    solana_sdk::{
         account::AccountSharedData,
         clock::Slot,
         hash::Hash,

@@ -13,7 +13,7 @@ use {
         snapshot_package::{retain_max_n_elements, PendingSnapshotPackage, SnapshotType},
         snapshot_utils,
     },
-    safecoin_sdk::{clock::Slot, hash::Hash},
+    solana_sdk::{clock::Slot, hash::Hash},
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -94,7 +94,7 @@ impl SnapshotPackagerService {
                     if let Some(snapshot_gossip_manager) = snapshot_gossip_manager.as_mut() {
                         snapshot_gossip_manager.push_snapshot_hash(
                             snapshot_package.snapshot_type,
-                            (snapshot_package.slot(), *snapshot_package.hash()),
+                            (snapshot_package.slot(), snapshot_package.hash().0),
                         );
                     }
                 }
@@ -225,12 +225,14 @@ mod tests {
             accounts_db::AccountStorageEntry,
             bank::BankSlotDelta,
             snapshot_archive_info::SnapshotArchiveInfo,
+            snapshot_hash::SnapshotHash,
             snapshot_package::{SnapshotPackage, SnapshotType},
             snapshot_utils::{
-                self, ArchiveFormat, SnapshotVersion, SNAPSHOT_STATUS_CACHE_FILENAME,
+                self, create_accounts_run_and_snapshot_dirs, ArchiveFormat, SnapshotVersion,
+                SNAPSHOT_STATUS_CACHE_FILENAME,
             },
         },
-        safecoin_sdk::hash::Hash,
+        solana_sdk::hash::Hash,
         std::{
             fs::{self, remove_dir_all, OpenOptions},
             io::Write,
@@ -242,7 +244,7 @@ mod tests {
     // Create temporary placeholder directory for all test files
     fn make_tmp_dir_path() -> PathBuf {
         let out_dir = std::env::var("FARF_DIR").unwrap_or_else(|_| "farf".to_string());
-        let path = PathBuf::from(format!("{}/tmp/test_package_snapshots", out_dir));
+        let path = PathBuf::from(format!("{out_dir}/tmp/test_package_snapshots"));
 
         // whack any possible collision
         let _ignored = std::fs::remove_dir_all(&path);
@@ -266,6 +268,10 @@ mod tests {
 
     fn create_and_verify_snapshot(temp_dir: &Path) {
         let accounts_dir = temp_dir.join("accounts");
+        let accounts_dir = create_accounts_run_and_snapshot_dirs(accounts_dir)
+            .unwrap()
+            .0;
+
         let snapshots_dir = temp_dir.join("snapshots");
         let full_snapshot_archives_dir = temp_dir.join("full_snapshot_archives");
         let incremental_snapshot_archives_dir = temp_dir.join("incremental_snapshot_archives");
@@ -281,7 +287,7 @@ mod tests {
         // Create some fake snapshot
         let snapshots_paths: Vec<_> = (0..5)
             .map(|i| {
-                let snapshot_file_name = format!("{}", i);
+                let snapshot_file_name = format!("{i}");
                 let snapshots_dir = snapshots_dir.join(&snapshot_file_name);
                 fs::create_dir_all(&snapshots_dir).unwrap();
                 let fake_snapshot_path = snapshots_dir.join(&snapshot_file_name);
@@ -298,18 +304,18 @@ mod tests {
             .collect();
 
         // Create directory of hard links for snapshots
-        let link_snapshots_dir = tempfile::tempdir_in(&temp_dir).unwrap();
+        let link_snapshots_dir = tempfile::tempdir_in(temp_dir).unwrap();
         for snapshots_path in snapshots_paths {
             let snapshot_file_name = snapshots_path.file_name().unwrap();
             let link_snapshots_dir = link_snapshots_dir.path().join(snapshot_file_name);
             fs::create_dir_all(&link_snapshots_dir).unwrap();
             let link_path = link_snapshots_dir.join(snapshot_file_name);
-            fs::hard_link(&snapshots_path, &link_path).unwrap();
+            fs::hard_link(&snapshots_path, link_path).unwrap();
         }
 
         // Create a packageable snapshot
         let slot = 42;
-        let hash = Hash::default();
+        let hash = SnapshotHash(Hash::default());
         let archive_format = ArchiveFormat::TarBzip2;
         let output_tar_path = snapshot_utils::build_full_snapshot_archive_path(
             &full_snapshot_archives_dir,
@@ -327,7 +333,7 @@ mod tests {
             block_height: slot,
             slot_deltas: vec![],
             snapshot_links: link_snapshots_dir,
-            snapshot_storages: vec![storage_entries],
+            snapshot_storages: storage_entries,
             snapshot_version: SnapshotVersion::default(),
             snapshot_type: SnapshotType::FullSnapshot,
         };

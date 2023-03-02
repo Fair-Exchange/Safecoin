@@ -108,6 +108,9 @@ Operate a configured testnet
    --full-rpc
                                       - Support full RPC services on all nodes
 
+   --tpu-disable-quic
+                                      - Disable quic for tpu packet forwarding
+
    --tpu-enable-udp
                                       - Enable UDP for tpu transactions
 
@@ -139,7 +142,7 @@ Operate a configured testnet
  startclients-specific options:
    $CLIENT_OPTIONS
 
-Note: if RUST_LOG is set in the environment it will be propogated into the
+Note: if RUST_LOG is set in the environment it will be propagated into the
       network nodes.
 EOF
   exit $exitcode
@@ -324,6 +327,7 @@ startBootstrapLeader() {
          \"$waitForNodeInit\" \
          \"$extraPrimordialStakes\" \
          \"$TMPFS_ACCOUNTS\" \
+         \"$disableQuic\" \
          \"$enableUdp\" \
       "
 
@@ -367,7 +371,7 @@ startNode() {
         timeout 30s scp "${sshOptions[@]}" "$localArchive" "$ipAddress:letsencrypt.tgz"
       fi
       ssh "${sshOptions[@]}" -n "$ipAddress" \
-        "sudo -H /certbot-restore.sh $letsEncryptDomainName maintainers@solana.foundation"
+        "sudo -H /certbot-restore.sh $letsEncryptDomainName maintainers@solanalabs.com"
       rm -f letsencrypt.tgz
       timeout 30s scp "${sshOptions[@]}" "$ipAddress:/letsencrypt.tgz" letsencrypt.tgz
       test -s letsencrypt.tgz # Ensure non-empty before overwriting $localArchive
@@ -397,6 +401,7 @@ startNode() {
          \"$waitForNodeInit\" \
          \"$extraPrimordialStakes\" \
          \"$TMPFS_ACCOUNTS\" \
+         \"$disableQuic\" \
          \"$enableUdp\" \
       "
   ) >> "$logFile" 2>&1 &
@@ -420,7 +425,7 @@ startClient() {
     startCommon "$ipAddress"
     ssh "${sshOptions[@]}" -f "$ipAddress" \
       "./solana/net/remote/remote-client.sh $deployMethod $entrypointIp \
-      $clientToRun \"$RUST_LOG\" \"$benchTpsExtraArgs\" $clientIndex"
+      $clientToRun \"$RUST_LOG\" \"$benchTpsExtraArgs\" $clientIndex $clientType"
   ) >> "$logFile" 2>&1 || {
     cat "$logFile"
     echo "^^^ +++"
@@ -806,7 +811,9 @@ maybeWarpSlot=
 maybeFullRpc=false
 waitForNodeInit=true
 extraPrimordialStakes=0
+disableQuic=false
 enableUdp=false
+clientType=thin-client
 
 command=$1
 [[ -n $command ]] || usage
@@ -919,6 +926,9 @@ while [[ -n $1 ]]; do
     elif [[ $1 == --full-rpc ]]; then
       maybeFullRpc=true
       shift 1
+    elif [[ $1 == --tpu-disable-quic ]]; then
+      disableQuic=true
+      shift 1
     elif [[ $1 == --tpu-enable-udp ]]; then
       enableUdp=true
       shift 1
@@ -939,6 +949,17 @@ while [[ -n $1 ]]; do
     elif [[ $1 = --skip-require-tower ]]; then
       maybeSkipRequireTower="$1"
       shift 1
+    elif [[ $1 = --client-type ]]; then
+      clientType=$2
+      case "$clientType" in
+        thin-client|tpu-client|rpc-client)
+          ;;
+        *)
+          echo "Unexpected client type: \"$clientType\""
+          exit 1
+          ;;
+      esac
+      shift 2
     else
       usage "Unknown long option: $1"
     fi

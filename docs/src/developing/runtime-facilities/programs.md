@@ -21,7 +21,7 @@ Create new accounts, allocate account data, assign accounts to owning programs,
 transfer lamports from System Program owned accounts and pay transaction fees.
 
 - Program id: `11111111111111111111111111111111`
-- Instructions: [SystemInstruction](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/safecoin_program/system_instruction/enum.SystemInstruction.html)
+- Instructions: [SystemInstruction](https://docs.rs/safecoin-program/VERSION_FOR_DOCS_RS/solana_program/system_instruction/enum.SystemInstruction.html)
 
 ## Config Program
 
@@ -41,7 +41,7 @@ Create and manage accounts representing stake and rewards for delegations to
 validators.
 
 - Program id: `Stake11111111111111111111111111111111111111`
-- Instructions: [StakeInstruction](https://docs.rs/safecoin-sdk/VERSION_FOR_DOCS_RS/safecoin_sdk/stake/instruction/enum.StakeInstruction.html)
+- Instructions: [StakeInstruction](https://docs.rs/safecoin-sdk/VERSION_FOR_DOCS_RS/solana_sdk/stake/instruction/enum.StakeInstruction.html)
 
 ## Vote Program
 
@@ -55,7 +55,7 @@ Create and manage accounts that track validator voting state and rewards.
 Deploys, upgrades, and executes programs on the chain.
 
 - Program id: `BPFLoaderUpgradeab1e11111111111111111111111`
-- Instructions: [LoaderInstruction](https://docs.rs/safecoin-sdk/VERSION_FOR_DOCS_RS/safecoin_sdk/loader_upgradeable_instruction/enum.UpgradeableLoaderInstruction.html)
+- Instructions: [LoaderInstruction](https://docs.rs/safecoin-sdk/VERSION_FOR_DOCS_RS/solana_sdk/loader_upgradeable_instruction/enum.UpgradeableLoaderInstruction.html)
 
 The BPF Upgradeable Loader marks itself as "owner" of the executable and
 program-data accounts it creates to store your program. When a user invokes an

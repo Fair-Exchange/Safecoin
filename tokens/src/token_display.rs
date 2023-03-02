@@ -1,6 +1,6 @@
 use {
     safecoin_account_decoder::parse_token::real_number_string_trimmed,
-    safecoin_sdk::native_token::lamports_to_sol,
+    solana_sdk::native_token::lamports_to_sol,
     std::{
         fmt::{Debug, Display, Formatter, Result},
         ops::Add,
@@ -26,11 +26,11 @@ impl Token {
         match &self.token_type {
             TokenType::Safe => {
                 let amount = lamports_to_sol(self.amount);
-                write!(f, "{}{}", SAFE_SYMBOL, amount)
+                write!(f, "{SAFE_SYMBOL}{amount}")
             }
             TokenType::SafeToken => {
                 let amount = real_number_string_trimmed(self.amount, self.decimals);
-                write!(f, "{} tokens", amount)
+                write!(f, "{amount} tokens")
             }
         }
     }

@@ -139,7 +139,7 @@ mod test {
             crds_value::CrdsValue,
         },
         rand::{thread_rng, Rng},
-        safecoin_sdk::timing::timestamp,
+        solana_sdk::timing::timestamp,
         std::{collections::HashSet, iter::repeat_with, ops::Index},
     };
 

@@ -43,8 +43,8 @@ pub struct WithdrawData {
     pub proof: WithdrawProof, // 736 bytes
 }
 
+#[cfg(not(target_os = "solana"))]
 impl WithdrawData {
-    #[cfg(not(target_os = "solana"))]
     pub fn new(
         amount: u64,
         keypair: &ElGamalKeypair,
@@ -62,7 +62,7 @@ impl WithdrawData {
         // current source balance
         let final_ciphertext = current_ciphertext - &ElGamal::encode(amount);
 
-        let pod_pubkey = pod::ElGamalPubkey((&keypair.public).to_bytes());
+        let pod_pubkey = pod::ElGamalPubkey(keypair.public.to_bytes());
         let pod_final_ciphertext: pod::ElGamalCiphertext = final_ciphertext.into();
         let mut transcript = WithdrawProof::transcript_new(&pod_pubkey, &pod_final_ciphertext);
         let proof = WithdrawProof::new(keypair, final_balance, &final_ciphertext, &mut transcript);

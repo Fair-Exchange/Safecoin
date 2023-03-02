@@ -23,11 +23,11 @@ impl DerefMut for StakeHistory {
 }
 
 /// The inner type, which is the SDK's stake history
-type StakeHistoryInner = safecoin_sdk::stake_history::StakeHistory;
+type StakeHistoryInner = solana_sdk::stake_history::StakeHistory;
 
 #[cfg(test)]
 mod tests {
-    use {super::*, safecoin_sdk::stake_history::StakeHistoryEntry};
+    use {super::*, solana_sdk::stake_history::StakeHistoryEntry};
 
     fn rand_stake_history_entry() -> StakeHistoryEntry {
         StakeHistoryEntry {

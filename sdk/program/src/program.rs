@@ -24,6 +24,8 @@ use crate::{
 /// program, and provided by _its_ caller. The same is true of the program ID of
 /// the called program.
 ///
+/// [entrypoint!]: crate::entrypoint!
+///
 /// The `Instruction` is usually built from within the calling program, but may
 /// be deserialized from an external source.
 ///
@@ -88,7 +90,7 @@ use crate::{
 /// A simple example of transferring lamports via CPI:
 ///
 /// ```
-/// use safecoin_program::{
+/// use solana_program::{
 ///     account_info::{next_account_info, AccountInfo},
 ///     entrypoint,
 ///     entrypoint::ProgramResult,
@@ -181,7 +183,7 @@ pub fn invoke_unchecked(instruction: &Instruction, account_infos: &[AccountInfo]
 /// A simple example of creating an account for a PDA:
 ///
 /// ```
-/// use safecoin_program::{
+/// use solana_program::{
 ///     account_info::{next_account_info, AccountInfo},
 ///     entrypoint,
 ///     entrypoint::ProgramResult,

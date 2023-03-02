@@ -7,7 +7,7 @@ use {
     clap::{crate_description, crate_name, Arg, Command},
     safecoin_measure::measure::Measure,
     solana_perf::perf_libs,
-    safecoin_sdk::hash::hash,
+    solana_sdk::hash::hash,
 };
 
 fn main() {

@@ -17,12 +17,12 @@ use {
         snapshot_hash::{FullSnapshotHash, IncrementalSnapshotHash, StartingSnapshotHashes},
         snapshot_utils,
     },
-    safecoin_sdk::genesis_config::GenesisConfig,
+    solana_sdk::genesis_config::GenesisConfig,
     std::{
         fs,
         path::PathBuf,
         process, result,
-        sync::{Arc, RwLock},
+        sync::{atomic::AtomicBool, Arc, RwLock},
     },
 };
 
@@ -50,6 +50,7 @@ pub fn load(
     transaction_status_sender: Option<&TransactionStatusSender>,
     cache_block_meta_sender: Option<&CacheBlockMetaSender>,
     accounts_update_notifier: Option<AccountsUpdateNotifier>,
+    exit: &Arc<AtomicBool>,
 ) -> LoadResult {
     let (bank_forks, leader_schedule_cache, starting_snapshot_hashes, ..) = load_bank_forks(
         genesis_config,
@@ -60,6 +61,7 @@ pub fn load(
         &process_options,
         cache_block_meta_sender,
         accounts_update_notifier,
+        exit,
     );
 
     blockstore_processor::process_blockstore_from_root(
@@ -84,6 +86,7 @@ pub fn load_bank_forks(
     process_options: &ProcessOptions,
     cache_block_meta_sender: Option<&CacheBlockMetaSender>,
     accounts_update_notifier: Option<AccountsUpdateNotifier>,
+    exit: &Arc<AtomicBool>,
 ) -> (
     Arc<RwLock<BankForks>>,
     LeaderScheduleCache,
@@ -124,6 +127,7 @@ pub fn load_bank_forks(
             snapshot_config.as_ref().unwrap(),
             process_options,
             accounts_update_notifier,
+            exit,
         )
     } else {
         let maybe_filler_accounts = process_options
@@ -143,6 +147,7 @@ pub fn load_bank_forks(
             process_options,
             cache_block_meta_sender,
             accounts_update_notifier,
+            exit,
         );
         bank_forks
             .read()
@@ -186,6 +191,7 @@ fn bank_forks_from_snapshot(
     snapshot_config: &SnapshotConfig,
     process_options: &ProcessOptions,
     accounts_update_notifier: Option<AccountsUpdateNotifier>,
+    exit: &Arc<AtomicBool>,
 ) -> (Arc<RwLock<BankForks>>, Option<StartingSnapshotHashes>) {
     // Fail hard here if snapshot fails to load, don't silently continue
     if account_paths.is_empty() {
@@ -193,19 +199,19 @@ fn bank_forks_from_snapshot(
         process::exit(1);
     }
 
-    let (mut deserialized_bank, full_snapshot_archive_info, incremental_snapshot_archive_info) =
+    let (deserialized_bank, full_snapshot_archive_info, incremental_snapshot_archive_info) =
         snapshot_utils::bank_from_latest_snapshot_archives(
             &snapshot_config.bank_snapshots_dir,
             &snapshot_config.full_snapshot_archives_dir,
             &snapshot_config.incremental_snapshot_archives_dir,
             &account_paths,
             genesis_config,
+            &process_options.runtime_config,
             process_options.debug_keys.clone(),
             Some(&crate::builtins::get(
                 process_options.runtime_config.bpf_jit,
             )),
             process_options.account_indexes.clone(),
-            process_options.accounts_db_caching_enabled,
             process_options.limit_load_slot_count_from_snapshot,
             process_options.shrink_ratio,
             process_options.accounts_db_test_hash_calculation,
@@ -213,6 +219,7 @@ fn bank_forks_from_snapshot(
             process_options.verify_index,
             process_options.accounts_db_config.clone(),
             accounts_update_notifier,
+            exit,
         )
         .expect("Load from snapshot failed");
 
@@ -220,12 +227,10 @@ fn bank_forks_from_snapshot(
         deserialized_bank.set_shrink_paths(shrink_paths);
     }
 
-    deserialized_bank.set_compute_budget(process_options.runtime_config.compute_budget);
-
     let full_snapshot_hash = FullSnapshotHash {
         hash: (
             full_snapshot_archive_info.slot(),
-            *full_snapshot_archive_info.hash(),
+            full_snapshot_archive_info.hash().0,
         ),
     };
     let starting_incremental_snapshot_hash =
@@ -234,7 +239,7 @@ fn bank_forks_from_snapshot(
                 base: full_snapshot_hash.hash,
                 hash: (
                     incremental_snapshot_archive_info.slot(),
-                    *incremental_snapshot_archive_info.hash(),
+                    incremental_snapshot_archive_info.hash().0,
                 ),
             }
         });

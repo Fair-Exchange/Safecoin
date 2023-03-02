@@ -10,7 +10,7 @@ lazy_static! {
     ///
     /// This is a [lazy_static] of `Option<String>`, the value of which is
     ///
-    /// > `~/.config/safecoin/cli/config.yml`
+    /// > `~/.config/solana/cli/config.yml`
     ///
     /// It will only be `None` if it is unable to identify the user's home
     /// directory, which should not happen under typical OS environments.
@@ -18,7 +18,7 @@ lazy_static! {
     /// [lazy_static]: https://docs.rs/lazy_static
     pub static ref CONFIG_FILE: Option<String> = {
         dirs_next::home_dir().map(|mut path| {
-            path.extend(&[".config", "safecoin", "cli", "config.yml"]);
+            path.extend([".config", "solana", "cli", "config.yml"]);
             path.to_str().unwrap().to_string()
         })
     };
@@ -32,7 +32,7 @@ pub struct Config {
     /// Typical values for mainnet, devnet, and testnet are [described in the
     /// Safecoin documentation][rpcdocs].
     ///
-    /// For local testing, the typical value is `http://localhost:8328`.
+    /// For local testing, the typical value is `http://localhost:8899`.
     ///
     /// [rpcdocs]: https://docs.solana.com/cluster/rpc-endpoints
     pub json_rpc_url: String,
@@ -61,7 +61,7 @@ pub struct Config {
     /// The default commitment level.
     ///
     /// By default the value is "confirmed", as defined by
-    /// `safecoin_sdk::commitment_config::CommitmentLevel::Confirmed`.
+    /// `solana_sdk::commitment_config::CommitmentLevel::Confirmed`.
     #[serde(default)]
     pub commitment: String,
 }
@@ -70,7 +70,7 @@ impl Default for Config {
     fn default() -> Self {
         let keypair_path = {
             let mut keypair_path = dirs_next::home_dir().expect("home directory");
-            keypair_path.extend(&[".config", "safecoin", "id.json"]);
+            keypair_path.extend([".config", "solana", "id.json"]);
             keypair_path.to_str().unwrap().to_string()
         };
         let json_rpc_url = "https://api.mainnet-beta.safecoin.org".to_string();
@@ -187,8 +187,8 @@ mod test {
         );
 
         assert_eq!(
-            Config::compute_websocket_url("http://example.com:8328"),
-            "ws://example.com:8329/".to_string()
+            Config::compute_websocket_url("http://example.com:8899"),
+            "ws://example.com:8900/".to_string()
         );
         assert_eq!(
             Config::compute_websocket_url("https://example.com:1234"),

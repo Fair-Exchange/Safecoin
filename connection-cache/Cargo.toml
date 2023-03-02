@@ -1,0 +1,30 @@
+[package]
+name = "solana-connection-cache"
+version = "1.15.3"
+description = "Safecoin Connection Cache"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/solana-connection-cache"
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1.57"
+bincode = "1.3.3"
+futures-util = "0.3.25"
+indexmap = "1.9.1"
+indicatif = { version = "0.17.1", optional = true }
+log = "0.4.17"
+rand = "0.7.0"
+rayon = "1.5.3"
+safecoin-measure = { path = "../measure", version = "=1.15.3" }
+safecoin-metrics = { path = "../metrics", version = "=1.15.3" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.15.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.15.3" }
+thiserror = "1.0"
+tokio = { version = "1", features = ["full"] }
+
+[dev-dependencies]
+rand_chacha = "0.2.2"
+safecoin-logger = { path = "../logger", version = "=1.15.3" }

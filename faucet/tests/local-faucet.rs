@@ -1,6 +1,6 @@
 use {
     safecoin_faucet::faucet::{request_airdrop_transaction, run_local_faucet},
-    safecoin_sdk::{
+    solana_sdk::{
         hash::Hash,
         message::Message,
         signature::{Keypair, Signer},
@@ -12,7 +12,7 @@ use {
 #[test]
 fn test_local_faucet() {
     let keypair = Keypair::new();
-    let to = safecoin_sdk::pubkey::new_rand();
+    let to = solana_sdk::pubkey::new_rand();
     let lamports = 50;
     let blockhash = Hash::new(to.as_ref());
     let create_instruction = system_instruction::transfer(&keypair.pubkey(), &to, lamports);

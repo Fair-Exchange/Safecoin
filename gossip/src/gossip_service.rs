@@ -1,13 +1,13 @@
 //! The `gossip_service` module implements the network control plane.
 
 use {
-    crate::{cluster_info::ClusterInfo, contact_info::ContactInfo},
+    crate::{cluster_info::ClusterInfo, legacy_contact_info::LegacyContactInfo as ContactInfo},
     crossbeam_channel::{unbounded, Sender},
     rand::{thread_rng, Rng},
     safecoin_client::{connection_cache::ConnectionCache, thin_client::ThinClient},
     solana_perf::recycler::Recycler,
     solana_runtime::bank_forks::BankForks,
-    safecoin_sdk::{
+    solana_sdk::{
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     },
@@ -331,7 +331,10 @@ pub fn make_gossip_node(
 mod tests {
     use {
         super::*,
-        crate::cluster_info::{ClusterInfo, Node},
+        crate::{
+            cluster_info::{ClusterInfo, Node},
+            contact_info::ContactInfo,
+        },
         std::sync::{atomic::AtomicBool, Arc},
     };
 
@@ -364,8 +367,8 @@ mod tests {
     fn test_gossip_services_spy() {
         const TIMEOUT: Duration = Duration::from_secs(5);
         let keypair = Keypair::new();
-        let peer0 = safecoin_sdk::pubkey::new_rand();
-        let peer1 = safecoin_sdk::pubkey::new_rand();
+        let peer0 = solana_sdk::pubkey::new_rand();
+        let peer1 = solana_sdk::pubkey::new_rand();
         let contact_info = ContactInfo::new_localhost(&keypair.pubkey(), 0);
         let peer0_info = ContactInfo::new_localhost(&peer0, 0);
         let peer1_info = ContactInfo::new_localhost(&peer1, 0);
@@ -397,7 +400,7 @@ mod tests {
             spy_ref.clone(),
             None,
             TIMEOUT,
-            Some(safecoin_sdk::pubkey::new_rand()),
+            Some(solana_sdk::pubkey::new_rand()),
             None,
         );
         assert!(!met_criteria);
@@ -411,7 +414,7 @@ mod tests {
             spy_ref.clone(),
             Some(1),
             TIMEOUT,
-            Some(safecoin_sdk::pubkey::new_rand()),
+            Some(solana_sdk::pubkey::new_rand()),
             None,
         );
         assert!(!met_criteria);
@@ -422,7 +425,7 @@ mod tests {
             None,
             TIMEOUT,
             None,
-            Some(&peer0_info.gossip),
+            Some(&peer0_info.gossip().unwrap()),
         );
         assert!(met_criteria);
 

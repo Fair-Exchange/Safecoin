@@ -6,7 +6,7 @@ use {
     safecoin_measure::measure::Measure,
     solana_metrics::datapoint_warn,
     solana_runtime::{bank::Bank, bank_forks::BankForks},
-    safecoin_sdk::{
+    solana_sdk::{
         hash::Hash, nonce_account, pubkey::Pubkey, saturating_add_assign, signature::Signature,
         timing::AtomicInterval, transport::TransportError,
     },
@@ -706,7 +706,7 @@ impl SendTransactionService {
         connection_cache: &Arc<ConnectionCache>,
     ) -> Result<(), TransportError> {
         let conn = connection_cache.get_connection(tpu_address);
-        conn.send_wire_transaction_async(wire_transaction.to_vec())
+        conn.send_data_async(wire_transaction.to_vec())
     }
 
     fn send_transactions_with_metrics(
@@ -716,7 +716,7 @@ impl SendTransactionService {
     ) -> Result<(), TransportError> {
         let wire_transactions = wire_transactions.iter().map(|t| t.to_vec()).collect();
         let conn = connection_cache.get_connection(tpu_address);
-        conn.send_wire_transaction_batch_async(wire_transactions)
+        conn.send_data_batch_async(wire_transactions)
     }
 
     fn send_transactions(
@@ -777,7 +777,7 @@ mod test {
         super::*,
         crate::tpu_info::NullTpuInfo,
         crossbeam_channel::unbounded,
-        safecoin_sdk::{
+        solana_sdk::{
             account::AccountSharedData,
             genesis_config::create_genesis_config,
             nonce::{self, state::DurableNonce},
@@ -796,7 +796,7 @@ mod test {
         let (sender, receiver) = unbounded();
 
         let connection_cache = Arc::new(ConnectionCache::default());
-        let send_tranaction_service = SendTransactionService::new::<NullTpuInfo>(
+        let send_transaction_service = SendTransactionService::new::<NullTpuInfo>(
             tpu_address,
             &bank_forks,
             None,
@@ -807,7 +807,7 @@ mod test {
         );
 
         drop(sender);
-        send_tranaction_service.join().unwrap();
+        send_transaction_service.join().unwrap();
     }
 
     #[test]

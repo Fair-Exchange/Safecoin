@@ -5,9 +5,10 @@ import {
   TransactionInstruction,
 } from "@safecoin/web3.js";
 import { InstructionCard } from "./InstructionCard";
-import { microLamportsToLamportsString, SafeBalance } from "utils";
+import { SafeBalance } from "components/common/SafeBalance";
 import { Address } from "components/common/Address";
 import { reportError } from "utils/sentry";
+import { microLamportsToLamportsString } from "utils";
 import { useCluster } from "providers/cluster";
 
 export function ComputeBudgetDetailsCard({

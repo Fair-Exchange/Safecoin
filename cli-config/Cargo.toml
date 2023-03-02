@@ -1,9 +1,9 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
 name = "safecoin-cli-config"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.14.3"
+version = "1.15.3"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -12,11 +12,11 @@ documentation = "https://docs.rs/safecoin-cli-config"
 [dependencies]
 dirs-next = "2.0.0"
 lazy_static = "1.4.0"
-serde = "1.0.138"
+serde = "1.0.144"
 serde_derive = "1.0.103"
-serde_yaml = "0.8.26"
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.14.3" }
-safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
+serde_yaml = "0.9.13"
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.15.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.15.3" }
 url = "2.2.2"
 
 [dev-dependencies]

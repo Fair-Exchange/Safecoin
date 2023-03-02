@@ -1,3 +1,6 @@
+//! Authenticated encryption implementation.
+//!
+//! This module is a simple wrapper of the `Aes128GcmSiv` implementation.
 #[cfg(not(target_os = "solana"))]
 use {
     aes_gcm_siv::{
@@ -8,7 +11,7 @@ use {
 };
 use {
     arrayref::{array_ref, array_refs},
-    safecoin_sdk::{
+    solana_sdk::{
         instruction::Instruction,
         message::Message,
         pubkey::Pubkey,
@@ -92,8 +95,8 @@ impl AeKey {
     }
 }
 
-/// For the purpose of encrypting balances for ZK-Token accounts, the nonce and ciphertext sizes
-/// should always be fixed.
+/// For the purpose of encrypting balances for the spl token accounts, the nonce and ciphertext
+/// sizes should always be fixed.
 pub type Nonce = [u8; 12];
 pub type Ciphertext = [u8; 24];
 
@@ -140,7 +143,7 @@ impl fmt::Display for AeCiphertext {
 mod tests {
     use {
         super::*,
-        safecoin_sdk::{signature::Keypair, signer::null_signer::NullSigner},
+        solana_sdk::{signature::Keypair, signer::null_signer::NullSigner},
     };
 
     #[test]

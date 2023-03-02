@@ -4,11 +4,11 @@ use {
         parse_token_extension::{parse_extension, UiExtension},
         StringAmount, StringDecimals,
     },
-    safecoin_sdk::pubkey::Pubkey,
+    solana_sdk::pubkey::Pubkey,
     safe_token_2022::{
-        extension::StateWithExtensions,
+        extension::{BaseStateWithExtensions, StateWithExtensions},
         generic_token_account::GenericTokenAccount,
-        safecoin_program::{
+        solana_program::{
             program_option::COption, program_pack::Pack, pubkey::Pubkey as SafeTokenPubkey,
         },
         state::{Account, AccountState, Mint, Multisig},
@@ -17,13 +17,13 @@ use {
 };
 
 // A helper function to convert safe_token::id() as spl_sdk::pubkey::Pubkey to
-// safecoin_sdk::pubkey::Pubkey
+// solana_sdk::pubkey::Pubkey
 pub(crate) fn safe_token_id() -> Pubkey {
     Pubkey::new_from_array(safe_token::id().to_bytes())
 }
 
 // A helper function to convert safe_token_2022::id() as spl_sdk::pubkey::Pubkey to
-// safecoin_sdk::pubkey::Pubkey
+// solana_sdk::pubkey::Pubkey
 pub(crate) fn safe_token_2022_id() -> Pubkey {
     Pubkey::new_from_array(safe_token_2022::id().to_bytes())
 }
@@ -39,7 +39,7 @@ pub fn is_known_safe_token_id(program_id: &Pubkey) -> bool {
 }
 
 // A helper function to convert safe_token::native_mint::id() as spl_sdk::pubkey::Pubkey to
-// safecoin_sdk::pubkey::Pubkey
+// solana_sdk::pubkey::Pubkey
 pub fn safe_token_native_mint() -> Pubkey {
     Pubkey::new_from_array(safe_token::native_mint::id().to_bytes())
 }
@@ -49,12 +49,12 @@ pub fn safe_token_native_mint_program_id() -> Pubkey {
     safe_token_id()
 }
 
-// A helper function to convert a safecoin_sdk::pubkey::Pubkey to spl_sdk::pubkey::Pubkey
+// A helper function to convert a solana_sdk::pubkey::Pubkey to spl_sdk::pubkey::Pubkey
 pub fn safe_token_pubkey(pubkey: &Pubkey) -> SafeTokenPubkey {
     SafeTokenPubkey::new_from_array(pubkey.to_bytes())
 }
 
-// A helper function to convert a spl_sdk::pubkey::Pubkey to safecoin_sdk::pubkey::Pubkey
+// A helper function to convert a spl_sdk::pubkey::Pubkey to solana_sdk::pubkey::Pubkey
 pub fn pubkey_from_safe_token(pubkey: &SafeTokenPubkey) -> Pubkey {
     Pubkey::new_from_array(pubkey.to_bytes())
 }
@@ -232,7 +232,7 @@ impl UiTokenAmount {
     pub fn real_number_string(&self) -> String {
         real_number_string(
             u64::from_str(&self.amount).unwrap_or_default(),
-            self.decimals as u8,
+            self.decimals,
         )
     }
 
@@ -242,7 +242,7 @@ impl UiTokenAmount {
         } else {
             real_number_string_trimmed(
                 u64::from_str(&self.amount).unwrap_or_default(),
-                self.decimals as u8,
+                self.decimals,
             )
         }
     }
@@ -282,11 +282,9 @@ pub struct UiMultisig {
 }
 
 pub fn get_token_account_mint(data: &[u8]) -> Option<Pubkey> {
-    if Account::valid_account_data(data) {
-        Some(Pubkey::new(&data[0..32]))
-    } else {
-        None
-    }
+    Account::valid_account_data(data)
+        .then(|| Pubkey::try_from(data.get(..32)?).ok())
+        .flatten()
 }
 
 #[cfg(test)]
@@ -402,7 +400,7 @@ mod test {
         account.state = AccountState::Initialized;
         Account::pack(account, &mut account_data).unwrap();
 
-        let expected_mint_pubkey = Pubkey::new(&[2; 32]);
+        let expected_mint_pubkey = Pubkey::from([2; 32]);
         assert_eq!(
             get_token_account_mint(&account_data),
             Some(expected_mint_pubkey)

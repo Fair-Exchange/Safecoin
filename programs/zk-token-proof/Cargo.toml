@@ -1,9 +1,9 @@
 [package]
 name = "safe-zk-token-proof-program"
 description = "Safecoin Zk Token Proof Program"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 repository = "https://github.com/fair-exchange/safecoin"
-version = "1.14.3"
+version = "1.15.3"
 license = "Apache-2.0"
 edition = "2021"
 
@@ -12,6 +12,6 @@ bytemuck = { version = "1.11.0", features = ["derive"] }
 getrandom = { version = "0.1", features = ["dummy"] }
 num-derive = "0.3"
 num-traits = "0.2"
-safecoin-program-runtime = { path = "../../program-runtime", version = "=1.14.3" }
-safecoin-sdk = { path = "../../sdk", version = "=1.14.3" }
-safe-zk-token-sdk = { path = "../../zk-token-sdk", version = "=1.14.3" }
+safecoin-program-runtime = { path = "../../program-runtime", version = "=1.15.3" }
+safecoin-sdk = { path = "../../sdk", version = "=1.15.3" }
+safe-zk-token-sdk = { path = "../../zk-token-sdk", version = "=1.15.3" }

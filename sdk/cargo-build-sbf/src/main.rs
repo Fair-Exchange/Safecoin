@@ -4,7 +4,7 @@ use {
     log::*,
     regex::Regex,
     solana_download_utils::download_file,
-    safecoin_sdk::signature::{write_keypair_file, Keypair},
+    solana_sdk::signature::{write_keypair_file, Keypair},
     std::{
         borrow::Cow,
         collections::{HashMap, HashSet},
@@ -27,6 +27,7 @@ struct Config<'a> {
     sbf_tools_version: &'a str,
     dump: bool,
     features: Vec<String>,
+    force_tools_install: bool,
     generate_child_script_on_failure: bool,
     no_default_features: bool,
     offline: bool,
@@ -48,11 +49,12 @@ impl Default for Config<'_> {
                 .expect("Unable to get parent directory")
                 .to_path_buf()
                 .join("sdk")
-                .join("bpf"),
+                .join("sbf"),
             sbf_out_dir: None,
             sbf_tools_version: "(unknown)",
             dump: false,
             features: vec![],
+            force_tools_install: false,
             generate_child_script_on_failure: false,
             no_default_features: false,
             offline: false,
@@ -72,7 +74,7 @@ where
     S: AsRef<OsStr>,
 {
     let args = args.into_iter().collect::<Vec<_>>();
-    let mut msg = format!("cargo-build-sbf child: {}", program.display());
+    let mut msg = format!("spawn: {}", program.display());
     for arg in args.iter() {
         msg = msg + &format!(" {}", arg.as_ref().to_str().unwrap_or("?")).to_string();
     }
@@ -100,7 +102,7 @@ where
         let file = File::create(&script_name).unwrap();
         let mut out = BufWriter::new(file);
         for (key, value) in env::vars() {
-            writeln!(out, "{}=\"{}\" \\", key, value).unwrap();
+            writeln!(out, "{key}=\"{value}\" \\").unwrap();
         }
         write!(out, "{}", program.display()).unwrap();
         for arg in args.iter() {
@@ -122,6 +124,105 @@ where
         .collect::<String>()
 }
 
+pub fn is_version_string(arg: &str) -> Result<(), String> {
+    let semver_re = Regex::new(r"^v[0-9]+\.[0-9]+(\.[0-9]+)?").unwrap();
+    if semver_re.is_match(arg) {
+        return Ok(());
+    }
+    Err("a version string starts with 'v' and contains major and minor version numbers separated by a dot, e.g. v1.32".to_string())
+}
+
+fn find_installed_sbf_tools(arch: &str) -> Vec<String> {
+    let home_dir = PathBuf::from(env::var("HOME").unwrap_or_else(|err| {
+        error!("Can't get home directory path: {}", err);
+        exit(1);
+    }));
+    let safecoin = home_dir.join(".cache").join("solana");
+    let package = if arch == "bpf" {
+        "bpf-tools"
+    } else {
+        "sbf-tools"
+    };
+    std::fs::read_dir(solana)
+        .unwrap()
+        .filter_map(|e| match e {
+            Err(_) => None,
+            Ok(e) => {
+                if e.path().join(package).is_dir() {
+                    Some(e.path().file_name().unwrap().to_string_lossy().to_string())
+                } else {
+                    None
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+}
+
+fn get_latest_sbf_tools_version() -> Result<String, String> {
+    let url = "https://github.com/solana-labs/sbf-tools/releases/latest";
+    let resp = reqwest::blocking::get(url).map_err(|err| format!("Failed to GET {url}: {err}"))?;
+    let path = std::path::Path::new(resp.url().path());
+    let version = path.file_name().unwrap().to_string_lossy().to_string();
+    Ok(version)
+}
+
+fn normalize_version(version: String) -> String {
+    let dots = version.as_bytes().iter().fold(
+        0,
+        |n: u32, c| if *c == b'.' { n.saturating_add(1) } else { n },
+    );
+    if dots == 1 {
+        format!("{version}.0")
+    } else {
+        version
+    }
+}
+
+fn validate_sbf_tools_version(
+    arch: &str,
+    requested_version: &str,
+    builtin_version: String,
+) -> String {
+    let normalized_requested = normalize_version(requested_version.to_string());
+    let requested_semver = semver::Version::parse(&normalized_requested[1..]).unwrap();
+    let installed_versions = find_installed_sbf_tools(arch);
+    for v in installed_versions {
+        if requested_semver <= semver::Version::parse(&normalize_version(v)[1..]).unwrap() {
+            return requested_version.to_string();
+        }
+    }
+    let latest_version = get_latest_sbf_tools_version().unwrap_or_else(|err| {
+        debug!(
+            "Can't get the latest version of sbf-tools: {}. Using built-in version {}.",
+            err, &builtin_version,
+        );
+        builtin_version.clone()
+    });
+    let normalized_latest = normalize_version(latest_version.clone());
+    let latest_semver = semver::Version::parse(&normalized_latest[1..]).unwrap();
+    if requested_semver <= latest_semver {
+        requested_version.to_string()
+    } else {
+        warn!(
+            "Version {} is not valid, latest version is {}. Using the built-in version {}",
+            requested_version, latest_version, &builtin_version,
+        );
+        builtin_version
+    }
+}
+
+fn make_sbf_tools_path_for_version(package: &str, version: &str) -> PathBuf {
+    let home_dir = PathBuf::from(env::var("HOME").unwrap_or_else(|err| {
+        error!("Can't get home directory path: {}", err);
+        exit(1);
+    }));
+    home_dir
+        .join(".cache")
+        .join("solana")
+        .join(version)
+        .join(package)
+}
+
 // Check whether a package is installed and install it if missing.
 fn install_if_missing(
     config: &Config,
@@ -130,6 +231,18 @@ fn install_if_missing(
     download_file_name: &str,
     target_path: &Path,
 ) -> Result<(), String> {
+    if config.force_tools_install {
+        if target_path.is_dir() {
+            debug!("Remove directory {:?}", target_path);
+            fs::remove_dir_all(target_path).map_err(|err| err.to_string())?;
+        }
+        let source_base = config.sbf_sdk.join("dependencies");
+        if source_base.exists() {
+            let source_path = source_base.join(package);
+            debug!("Remove file {:?}", source_path);
+            fs::remove_file(source_path).map_err(|err| err.to_string())?;
+        }
+    }
     // Check whether the target path is an empty directory. This can
     // happen if package download failed on previous run of
     // cargo-build-sbf.  Remove the target_path directory in this
@@ -141,7 +254,8 @@ fn install_if_missing(
             .next()
             .is_none()
     {
-        fs::remove_dir(&target_path).map_err(|err| err.to_string())?;
+        debug!("Remove directory {:?}", target_path);
+        fs::remove_dir(target_path).map_err(|err| err.to_string())?;
     }
 
     // Check whether the package is already in ~/.cache/solana.
@@ -153,9 +267,10 @@ fn install_if_missing(
             .unwrap_or(false)
     {
         if target_path.exists() {
-            fs::remove_file(&target_path).map_err(|err| err.to_string())?;
+            debug!("Remove file {:?}", target_path);
+            fs::remove_file(target_path).map_err(|err| err.to_string())?;
         }
-        fs::create_dir_all(&target_path).map_err(|err| err.to_string())?;
+        fs::create_dir_all(target_path).map_err(|err| err.to_string())?;
         let mut url = String::from(url);
         url.push('/');
         url.push_str(config.sbf_tools_version);
@@ -169,9 +284,7 @@ fn install_if_missing(
         let zip = File::open(&download_file_path).map_err(|err| err.to_string())?;
         let tar = BzDecoder::new(BufReader::new(zip));
         let mut archive = Archive::new(tar);
-        archive
-            .unpack(&target_path)
-            .map_err(|err| err.to_string())?;
+        archive.unpack(target_path).map_err(|err| err.to_string())?;
         fs::remove_file(download_file_path).map_err(|err| err.to_string())?;
     }
     // Make a symbolic link source_path -> target_path in the
@@ -265,7 +378,7 @@ fn postprocess_dump(program_dump: &Path) {
         if head_re.is_match(line) {
             let captures = head_re.captures(line).unwrap();
             pc = u64::from_str_radix(&captures[1], 16).unwrap();
-            writeln!(out, "{}", line).unwrap();
+            writeln!(out, "{line}").unwrap();
             continue;
         }
         if insn_re.is_match(line) {
@@ -288,11 +401,11 @@ fn postprocess_dump(program_dump: &Path) {
                 if a2n.contains_key(&address) {
                     writeln!(out, "{} ; {}", line, a2n[&address]).unwrap();
                 } else {
-                    writeln!(out, "{}", line).unwrap();
+                    writeln!(out, "{line}").unwrap();
                 }
             }
         } else {
-            writeln!(out, "{}", line).unwrap();
+            writeln!(out, "{line}").unwrap();
         }
         pc = pc.checked_add(step).unwrap();
     }
@@ -372,7 +485,7 @@ fn link_sbf_toolchain(config: &Config) {
     let rustup_args = vec!["toolchain", "list", "-v"];
     let rustup_output = spawn(
         &rustup,
-        &rustup_args,
+        rustup_args,
         config.generate_child_script_on_failure,
     );
     if config.verbose {
@@ -392,7 +505,7 @@ fn link_sbf_toolchain(config: &Config) {
                 ];
                 let output = spawn(
                     &rustup,
-                    &rustup_args,
+                    rustup_args,
                     config.generate_child_script_on_failure,
                 );
                 if config.verbose {
@@ -413,7 +526,7 @@ fn link_sbf_toolchain(config: &Config) {
         ];
         let output = spawn(
             &rustup,
-            &rustup_args,
+            rustup_args,
             config.generate_child_script_on_failure,
         );
         if config.verbose {
@@ -475,7 +588,7 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
         })
         .join("release");
 
-    env::set_current_dir(&root_package_dir).unwrap_or_else(|err| {
+    env::set_current_dir(root_package_dir).unwrap_or_else(|err| {
         error!(
             "Unable to set current directory to {}: {}",
             root_package_dir, err
@@ -510,25 +623,16 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
     } else {
         "solana-sbf-tools-linux.tar.bz2"
     };
-
-    let home_dir = PathBuf::from(env::var("HOME").unwrap_or_else(|err| {
-        error!("Can't get home directory path: {}", err);
-        exit(1);
-    }));
     let package = if config.arch == "bpf" {
         "bpf-tools"
     } else {
         "sbf-tools"
     };
-    let target_path = home_dir
-        .join(".cache")
-        .join("solana")
-        .join(config.sbf_tools_version)
-        .join(package);
+    let target_path = make_sbf_tools_path_for_version(package, config.sbf_tools_version);
     install_if_missing(
         config,
         package,
-        "https://github.com/solana-labs/bpf-tools/releases/download",
+        "https://github.com/solana-labs/sbf-tools/releases/download",
         sbf_tools_download_file_name,
         &target_path,
     )
@@ -536,7 +640,7 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
         // The package version directory doesn't contain a valid
         // installation, and it should be removed.
         let target_path_parent = target_path.parent().expect("Invalid package path");
-        fs::remove_dir_all(&target_path_parent).unwrap_or_else(|err| {
+        fs::remove_dir_all(target_path_parent).unwrap_or_else(|err| {
             error!(
                 "Failed to remove {} while recovering from installation failure: {}",
                 target_path_parent.to_string_lossy(),
@@ -564,25 +668,6 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
     env::set_var("OBJDUMP", llvm_bin.join("llvm-objdump"));
     env::set_var("OBJCOPY", llvm_bin.join("llvm-objcopy"));
 
-    let rustflags = env::var("RUSTFLAGS").ok();
-    let mut rustflags = Cow::Borrowed(rustflags.as_deref().unwrap_or_default());
-    if config.remap_cwd {
-        rustflags = Cow::Owned(format!("{} -Zremap-cwd-prefix=", &rustflags));
-    }
-    if config.debug {
-        // Replace with -Zsplit-debuginfo=packed when stabilized.
-        rustflags = Cow::Owned(format!("{} -g", &rustflags));
-    }
-    if let Cow::Owned(flags) = rustflags {
-        env::set_var("RUSTFLAGS", &flags);
-    }
-    if config.verbose {
-        debug!(
-            "RUSTFLAGS=\"{}\"",
-            env::var("RUSTFLAGS").ok().unwrap_or_default()
-        );
-    }
-
     // RUSTC variable overrides cargo +<toolchain> mechanism of
     // selecting the rust compiler and makes cargo run a rust compiler
     // other than the one linked in BPF toolchain. We have to prevent
@@ -593,15 +678,40 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
         );
         env::remove_var("RUSTC")
     }
-
-    let mut target_rustflags = env::var("CARGO_TARGET_SBF_SAFECOIN_SAFECOIN_RUSTFLAGS")
-        .ok()
-        .unwrap_or_default();
+    let cargo_target = if config.arch == "bpf" {
+        "CARGO_TARGET_BPFEL_UNKNOWN_UNKNOWN_RUSTFLAGS"
+    } else {
+        "CARGO_TARGET_SBF_SAFECOIN_SAFECOIN_RUSTFLAGS"
+    };
+    let rustflags = env::var("RUSTFLAGS").ok().unwrap_or_default();
+    if env::var("RUSTFLAGS").is_ok() {
+        warn!(
+            "Removed RUSTFLAGS from cargo environment, because it overrides {}.",
+            cargo_target,
+        );
+        env::remove_var("RUSTFLAGS")
+    }
+    let target_rustflags = env::var(cargo_target).ok();
+    let mut target_rustflags = Cow::Borrowed(target_rustflags.as_deref().unwrap_or_default());
+    target_rustflags = Cow::Owned(format!("{} {}", &rustflags, &target_rustflags));
+    if config.remap_cwd {
+        target_rustflags = Cow::Owned(format!("{} -Zremap-cwd-prefix=", &target_rustflags));
+    }
+    if config.debug {
+        // Replace with -Zsplit-debuginfo=packed when stabilized.
+        target_rustflags = Cow::Owned(format!("{} -g", &target_rustflags));
+    }
     if config.arch == "sbfv2" {
-        target_rustflags = format!("{} {}", "-C target_cpu=sbfv2", target_rustflags);
-        env::set_var(
-            "CARGO_TARGET_SBF_SAFECOIN_SAFECOIN_RUSTFLAGS",
-            &target_rustflags,
+        target_rustflags = Cow::Owned(format!("{} -C target_cpu=sbfv2", &target_rustflags));
+    }
+    if let Cow::Owned(flags) = target_rustflags {
+        env::set_var(cargo_target, flags);
+    }
+    if config.verbose {
+        debug!(
+            "{}=\"{}\"",
+            cargo_target,
+            env::var(cargo_target).ok().unwrap_or_default(),
         );
     }
 
@@ -655,11 +765,11 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
     }
 
     if let Some(program_name) = program_name {
-        let program_unstripped_so = target_build_directory.join(&format!("{}.so", program_name));
-        let program_dump = sbf_out_dir.join(&format!("{}-dump.txt", program_name));
-        let program_so = sbf_out_dir.join(&format!("{}.so", program_name));
-        let program_debug = sbf_out_dir.join(&format!("{}.debug", program_name));
-        let program_keypair = sbf_out_dir.join(&format!("{}-keypair.json", program_name));
+        let program_unstripped_so = target_build_directory.join(format!("{program_name}.so"));
+        let program_dump = sbf_out_dir.join(format!("{program_name}-dump.txt"));
+        let program_so = sbf_out_dir.join(format!("{program_name}.so"));
+        let program_debug = sbf_out_dir.join(format!("{program_name}.debug"));
+        let program_keypair = sbf_out_dir.join(format!("{program_name}-keypair.json"));
 
         fn file_older_or_missing(prerequisite_file: &Path, target_file: &Path) -> bool {
             let prerequisite_metadata = fs::metadata(prerequisite_file).unwrap_or_else(|err| {
@@ -695,7 +805,7 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
             #[cfg(windows)]
             let output = spawn(
                 &llvm_bin.join("llvm-objcopy"),
-                &[
+                [
                     "--strip-all".as_ref(),
                     program_unstripped_so.as_os_str(),
                     program_so.as_os_str(),
@@ -705,7 +815,7 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
             #[cfg(not(windows))]
             let output = spawn(
                 &config.sbf_sdk.join("scripts").join("strip.sh"),
-                &[&program_unstripped_so, &program_so],
+                [&program_unstripped_so, &program_so],
                 config.generate_child_script_on_failure,
             );
             if config.verbose {
@@ -728,7 +838,7 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
             {
                 let output = spawn(
                     &dump_script,
-                    &[&program_unstripped_so, &program_dump],
+                    [&program_unstripped_so, &program_dump],
                     config.generate_child_script_on_failure,
                 );
                 if config.verbose {
@@ -746,7 +856,7 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
 
             let output = spawn(
                 llvm_objcopy,
-                &[
+                [
                     "--only-keep-debug".as_ref(),
                     program_unstripped_so.as_os_str(),
                     program_debug.as_os_str(),
@@ -826,7 +936,7 @@ fn main() {
 
     // The following line is scanned by CI configuration script to
     // separate cargo caches according to the version of sbf-tools.
-    let sbf_tools_version = "v1.29";
+    let sbf_tools_version = String::from("v1.32");
     let version = format!("{}\nsbf-tools {}", crate_version!(), sbf_tools_version);
     let matches = clap::Command::new(crate_name!())
         .about(crate_description!())
@@ -883,6 +993,12 @@ fn main() {
                 .help("Space-separated list of features to activate"),
         )
         .arg(
+            Arg::new("force_tools_install")
+                .long("force-tools-install")
+                .takes_value(false)
+                .help("Download and install sbf-tools even when existing tools are located"),
+        )
+        .arg(
             Arg::new("generate_child_script_on_failure")
                 .long("generate-child-script-on-failure")
                 .takes_value(false)
@@ -906,6 +1022,14 @@ fn main() {
                 .long("offline")
                 .takes_value(false)
                 .help("Run without accessing the network"),
+        )
+        .arg(
+            Arg::new("tools_version")
+                .long("tools-version")
+                .value_name("STRING")
+                .takes_value(true)
+                .validator(is_version_string)
+                .help("sbf-tools version to use or to install, a version string, e.g. \"v1.32\""),
         )
         .arg(
             Arg::new("verbose")
@@ -933,7 +1057,7 @@ fn main() {
         .arg(
             Arg::new("arch")
                 .long("arch")
-                .possible_values(&["bpf", "sbf", "sbfv2"])
+                .possible_values(["bpf", "sbf", "sbfv2"])
                 .default_value("sbf")
                 .help("Build for the given SBF version"),
         )
@@ -942,6 +1066,15 @@ fn main() {
     let sbf_sdk: PathBuf = matches.value_of_t_or_exit("sbf_sdk");
     let sbf_out_dir: Option<PathBuf> = matches.value_of_t("sbf_out_dir").ok();
 
+    let sbf_tools_version = if let Some(tools_version) = matches.value_of("tools_version") {
+        validate_sbf_tools_version(
+            matches.value_of("arch").unwrap(),
+            tools_version,
+            sbf_tools_version,
+        )
+    } else {
+        sbf_tools_version
+    };
     let config = Config {
         cargo_args: matches
             .values_of("cargo_args")
@@ -963,9 +1096,10 @@ fn main() {
                     .join(sbf_out_dir)
             }
         }),
-        sbf_tools_version,
+        sbf_tools_version: sbf_tools_version.as_str(),
         dump: matches.is_present("dump"),
         features: matches.values_of_t("features").ok().unwrap_or_default(),
+        force_tools_install: matches.is_present("force_tools_install"),
         generate_child_script_on_failure: matches.is_present("generate_child_script_on_failure"),
         no_default_features: matches.is_present("no_default_features"),
         remap_cwd: !matches.is_present("remap_cwd"),

@@ -1,7 +1,7 @@
 use {
     crate::bank::Bank,
     crossbeam_channel::{unbounded, Receiver, Sender},
-    safecoin_sdk::{
+    solana_sdk::{
         account::Account,
         client::{AsyncClient, Client, SyncClient},
         commitment_config::CommitmentConfig,
@@ -14,6 +14,7 @@ use {
         signature::{Keypair, Signature, Signer},
         signers::Signers,
         system_instruction,
+        sysvar::{Sysvar, SysvarId},
         transaction::{self, Transaction, VersionedTransaction},
         transport::{Result, TransportError},
     },
@@ -324,13 +325,17 @@ impl BankClient {
     pub fn new(bank: Bank) -> Self {
         Self::new_shared(&Arc::new(bank))
     }
+
+    pub fn set_sysvar_for_tests<T: Sysvar + SysvarId>(&self, sysvar: &T) {
+        self.bank.set_sysvar_for_tests(sysvar);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        safecoin_sdk::{
+        solana_sdk::{
             genesis_config::create_genesis_config, instruction::AccountMeta,
             native_token::sol_to_lamports,
         },
@@ -348,7 +353,7 @@ mod tests {
         let amount = genesis_config.rent.minimum_balance(0);
 
         // Create 2-2 Multisig Transfer instruction.
-        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
+        let bob_pubkey = solana_sdk::pubkey::new_rand();
         let mut transfer_instruction =
             system_instruction::transfer(&john_pubkey, &bob_pubkey, amount);
         transfer_instruction

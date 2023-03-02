@@ -63,7 +63,7 @@ impl From<u64> for PubkeyError {
 /// [acc]: https://docs.solana.com/developing/programming-model/accounts
 /// [ed25519]: https://ed25519.cr.yp.to/
 /// [pdas]: https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses
-/// [`Keypair`]: https://docs.rs/safecoin-sdk/latest/safecoin_sdk/signer/keypair/struct.Keypair.html
+/// [`Keypair`]: https://docs.rs/safecoin-sdk/latest/solana_sdk/signer/keypair/struct.Keypair.html
 #[wasm_bindgen]
 #[repr(transparent)]
 #[derive(
@@ -121,14 +121,33 @@ impl FromStr for Pubkey {
         if pubkey_vec.len() != mem::size_of::<Pubkey>() {
             Err(ParsePubkeyError::WrongSize)
         } else {
-            Ok(Pubkey::new(&pubkey_vec))
+            Pubkey::try_from(pubkey_vec).map_err(|_| ParsePubkeyError::Invalid)
         }
     }
 }
 
 impl From<[u8; 32]> for Pubkey {
+    #[inline]
     fn from(from: [u8; 32]) -> Self {
         Self(from)
+    }
+}
+
+impl TryFrom<&[u8]> for Pubkey {
+    type Error = std::array::TryFromSliceError;
+
+    #[inline]
+    fn try_from(pubkey: &[u8]) -> Result<Self, Self::Error> {
+        <[u8; 32]>::try_from(pubkey).map(Self::from)
+    }
+}
+
+impl TryFrom<Vec<u8>> for Pubkey {
+    type Error = Vec<u8>;
+
+    #[inline]
+    fn try_from(pubkey: Vec<u8>) -> Result<Self, Self::Error> {
+        <[u8; 32]>::try_from(pubkey).map(Self::from)
     }
 }
 
@@ -151,11 +170,12 @@ pub fn bytes_are_curve_point<T: AsRef<[u8]>>(_bytes: T) -> bool {
 }
 
 impl Pubkey {
+    #[deprecated(
+        since = "1.14.14",
+        note = "Please use 'Pubkey::from' or 'Pubkey::try_from' instead"
+    )]
     pub fn new(pubkey_vec: &[u8]) -> Self {
-        Self(
-            <[u8; 32]>::try_from(<&[u8]>::clone(&pubkey_vec))
-                .expect("Slice must be the same length as a Pubkey"),
-        )
+        Self::try_from(pubkey_vec).expect("Slice must be the same length as a Pubkey")
     }
 
     pub const fn new_from_array(pubkey_array: [u8; 32]) -> Self {
@@ -166,7 +186,7 @@ impl Pubkey {
     #[cfg(not(target_os = "solana"))]
     pub fn new_rand() -> Self {
         // Consider removing Pubkey::new_rand() entirely in the v1.5 or v1.6 timeframe
-        Pubkey::new(&rand::random::<[u8; 32]>())
+        Pubkey::from(rand::random::<[u8; 32]>())
     }
 
     /// unique Pubkey for tests and benchmarks.
@@ -179,7 +199,7 @@ impl Pubkey {
         // use big endian representation to ensure that recent unique pubkeys
         // are always greater than less recent unique pubkeys
         b[0..8].copy_from_slice(&i.to_be_bytes());
-        Self::new(&b)
+        Self::from(b)
     }
 
     pub fn create_with_seed(
@@ -198,10 +218,8 @@ impl Pubkey {
                 return Err(PubkeyError::IllegalOwner);
             }
         }
-
-        Ok(Pubkey::new(
-            hashv(&[base.as_ref(), seed.as_ref(), owner]).as_ref(),
-        ))
+        let hash = hashv(&[base.as_ref(), seed.as_ref(), owner]);
+        Ok(Pubkey::from(hash.to_bytes()))
     }
 
     /// Find a valid [program derived address][pda] and its corresponding bump seed.
@@ -293,7 +311,7 @@ impl Pubkey {
     ///
     /// ```
     /// # use borsh::{BorshSerialize, BorshDeserialize};
-    /// # use safecoin_program::{
+    /// # use solana_program::{
     /// #     pubkey::Pubkey,
     /// #     entrypoint::ProgramResult,
     /// #     program::invoke_signed,
@@ -372,20 +390,20 @@ impl Pubkey {
     ///
     /// ```
     /// # use borsh::{BorshSerialize, BorshDeserialize};
-    /// # use safecoin_program::example_mocks::{safecoin_sdk, safecoin_client};
-    /// # use safecoin_program::{
+    /// # use solana_program::example_mocks::{solana_sdk, solana_rpc_client};
+    /// # use solana_program::{
     /// #     pubkey::Pubkey,
     /// #     instruction::Instruction,
     /// #     hash::Hash,
     /// #     instruction::AccountMeta,
     /// #     system_program,
     /// # };
-    /// # use safecoin_sdk::{
+    /// # use solana_sdk::{
     /// #     signature::Keypair,
     /// #     signature::{Signer, Signature},
     /// #     transaction::Transaction,
     /// # };
-    /// # use safecoin_client::rpc_client::RpcClient;
+    /// # use solana_rpc_client::rpc_client::RpcClient;
     /// # use std::convert::TryFrom;
     /// # use anyhow::Result;
     /// #
@@ -508,7 +526,7 @@ impl Pubkey {
                 )
             };
             match result {
-                crate::entrypoint::SUCCESS => Some((Pubkey::new(&bytes), bump_seed)),
+                crate::entrypoint::SUCCESS => Some((Pubkey::from(bytes), bump_seed)),
                 _ => None,
             }
         }
@@ -549,7 +567,7 @@ impl Pubkey {
     /// that the returned `Pubkey` has the expected value.
     ///
     /// ```
-    /// # use safecoin_program::pubkey::Pubkey;
+    /// # use solana_program::pubkey::Pubkey;
     /// # let program_id = Pubkey::new_unique();
     /// let (expected_pda, bump_seed) = Pubkey::find_program_address(&[b"vault"], &program_id);
     /// let actual_pda = Pubkey::create_program_address(&[b"vault", &[bump_seed]], &program_id)?;
@@ -584,7 +602,7 @@ impl Pubkey {
                 return Err(PubkeyError::InvalidSeeds);
             }
 
-            Ok(Pubkey::new(hash.as_ref()))
+            Ok(Pubkey::from(hash.to_bytes()))
         }
         // Call via a system call to perform the calculation
         #[cfg(target_os = "solana")]
@@ -599,7 +617,7 @@ impl Pubkey {
                 )
             };
             match result {
-                crate::entrypoint::SUCCESS => Ok(Pubkey::new(&bytes)),
+                crate::entrypoint::SUCCESS => Ok(Pubkey::from(bytes)),
                 _ => Err(result.into()),
             }
         }

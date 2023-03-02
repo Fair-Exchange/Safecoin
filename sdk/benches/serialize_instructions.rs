@@ -3,7 +3,7 @@
 extern crate test;
 use {
     bincode::{deserialize, serialize},
-    safecoin_sdk::{
+    solana_sdk::{
         instruction::{AccountMeta, Instruction},
         message::{Message, SanitizedMessage},
         pubkey::{self, Pubkey},

@@ -70,7 +70,7 @@ An update manifest is used to advertise the deployment of new release tarballs o
 The update tarball itself is hosted elsewhere, off-chain and can be fetched from the specified `download_url`.
 
 ```text
-use safecoin_sdk::signature::Signature;
+use solana_sdk::signature::Signature;
 
 /// Information required to download and apply a given update
 pub struct UpdateManifest {
@@ -115,7 +115,7 @@ The `safecoin-install` tool is used by the user to install and update their clus
 
 It manages the following files and directories in the user's home directory:
 
-- `~/.config/safecoin/install/config.yml` - user configuration and information about currently installed software version
+- `~/.config/solana/install/config.yml` - user configuration and information about currently installed software version
 - `~/.local/share/solana/install/bin` - a symlink to the current release. eg, `~/.local/share/solana-update/<update-pubkey>-<manifest_signature>/bin`
 - `~/.local/share/solana/install/releases/<download_sha256>/` - contents of a release
 

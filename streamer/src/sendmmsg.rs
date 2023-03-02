@@ -10,7 +10,7 @@ use {
     std::os::unix::io::AsRawFd,
 };
 use {
-    safecoin_sdk::transport::TransportError,
+    solana_sdk::transport::TransportError,
     std::{
         borrow::Borrow,
         io,
@@ -29,7 +29,7 @@ pub enum SendPktsError {
 
 impl From<SendPktsError> for TransportError {
     fn from(err: SendPktsError) -> Self {
-        Self::Custom(format!("{:?}", err))
+        Self::Custom(format!("{err:?}"))
     }
 }
 
@@ -134,7 +134,8 @@ where
 {
     let size = packets.len();
     #[allow(clippy::uninit_assumed_init)]
-    let mut iovs = vec![unsafe { std::mem::MaybeUninit::uninit().assume_init() }; size];
+    let iovec = std::mem::MaybeUninit::<iovec>::uninit();
+    let mut iovs = vec![unsafe { iovec.assume_init() }; size];
     let mut addrs = vec![unsafe { std::mem::zeroed() }; size];
     let mut hdrs = vec![unsafe { std::mem::zeroed() }; size];
     for ((pkt, dest), hdr, iov, addr) in izip!(packets, &mut hdrs, &mut iovs, &mut addrs) {
@@ -165,7 +166,7 @@ mod tests {
             recvmmsg::recv_mmsg,
             sendmmsg::{batch_send, multi_target_send, SendPktsError},
         },
-        safecoin_sdk::packet::PACKET_DATA_SIZE,
+        solana_sdk::packet::PACKET_DATA_SIZE,
         std::{
             io::ErrorKind,
             net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket},

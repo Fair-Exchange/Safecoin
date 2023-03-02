@@ -1,5 +1,5 @@
 import React from "react";
-import { SafeBalance } from "utils";
+import { SafeBalance } from "components/common/SafeBalance";
 import { Epoch } from "components/common/Epoch";
 import {
   SysvarAccount,

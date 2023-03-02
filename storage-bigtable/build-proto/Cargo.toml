@@ -1,5 +1,5 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.com>"]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 description = "Safecoin: Enterprise Security for the Community by the Community"
 edition = "2021"
 homepage = "https://safecoin.org/"
@@ -7,9 +7,7 @@ license = "Apache-2.0"
 name = "proto"
 publish = false
 repository = "https://github.com/fair-exchange/safecoin"
-version = "1.14.3"
-
-[workspace]
+version = "1.15.3"
 
 [dependencies]
 tonic-build = "0.8.0"

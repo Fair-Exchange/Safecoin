@@ -3,7 +3,7 @@ use {
         stakes::{create_and_add_stakes, StakerInfo},
         unlocks::UnlockInfo,
     },
-    safecoin_sdk::{genesis_config::GenesisConfig, native_token::LAMPORTS_PER_SAFE},
+    solana_sdk::{genesis_config::GenesisConfig, native_token::LAMPORTS_PER_SAFE},
 };
 
 // 9 month schedule is 100% after 9 months
@@ -276,8 +276,8 @@ mod tests {
 
         let lamports = genesis_config
             .accounts
-            .iter()
-            .map(|(_, account)| account.lamports)
+            .values()
+            .map(|account| account.lamports)
             .sum::<u64>();
 
         assert_eq!(33_370_166 * LAMPORTS_PER_SAFE, lamports);

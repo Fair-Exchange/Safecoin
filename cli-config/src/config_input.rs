@@ -1,6 +1,6 @@
 use {
     crate::Config, safecoin_clap_utils::input_validators::normalize_to_url_if_moniker,
-    safecoin_sdk::commitment_config::CommitmentConfig, std::str::FromStr,
+    solana_sdk::commitment_config::CommitmentConfig, std::str::FromStr,
 };
 
 pub enum SettingType {
@@ -82,7 +82,7 @@ impl ConfigInput {
             (SettingType::Explicit, json_rpc_cfg_url.to_string()),
             (SettingType::SystemDefault, Self::default_json_rpc_url()),
         ]);
-        (setting_type, normalize_to_url_if_moniker(&url_or_moniker))
+        (setting_type, normalize_to_url_if_moniker(url_or_moniker))
     }
 
     pub fn compute_keypair_path_setting(

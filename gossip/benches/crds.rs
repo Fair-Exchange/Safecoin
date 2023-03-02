@@ -10,7 +10,7 @@ use {
         crds_gossip_pull::CRDS_GOSSIP_PULL_CRDS_TIMEOUT_MS,
         crds_value::CrdsValue,
     },
-    safecoin_sdk::pubkey::Pubkey,
+    solana_sdk::pubkey::Pubkey,
     std::collections::HashMap,
     test::Bencher,
 };

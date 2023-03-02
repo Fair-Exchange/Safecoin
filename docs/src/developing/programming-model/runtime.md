@@ -35,13 +35,19 @@ The policy is as follows:
   - And only if the data is zero-initialized or empty.
 - An account not assigned to the program cannot have its balance decrease.
 - The balance of read-only and executable accounts may not change.
-- Only the system program can change the size of the data and only if the system
-  program owns the account.
-- Only the owner may change account data.
+- Only the owner may change account size and data.
   - And if the account is writable.
   - And if the account is not executable.
 - Executable is one-way (false->true) and only the account owner may set it.
 - No one can make modifications to the rent_epoch associated with this account.
+
+## Balancing the balances
+
+Before and after each instruction, the sum of all account balances must stay the same.
+E.g. if one account's balance is increased, another's must be decreased by the same amount.
+Because the runtime can not see changes to accounts which were not passed to it,
+all accounts for which the balances were modified must be passed,
+even if they are not needed in the called instruction.
 
 ## Compute Budget
 
@@ -49,15 +55,17 @@ To prevent abuse of computational resources, each transaction is allocated a
 compute budget. The budget specifies a maximum number of compute units that a
 transaction can consume, the costs associated with different types of operations
 the transaction may perform, and operational bounds the transaction must adhere
-to.  As the transaction is processed compute units are consumed by its
-instruction's programs performing operations such as executing BPF instructions,
+to.
+
+As the transaction is processed compute units are consumed by its
+instruction's programs performing operations such as executing SBF instructions,
 calling syscalls, etc... When the transaction consumes its entire budget, or
 exceeds a bound such as attempting a call stack that is too deep, the runtime
 halts the transaction processing and returns an error.
 
 The following operations incur a compute cost:
 
-- Executing BPF instructions
+- Executing SBF instructions
 - Passing data between programs
 - Calling system calls
   - logging
@@ -71,38 +79,41 @@ budget, or exceeds a bound, the entire invocation chain and the top level
 transaction processing are halted.
 
 The current [compute
-budget](https://github.com/fair-exchange/safecoin/blob/090e11210aa7222d8295610a6ccac4acda711bb9/program-runtime/src/compute_budget.rs#L26-L87)
+budget](https://github.com/fair-exchange/safecoin/blob/090e11210aa7222d8295610a6ccac4acda711bb9/program-runtime/src/compute_budget.rs#L26-L87) can be found in the Safecoin Program Runtime.
 
-can be found in the Safecoin Program Runtime.
+#### Example Compute Budget
 
-For example, if the current budget is:
+For example, if the compute budget set in the Safecoin runtime is:
 
 ```rust
 max_units: 1,400,000,
 log_u64_units: 100,
 create_program address units: 1500,
 invoke_units: 1000,
-max_invoke_depth: 4,
+max_invoke_stack_height: 5,
+max_instruction_trace_length: 64,
 max_call_depth: 64,
 stack_frame_size: 4096,
 log_pubkey_units: 100,
 ...
 ```
 
-Then the transaction
+Then any transaction:
 
-- Could execute 1,400,000 BPF instructions, if it did nothing else.
+- Could execute 1,400,000 SBF instructions, if it did nothing else.
 - Cannot exceed 4k of stack usage.
-- Cannot exceed a BPF call depth of 64.
-- Cannot exceed 4 levels of cross-program invocations.
+- Cannot exceed a SBF call depth of 64.
+- Cannot exceed invoke stack height of 5 (4 levels of cross-program invocations).
 
-Since the compute budget is consumed incrementally as the transaction executes,
-the total budget consumption will be a combination of the various costs of the
-operations it performs.
+> **NOTE:** Since the compute budget is consumed incrementally as the transaction executes,
+> the total budget consumption will be a combination of the various costs of the
+> operations it performs.
 
 At runtime a program may log how much of the compute budget remains. See
 [debugging](developing/on-chain-programs/debugging.md#monitoring-compute-budget-consumption)
 for more information.
+
+### Prioritization fees
 
 A transaction may set the maximum number of compute units it is allowed to
 consume and the compute unit price by including a `SetComputeUnitLimit` and a
@@ -112,20 +123,19 @@ respectively.
 
 If no `SetComputeUnitLimit` is provided the limit will be calculated as the
 product of the number of instructions in the transaction (excluding the [Compute
-budget
-instructions](https://github.com/fair-exchange/safecoin/blob/db32549c00a1b5370fcaf128981ad3323bbd9570/sdk/src/compute_budget.rs#L22))
-and the default per-instruction units, which is currently 200k.
+budget instructions](https://github.com/fair-exchange/safecoin/blob/db32549c00a1b5370fcaf128981ad3323bbd9570/sdk/src/compute_budget.rs#L22)) and the default per-instruction units, which is currently 200k.
 
-Note that a transaction's prioritization fee is calculated by multiplying the
-number of compute units by the compute unit price (measured in micro-lamports)
-set by the transaction via compute budget instructions.  So transactions should
-request the minimum amount of compute units required for execution to minimize
+> **NOTE:** A transaction's [prioritization fee](./../../terminology.md#prioritization-fee) is calculated by multiplying the
+> number of _compute units_ by the _compute unit price_ (measured in micro-lamports)
+> set by the transaction via compute budget instructions.
+
+Transactions should request the minimum amount of compute units required for execution to minimize
 fees. Also note that fees are not adjusted when the number of requested compute
 units exceeds the number of compute units actually consumed by an executed
 transaction.
 
 Compute Budget instructions don't require any accounts and don't consume any
-compute units to process.  Transactions can only contain one of each type of
+compute units to process. Transactions can only contain one of each type of
 compute budget instruction, duplicate types will result in an error.
 
 The `ComputeBudgetInstruction::set_compute_unit_limit` and

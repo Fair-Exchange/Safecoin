@@ -59,7 +59,7 @@ have not made any errors.
 safecoin-keygen new --no-outfile
 ```
 
-> If the `--no-outfile` flag is **omitted**, the default behavior is to write the keypair to `~/.config/safecoin/id.json`, resulting in a [file system wallet](file-system-wallet.md).
+> If the `--no-outfile` flag is **omitted**, the default behavior is to write the keypair to `~/.config/solana/id.json`, resulting in a [file system wallet](file-system-wallet.md).
 
 The output of this command will display a line like this:
 
@@ -133,7 +133,7 @@ The solana-cli supports
 hierarchical derivation of private keys from your seed phrase and passphrase by
 adding either the `?key=` query string or the `?full-path=` query string.
 
-By default, `prompt:` will derive solana's base derivation path `m/44'/19165'`. To
+By default, `prompt:` will derive solana's base derivation path `m/44'/501'`. To
 derive a child key, supply the `?key=<ACCOUNT>/<CHANGE>` query string.
 
 ```bash

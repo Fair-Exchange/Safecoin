@@ -9,7 +9,7 @@
 //!
 //! [std]: https://doc.rust-lang.org/stable/std/
 //! [sstd]: https://docs.solana.com/developing/on-chain-programs/developing-rust#restrictions
-//! [`safecoin-sdk`]: https://docs.rs/safecoin-sdk/latest/safecoin_sdk/
+//! [`safecoin-sdk`]: https://docs.rs/safecoin-sdk/latest/solana_sdk/
 //!
 //! This library defines
 //!
@@ -28,7 +28,7 @@
 //! [serialization]: #serialization
 //! [np]: #native-programs
 //! [cpi]: #cross-program-instruction-execution
-//! [sysvar]: #sysvars
+//! [sysvar]: crate::sysvar
 //!
 //! Idiomatic examples of `safecoin-program` usage can be found in
 //! [the Safecoin Program Library][spl].
@@ -68,7 +68,7 @@
 //! ```
 //! #[cfg(not(feature = "no-entrypoint"))]
 //! pub mod entrypoint {
-//!     use safecoin_program::{
+//!     use solana_program::{
 //!         account_info::AccountInfo,
 //!         entrypoint,
 //!         entrypoint::ProgramResult,
@@ -181,7 +181,7 @@
 //! [`ProgramError`]: program_error::ProgramError
 //! [`ProgramResult`]: entrypoint::ProgramResult
 //! [ed25519]: https://ed25519.cr.yp.to/
-//! [`Keypair`]: https://docs.rs/safecoin-sdk/latest/safecoin_sdk/signer/keypair/struct.Keypair.html
+//! [`Keypair`]: https://docs.rs/safecoin-sdk/latest/solana_sdk/signer/keypair/struct.Keypair.html
 //! [SHA-256]: https://en.wikipedia.org/wiki/SHA-2
 //! [`Safe`]: native_token::Safe
 //! [_lamports_]: https://docs.solana.com/introduction#what-are-sols
@@ -277,7 +277,7 @@
 //! A simple example of transferring lamports via CPI:
 //!
 //! ```
-//! use safecoin_program::{
+//! use solana_program::{
 //!     account_info::{next_account_info, AccountInfo},
 //!     entrypoint,
 //!     entrypoint::ProgramResult,
@@ -329,7 +329,7 @@
 //! A simple example of creating an account for a PDA:
 //!
 //! ```
-//! use safecoin_program::{
+//! use solana_program::{
 //!     account_info::{next_account_info, AccountInfo},
 //!     entrypoint,
 //!     entrypoint::ProgramResult,
@@ -401,7 +401,7 @@
 //! only be executed as "top-level" instructions included by off-chain clients
 //! in a [`Transaction`].
 //!
-//! [`Transaction`]: https://docs.rs/safecoin-sdk/latest/safecoin_sdk/transaction/struct.Transaction.html
+//! [`Transaction`]: https://docs.rs/safecoin-sdk/latest/solana_sdk/transaction/struct.Transaction.html
 //!
 //! This crate defines the program IDs for most native programs. Even though
 //! some native programs cannot be invoked by other programs, a Safecoin program
@@ -427,139 +427,58 @@
 //! - __System Program__: Creates new accounts, allocates account data, assigns
 //!   accounts to owning programs, transfers lamports from System Program owned
 //!   accounts and pays transaction fees.
-//!   - ID: [`safecoin_program::system_program`]
-//!   - Instruction: [`safecoin_program::system_instruction`]
+//!   - ID: [`solana_program::system_program`]
+//!   - Instruction: [`solana_program::system_instruction`]
 //!   - Invokable by programs? yes
 //!
 //! - __Compute Budget Program__: Requests additional CPU or memory resources
 //!   for a transaction. This program does nothing when called from another
 //!   program.
-//!   - ID: [`safecoin_sdk::compute_budget`](https://docs.rs/safecoin-sdk/latest/safecoin_sdk/compute_budget/index.html)
-//!   - Instruction: [`safecoin_sdk::compute_budget`](https://docs.rs/safecoin-sdk/latest/safecoin_sdk/compute_budget/index.html)
+//!   - ID: [`solana_sdk::compute_budget`](https://docs.rs/safecoin-sdk/latest/solana_sdk/compute_budget/index.html)
+//!   - Instruction: [`solana_sdk::compute_budget`](https://docs.rs/safecoin-sdk/latest/solana_sdk/compute_budget/index.html)
 //!   - Invokable by programs? no
 //!
 //! - __ed25519 Program__: Verifies an ed25519 signature.
-//!   - ID: [`safecoin_program::ed25519_program`]
-//!   - Instruction: [`safecoin_sdk::ed25519_instruction`](https://docs.rs/safecoin-sdk/latest/safecoin_sdk/ed25519_instruction/index.html)
+//!   - ID: [`solana_program::ed25519_program`]
+//!   - Instruction: [`solana_sdk::ed25519_instruction`](https://docs.rs/safecoin-sdk/latest/solana_sdk/ed25519_instruction/index.html)
 //!   - Invokable by programs? no
 //!
 //! - __secp256k1 Program__: Verifies secp256k1 public key recovery operations.
-//!   - ID: [`safecoin_program::secp256k1_program`]
-//!   - Instruction: [`safecoin_sdk::secp256k1_instruction`](https://docs.rs/safecoin-sdk/latest/safecoin_sdk/secp256k1_instruction/index.html)
+//!   - ID: [`solana_program::secp256k1_program`]
+//!   - Instruction: [`solana_sdk::secp256k1_instruction`](https://docs.rs/safecoin-sdk/latest/solana_sdk/secp256k1_instruction/index.html)
 //!   - Invokable by programs? no
 //!
 //! - __BPF Loader__: Deploys, and executes immutable programs on the chain.
-//!   - ID: [`safecoin_program::bpf_loader`]
-//!   - Instruction: [`safecoin_program::loader_instruction`]
+//!   - ID: [`solana_program::bpf_loader`]
+//!   - Instruction: [`solana_program::loader_instruction`]
 //!   - Invokable by programs? yes
 //!
 //! - __Upgradable BPF Loader__: Deploys, upgrades, and executes upgradable
 //!   programs on the chain.
-//!   - ID: [`safecoin_program::bpf_loader_upgradeable`]
-//!   - Instruction: [`safecoin_program::loader_upgradeable_instruction`]
+//!   - ID: [`solana_program::bpf_loader_upgradeable`]
+//!   - Instruction: [`solana_program::loader_upgradeable_instruction`]
 //!   - Invokable by programs? yes
 //!
 //! - __Deprecated BPF Loader__: Deploys, and executes immutable programs on the
 //!   chain.
-//!   - ID: [`safecoin_program::bpf_loader_deprecated`]
-//!   - Instruction: [`safecoin_program::loader_instruction`]
+//!   - ID: [`solana_program::bpf_loader_deprecated`]
+//!   - Instruction: [`solana_program::loader_instruction`]
 //!   - Invokable by programs? yes
 //!
-//! [lut]: https://docs.solana.com/proposals/transactions-v2
-//!
-//! # Sysvars
-//!
-//! Sysvars are special accounts that contain dynamically-updated data about
-//! the network cluster, the blockchain history, and the executing transaction.
-//!
-//! The program IDs for sysvars are defined in the [`sysvar`] module, and simple
-//! sysvars implement the [`Sysvar::get`] method, which loads a sysvar directly
-//! from the runtime, as in this example that logs the `clock` sysvar:
-//!
-//! [`Sysvar::get`]: sysvar::Sysvar::get
-//!
-//! ```
-//! use safecoin_program::{
-//!     account_info::AccountInfo,
-//!     clock,
-//!     entrypoint::ProgramResult,
-//!     msg,
-//!     pubkey::Pubkey,
-//!     sysvar::Sysvar,
-//! };
-//!
-//! fn process_instruction(
-//!     program_id: &Pubkey,
-//!     accounts: &[AccountInfo],
-//!     instruction_data: &[u8],
-//! ) -> ProgramResult {
-//!     let clock = clock::Clock::get()?;
-//!     msg!("clock: {:#?}", clock);
-//!     Ok(())
-//! }
-//! ```
-//!
-//! Since Safecoin sysvars are accounts, if the `AccountInfo` is provided to the
-//! program, then the program can deserialize the sysvar with
-//! [`Sysvar::from_account_info`] to access its data, as in this example that
-//! again logs the [`clock`][clk] sysvar.
-//!
-//! [`Sysvar::from_account_info`]: sysvar::Sysvar::from_account_info
-//! [clk]: sysvar::clock
-//!
-//! ```
-//! use safecoin_program::{
-//!     account_info::{next_account_info, AccountInfo},
-//!     clock,
-//!     entrypoint::ProgramResult,
-//!     msg,
-//!     pubkey::Pubkey,
-//!     sysvar::Sysvar,
-//! };
-//!
-//! fn process_instruction(
-//!     program_id: &Pubkey,
-//!     accounts: &[AccountInfo],
-//!     instruction_data: &[u8],
-//! ) -> ProgramResult {
-//!     let account_info_iter = &mut accounts.iter();
-//!     let clock_account = next_account_info(account_info_iter)?;
-//!     let clock = clock::Clock::from_account_info(&clock_account)?;
-//!     msg!("clock: {:#?}", clock);
-//!     Ok(())
-//! }
-//! ```
-//!
-//! When possible, programs should prefer to call `Sysvar::get` instead of
-//! deserializing with `Sysvar::from_account_info`, as the latter imposes extra
-//! overhead of deserialization while also requiring the sysvar account address
-//! be passed to the program, wasting the limited space available to
-//! transactions. Deserializing sysvars that can instead be retrieved with
-//! `Sysvar::get` should be only be considered for compatibility with older
-//! programs that pass around sysvar accounts.
-//!
-//! Some sysvars are too large to deserialize within a program, and
-//! `Sysvar::from_account_info` returns an error. Some sysvars are too large
-//! to deserialize within a program, and attempting to will exhaust the
-//! program's compute budget. Some sysvars do not implement `Sysvar::get` and
-//! return an error. Some sysvars have custom deserializers that do not
-//! implement the `Sysvar` trait. These cases are documented in the modules for
-//! individual sysvars.
-//!
-//! For more details see the Safecoin [documentation on sysvars][sysvardoc].
-//!
-//! [sysvardoc]: https://docs.solana.com/developing/runtime-facilities/sysvars
+//! [lut]: https://docs.solana.com/proposals/versioned-transactions
 
 #![allow(incomplete_features)]
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(specialization))]
 #![cfg_attr(RUSTC_NEEDS_PROC_MACRO_HYGIENE, feature(proc_macro_hygiene))]
 
-// Allows macro expansion of `use ::safecoin_program::*` to work within this crate
-extern crate self as safecoin_program;
+// Allows macro expansion of `use ::solana_program::*` to work within this crate
+extern crate self as solana_program;
 
 pub mod account_info;
 pub mod address_lookup_table_account;
+pub mod alt_bn128;
 pub(crate) mod atomic_u64;
+pub mod big_mod_exp;
 pub mod blake3;
 pub mod borsh;
 pub mod bpf_loader;
@@ -608,10 +527,11 @@ pub mod syscalls;
 pub mod system_instruction;
 pub mod system_program;
 pub mod sysvar;
+pub mod vote;
 pub mod wasm;
 
 #[cfg(target_os = "solana")]
-pub use safecoin_sdk_macro::wasm_bindgen_stub as wasm_bindgen;
+pub use solana_sdk_macro::wasm_bindgen_stub as wasm_bindgen;
 /// Re-export of [wasm-bindgen].
 ///
 /// [wasm-bindgen]: https://rustwasm.github.io/docs/wasm-bindgen/
@@ -627,21 +547,12 @@ pub mod config {
     }
 }
 
-/// The [vote native program][np].
-///
-/// [np]: https://docs.solana.com/developing/runtime-facilities/programs#vote-program
-pub mod vote {
-    pub mod program {
-        crate::declare_id!("Vote111111111111111111111111111111111111111");
-    }
-}
-
-/// A vector of Safecoin SDK IDs
+/// A vector of Safecoin SDK IDs.
 pub mod sdk_ids {
     use {
         crate::{
             bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, config, ed25519_program,
-            feature, incinerator, secp256k1_program, safecoin_program::pubkey::Pubkey, stake,
+            feature, incinerator, secp256k1_program, solana_program::pubkey::Pubkey, stake,
             system_program, sysvar, vote,
         },
         lazy_static::lazy_static,
@@ -670,7 +581,7 @@ pub mod sdk_ids {
 }
 
 /// Same as [`declare_id`] except that it reports that this ID has been deprecated.
-pub use safecoin_sdk_macro::program_declare_deprecated_id as declare_deprecated_id;
+pub use solana_sdk_macro::program_declare_deprecated_id as declare_deprecated_id;
 /// Convenience macro to declare a static public key and functions to interact with it.
 ///
 /// Input: a single literal base58 string representation of a program's ID.
@@ -681,10 +592,10 @@ pub use safecoin_sdk_macro::program_declare_deprecated_id as declare_deprecated_
 /// # // wrapper is used so that the macro invocation occurs in the item position
 /// # // rather than in the statement position which isn't allowed.
 /// use std::str::FromStr;
-/// use safecoin_program::{declare_id, pubkey::Pubkey};
+/// use solana_program::{declare_id, pubkey::Pubkey};
 ///
 /// # mod item_wrapper {
-/// #   use safecoin_program::declare_id;
+/// #   use solana_program::declare_id;
 /// declare_id!("My11111111111111111111111111111111111111111");
 /// # }
 /// # use item_wrapper::id;
@@ -692,7 +603,7 @@ pub use safecoin_sdk_macro::program_declare_deprecated_id as declare_deprecated_
 /// let my_id = Pubkey::from_str("My11111111111111111111111111111111111111111").unwrap();
 /// assert_eq!(id(), my_id);
 /// ```
-pub use safecoin_sdk_macro::program_declare_id as declare_id;
+pub use solana_sdk_macro::program_declare_id as declare_id;
 /// Convenience macro to define a static public key.
 ///
 /// Input: a single literal base58 string representation of a Pubkey.
@@ -701,14 +612,14 @@ pub use safecoin_sdk_macro::program_declare_id as declare_id;
 ///
 /// ```
 /// use std::str::FromStr;
-/// use safecoin_program::{pubkey, pubkey::Pubkey};
+/// use solana_program::{pubkey, pubkey::Pubkey};
 ///
 /// static ID: Pubkey = pubkey!("My11111111111111111111111111111111111111111");
 ///
 /// let my_id = Pubkey::from_str("My11111111111111111111111111111111111111111").unwrap();
 /// assert_eq!(ID, my_id);
 /// ```
-pub use safecoin_sdk_macro::program_pubkey as pubkey;
+pub use solana_sdk_macro::program_pubkey as pubkey;
 
 #[macro_use]
 extern crate serde_derive;
@@ -727,7 +638,7 @@ extern crate safecoin_frozen_abi_macro;
 /// Literal denominator div-by-zero fails:
 ///
 /// ```compile_fail
-/// # use safecoin_program::unchecked_div_by_const;
+/// # use solana_program::unchecked_div_by_const;
 /// # fn main() {
 /// let _ = unchecked_div_by_const!(10, 0);
 /// # }
@@ -736,7 +647,7 @@ extern crate safecoin_frozen_abi_macro;
 /// Const denominator div-by-zero fails:
 ///
 /// ```compile_fail
-/// # use safecoin_program::unchecked_div_by_const;
+/// # use solana_program::unchecked_div_by_const;
 /// # fn main() {
 /// const D: u64 = 0;
 /// let _ = unchecked_div_by_const!(10, D);
@@ -746,7 +657,7 @@ extern crate safecoin_frozen_abi_macro;
 /// Non-const denominator fails:
 ///
 /// ```compile_fail
-/// # use safecoin_program::unchecked_div_by_const;
+/// # use solana_program::unchecked_div_by_const;
 /// # fn main() {
 /// let d = 0;
 /// let _ = unchecked_div_by_const!(10, d);
@@ -756,7 +667,7 @@ extern crate safecoin_frozen_abi_macro;
 /// Literal denominator div-by-zero fails:
 ///
 /// ```compile_fail
-/// # use safecoin_program::unchecked_div_by_const;
+/// # use solana_program::unchecked_div_by_const;
 /// # fn main() {
 /// const N: u64 = 10;
 /// let _ = unchecked_div_by_const!(N, 0);
@@ -766,7 +677,7 @@ extern crate safecoin_frozen_abi_macro;
 /// Const denominator div-by-zero fails:
 ///
 /// ```compile_fail
-/// # use safecoin_program::unchecked_div_by_const;
+/// # use solana_program::unchecked_div_by_const;
 /// # fn main() {
 /// const N: u64 = 10;
 /// const D: u64 = 0;
@@ -777,7 +688,7 @@ extern crate safecoin_frozen_abi_macro;
 /// Non-const denominator fails:
 ///
 /// ```compile_fail
-/// # use safecoin_program::unchecked_div_by_const;
+/// # use solana_program::unchecked_div_by_const;
 /// # fn main() {
 /// # const N: u64 = 10;
 /// let d = 0;
@@ -788,7 +699,7 @@ extern crate safecoin_frozen_abi_macro;
 /// Literal denominator div-by-zero fails:
 ///
 /// ```compile_fail
-/// # use safecoin_program::unchecked_div_by_const;
+/// # use solana_program::unchecked_div_by_const;
 /// # fn main() {
 /// let n = 10;
 /// let _ = unchecked_div_by_const!(n, 0);
@@ -798,7 +709,7 @@ extern crate safecoin_frozen_abi_macro;
 /// Const denominator div-by-zero fails:
 ///
 /// ```compile_fail
-/// # use safecoin_program::unchecked_div_by_const;
+/// # use solana_program::unchecked_div_by_const;
 /// # fn main() {
 /// let n = 10;
 /// const D: u64 = 0;
@@ -809,7 +720,7 @@ extern crate safecoin_frozen_abi_macro;
 /// Non-const denominator fails:
 ///
 /// ```compile_fail
-/// # use safecoin_program::unchecked_div_by_const;
+/// # use solana_program::unchecked_div_by_const;
 /// # fn main() {
 /// let n = 10;
 /// let d = 0;
@@ -833,31 +744,12 @@ macro_rules! unchecked_div_by_const {
     }};
 }
 
-use std::{mem::MaybeUninit, ptr::write_bytes};
-
-#[macro_export]
-macro_rules! copy_field {
-    ($ptr:expr, $self:ident, $field:ident) => {
-        std::ptr::addr_of_mut!((*$ptr).$field).write($self.$field)
-    };
-}
-
-pub fn clone_zeroed<T, F>(clone: F) -> T
-where
-    F: Fn(&mut MaybeUninit<T>),
-{
-    let mut value = MaybeUninit::<T>::uninit();
-    unsafe { write_bytes(&mut value, 0, 1) }
-    clone(&mut value);
-    unsafe { value.assume_init() }
-}
-
 // This module is purposefully listed after all other exports: because of an
 // interaction within rustdoc between the reexports inside this module of
-// `safecoin_program`'s top-level modules, and `safecoin_sdk`'s glob re-export of
-// `safecoin_program`'s top-level modules, if this module is not lexically last
+// `solana_program`'s top-level modules, and `solana_sdk`'s glob re-export of
+// `solana_program`'s top-level modules, if this module is not lexically last
 // rustdoc fails to generate documentation for the re-exports within
-// `safecoin_sdk`.
+// `solana_sdk`.
 #[cfg(not(target_os = "solana"))]
 pub mod example_mocks;
 

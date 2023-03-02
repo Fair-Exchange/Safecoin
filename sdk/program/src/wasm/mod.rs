@@ -9,7 +9,7 @@ pub mod system_instruction;
 
 /// Initialize Javascript logging and panic handler
 #[wasm_bindgen]
-pub fn safecoin_program_init() {
+pub fn solana_program_init() {
     use std::sync::Once;
     static INIT: Once = Once::new();
 

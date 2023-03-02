@@ -2,9 +2,9 @@ import bs58 from 'bs58';
 import BN from 'bn.js';
 import * as mockttp from 'mockttp';
 
-import {mockRpcMessage} from './rpc-websockets';
+import {mockRpcMessage} from './rpc-websocket';
 import {Connection, PublicKey, Transaction, Signer} from '../../src';
-import invariant from '../../src/util/assert';
+import invariant from '../../src/utils/assert';
 import type {Commitment, HttpHeaders, RpcParams} from '../../src/connection';
 
 export const mockServer: mockttp.Mockttp | undefined =
@@ -53,7 +53,7 @@ export const mockRpcBatchResponse = async ({
   });
 
   await mockServer
-    .post('/')
+    .forPost('/')
     .withJsonBodyIncluding(request)
     .thenReply(200, JSON.stringify(response));
 };
@@ -71,6 +71,7 @@ export const mockRpcResponse = async ({
   params,
   value,
   error,
+  slot,
   withContext,
   withHeaders,
 }: {
@@ -78,13 +79,14 @@ export const mockRpcResponse = async ({
   params: Array<any>;
   value?: Promise<any> | any;
   error?: any;
+  slot?: number;
   withContext?: boolean;
   withHeaders?: HttpHeaders;
 }) => {
   if (!mockServer) return;
 
   await mockServer
-    .post('/')
+    .forPost('/')
     .withJsonBodyIncluding({
       jsonrpc: '2.0',
       method,
@@ -98,7 +100,7 @@ export const mockRpcResponse = async ({
         if (withContext) {
           result = {
             context: {
-              slot: 11,
+              slot: slot != null ? slot : 11,
             },
             value: unwrappedValue,
           };
@@ -126,7 +128,7 @@ const latestBlockhash = async ({
   commitment?: Commitment;
 }) => {
   const blockhash = uniqueBlockhash();
-  const params = [];
+  const params: Array<Object> = [];
   if (commitment) {
     params.push({commitment});
   }
@@ -152,7 +154,7 @@ const recentBlockhash = async ({
   commitment?: Commitment;
 }) => {
   const blockhash = uniqueBlockhash();
-  const params = [];
+  const params: Array<Object> = [];
   if (commitment) {
     params.push({commitment});
   }

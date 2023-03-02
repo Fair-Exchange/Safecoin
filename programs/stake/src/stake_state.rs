@@ -5,12 +5,12 @@
 
 #[deprecated(
     since = "1.8.0",
-    note = "Please use `safecoin_sdk::stake::state` or `safecoin_program::stake::state` instead"
+    note = "Please use `solana_sdk::stake::state` or `solana_program::stake::state` instead"
 )]
-pub use safecoin_sdk::stake::state::*;
+pub use solana_sdk::stake::state::*;
 use {
-    safecoin_program_runtime::{ic_msg, invoke_context::InvokeContext},
-    safecoin_sdk::{
+    solana_program_runtime::{ic_msg, invoke_context::InvokeContext},
+    solana_sdk::{
         account::{AccountSharedData, ReadableAccount, WritableAccount},
         account_utils::StateMut,
         clock::{Clock, Epoch},
@@ -28,9 +28,11 @@ use {
             tools::{acceptable_reference_epoch_credits, eligible_for_deactivate_delinquent},
         },
         stake_history::{StakeHistory, StakeHistoryEntry},
-        transaction_context::{BorrowedAccount, InstructionContext, TransactionContext},
+        transaction_context::{
+            BorrowedAccount, IndexOfAccount, InstructionContext, TransactionContext,
+        },
     },
-    solana_vote_program::vote_state::{VoteState, VoteStateVersions},
+    solana_vote_program::vote_state::{self, VoteState, VoteStateVersions},
     std::{collections::HashSet, convert::TryFrom},
 };
 
@@ -539,7 +541,7 @@ pub fn authorize_with_seed(
     transaction_context: &TransactionContext,
     instruction_context: &InstructionContext,
     stake_account: &mut BorrowedAccount,
-    authority_base_index: usize,
+    authority_base_index: IndexOfAccount,
     authority_seed: &str,
     authority_owner: &Pubkey,
     new_authority: &Pubkey,
@@ -576,8 +578,8 @@ pub fn delegate(
     invoke_context: &InvokeContext,
     transaction_context: &TransactionContext,
     instruction_context: &InstructionContext,
-    stake_account_index: usize,
-    vote_account_index: usize,
+    stake_account_index: IndexOfAccount,
+    vote_account_index: IndexOfAccount,
     clock: &Clock,
     stake_history: &StakeHistory,
     config: &Config,
@@ -667,9 +669,9 @@ pub fn split(
     invoke_context: &InvokeContext,
     transaction_context: &TransactionContext,
     instruction_context: &InstructionContext,
-    stake_account_index: usize,
+    stake_account_index: IndexOfAccount,
     lamports: u64,
-    split_index: usize,
+    split_index: IndexOfAccount,
     signers: &HashSet<Pubkey>,
 ) -> Result<(), InstructionError> {
     let split =
@@ -813,8 +815,8 @@ pub fn merge(
     invoke_context: &InvokeContext,
     transaction_context: &TransactionContext,
     instruction_context: &InstructionContext,
-    stake_account_index: usize,
-    source_account_index: usize,
+    stake_account_index: IndexOfAccount,
+    source_account_index: IndexOfAccount,
     clock: &Clock,
     stake_history: &StakeHistory,
     signers: &HashSet<Pubkey>,
@@ -879,8 +881,8 @@ pub fn redelegate(
     transaction_context: &TransactionContext,
     instruction_context: &InstructionContext,
     stake_account: &mut BorrowedAccount,
-    uninitialized_stake_account_index: usize,
-    vote_account_index: usize,
+    uninitialized_stake_account_index: IndexOfAccount,
+    vote_account_index: IndexOfAccount,
     config: &Config,
     signers: &HashSet<Pubkey>,
 ) -> Result<(), InstructionError> {
@@ -999,13 +1001,13 @@ pub fn redelegate(
 pub fn withdraw(
     transaction_context: &TransactionContext,
     instruction_context: &InstructionContext,
-    stake_account_index: usize,
+    stake_account_index: IndexOfAccount,
     lamports: u64,
-    to_index: usize,
+    to_index: IndexOfAccount,
     clock: &Clock,
     stake_history: &StakeHistory,
-    withdraw_authority_index: usize,
-    custodian_index: Option<usize>,
+    withdraw_authority_index: IndexOfAccount,
+    custodian_index: Option<IndexOfAccount>,
     feature_set: &FeatureSet,
 ) -> Result<(), InstructionError> {
     let withdraw_authority_pubkey = transaction_context.get_key_of_account_at_index(
@@ -1113,8 +1115,8 @@ pub(crate) fn deactivate_delinquent(
     transaction_context: &TransactionContext,
     instruction_context: &InstructionContext,
     stake_account: &mut BorrowedAccount,
-    delinquent_vote_account_index: usize,
-    reference_vote_account_index: usize,
+    delinquent_vote_account_index: IndexOfAccount,
+    reference_vote_account_index: IndexOfAccount,
     current_epoch: Epoch,
 ) -> Result<(), InstructionError> {
     let delinquent_vote_account_pubkey = transaction_context.get_key_of_account_at_index(
@@ -1205,8 +1207,8 @@ fn validate_split_amount(
     invoke_context: &InvokeContext,
     transaction_context: &TransactionContext,
     instruction_context: &InstructionContext,
-    source_account_index: usize,
-    destination_account_index: usize,
+    source_account_index: IndexOfAccount,
+    destination_account_index: IndexOfAccount,
     lamports: u64,
     source_meta: &Meta,
     source_stake: Option<&Stake>,
@@ -1687,9 +1689,7 @@ pub fn create_lockup_stake_account(
     let rent_exempt_reserve = rent.minimum_balance(stake_account.data().len());
     assert!(
         lamports >= rent_exempt_reserve,
-        "lamports: {} is less than rent_exempt_reserve {}",
-        lamports,
-        rent_exempt_reserve
+        "lamports: {lamports} is less than rent_exempt_reserve {rent_exempt_reserve}"
     );
 
     stake_account
@@ -1750,7 +1750,7 @@ fn do_create_account(
 ) -> AccountSharedData {
     let mut stake_account = AccountSharedData::new(lamports, StakeState::size_of(), &id());
 
-    let vote_state = VoteState::from(vote_account).expect("vote_state");
+    let vote_state = vote_state::from(vote_account).expect("vote_state");
 
     let rent_exempt_reserve = rent.minimum_balance(stake_account.data().len());
 
@@ -1779,8 +1779,8 @@ mod tests {
     use {
         super::*,
         proptest::prelude::*,
-        safecoin_program_runtime::invoke_context::InvokeContext,
-        safecoin_sdk::{
+        solana_program_runtime::invoke_context::InvokeContext,
+        solana_sdk::{
             account::{create_account_shared_data_for_test, AccountSharedData},
             native_token,
             pubkey::Pubkey,
@@ -1791,7 +1791,7 @@ mod tests {
 
     #[test]
     fn test_authorized_authorize() {
-        let staker = safecoin_sdk::pubkey::new_rand();
+        let staker = solana_sdk::pubkey::new_rand();
         let mut authorized = Authorized::auto(&staker);
         let mut signers = HashSet::new();
         assert_eq!(
@@ -1807,9 +1807,9 @@ mod tests {
 
     #[test]
     fn test_authorized_authorize_with_custodian() {
-        let staker = safecoin_sdk::pubkey::new_rand();
-        let custodian = safecoin_sdk::pubkey::new_rand();
-        let invalid_custodian = safecoin_sdk::pubkey::new_rand();
+        let staker = solana_sdk::pubkey::new_rand();
+        let custodian = solana_sdk::pubkey::new_rand();
+        let invalid_custodian = solana_sdk::pubkey::new_rand();
         let mut authorized = Authorized::auto(&staker);
         let mut signers = HashSet::new();
         signers.insert(staker);
@@ -2930,7 +2930,7 @@ mod tests {
 
     #[test]
     fn test_lockup_is_expired() {
-        let custodian = safecoin_sdk::pubkey::new_rand();
+        let custodian = solana_sdk::pubkey::new_rand();
         let lockup = Lockup {
             epoch: 1,
             unix_timestamp: 1,
@@ -2991,7 +2991,7 @@ mod tests {
         panic!(
             "stake minimum_balance: {} lamports, {} SAFE",
             minimum_balance,
-            minimum_balance as f64 / safecoin_sdk::native_token::LAMPORTS_PER_SAFE as f64
+            minimum_balance as f64 / solana_sdk::native_token::LAMPORTS_PER_SAFE as f64
         );
     }
 
@@ -3016,7 +3016,7 @@ mod tests {
             rent_exempt_reserve
         );
 
-        let even_larger_data = safecoin_sdk::system_instruction::MAX_PERMITTED_DATA_LENGTH;
+        let even_larger_data = solana_sdk::system_instruction::MAX_PERMITTED_DATA_LENGTH;
         let even_larger_rent_exempt_reserve = rent.minimum_balance(even_larger_data as usize);
         assert_eq!(
             calculate_split_rent_exempt_reserve(rent_exempt_reserve, data_len, even_larger_data),

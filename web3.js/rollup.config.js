@@ -2,7 +2,6 @@ import alias from '@rollup/plugin-alias';
 import babel from '@rollup/plugin-babel';
 import commonjs from '@rollup/plugin-commonjs';
 import * as fs from 'fs';
-import json from '@rollup/plugin-json';
 import path from 'path';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
@@ -95,6 +94,12 @@ function generateConfig(configType, format) {
     // Prevent dependencies from being bundled
     config.external = [
       /@babel\/runtime/,
+      '@noble/hashes/hmac',
+      '@noble/hashes/sha256',
+      '@noble/hashes/sha3',
+      '@noble/hashes/sha512',
+      '@noble/ed25519',
+      '@noble/secp256k1',
       '@solana/buffer-layout',
       'bigint-buffer',
       'bn.js',
@@ -103,12 +108,13 @@ function generateConfig(configType, format) {
       'buffer',
       'crypto-hash',
       'jayson/lib/client/browser',
-      'js-sha3',
       'node-fetch',
       'rpc-websockets',
-      'secp256k1',
+      'rpc-websockets/dist/lib/client',
+      'rpc-websockets/dist/lib/client/client.types',
+      'rpc-websockets/dist/lib/client/websocket',
+      'rpc-websockets/dist/lib/client/websocket.browser',
       'superstruct',
-      'tweetnacl',
     ];
   }
 
@@ -159,6 +165,12 @@ function generateConfig(configType, format) {
           config.external = [
             /@babel\/runtime/,
             '@solana/buffer-layout',
+            '@noble/hashes/hmac',
+            '@noble/hashes/sha256',
+            '@noble/hashes/sha3',
+            '@noble/hashes/sha512',
+            '@noble/ed25519',
+            '@noble/secp256k1',
             'bigint-buffer',
             'bn.js',
             'borsh',
@@ -168,23 +180,19 @@ function generateConfig(configType, format) {
             'http',
             'https',
             'jayson/lib/client/browser',
-            'js-sha3',
             'node-fetch',
             'react-native-url-polyfill',
             'rpc-websockets',
-            'secp256k1',
+            'rpc-websockets/dist/lib/client',
+            'rpc-websockets/dist/lib/client/client.types',
+            'rpc-websockets/dist/lib/client/websocket',
+            'rpc-websockets/dist/lib/client/websocket.browser',
             'superstruct',
-            'tweetnacl',
           ];
 
           break;
         }
       }
-
-      // TODO: Find a workaround to avoid resolving the following JSON file:
-      // `node_modules/secp256k1/node_modules/elliptic/package.json`
-      config.plugins.push(json());
-
       break;
     case 'node':
       config.output = [

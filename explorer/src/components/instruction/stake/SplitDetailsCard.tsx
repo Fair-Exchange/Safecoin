@@ -4,7 +4,7 @@ import {
   StakeProgram,
   ParsedInstruction,
 } from "@safecoin/web3.js";
-import { SafeBalance } from "utils";
+import { SafeBalance } from "components/common/SafeBalance";
 import { InstructionCard } from "../InstructionCard";
 import { Address } from "components/common/Address";
 import { SplitInfo } from "./types";

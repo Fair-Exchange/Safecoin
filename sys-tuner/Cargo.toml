@@ -1,9 +1,9 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
 name = "safecoin-sys-tuner"
 description = "The safecoin cluster system tuner daemon"
-version = "1.14.3"
+version = "1.15.3"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -12,15 +12,15 @@ publish = true
 
 [dependencies]
 clap = "2.33.1"
-libc = "0.2.126"
+libc = "0.2.131"
 log = "0.4.17"
-safecoin-logger = { path = "../logger", version = "=1.14.3" }
-safecoin-version = { path = "../version", version = "=1.14.3" }
+safecoin-logger = { path = "../logger", version = "=1.15.3" }
+safecoin-version = { path = "../version", version = "=1.15.3" }
 
 [target."cfg(unix)".dependencies]
 unix_socket2 = "0.5.4"
 users = "0.10.0"
-nix = "0.24.2"
+nix = "0.25.0"
 sysctl = "0.4.4"
 
 [lib]

@@ -1,6 +1,6 @@
 use {
     crate::{inline_safe_associated_token_account, inline_safe_token, inline_safe_token_2022},
-    safecoin_sdk::pubkey::Pubkey,
+    solana_sdk::pubkey::Pubkey,
 };
 
 lazy_static! {

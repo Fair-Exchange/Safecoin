@@ -1,9 +1,9 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
 name = "safecoin-ledger-tool"
 description = "Safecoin: Enterprise Security for the Community by the Community"
-version = "1.14.3"
+version = "1.15.3"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -11,31 +11,35 @@ documentation = "https://docs.rs/safecoin-ledger-tool"
 
 [dependencies]
 bs58 = "0.4.0"
-chrono = "0.4.11"
+chrono = "0.4.22"
 clap = "2.33.1"
 crossbeam-channel = "0.5"
 csv = "1.1.6"
 dashmap = "4.0.2"
+futures = "0.3"
 histogram = "0.6.9"
-itertools = "0.10.3"
+itertools = "0.10.5"
 log = { version = "0.4.17" }
+num_cpus = "1.13.1"
 regex = "1"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.81"
-safecoin-clap-utils = { path = "../clap-utils", version = "=1.14.3" }
-safecoin-cli-output = { path = "../cli-output", version = "=1.14.3" }
-safecoin-core = { path = "../core", version = "=1.14.3" }
-solana-entry = { path = "../entry", version = "=1.14.3" }
-safecoin-ledger = { path = "../ledger", version = "=1.14.3" }
-safecoin-logger = { path = "../logger", version = "=1.14.3" }
-safecoin-measure = { path = "../measure", version = "=1.14.3" }
-safecoin-runtime = { path = "../runtime", version = "=1.14.3" }
-safecoin-sdk = { path = "../sdk", version = "=1.14.3" }
-safecoin-stake-program = { path = "../programs/stake", version = "=1.14.3" }
-safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.14.3" }
-safecoin-transaction-status = { path = "../transaction-status", version = "=1.14.3" }
-safecoin-version = { path = "../version", version = "=1.14.3" }
-safecoin-vote-program = { path = "../programs/vote", version = "=1.14.3" }
+serde_json = "1.0.83"
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.15.3" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.15.3" }
+safecoin-cli-output = { path = "../cli-output", version = "=1.15.3" }
+safecoin-core = { path = "../core", version = "=1.15.3" }
+solana-entry = { path = "../entry", version = "=1.15.3" }
+solana-geyser-plugin-manager = { path = "../geyser-plugin-manager", version = "=1.15.3" }
+safecoin-ledger = { path = "../ledger", version = "=1.15.3" }
+safecoin-logger = { path = "../logger", version = "=1.15.3" }
+safecoin-measure = { path = "../measure", version = "=1.15.3" }
+safecoin-runtime = { path = "../runtime", version = "=1.15.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.15.3" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.15.3" }
+safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.15.3" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.15.3" }
+safecoin-version = { path = "../version", version = "=1.15.3" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.15.3" }
 tokio = { version = "1", features = ["full"] }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
@@ -43,7 +47,7 @@ jemallocator = { package = "tikv-jemallocator", version = "0.4.1", features = ["
 
 [dev-dependencies]
 assert_cmd = "2.0"
-bytecount = "0.6.2"
+bytecount = "0.6.3"
 
 [target."cfg(unix)".dependencies]
 signal-hook = "0.3.14"

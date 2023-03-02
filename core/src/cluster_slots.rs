@@ -1,10 +1,11 @@
 use {
     itertools::Itertools,
     safecoin_gossip::{
-        cluster_info::ClusterInfo, contact_info::ContactInfo, crds::Cursor, epoch_slots::EpochSlots,
+        cluster_info::ClusterInfo, crds::Cursor, epoch_slots::EpochSlots,
+        legacy_contact_info::LegacyContactInfo as ContactInfo,
     },
     solana_runtime::{bank::Bank, epoch_stakes::NodeIdToVoteAccounts},
-    safecoin_sdk::{
+    solana_sdk::{
         clock::{Slot, DEFAULT_SLOTS_PER_EPOCH},
         pubkey::Pubkey,
         timing::AtomicInterval,
@@ -194,7 +195,7 @@ impl ClusterSlots {
             .iter()
             .map(|peer| slot_peers.get(&peer.id).cloned().unwrap_or(0))
             .zip(stakes)
-            .map(|(a, b)| a + b)
+            .map(|(a, b)| (a / 2 + b / 2).max(1u64))
             .collect()
     }
 
@@ -203,16 +204,16 @@ impl ClusterSlots {
         slot: Slot,
         repair_peers: &[ContactInfo],
     ) -> Vec<(u64, usize)> {
-        let slot_peers = self.lookup(slot);
-        repair_peers
-            .iter()
-            .enumerate()
-            .filter_map(|(i, x)| {
-                slot_peers
-                    .as_ref()
-                    .and_then(|v| v.read().unwrap().get(&x.id).map(|stake| (*stake + 1, i)))
+        self.lookup(slot)
+            .map(|slot_peers| {
+                let slot_peers = slot_peers.read().unwrap();
+                repair_peers
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, ci)| Some((slot_peers.get(&ci.id)? + 1, i)))
+                    .collect()
             })
-            .collect()
+            .unwrap_or_default()
     }
 }
 
@@ -282,8 +283,8 @@ mod tests {
         let mut c1 = ContactInfo::default();
         let mut c2 = ContactInfo::default();
         let mut map = HashMap::new();
-        let k1 = safecoin_sdk::pubkey::new_rand();
-        let k2 = safecoin_sdk::pubkey::new_rand();
+        let k1 = solana_sdk::pubkey::new_rand();
+        let k2 = solana_sdk::pubkey::new_rand();
         map.insert(k1, std::u64::MAX / 2);
         map.insert(k2, 0);
         cs.cluster_slots
@@ -292,10 +293,7 @@ mod tests {
             .insert(0, Arc::new(RwLock::new(map)));
         c1.id = k1;
         c2.id = k2;
-        assert_eq!(
-            cs.compute_weights(0, &[c1, c2]),
-            vec![std::u64::MAX / 2 + 1, 1]
-        );
+        assert_eq!(cs.compute_weights(0, &[c1, c2]), vec![std::u64::MAX / 4, 1]);
     }
 
     #[test]
@@ -304,8 +302,8 @@ mod tests {
         let mut c1 = ContactInfo::default();
         let mut c2 = ContactInfo::default();
         let mut map = HashMap::new();
-        let k1 = safecoin_sdk::pubkey::new_rand();
-        let k2 = safecoin_sdk::pubkey::new_rand();
+        let k1 = solana_sdk::pubkey::new_rand();
+        let k2 = solana_sdk::pubkey::new_rand();
         map.insert(k2, 0);
         cs.cluster_slots
             .write()
@@ -326,7 +324,7 @@ mod tests {
         c2.id = k2;
         assert_eq!(
             cs.compute_weights(0, &[c1, c2]),
-            vec![std::u64::MAX / 2 + 1, 1]
+            vec![std::u64::MAX / 4 + 1, 1]
         );
     }
 
@@ -335,7 +333,7 @@ mod tests {
         let cs = ClusterSlots::default();
         let mut contact_infos = vec![ContactInfo::default(); 2];
         for ci in contact_infos.iter_mut() {
-            ci.id = safecoin_sdk::pubkey::new_rand();
+            ci.id = solana_sdk::pubkey::new_rand();
         }
         let slot = 9;
 

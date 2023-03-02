@@ -4,7 +4,7 @@ use {
         parse_token::{real_number_string_trimmed, UiTokenAmount},
         StringAmount,
     },
-    safecoin_sdk::{
+    solana_sdk::{
         deserialize_utils::default_on_eof, message::v0::LoadedAddresses, transaction::Result,
         transaction_context::TransactionReturnData,
     },

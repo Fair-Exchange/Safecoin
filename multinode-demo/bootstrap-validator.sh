@@ -139,7 +139,7 @@ fi
 
 args+=(
   --ledger "$ledger_dir"
-  --rpc-port 8328
+  --rpc-port 8899
   --snapshot-interval-slots 200
   --no-incremental-snapshots
   --identity "$identity"

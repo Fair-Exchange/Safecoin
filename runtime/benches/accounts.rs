@@ -8,14 +8,14 @@ use {
     rand::Rng,
     rayon::iter::{IntoParallelRefIterator, ParallelIterator},
     solana_runtime::{
-        accounts::{test_utils::create_test_accounts, AccountAddressFilter, Accounts},
-        accounts_db::AccountShrinkThreshold,
+        accounts::{AccountAddressFilter, Accounts},
+        accounts_db::{test_utils::create_test_accounts, AccountShrinkThreshold},
         accounts_index::{AccountSecondaryIndexes, ScanConfig},
         ancestors::Ancestors,
         bank::*,
         rent_collector::RentCollector,
     },
-    safecoin_sdk::{
+    solana_sdk::{
         account::{AccountSharedData, ReadableAccount},
         genesis_config::{create_genesis_config, ClusterType},
         hash::Hash,
@@ -34,7 +34,7 @@ use {
 
 fn deposit_many(bank: &Bank, pubkeys: &mut Vec<Pubkey>, num: usize) -> Result<(), LamportsError> {
     for t in 0..num {
-        let pubkey = safecoin_sdk::pubkey::new_rand();
+        let pubkey = solana_sdk::pubkey::new_rand();
         let account =
             AccountSharedData::new((t + 1) as u64, 0, AccountSharedData::default().owner());
         pubkeys.push(pubkey);
@@ -48,16 +48,7 @@ fn deposit_many(bank: &Bank, pubkeys: &mut Vec<Pubkey>, num: usize) -> Result<()
 #[bench]
 fn test_accounts_create(bencher: &mut Bencher) {
     let (genesis_config, _) = create_genesis_config(10_000);
-    let bank0 = Bank::new_with_paths_for_benches(
-        &genesis_config,
-        vec![PathBuf::from("bench_a0")],
-        None,
-        None,
-        AccountSecondaryIndexes::default(),
-        false,
-        AccountShrinkThreshold::default(),
-        false,
-    );
+    let bank0 = Bank::new_with_paths_for_benches(&genesis_config, vec![PathBuf::from("bench_a0")]);
     bencher.iter(|| {
         let mut pubkeys: Vec<Pubkey> = vec![];
         deposit_many(&bank0, &mut pubkeys, 1000).unwrap();
@@ -71,12 +62,6 @@ fn test_accounts_squash(bencher: &mut Bencher) {
     let mut prev_bank = Arc::new(Bank::new_with_paths_for_benches(
         &genesis_config,
         vec![PathBuf::from("bench_a1")],
-        None,
-        None,
-        AccountSecondaryIndexes::default(),
-        false,
-        AccountShrinkThreshold::default(),
-        false,
     ));
     let mut pubkeys: Vec<Pubkey> = vec![];
     deposit_many(&prev_bank, &mut pubkeys, 250_000).unwrap();
@@ -101,7 +86,6 @@ fn test_accounts_hash_bank_hash(bencher: &mut Bencher) {
         vec![PathBuf::from("bench_accounts_hash_internal")],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
-        false,
         AccountShrinkThreshold::default(),
     );
     let mut pubkeys: Vec<Pubkey> = vec![];
@@ -109,12 +93,9 @@ fn test_accounts_hash_bank_hash(bencher: &mut Bencher) {
     let slot = 0;
     create_test_accounts(&accounts, &mut pubkeys, num_accounts, slot);
     let ancestors = Ancestors::from(vec![0]);
-    let (_, total_lamports) = accounts.accounts_db.update_accounts_hash(
-        0,
-        &ancestors,
-        &EpochSchedule::default(),
-        &RentCollector::default(),
-    );
+    let (_, total_lamports) = accounts
+        .accounts_db
+        .update_accounts_hash_for_tests(0, &ancestors, false, false);
     let test_hash_calculation = false;
     bencher.iter(|| {
         assert!(accounts.verify_bank_hash_and_lamports(
@@ -138,19 +119,15 @@ fn test_update_accounts_hash(bencher: &mut Bencher) {
         vec![PathBuf::from("update_accounts_hash")],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
-        false,
         AccountShrinkThreshold::default(),
     );
     let mut pubkeys: Vec<Pubkey> = vec![];
     create_test_accounts(&accounts, &mut pubkeys, 50_000, 0);
     let ancestors = Ancestors::from(vec![0]);
     bencher.iter(|| {
-        accounts.accounts_db.update_accounts_hash(
-            0,
-            &ancestors,
-            &EpochSchedule::default(),
-            &RentCollector::default(),
-        );
+        accounts
+            .accounts_db
+            .update_accounts_hash_for_tests(0, &ancestors, false, false);
     });
 }
 
@@ -161,13 +138,12 @@ fn test_accounts_delta_hash(bencher: &mut Bencher) {
         vec![PathBuf::from("accounts_delta_hash")],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
-        false,
         AccountShrinkThreshold::default(),
     );
     let mut pubkeys: Vec<Pubkey> = vec![];
     create_test_accounts(&accounts, &mut pubkeys, 100_000, 0);
     bencher.iter(|| {
-        accounts.accounts_db.get_accounts_delta_hash(0);
+        accounts.accounts_db.calculate_accounts_delta_hash(0);
     });
 }
 
@@ -178,22 +154,20 @@ fn bench_delete_dependencies(bencher: &mut Bencher) {
         vec![PathBuf::from("accounts_delete_deps")],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
-        false,
         AccountShrinkThreshold::default(),
     );
     let mut old_pubkey = Pubkey::default();
     let zero_account = AccountSharedData::new(0, 0, AccountSharedData::default().owner());
     for i in 0..1000 {
-        let pubkey = safecoin_sdk::pubkey::new_rand();
-        let account =
-            AccountSharedData::new((i + 1) as u64, 0, AccountSharedData::default().owner());
+        let pubkey = solana_sdk::pubkey::new_rand();
+        let account = AccountSharedData::new(i + 1, 0, AccountSharedData::default().owner());
         accounts.store_slow_uncached(i, &pubkey, &account);
         accounts.store_slow_uncached(i, &old_pubkey, &zero_account);
         old_pubkey = pubkey;
         accounts.add_root(i);
     }
     bencher.iter(|| {
-        accounts.accounts_db.clean_accounts(None, false, None);
+        accounts.accounts_db.clean_accounts_for_tests();
     });
 }
 
@@ -212,7 +186,6 @@ fn store_accounts_with_possible_contention<F: 'static>(
         ],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
-        false,
         AccountShrinkThreshold::default(),
     ));
     let num_keys = 1000;
@@ -221,7 +194,7 @@ fn store_accounts_with_possible_contention<F: 'static>(
     let pubkeys: Arc<Vec<_>> = Arc::new(
         (0..num_keys)
             .map(|_| {
-                let pubkey = safecoin_sdk::pubkey::new_rand();
+                let pubkey = solana_sdk::pubkey::new_rand();
                 let account = AccountSharedData::new(1, 0, AccountSharedData::default().owner());
                 accounts.store_slow_uncached(slot, &pubkey, &account);
                 pubkey
@@ -249,7 +222,7 @@ fn store_accounts_with_possible_contention<F: 'static>(
             // Write to a different slot than the one being read from. Because
             // there's a new account pubkey being written to every time, will
             // compete for the accounts index lock on every store
-            accounts.store_slow_uncached(slot + 1, &safecoin_sdk::pubkey::new_rand(), account);
+            accounts.store_slow_uncached(slot + 1, &solana_sdk::pubkey::new_rand(), account);
         }
     })
 }
@@ -349,7 +322,6 @@ fn setup_bench_dashmap_iter() -> (Arc<Accounts>, DashMap<Pubkey, (AccountSharedD
         ],
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
-        false,
         AccountShrinkThreshold::default(),
     ));
 
@@ -404,7 +376,6 @@ fn bench_load_largest_accounts(b: &mut Bencher) {
         Vec::new(),
         &ClusterType::Development,
         AccountSecondaryIndexes::default(),
-        false,
         AccountShrinkThreshold::default(),
     );
     let mut rng = rand::thread_rng();

@@ -1,5 +1,5 @@
 use {
-    safecoin_sdk::{clock::Slot, signature::Signature, transaction::SanitizedTransaction},
+    solana_sdk::{clock::Slot, signature::Signature, transaction::SanitizedTransaction},
     safecoin_transaction_status::TransactionStatusMeta,
     std::sync::{Arc, RwLock},
 };

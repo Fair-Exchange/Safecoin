@@ -9,7 +9,7 @@ use {
     },
     rand::{thread_rng, Rng},
     safecoin_measure::measure::Measure,
-    safecoin_sdk::pubkey::Pubkey,
+    solana_sdk::pubkey::Pubkey,
     std::{
         collections::hash_map::DefaultHasher,
         hash::{Hash, Hasher},
@@ -210,7 +210,7 @@ impl<T: Clone + Copy> Bucket<T> {
         let mut m = Measure::start("bucket_create_key");
         let ix = Self::bucket_index_ix(index, key, random);
         for i in ix..ix + index.max_search() {
-            let ii = i as u64 % index.capacity();
+            let ii = i % index.capacity();
             if !index.is_free(ii) {
                 continue;
             }
@@ -353,7 +353,7 @@ impl<T: Clone + Copy> Bucket<T> {
             let increment = 1;
             for i in increment.. {
                 //increasing the capacity by ^4 reduces the
-                //likelyhood of a re-index collision of 2^(max_search)^2
+                //likelihood of a re-index collision of 2^(max_search)^2
                 //1 in 2^32
                 let mut index = BucketStorage::new_with_capacity(
                     Arc::clone(&self.drives),
@@ -390,11 +390,7 @@ impl<T: Clone + Copy> Bucket<T> {
                     }
                 }
                 if valid {
-                    let sz = index.capacity();
-                    {
-                        let mut max = self.stats.index.max_size.lock().unwrap();
-                        *max = std::cmp::max(*max, sz);
-                    }
+                    self.stats.index.update_max_size(index.capacity());
                     let mut items = self.reallocated.items.lock().unwrap();
                     items.index = Some((random, index));
                     self.reallocated.add_reallocation();

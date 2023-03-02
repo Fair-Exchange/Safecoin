@@ -1,15 +1,15 @@
 #[allow(deprecated)]
-use safecoin_sdk::sysvar::{fees::Fees, recent_blockhashes::RecentBlockhashes};
+use solana_sdk::sysvar::{fees::Fees, recent_blockhashes::RecentBlockhashes};
 use {
     crate::invoke_context::InvokeContext,
-    safecoin_sdk::{
+    solana_sdk::{
         instruction::InstructionError,
         pubkey::Pubkey,
         sysvar::{
             clock::Clock, epoch_schedule::EpochSchedule, rent::Rent, slot_hashes::SlotHashes,
             stake_history::StakeHistory, Sysvar, SysvarId,
         },
-        transaction_context::{InstructionContext, TransactionContext},
+        transaction_context::{IndexOfAccount, InstructionContext, TransactionContext},
     },
     std::sync::Arc,
 };
@@ -175,7 +175,7 @@ impl SysvarCache {
 /// These methods facilitate a transition from fetching sysvars from keyed
 /// accounts to fetching from the sysvar cache without breaking consensus. In
 /// order to keep consistent behavior, they continue to enforce the same checks
-/// as `safecoin_sdk::keyed_account::from_keyed_account` despite dynamically
+/// as `solana_sdk::keyed_account::from_keyed_account` despite dynamically
 /// loading them instead of deserializing from account data.
 pub mod get_sysvar_with_account_check {
     use super::*;
@@ -183,7 +183,7 @@ pub mod get_sysvar_with_account_check {
     fn check_sysvar_account<S: Sysvar>(
         transaction_context: &TransactionContext,
         instruction_context: &InstructionContext,
-        instruction_account_index: usize,
+        instruction_account_index: IndexOfAccount,
     ) -> Result<(), InstructionError> {
         let index_in_transaction = instruction_context
             .get_index_of_instruction_account_in_transaction(instruction_account_index)?;
@@ -196,7 +196,7 @@ pub mod get_sysvar_with_account_check {
     pub fn clock(
         invoke_context: &InvokeContext,
         instruction_context: &InstructionContext,
-        instruction_account_index: usize,
+        instruction_account_index: IndexOfAccount,
     ) -> Result<Arc<Clock>, InstructionError> {
         check_sysvar_account::<Clock>(
             invoke_context.transaction_context,
@@ -209,7 +209,7 @@ pub mod get_sysvar_with_account_check {
     pub fn rent(
         invoke_context: &InvokeContext,
         instruction_context: &InstructionContext,
-        instruction_account_index: usize,
+        instruction_account_index: IndexOfAccount,
     ) -> Result<Arc<Rent>, InstructionError> {
         check_sysvar_account::<Rent>(
             invoke_context.transaction_context,
@@ -222,7 +222,7 @@ pub mod get_sysvar_with_account_check {
     pub fn slot_hashes(
         invoke_context: &InvokeContext,
         instruction_context: &InstructionContext,
-        instruction_account_index: usize,
+        instruction_account_index: IndexOfAccount,
     ) -> Result<Arc<SlotHashes>, InstructionError> {
         check_sysvar_account::<SlotHashes>(
             invoke_context.transaction_context,
@@ -236,7 +236,7 @@ pub mod get_sysvar_with_account_check {
     pub fn recent_blockhashes(
         invoke_context: &InvokeContext,
         instruction_context: &InstructionContext,
-        instruction_account_index: usize,
+        instruction_account_index: IndexOfAccount,
     ) -> Result<Arc<RecentBlockhashes>, InstructionError> {
         check_sysvar_account::<RecentBlockhashes>(
             invoke_context.transaction_context,
@@ -249,7 +249,7 @@ pub mod get_sysvar_with_account_check {
     pub fn stake_history(
         invoke_context: &InvokeContext,
         instruction_context: &InstructionContext,
-        instruction_account_index: usize,
+        instruction_account_index: IndexOfAccount,
     ) -> Result<Arc<StakeHistory>, InstructionError> {
         check_sysvar_account::<StakeHistory>(
             invoke_context.transaction_context,

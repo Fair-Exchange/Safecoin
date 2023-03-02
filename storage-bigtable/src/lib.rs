@@ -5,7 +5,7 @@ use {
     log::*,
     serde::{Deserialize, Serialize},
     solana_metrics::{datapoint_info, inc_new_counter_debug},
-    safecoin_sdk::{
+    solana_sdk::{
         clock::{Slot, UnixTimestamp},
         deserialize_utils::default_on_eof,
         message::v0::LoadedAddresses,
@@ -24,6 +24,7 @@ use {
     std::{
         collections::{HashMap, HashSet},
         convert::TryInto,
+        time::Duration,
     },
     thiserror::Error,
     tokio::task::JoinError,
@@ -78,7 +79,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 // Convert a slot to its bucket representation whereby lower slots are always lexically ordered
 // before higher slots
 fn slot_to_key(slot: Slot) -> String {
-    format!("{:016x}", slot)
+    format!("{slot:016x}")
 }
 
 fn slot_to_blocks_key(slot: Slot) -> String {
@@ -418,6 +419,22 @@ impl LedgerStorage {
         .await
     }
 
+    pub fn new_for_emulator(
+        instance_name: &str,
+        app_profile_id: &str,
+        endpoint: &str,
+        timeout: Option<Duration>,
+    ) -> Result<Self> {
+        Ok(Self {
+            connection: bigtable::BigTableConnection::new_for_emulator(
+                instance_name,
+                app_profile_id,
+                endpoint,
+                timeout,
+            )?,
+        })
+    }
+
     pub async fn new_with_config(config: LedgerStorageConfig) -> Result<Self> {
         let LedgerStorageConfig {
             read_only,
@@ -533,6 +550,22 @@ impl LedgerStorage {
                 bigtable::Error::ObjectCorrupt(format!("blocks/{}", slot_to_blocks_key(slot)))
             })?,
         })
+    }
+
+    /// Does the confirmed block exist in the Bigtable
+    pub async fn confirmed_block_exists(&self, slot: Slot) -> Result<bool> {
+        debug!(
+            "LedgerStorage::confirmed_block_exists request received: {:?}",
+            slot
+        );
+        inc_new_counter_debug!("storage-bigtable-query", 1);
+        let mut bigtable = self.connection.client();
+
+        let block_exists = bigtable
+            .row_key_exists("blocks", slot_to_blocks_key(slot))
+            .await?;
+
+        Ok(block_exists)
     }
 
     pub async fn get_signature_status(&self, signature: &Signature) -> Result<TransactionStatus> {
@@ -685,7 +718,7 @@ impl LedgerStorage {
         );
         inc_new_counter_debug!("storage-bigtable-query", 1);
         let mut bigtable = self.connection.client();
-        let address_prefix = format!("{}/", address);
+        let address_prefix = format!("{address}/");
 
         // Figure out where to start listing from based on `before_signature`
         let (first_slot, before_transaction_index) = match before_signature {
@@ -749,8 +782,7 @@ impl LedgerStorage {
         'outer: for (row_key, data) in tx_by_addr_data {
             let slot = !key_to_slot(&row_key[address_prefix.len()..]).ok_or_else(|| {
                 bigtable::Error::ObjectCorrupt(format!(
-                    "Failed to convert key to slot: tx-by-addr/{}",
-                    row_key
+                    "Failed to convert key to slot: tx-by-addr/{row_key}"
                 ))
             })?;
 
@@ -975,11 +1007,7 @@ impl LedgerStorage {
             .collect();
 
         let tx_deletion_rows = if !expected_tx_infos.is_empty() {
-            let signatures = expected_tx_infos
-                .iter()
-                .map(|(signature, _info)| signature)
-                .cloned()
-                .collect::<Vec<_>>();
+            let signatures = expected_tx_infos.keys().cloned().collect::<Vec<_>>();
             let fetched_tx_infos: HashMap<String, std::result::Result<UploadedTransaction, _>> =
                 self.connection
                     .get_bincode_cells_with_retry::<TransactionInfo>("tx", &signatures)

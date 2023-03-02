@@ -9,7 +9,7 @@ use {
         crds_shards::CrdsShards,
         crds_value::CrdsValue,
     },
-    safecoin_sdk::timing::timestamp,
+    solana_sdk::timing::timestamp,
     std::iter::repeat_with,
     test::Bencher,
 };

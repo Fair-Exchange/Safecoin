@@ -1,7 +1,12 @@
+import HttpKeepAliveAgent, {
+  HttpsAgent as HttpsKeepAliveAgent,
+} from 'agentkeepalive';
 import bs58 from 'bs58';
 import {Buffer} from 'buffer';
 // @ts-ignore
 import fastStableStringify from 'fast-stable-stringify';
+import type {Agent as NodeHttpAgent} from 'http';
+import {Agent as NodeHttpsAgent} from 'https';
 import {
   type as pick,
   number,
@@ -21,28 +26,34 @@ import {
   any,
 } from 'superstruct';
 import type {Struct} from 'superstruct';
-import {Client as RpcWebSocketClient} from 'rpc-websockets';
 import RpcClient from 'jayson/lib/client/browser';
+import {JSONRPCError} from 'jayson';
 
-import {URL} from './util/url-impl';
-import {AgentManager} from './agent-manager';
 import {EpochSchedule} from './epoch-schedule';
 import {SendTransactionError, SafecoinJSONRPCError} from './errors';
 import fetchImpl, {Response} from './fetch-impl';
-import {NonceAccount} from './nonce-account';
+import {DurableNonce, NonceAccount} from './nonce-account';
 import {PublicKey} from './publickey';
 import {Signer} from './keypair';
+import RpcWebSocketClient from './rpc-websocket';
 import {MS_PER_SLOT} from './timing';
-import {Transaction, TransactionStatus} from './transaction';
-import {Message} from './message';
-import assert from './util/assert';
-import {sleep} from './util/sleep';
-import {toBuffer} from './util/to-buffer';
+import {
+  Transaction,
+  TransactionStatus,
+  TransactionVersion,
+  VersionedTransaction,
+} from './transaction';
+import {Message, MessageHeader, MessageV0, VersionedMessage} from './message';
+import {AddressLookupTableAccount} from './programs/address-lookup-table/state';
+import assert from './utils/assert';
+import {sleep} from './utils/sleep';
+import {toBuffer} from './utils/to-buffer';
 import {
   TransactionExpiredBlockheightExceededError,
+  TransactionExpiredNonceInvalidError,
   TransactionExpiredTimeoutError,
-} from './util/tx-expiry-custom-errors';
-import {makeWebsocketUrl} from './util/makeWebsocketUrl';
+} from './transaction/expiry-custom-errors';
+import {makeWebsocketUrl} from './utils/makeWebsocketUrl';
 import type {Blockhash} from './blockhash';
 import type {FeeCalculator} from './fee-calculator';
 import type {TransactionSignature} from './transaction';
@@ -83,6 +94,10 @@ type ClientSubscriptionId = number;
 /** @internal */ type ServerSubscriptionId = number;
 /** @internal */ type SubscriptionConfigHash = string;
 /** @internal */ type SubscriptionDisposeFn = () => Promise<void>;
+/** @internal */ type SubscriptionStateChangeCallback = (
+  nextState: StatefulSubscription['state'],
+) => void;
+/** @internal */ type SubscriptionStateChangeDisposeFn = () => void;
 /**
  * @internal
  * Every subscription contains the args used to open the subscription with
@@ -300,9 +315,54 @@ export type BlockhashWithExpiryBlockHeight = Readonly<{
  * A strategy for confirming transactions that uses the last valid
  * block height for a given blockhash to check for transaction expiration.
  */
-export type BlockheightBasedTransactionConfirmationStrategy = {
+export type BlockheightBasedTransactionConfirmationStrategy =
+  BaseTransactionConfirmationStrategy & BlockhashWithExpiryBlockHeight;
+
+/**
+ * A strategy for confirming durable nonce transactions.
+ */
+export type DurableNonceTransactionConfirmationStrategy =
+  BaseTransactionConfirmationStrategy & {
+    /**
+     * The lowest slot at which to fetch the nonce value from the
+     * nonce account. This should be no lower than the slot at
+     * which the last-known value of the nonce was fetched.
+     */
+    minContextSlot: number;
+    /**
+     * The account where the current value of the nonce is stored.
+     */
+    nonceAccountPubkey: PublicKey;
+    /**
+     * The nonce value that was used to sign the transaction
+     * for which confirmation is being sought.
+     */
+    nonceValue: DurableNonce;
+  };
+
+/**
+ * Properties shared by all transaction confirmation strategies
+ */
+export type BaseTransactionConfirmationStrategy = Readonly<{
+  /** A signal that, when aborted, cancels any outstanding transaction confirmation operations */
+  abortSignal?: AbortSignal;
   signature: TransactionSignature;
-} & BlockhashWithExpiryBlockHeight;
+}>;
+
+/**
+ * This type represents all transaction confirmation strategies
+ */
+export type TransactionConfirmationStrategy =
+  | BlockheightBasedTransactionConfirmationStrategy
+  | DurableNonceTransactionConfirmationStrategy;
+
+/* @internal */
+function assertEndpointUrl(putativeUrl: string) {
+  if (/^https?:/.test(putativeUrl) === false) {
+    throw new TypeError('Endpoint URL must start with `http:` or `https:`.');
+  }
+  return putativeUrl;
+}
 
 /** @internal */
 function extractCommitmentFromConfig<TConfig>(
@@ -388,6 +448,32 @@ function notificationResultAndContext<T, U>(value: Struct<T, U>) {
 }
 
 /**
+ * @internal
+ */
+function versionedMessageFromResponse(
+  version: TransactionVersion | undefined,
+  response: MessageResponse,
+): VersionedMessage {
+  if (version === 0) {
+    return new MessageV0({
+      header: response.header,
+      staticAccountKeys: response.accountKeys.map(
+        accountKey => new PublicKey(accountKey),
+      ),
+      recentBlockhash: response.recentBlockhash,
+      compiledInstructions: response.instructions.map(ix => ({
+        programIdIndex: ix.programIdIndex,
+        accountKeyIndexes: ix.accounts,
+        data: bs58.decode(ix.data),
+      })),
+      addressTableLookups: response.addressTableLookups!,
+    });
+  } else {
+    return new Message(response);
+  }
+}
+
+/**
  * The level of commitment desired when querying state
  * <pre>
  *   'processed': Query the most recent block which has reached 1 confirmation by the connected node
@@ -431,6 +517,8 @@ export type GetAccountInfoConfig = {
   commitment?: Commitment;
   /** The minimum slot that the request can be evaluated at */
   minContextSlot?: number;
+  /** Optional data slice to limit the returned account data */
+  dataSlice?: DataSlice;
 };
 
 /**
@@ -449,8 +537,40 @@ export type GetBalanceConfig = {
 export type GetBlockConfig = {
   /** The level of finality desired */
   commitment?: Finality;
+  /**
+   * Whether to populate the rewards array. If parameter not provided, the default includes rewards.
+   */
+  rewards?: boolean;
+  /**
+   * Level of transaction detail to return, either "full", "accounts", "signatures", or "none". If
+   * parameter not provided, the default detail level is "full". If "accounts" are requested,
+   * transaction details only include signatures and an annotated list of accounts in each
+   * transaction. Transaction metadata is limited to only: fee, err, pre_balances, post_balances,
+   * pre_token_balances, and post_token_balances.
+   */
+  transactionDetails?: 'accounts' | 'full' | 'none' | 'signatures';
+};
+
+/**
+ * Configuration object for changing `getBlock` query behavior
+ */
+export type GetVersionedBlockConfig = {
+  /** The level of finality desired */
+  commitment?: Finality;
   /** The max transaction version to return in responses. If the requested transaction is a higher version, an error will be returned */
   maxSupportedTransactionVersion?: number;
+  /**
+   * Whether to populate the rewards array. If parameter not provided, the default includes rewards.
+   */
+  rewards?: boolean;
+  /**
+   * Level of transaction detail to return, either "full", "accounts", "signatures", or "none". If
+   * parameter not provided, the default detail level is "full". If "accounts" are requested,
+   * transaction details only include signatures and an annotated list of accounts in each
+   * transaction. Transaction metadata is limited to only: fee, err, pre_balances, post_balances,
+   * pre_token_balances, and post_token_balances.
+   */
+  transactionDetails?: 'accounts' | 'full' | 'none' | 'signatures';
 };
 
 /**
@@ -527,6 +647,14 @@ export type GetSlotLeaderConfig = {
  * Configuration object for changing `getTransaction` query behavior
  */
 export type GetTransactionConfig = {
+  /** The level of finality desired */
+  commitment?: Finality;
+};
+
+/**
+ * Configuration object for changing `getTransaction` query behavior
+ */
+export type GetVersionedTransactionConfig = {
   /** The level of finality desired */
   commitment?: Finality;
   /** The max transaction version to return in responses. If the requested transaction is a higher version, an error will be returned */
@@ -639,6 +767,8 @@ export type InflationReward = {
   amount: number;
   /** post balance of the account in lamports */
   postBalance: number;
+  /** vote account commission when the reward was credited */
+  commission?: number | null;
 };
 
 /**
@@ -652,10 +782,32 @@ const GetInflationRewardResult = jsonRpcResult(
         effectiveSlot: number(),
         amount: number(),
         postBalance: number(),
+        commission: optional(nullable(number())),
       }),
     ),
   ),
 );
+
+export type InflationRate = {
+  /** total inflation */
+  total: number;
+  /** inflation allocated to validators */
+  validator: number;
+  /** inflation allocated to the foundation */
+  foundation: number;
+  /** epoch for which these values are valid */
+  epoch: number;
+};
+
+/**
+ * Expected JSON RPC response for the "getInflationRate" message
+ */
+const GetInflationRateResult = pick({
+  total: number(),
+  validator: number(),
+  foundation: number(),
+  epoch: number(),
+});
 
 /**
  * Information about the current epoch
@@ -747,6 +899,22 @@ export type TransactionReturnData = {
   data: [string, TransactionReturnDataEncoding];
 };
 
+export type SimulateTransactionConfig = {
+  /** Optional parameter used to enable signature verification before simulation */
+  sigVerify?: boolean;
+  /** Optional parameter used to replace the simulated transaction's recent blockhash with the latest blockhash */
+  replaceRecentBlockhash?: boolean;
+  /** Optional parameter used to set the commitment level when selecting the latest block */
+  commitment?: Commitment;
+  /** Optional parameter used to specify a list of account addresses to return post simulation state for */
+  accounts?: {
+    encoding: 'base64';
+    addresses: string[];
+  };
+  /** Optional parameter used to specify the minimum block slot that can be used for simulation */
+  minContextSlot?: number;
+};
+
 export type SimulatedTransactionResponse = {
   err: TransactionError | string | null;
   logs: Array<string> | null;
@@ -805,6 +973,14 @@ export type TokenBalance = {
 export type ParsedConfirmedTransactionMeta = ParsedTransactionMeta;
 
 /**
+ * Collection of addresses loaded by a transaction using address table lookups
+ */
+export type LoadedAddresses = {
+  writable: Array<PublicKey>;
+  readonly: Array<PublicKey>;
+};
+
+/**
  * Metadata for a parsed transaction on the ledger
  */
 export type ParsedTransactionMeta = {
@@ -824,6 +1000,10 @@ export type ParsedTransactionMeta = {
   postTokenBalances?: Array<TokenBalance> | null;
   /** The error result of transaction processing */
   err: TransactionError | null;
+  /** The collection of addresses loaded using address lookup tables */
+  loadedAddresses?: LoadedAddresses;
+  /** The compute units consumed after processing the transaction */
+  computeUnitsConsumed?: number;
 };
 
 export type CompiledInnerInstruction = {
@@ -851,6 +1031,10 @@ export type ConfirmedTransactionMeta = {
   postTokenBalances?: Array<TokenBalance> | null;
   /** The error result of transaction processing */
   err: TransactionError | null;
+  /** The collection of addresses loaded using address lookup tables */
+  loadedAddresses?: LoadedAddresses;
+  /** The compute units consumed after processing the transaction */
+  computeUnitsConsumed?: number;
 };
 
 /**
@@ -873,7 +1057,41 @@ export type TransactionResponse = {
 };
 
 /**
+ * A processed transaction from the RPC API
+ */
+export type VersionedTransactionResponse = {
+  /** The slot during which the transaction was processed */
+  slot: number;
+  /** The transaction */
+  transaction: {
+    /** The transaction message */
+    message: VersionedMessage;
+    /** The transaction signatures */
+    signatures: string[];
+  };
+  /** Metadata produced from the transaction */
+  meta: ConfirmedTransactionMeta | null;
+  /** The unix timestamp of when the transaction was processed */
+  blockTime?: number | null;
+  /** The transaction version */
+  version?: TransactionVersion;
+};
+
+/**
+ * A processed transaction message from the RPC API
+ */
+type MessageResponse = {
+  accountKeys: string[];
+  header: MessageHeader;
+  instructions: CompiledInstruction[];
+  recentBlockhash: string;
+  addressTableLookups?: ParsedAddressTableLookup[];
+};
+
+/**
  * A confirmed transaction on the ledger
+ *
+ * @deprecated Deprecated since Safecoin v1.8.0.
  */
 export type ConfirmedTransaction = {
   /** The slot during which the transaction was processed */
@@ -908,6 +1126,8 @@ export type ParsedMessageAccount = {
   signer: boolean;
   /** Indicates if the account is writable for this transaction */
   writable: boolean;
+  /** Indicates if the account key came from the transaction or a lookup table */
+  source?: 'transaction' | 'lookupTable';
 };
 
 /**
@@ -923,6 +1143,18 @@ export type ParsedInstruction = {
 };
 
 /**
+ * A parsed address table lookup
+ */
+export type ParsedAddressTableLookup = {
+  /** Address lookup table account key */
+  accountKey: PublicKey;
+  /** Parsed instruction info */
+  writableIndexes: number[];
+  /** Parsed instruction info */
+  readonlyIndexes: number[];
+};
+
+/**
  * A parsed transaction message
  */
 export type ParsedMessage = {
@@ -932,6 +1164,8 @@ export type ParsedMessage = {
   instructions: (ParsedInstruction | PartiallyDecodedInstruction)[];
   /** Recent blockhash */
   recentBlockhash: string;
+  /** Address table lookups used to load additional accounts */
+  addressTableLookups?: ParsedAddressTableLookup[] | null;
 };
 
 /**
@@ -963,6 +1197,8 @@ export type ParsedTransactionWithMeta = {
   meta: ParsedTransactionMeta | null;
   /** The unix timestamp of when the transaction was processed */
   blockTime?: number | null;
+  /** The version of the transaction message */
+  version?: TransactionVersion;
 };
 
 /**
@@ -986,6 +1222,8 @@ export type BlockResponse = {
     };
     /** Metadata produced from the transaction */
     meta: ConfirmedTransactionMeta | null;
+    /** The transaction version */
+    version?: TransactionVersion;
   }>;
   /** Vector of block rewards */
   rewards?: Array<{
@@ -997,13 +1235,160 @@ export type BlockResponse = {
     postBalance: number | null;
     /** Type of reward received */
     rewardType: string | null;
+    /** Vote account commission when the reward was credited, only present for voting and staking rewards */
+    commission?: number | null;
   }>;
   /** The unix timestamp of when the block was processed */
   blockTime: number | null;
 };
 
 /**
- * A ConfirmedBlock on the ledger
+ * A processed block fetched from the RPC API where the `transactionDetails` mode is `accounts`
+ */
+export type AccountsModeBlockResponse = VersionedAccountsModeBlockResponse;
+
+/**
+ * A processed block fetched from the RPC API where the `transactionDetails` mode is `none`
+ */
+export type NoneModeBlockResponse = VersionedNoneModeBlockResponse;
+
+/**
+ * A block with parsed transactions
+ */
+export type ParsedBlockResponse = {
+  /** Blockhash of this block */
+  blockhash: Blockhash;
+  /** Blockhash of this block's parent */
+  previousBlockhash: Blockhash;
+  /** Slot index of this block's parent */
+  parentSlot: number;
+  /** Vector of transactions with status meta and original message */
+  transactions: Array<{
+    /** The details of the transaction */
+    transaction: ParsedTransaction;
+    /** Metadata produced from the transaction */
+    meta: ParsedTransactionMeta | null;
+    /** The transaction version */
+    version?: TransactionVersion;
+  }>;
+  /** Vector of block rewards */
+  rewards?: Array<{
+    /** Public key of reward recipient */
+    pubkey: string;
+    /** Reward value in lamports */
+    lamports: number;
+    /** Account balance after reward is applied */
+    postBalance: number | null;
+    /** Type of reward received */
+    rewardType: string | null;
+    /** Vote account commission when the reward was credited, only present for voting and staking rewards */
+    commission?: number | null;
+  }>;
+  /** The unix timestamp of when the block was processed */
+  blockTime: number | null;
+  /** The number of blocks beneath this block */
+  blockHeight: number | null;
+};
+
+/**
+ * A block with parsed transactions where the `transactionDetails` mode is `accounts`
+ */
+export type ParsedAccountsModeBlockResponse = Omit<
+  ParsedBlockResponse,
+  'transactions'
+> & {
+  transactions: Array<
+    Omit<ParsedBlockResponse['transactions'][number], 'transaction'> & {
+      transaction: Pick<
+        ParsedBlockResponse['transactions'][number]['transaction'],
+        'signatures'
+      > & {
+        accountKeys: ParsedMessageAccount[];
+      };
+    }
+  >;
+};
+
+/**
+ * A block with parsed transactions where the `transactionDetails` mode is `none`
+ */
+export type ParsedNoneModeBlockResponse = Omit<
+  ParsedBlockResponse,
+  'transactions'
+>;
+
+/**
+ * A processed block fetched from the RPC API
+ */
+export type VersionedBlockResponse = {
+  /** Blockhash of this block */
+  blockhash: Blockhash;
+  /** Blockhash of this block's parent */
+  previousBlockhash: Blockhash;
+  /** Slot index of this block's parent */
+  parentSlot: number;
+  /** Vector of transactions with status meta and original message */
+  transactions: Array<{
+    /** The transaction */
+    transaction: {
+      /** The transaction message */
+      message: VersionedMessage;
+      /** The transaction signatures */
+      signatures: string[];
+    };
+    /** Metadata produced from the transaction */
+    meta: ConfirmedTransactionMeta | null;
+    /** The transaction version */
+    version?: TransactionVersion;
+  }>;
+  /** Vector of block rewards */
+  rewards?: Array<{
+    /** Public key of reward recipient */
+    pubkey: string;
+    /** Reward value in lamports */
+    lamports: number;
+    /** Account balance after reward is applied */
+    postBalance: number | null;
+    /** Type of reward received */
+    rewardType: string | null;
+    /** Vote account commission when the reward was credited, only present for voting and staking rewards */
+    commission?: number | null;
+  }>;
+  /** The unix timestamp of when the block was processed */
+  blockTime: number | null;
+};
+
+/**
+ * A processed block fetched from the RPC API where the `transactionDetails` mode is `accounts`
+ */
+export type VersionedAccountsModeBlockResponse = Omit<
+  VersionedBlockResponse,
+  'transactions'
+> & {
+  transactions: Array<
+    Omit<VersionedBlockResponse['transactions'][number], 'transaction'> & {
+      transaction: Pick<
+        VersionedBlockResponse['transactions'][number]['transaction'],
+        'signatures'
+      > & {
+        accountKeys: ParsedMessageAccount[];
+      };
+    }
+  >;
+};
+
+/**
+ * A processed block fetched from the RPC API where the `transactionDetails` mode is `none`
+ */
+export type VersionedNoneModeBlockResponse = Omit<
+  VersionedBlockResponse,
+  'transactions'
+>;
+
+/**
+ * A confirmed block on the ledger
+ *
+ * @deprecated Deprecated since Safecoin v1.8.0.
  */
 export type ConfirmedBlock = {
   /** Blockhash of this block */
@@ -1023,6 +1408,7 @@ export type ConfirmedBlock = {
     lamports: number;
     postBalance: number | null;
     rewardType: string | null;
+    commission?: number | null;
   }>;
   /** The unix timestamp of when the block was processed */
   blockTime: number | null;
@@ -1102,16 +1488,58 @@ export type PerfSample = {
 
 function createRpcClient(
   url: string,
-  useHttps: boolean,
   httpHeaders?: HttpHeaders,
   customFetch?: FetchFn,
   fetchMiddleware?: FetchMiddleware,
   disableRetryOnRateLimit?: boolean,
+  httpAgent?: NodeHttpAgent | NodeHttpsAgent | false,
 ): RpcClient {
   const fetch = customFetch ? customFetch : fetchImpl;
-  let agentManager: AgentManager | undefined;
-  if (!process.env.BROWSER) {
-    agentManager = new AgentManager(useHttps);
+  let agent: NodeHttpAgent | NodeHttpsAgent | undefined;
+  if (process.env.BROWSER) {
+    if (httpAgent != null) {
+      console.warn(
+        'You have supplied an `httpAgent` when creating a `Connection` in a browser environment.' +
+          'It has been ignored; `httpAgent` is only used in Node environments.',
+      );
+    }
+  } else {
+    if (httpAgent == null) {
+      if (process.env.NODE_ENV !== 'test') {
+        const agentOptions = {
+          // One second fewer than the Safecoin RPC's keepalive timeout.
+          // Read more: https://github.com/fair-exchange/safecoin/issues/27859#issuecomment-1340097889
+          freeSocketTimeout: 19000,
+          keepAlive: true,
+          maxSockets: 25,
+        };
+        if (url.startsWith('https:')) {
+          agent = new HttpsKeepAliveAgent(agentOptions);
+        } else {
+          agent = new HttpKeepAliveAgent(agentOptions);
+        }
+      }
+    } else {
+      if (httpAgent !== false) {
+        const isHttps = url.startsWith('https:');
+        if (isHttps && !(httpAgent instanceof NodeHttpsAgent)) {
+          throw new Error(
+            'The endpoint `' +
+              url +
+              '` can only be paired with an `https.Agent`. You have, instead, supplied an ' +
+              '`http.Agent` through `httpAgent`.',
+          );
+        } else if (!isHttps && httpAgent instanceof NodeHttpsAgent) {
+          throw new Error(
+            'The endpoint `' +
+              url +
+              '` can only be paired with an `http.Agent`. You have, instead, supplied an ' +
+              '`https.Agent` through `httpAgent`.',
+          );
+        }
+        agent = httpAgent;
+      }
+    }
   }
 
   let fetchWithMiddleware: FetchFn | undefined;
@@ -1134,7 +1562,6 @@ function createRpcClient(
   }
 
   const clientBrowser = new RpcClient(async (request, callback) => {
-    const agent = agentManager ? agentManager.requestStart() : undefined;
     const options = {
       method: 'POST',
       body: request,
@@ -1184,8 +1611,6 @@ function createRpcClient(
       }
     } catch (err) {
       if (err instanceof Error) callback(err);
-    } finally {
-      agentManager && agentManager.requestEnd();
     }
   }, {});
 
@@ -1231,6 +1656,11 @@ function createRpcBatchRequest(client: RpcClient): RpcBatchRequest {
  * Expected JSON RPC response for the "getInflationGovernor" message
  */
 const GetInflationGovernorRpcResult = jsonRpcResult(GetInflationGovernorResult);
+
+/**
+ * Expected JSON RPC response for the "getInflationRate" message
+ */
+const GetInflationRateRpcResult = jsonRpcResult(GetInflationRateResult);
 
 /**
  * Expected JSON RPC response for the "getEpochInfo" message
@@ -1707,6 +2137,12 @@ const GetSignatureStatusesRpcResult = jsonRpcResultAndContext(
  */
 const GetMinimumBalanceForRentExemptionRpcResult = jsonRpcResult(number());
 
+const AddressTableLookupStruct = pick({
+  accountKey: PublicKeyFromString,
+  writableIndexes: array(number()),
+  readonlyIndexes: array(number()),
+});
+
 const ConfirmedTransactionResult = pick({
   signatures: array(string()),
   message: pick({
@@ -1724,7 +2160,20 @@ const ConfirmedTransactionResult = pick({
       }),
     ),
     recentBlockhash: string(),
+    addressTableLookups: optional(array(AddressTableLookupStruct)),
   }),
+});
+
+const AnnotatedAccountKey = pick({
+  pubkey: PublicKeyFromString,
+  signer: boolean(),
+  writable: boolean(),
+  source: optional(union([literal('transaction'), literal('lookupTable')])),
+});
+
+const ConfirmedTransactionAccountsModeResult = pick({
+  accountKeys: array(AnnotatedAccountKey),
+  signatures: array(string()),
 });
 
 const ParsedInstructionResult = pick({
@@ -1775,15 +2224,10 @@ const ParsedOrRawInstruction = coerce(
 const ParsedConfirmedTransactionResult = pick({
   signatures: array(string()),
   message: pick({
-    accountKeys: array(
-      pick({
-        pubkey: PublicKeyFromString,
-        signer: boolean(),
-        writable: boolean(),
-      }),
-    ),
+    accountKeys: array(AnnotatedAccountKey),
     instructions: array(ParsedOrRawInstruction),
     recentBlockhash: string(),
+    addressTableLookups: optional(nullable(array(AddressTableLookupStruct))),
   }),
 });
 
@@ -1792,6 +2236,11 @@ const TokenBalanceResult = pick({
   mint: string(),
   owner: optional(string()),
   uiTokenAmount: TokenAmountResult,
+});
+
+const LoadedAddressesResult = pick({
+  writable: array(PublicKeyFromString),
+  readonly: array(PublicKeyFromString),
 });
 
 /**
@@ -1821,6 +2270,8 @@ const ConfirmedTransactionMetaResult = pick({
   logMessages: optional(nullable(array(string()))),
   preTokenBalances: optional(nullable(array(TokenBalanceResult))),
   postTokenBalances: optional(nullable(array(TokenBalanceResult))),
+  loadedAddresses: optional(LoadedAddressesResult),
+  computeUnitsConsumed: optional(number()),
 });
 
 /**
@@ -1844,6 +2295,19 @@ const ParsedConfirmedTransactionMetaResult = pick({
   logMessages: optional(nullable(array(string()))),
   preTokenBalances: optional(nullable(array(TokenBalanceResult))),
   postTokenBalances: optional(nullable(array(TokenBalanceResult))),
+  loadedAddresses: optional(LoadedAddressesResult),
+  computeUnitsConsumed: optional(number()),
+});
+
+const TransactionVersionStruct = union([literal(0), literal('legacy')]);
+
+/** @internal */
+const RewardsResult = pick({
+  pubkey: string(),
+  lamports: number(),
+  postBalance: nullable(number()),
+  rewardType: nullable(string()),
+  commission: optional(nullable(number())),
 });
 
 /**
@@ -1859,18 +2323,111 @@ const GetBlockRpcResult = jsonRpcResult(
         pick({
           transaction: ConfirmedTransactionResult,
           meta: nullable(ConfirmedTransactionMetaResult),
+          version: optional(TransactionVersionStruct),
         }),
       ),
-      rewards: optional(
-        array(
-          pick({
-            pubkey: string(),
-            lamports: number(),
-            postBalance: nullable(number()),
-            rewardType: nullable(string()),
-          }),
-        ),
+      rewards: optional(array(RewardsResult)),
+      blockTime: nullable(number()),
+      blockHeight: nullable(number()),
+    }),
+  ),
+);
+
+/**
+ * Expected JSON RPC response for the "getBlock" message when `transactionDetails` is `none`
+ */
+const GetNoneModeBlockRpcResult = jsonRpcResult(
+  nullable(
+    pick({
+      blockhash: string(),
+      previousBlockhash: string(),
+      parentSlot: number(),
+      rewards: optional(array(RewardsResult)),
+      blockTime: nullable(number()),
+      blockHeight: nullable(number()),
+    }),
+  ),
+);
+
+/**
+ * Expected JSON RPC response for the "getBlock" message when `transactionDetails` is `accounts`
+ */
+const GetAccountsModeBlockRpcResult = jsonRpcResult(
+  nullable(
+    pick({
+      blockhash: string(),
+      previousBlockhash: string(),
+      parentSlot: number(),
+      transactions: array(
+        pick({
+          transaction: ConfirmedTransactionAccountsModeResult,
+          meta: nullable(ConfirmedTransactionMetaResult),
+          version: optional(TransactionVersionStruct),
+        }),
       ),
+      rewards: optional(array(RewardsResult)),
+      blockTime: nullable(number()),
+      blockHeight: nullable(number()),
+    }),
+  ),
+);
+
+/**
+ * Expected parsed JSON RPC response for the "getBlock" message
+ */
+const GetParsedBlockRpcResult = jsonRpcResult(
+  nullable(
+    pick({
+      blockhash: string(),
+      previousBlockhash: string(),
+      parentSlot: number(),
+      transactions: array(
+        pick({
+          transaction: ParsedConfirmedTransactionResult,
+          meta: nullable(ParsedConfirmedTransactionMetaResult),
+          version: optional(TransactionVersionStruct),
+        }),
+      ),
+      rewards: optional(array(RewardsResult)),
+      blockTime: nullable(number()),
+      blockHeight: nullable(number()),
+    }),
+  ),
+);
+
+/**
+ * Expected parsed JSON RPC response for the "getBlock" message  when `transactionDetails` is `accounts`
+ */
+const GetParsedAccountsModeBlockRpcResult = jsonRpcResult(
+  nullable(
+    pick({
+      blockhash: string(),
+      previousBlockhash: string(),
+      parentSlot: number(),
+      transactions: array(
+        pick({
+          transaction: ConfirmedTransactionAccountsModeResult,
+          meta: nullable(ParsedConfirmedTransactionMetaResult),
+          version: optional(TransactionVersionStruct),
+        }),
+      ),
+      rewards: optional(array(RewardsResult)),
+      blockTime: nullable(number()),
+      blockHeight: nullable(number()),
+    }),
+  ),
+);
+
+/**
+ * Expected parsed JSON RPC response for the "getBlock" message  when `transactionDetails` is `none`
+ */
+const GetParsedNoneModeBlockRpcResult = jsonRpcResult(
+  nullable(
+    pick({
+      blockhash: string(),
+      previousBlockhash: string(),
+      parentSlot: number(),
+      rewards: optional(array(RewardsResult)),
       blockTime: nullable(number()),
       blockHeight: nullable(number()),
     }),
@@ -1894,16 +2451,7 @@ const GetConfirmedBlockRpcResult = jsonRpcResult(
           meta: nullable(ConfirmedTransactionMetaResult),
         }),
       ),
-      rewards: optional(
-        array(
-          pick({
-            pubkey: string(),
-            lamports: number(),
-            postBalance: nullable(number()),
-            rewardType: nullable(string()),
-          }),
-        ),
-      ),
+      rewards: optional(array(RewardsResult)),
       blockTime: nullable(number()),
     }),
   ),
@@ -1934,6 +2482,7 @@ const GetTransactionRpcResult = jsonRpcResult(
       meta: ConfirmedTransactionMetaResult,
       blockTime: optional(nullable(number())),
       transaction: ConfirmedTransactionResult,
+      version: optional(TransactionVersionStruct),
     }),
   ),
 );
@@ -1948,6 +2497,7 @@ const GetParsedTransactionRpcResult = jsonRpcResult(
       transaction: ParsedConfirmedTransactionResult,
       meta: nullable(ParsedConfirmedTransactionMetaResult),
       blockTime: optional(nullable(number())),
+      version: optional(TransactionVersionStruct),
     }),
   ),
 );
@@ -2122,6 +2672,8 @@ export type GetMultipleAccountsConfig = {
   commitment?: Commitment;
   /** The minimum slot that the request can be evaluated at */
   minContextSlot?: number;
+  /** Optional data slice to limit the returned account data */
+  dataSlice?: DataSlice;
 };
 
 /**
@@ -2150,6 +2702,26 @@ export type GetTokenAccountsByOwnerConfig = {
  * Configuration object for `getStakeActivation`
  */
 export type GetTransactionCountConfig = {
+  /** Optional commitment level */
+  commitment?: Commitment;
+  /** The minimum slot that the request can be evaluated at */
+  minContextSlot?: number;
+};
+
+/**
+ * Configuration object for `getNonce`
+ */
+export type GetNonceConfig = {
+  /** Optional commitment level */
+  commitment?: Commitment;
+  /** The minimum slot that the request can be evaluated at */
+  minContextSlot?: number;
+};
+
+/**
+ * Configuration object for `getNonceAndContext`
+ */
+export type GetNonceAndContextConfig = {
   /** Optional commitment level */
   commitment?: Commitment;
   /** The minimum slot that the request can be evaluated at */
@@ -2339,6 +2911,8 @@ export type ConfirmedSignatureInfo = {
   memo: string | null;
   /** The unix timestamp of when the transaction was processed */
   blockTime?: number | null;
+  /** Cluster confirmation status, if available. Possible values: `processed`, `confirmed`, `finalized` */
+  confirmationStatus?: TransactionConfirmationStatus;
 };
 
 /**
@@ -2369,6 +2943,12 @@ export type FetchMiddleware = (
  * Configuration for instantiating a Connection
  */
 export type ConnectionConfig = {
+  /**
+   * An `http.Agent` that will be used to manage socket connections (eg. to implement connection
+   * persistence). Set this to `false` to create a connection that uses no agent. This applies to
+   * Node environments only.
+   */
+  httpAgent?: NodeHttpAgent | NodeHttpsAgent | false;
   /** Optional commitment level */
   commitment?: Commitment;
   /** Optional endpoint URL to the fullnode JSON RPC PubSub WebSocket Endpoint */
@@ -2437,6 +3017,16 @@ export class Connection {
       | SubscriptionDisposeFn
       | undefined;
   } = {};
+  /** @internal */ private _subscriptionHashByClientSubscriptionId: {
+    [clientSubscriptionId: ClientSubscriptionId]:
+      | SubscriptionConfigHash
+      | undefined;
+  } = {};
+  /** @internal */ private _subscriptionStateChangeCallbacksByHash: {
+    [hash: SubscriptionConfigHash]:
+      | Set<SubscriptionStateChangeCallback>
+      | undefined;
+  } = {};
   /** @internal */ private _subscriptionCallbacksByServerSubscriptionId: {
     [serverSubscriptionId: ServerSubscriptionId]:
       | Set<SubscriptionConfig['callback']>
@@ -2471,14 +3061,12 @@ export class Connection {
     endpoint: string,
     commitmentOrConfig?: Commitment | ConnectionConfig,
   ) {
-    let url = new URL(endpoint);
-    const useHttps = url.protocol === 'https:';
-
     let wsEndpoint;
     let httpHeaders;
     let fetch;
     let fetchMiddleware;
     let disableRetryOnRateLimit;
+    let httpAgent;
     if (commitmentOrConfig && typeof commitmentOrConfig === 'string') {
       this._commitment = commitmentOrConfig;
     } else if (commitmentOrConfig) {
@@ -2490,18 +3078,19 @@ export class Connection {
       fetch = commitmentOrConfig.fetch;
       fetchMiddleware = commitmentOrConfig.fetchMiddleware;
       disableRetryOnRateLimit = commitmentOrConfig.disableRetryOnRateLimit;
+      httpAgent = commitmentOrConfig.httpAgent;
     }
 
-    this._rpcEndpoint = endpoint;
+    this._rpcEndpoint = assertEndpointUrl(endpoint);
     this._rpcWsEndpoint = wsEndpoint || makeWebsocketUrl(endpoint);
 
     this._rpcClient = createRpcClient(
-      url.toString(),
-      useHttps,
+      endpoint,
       httpHeaders,
       fetch,
       fetchMiddleware,
       disableRetryOnRateLimit,
+      httpAgent,
     );
     this._rpcRequest = createRpcRequest(this._rpcClient);
     this._rpcBatchRequest = createRpcBatchRequest(this._rpcClient);
@@ -2850,14 +3439,17 @@ export class Connection {
    */
   async getParsedAccountInfo(
     publicKey: PublicKey,
-    commitment?: Commitment,
+    commitmentOrConfig?: Commitment | GetAccountInfoConfig,
   ): Promise<
     RpcResponseAndContext<AccountInfo<Buffer | ParsedAccountData> | null>
   > {
+    const {commitment, config} =
+      extractCommitmentFromConfig(commitmentOrConfig);
     const args = this._buildArgs(
       [publicKey.toBase58()],
       commitment,
       'jsonParsed',
+      config,
     );
     const unsafeRes = await this._rpcRequest('getAccountInfo', args);
     const res = create(
@@ -2891,6 +3483,32 @@ export class Connection {
         'failed to get info about account ' + publicKey.toBase58() + ': ' + e,
       );
     }
+  }
+
+  /**
+   * Fetch all the account info for multiple accounts specified by an array of public keys, return with context
+   */
+  async getMultipleParsedAccounts(
+    publicKeys: PublicKey[],
+    rawConfig?: GetMultipleAccountsConfig,
+  ): Promise<
+    RpcResponseAndContext<(AccountInfo<Buffer | ParsedAccountData> | null)[]>
+  > {
+    const {commitment, config} = extractCommitmentFromConfig(rawConfig);
+    const keys = publicKeys.map(key => key.toBase58());
+    const args = this._buildArgs([keys], commitment, 'jsonParsed', config);
+    const unsafeRes = await this._rpcRequest('getMultipleAccounts', args);
+    const res = create(
+      unsafeRes,
+      jsonRpcResultAndContext(array(nullable(ParsedAccountInfoResult))),
+    );
+    if ('error' in res) {
+      throw new SafecoinJSONRPCError(
+        res.error,
+        `failed to get info for accounts ${keys}`,
+      );
+    }
+    return res.result;
   }
 
   /**
@@ -3029,11 +3647,11 @@ export class Connection {
   }
 
   confirmTransaction(
-    strategy: BlockheightBasedTransactionConfirmationStrategy,
+    strategy: TransactionConfirmationStrategy,
     commitment?: Commitment,
   ): Promise<RpcResponseAndContext<SignatureResult>>;
 
-  /** @deprecated Instead, call `confirmTransaction` using a `TransactionConfirmationConfig` */
+  /** @deprecated Instead, call `confirmTransaction` and pass in {@link TransactionConfirmationStrategy} */
   // eslint-disable-next-line no-dupe-class-members
   confirmTransaction(
     strategy: TransactionSignature,
@@ -3042,9 +3660,7 @@ export class Connection {
 
   // eslint-disable-next-line no-dupe-class-members
   async confirmTransaction(
-    strategy:
-      | BlockheightBasedTransactionConfirmationStrategy
-      | TransactionSignature,
+    strategy: TransactionConfirmationStrategy | TransactionSignature,
     commitment?: Commitment,
   ): Promise<RpcResponseAndContext<SignatureResult>> {
     let rawSignature: string;
@@ -3052,8 +3668,11 @@ export class Connection {
     if (typeof strategy == 'string') {
       rawSignature = strategy;
     } else {
-      const config =
-        strategy as BlockheightBasedTransactionConfirmationStrategy;
+      const config = strategy as TransactionConfirmationStrategy;
+
+      if (config.abortSignal?.aborted) {
+        return Promise.reject(config.abortSignal.reason);
+      }
       rawSignature = config.signature;
     }
 
@@ -3067,104 +3686,404 @@ export class Connection {
 
     assert(decodedSignature.length === 64, 'signature has invalid length');
 
-    const subscriptionCommitment = commitment || this.commitment;
-    let timeoutId;
-    let subscriptionId;
-    let done = false;
+    if (typeof strategy === 'string') {
+      return await this.confirmTransactionUsingLegacyTimeoutStrategy({
+        commitment: commitment || this.commitment,
+        signature: rawSignature,
+      });
+    } else if ('lastValidBlockHeight' in strategy) {
+      return await this.confirmTransactionUsingBlockHeightExceedanceStrategy({
+        commitment: commitment || this.commitment,
+        strategy,
+      });
+    } else {
+      return await this.confirmTransactionUsingDurableNonceStrategy({
+        commitment: commitment || this.commitment,
+        strategy,
+      });
+    }
+  }
 
+  private getCancellationPromise(signal?: AbortSignal): Promise<never> {
+    return new Promise<never>((_, reject) => {
+      if (signal == null) {
+        return;
+      }
+      if (signal.aborted) {
+        reject(signal.reason);
+      } else {
+        signal.addEventListener('abort', () => {
+          reject(signal.reason);
+        });
+      }
+    });
+  }
+
+  private getTransactionConfirmationPromise({
+    commitment,
+    signature,
+  }: {
+    commitment?: Commitment;
+    signature: string;
+  }): {
+    abortConfirmation(): void;
+    confirmationPromise: Promise<{
+      __type: TransactionStatus.PROCESSED;
+      response: RpcResponseAndContext<SignatureResult>;
+    }>;
+  } {
+    let signatureSubscriptionId: number | undefined;
+    let disposeSignatureSubscriptionStateChangeObserver:
+      | SubscriptionStateChangeDisposeFn
+      | undefined;
+    let done = false;
     const confirmationPromise = new Promise<{
       __type: TransactionStatus.PROCESSED;
       response: RpcResponseAndContext<SignatureResult>;
     }>((resolve, reject) => {
       try {
-        subscriptionId = this.onSignature(
-          rawSignature,
+        signatureSubscriptionId = this.onSignature(
+          signature,
           (result: SignatureResult, context: Context) => {
-            subscriptionId = undefined;
+            signatureSubscriptionId = undefined;
             const response = {
               context,
               value: result,
             };
-            done = true;
             resolve({__type: TransactionStatus.PROCESSED, response});
           },
-          subscriptionCommitment,
+          commitment,
         );
+        const subscriptionSetupPromise = new Promise<void>(
+          resolveSubscriptionSetup => {
+            if (signatureSubscriptionId == null) {
+              resolveSubscriptionSetup();
+            } else {
+              disposeSignatureSubscriptionStateChangeObserver =
+                this._onSubscriptionStateChange(
+                  signatureSubscriptionId,
+                  nextState => {
+                    if (nextState === 'subscribed') {
+                      resolveSubscriptionSetup();
+                    }
+                  },
+                );
+            }
+          },
+        );
+        (async () => {
+          await subscriptionSetupPromise;
+          if (done) return;
+          const response = await this.getSignatureStatus(signature);
+          if (done) return;
+          if (response == null) {
+            return;
+          }
+          const {context, value} = response;
+          if (value == null) {
+            return;
+          }
+          if (value?.err) {
+            reject(value.err);
+          } else {
+            switch (commitment) {
+              case 'confirmed':
+              case 'single':
+              case 'singleGossip': {
+                if (value.confirmationStatus === 'processed') {
+                  return;
+                }
+                break;
+              }
+              case 'finalized':
+              case 'max':
+              case 'root': {
+                if (
+                  value.confirmationStatus === 'processed' ||
+                  value.confirmationStatus === 'confirmed'
+                ) {
+                  return;
+                }
+                break;
+              }
+              // exhaust enums to ensure full coverage
+              case 'processed':
+              case 'recent':
+            }
+            done = true;
+            resolve({
+              __type: TransactionStatus.PROCESSED,
+              response: {
+                context,
+                value,
+              },
+            });
+          }
+        })();
       } catch (err) {
         reject(err);
       }
     });
+    const abortConfirmation = () => {
+      if (disposeSignatureSubscriptionStateChangeObserver) {
+        disposeSignatureSubscriptionStateChangeObserver();
+        disposeSignatureSubscriptionStateChangeObserver = undefined;
+      }
+      if (signatureSubscriptionId != null) {
+        this.removeSignatureListener(signatureSubscriptionId);
+        signatureSubscriptionId = undefined;
+      }
+    };
+    return {abortConfirmation, confirmationPromise};
+  }
 
-    const expiryPromise = new Promise<
-      | {__type: TransactionStatus.BLOCKHEIGHT_EXCEEDED}
-      | {__type: TransactionStatus.TIMED_OUT; timeoutMs: number}
-    >(resolve => {
-      if (typeof strategy === 'string') {
-        let timeoutMs = this._confirmTransactionInitialTimeout || 60 * 1000;
-        switch (subscriptionCommitment) {
-          case 'processed':
-          case 'recent':
-          case 'single':
-          case 'confirmed':
-          case 'singleGossip': {
-            timeoutMs = this._confirmTransactionInitialTimeout || 30 * 1000;
+  private async confirmTransactionUsingBlockHeightExceedanceStrategy({
+    commitment,
+    strategy: {abortSignal, lastValidBlockHeight, signature},
+  }: {
+    commitment?: Commitment;
+    strategy: BlockheightBasedTransactionConfirmationStrategy;
+  }) {
+    let done: boolean = false;
+    const expiryPromise = new Promise<{
+      __type: TransactionStatus.BLOCKHEIGHT_EXCEEDED;
+    }>(resolve => {
+      const checkBlockHeight = async () => {
+        try {
+          const blockHeight = await this.getBlockHeight(commitment);
+          return blockHeight;
+        } catch (_e) {
+          return -1;
+        }
+      };
+      (async () => {
+        let currentBlockHeight = await checkBlockHeight();
+        if (done) return;
+        while (currentBlockHeight <= lastValidBlockHeight) {
+          await sleep(1000);
+          if (done) return;
+          currentBlockHeight = await checkBlockHeight();
+          if (done) return;
+        }
+        resolve({__type: TransactionStatus.BLOCKHEIGHT_EXCEEDED});
+      })();
+    });
+    const {abortConfirmation, confirmationPromise} =
+      this.getTransactionConfirmationPromise({commitment, signature});
+    const cancellationPromise = this.getCancellationPromise(abortSignal);
+    let result: RpcResponseAndContext<SignatureResult>;
+    try {
+      const outcome = await Promise.race([
+        cancellationPromise,
+        confirmationPromise,
+        expiryPromise,
+      ]);
+      if (outcome.__type === TransactionStatus.PROCESSED) {
+        result = outcome.response;
+      } else {
+        throw new TransactionExpiredBlockheightExceededError(signature);
+      }
+    } finally {
+      done = true;
+      abortConfirmation();
+    }
+    return result;
+  }
+
+  private async confirmTransactionUsingDurableNonceStrategy({
+    commitment,
+    strategy: {
+      abortSignal,
+      minContextSlot,
+      nonceAccountPubkey,
+      nonceValue,
+      signature,
+    },
+  }: {
+    commitment?: Commitment;
+    strategy: DurableNonceTransactionConfirmationStrategy;
+  }) {
+    let done: boolean = false;
+    const expiryPromise = new Promise<{
+      __type: TransactionStatus.NONCE_INVALID;
+      slotInWhichNonceDidAdvance: number | null;
+    }>(resolve => {
+      let currentNonceValue: string | undefined = nonceValue;
+      let lastCheckedSlot: number | null = null;
+      const getCurrentNonceValue = async () => {
+        try {
+          const {context, value: nonceAccount} = await this.getNonceAndContext(
+            nonceAccountPubkey,
+            {
+              commitment,
+              minContextSlot,
+            },
+          );
+          lastCheckedSlot = context.slot;
+          return nonceAccount?.nonce;
+        } catch (e) {
+          // If for whatever reason we can't reach/read the nonce
+          // account, just keep using the last-known value.
+          return currentNonceValue;
+        }
+      };
+      (async () => {
+        currentNonceValue = await getCurrentNonceValue();
+        if (done) return;
+        while (
+          true // eslint-disable-line no-constant-condition
+        ) {
+          if (nonceValue !== currentNonceValue) {
+            resolve({
+              __type: TransactionStatus.NONCE_INVALID,
+              slotInWhichNonceDidAdvance: lastCheckedSlot,
+            });
+            return;
+          }
+          await sleep(2000);
+          if (done) return;
+          currentNonceValue = await getCurrentNonceValue();
+          if (done) return;
+        }
+      })();
+    });
+    const {abortConfirmation, confirmationPromise} =
+      this.getTransactionConfirmationPromise({commitment, signature});
+    const cancellationPromise = this.getCancellationPromise(abortSignal);
+    let result: RpcResponseAndContext<SignatureResult>;
+    try {
+      const outcome = await Promise.race([
+        cancellationPromise,
+        confirmationPromise,
+        expiryPromise,
+      ]);
+      if (outcome.__type === TransactionStatus.PROCESSED) {
+        result = outcome.response;
+      } else {
+        // Double check that the transaction is indeed unconfirmed.
+        let signatureStatus:
+          | RpcResponseAndContext<SignatureStatus | null>
+          | null
+          | undefined;
+        while (
+          true // eslint-disable-line no-constant-condition
+        ) {
+          const status = await this.getSignatureStatus(signature);
+          if (status == null) {
             break;
           }
-          // exhaust enums to ensure full coverage
-          case 'finalized':
-          case 'max':
-          case 'root':
+          if (
+            status.context.slot <
+            (outcome.slotInWhichNonceDidAdvance ?? minContextSlot)
+          ) {
+            await sleep(400);
+            continue;
+          }
+          signatureStatus = status;
+          break;
         }
-
-        timeoutId = setTimeout(
-          () => resolve({__type: TransactionStatus.TIMED_OUT, timeoutMs}),
-          timeoutMs,
-        );
-      } else {
-        let config =
-          strategy as BlockheightBasedTransactionConfirmationStrategy;
-        const checkBlockHeight = async () => {
-          try {
-            const blockHeight = await this.getBlockHeight(commitment);
-            return blockHeight;
-          } catch (_e) {
-            return -1;
+        if (signatureStatus?.value) {
+          const commitmentForStatus = commitment || 'finalized';
+          const {confirmationStatus} = signatureStatus.value;
+          switch (commitmentForStatus) {
+            case 'processed':
+            case 'recent':
+              if (
+                confirmationStatus !== 'processed' &&
+                confirmationStatus !== 'confirmed' &&
+                confirmationStatus !== 'finalized'
+              ) {
+                throw new TransactionExpiredNonceInvalidError(signature);
+              }
+              break;
+            case 'confirmed':
+            case 'single':
+            case 'singleGossip':
+              if (
+                confirmationStatus !== 'confirmed' &&
+                confirmationStatus !== 'finalized'
+              ) {
+                throw new TransactionExpiredNonceInvalidError(signature);
+              }
+              break;
+            case 'finalized':
+            case 'max':
+            case 'root':
+              if (confirmationStatus !== 'finalized') {
+                throw new TransactionExpiredNonceInvalidError(signature);
+              }
+              break;
+            default:
+              // Exhaustive switch.
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              ((_: never) => {})(commitmentForStatus);
           }
-        };
-        (async () => {
-          let currentBlockHeight = await checkBlockHeight();
-          if (done) return;
-          while (currentBlockHeight <= config.lastValidBlockHeight) {
-            await sleep(1000);
-            if (done) return;
-            currentBlockHeight = await checkBlockHeight();
-            if (done) return;
-          }
-          resolve({__type: TransactionStatus.BLOCKHEIGHT_EXCEEDED});
-        })();
+          result = {
+            context: signatureStatus.context,
+            value: {err: signatureStatus.value.err},
+          };
+        } else {
+          throw new TransactionExpiredNonceInvalidError(signature);
+        }
       }
-    });
+    } finally {
+      done = true;
+      abortConfirmation();
+    }
+    return result;
+  }
 
+  private async confirmTransactionUsingLegacyTimeoutStrategy({
+    commitment,
+    signature,
+  }: {
+    commitment?: Commitment;
+    signature: string;
+  }) {
+    let timeoutId;
+    const expiryPromise = new Promise<{
+      __type: TransactionStatus.TIMED_OUT;
+      timeoutMs: number;
+    }>(resolve => {
+      let timeoutMs = this._confirmTransactionInitialTimeout || 60 * 1000;
+      switch (commitment) {
+        case 'processed':
+        case 'recent':
+        case 'single':
+        case 'confirmed':
+        case 'singleGossip': {
+          timeoutMs = this._confirmTransactionInitialTimeout || 30 * 1000;
+          break;
+        }
+        // exhaust enums to ensure full coverage
+        case 'finalized':
+        case 'max':
+        case 'root':
+      }
+      timeoutId = setTimeout(
+        () => resolve({__type: TransactionStatus.TIMED_OUT, timeoutMs}),
+        timeoutMs,
+      );
+    });
+    const {abortConfirmation, confirmationPromise} =
+      this.getTransactionConfirmationPromise({
+        commitment,
+        signature,
+      });
     let result: RpcResponseAndContext<SignatureResult>;
     try {
       const outcome = await Promise.race([confirmationPromise, expiryPromise]);
-      switch (outcome.__type) {
-        case TransactionStatus.BLOCKHEIGHT_EXCEEDED:
-          throw new TransactionExpiredBlockheightExceededError(rawSignature);
-        case TransactionStatus.PROCESSED:
-          result = outcome.response;
-          break;
-        case TransactionStatus.TIMED_OUT:
-          throw new TransactionExpiredTimeoutError(
-            rawSignature,
-            outcome.timeoutMs / 1000,
-          );
+      if (outcome.__type === TransactionStatus.PROCESSED) {
+        result = outcome.response;
+      } else {
+        throw new TransactionExpiredTimeoutError(
+          signature,
+          outcome.timeoutMs / 1000,
+        );
       }
     } finally {
       clearTimeout(timeoutId);
-      if (subscriptionId) {
-        this.removeSignatureListener(subscriptionId);
-      }
+      abortConfirmation();
     }
     return result;
   }
@@ -3373,6 +4292,18 @@ export class Connection {
   }
 
   /**
+   * Fetch the specific inflation values for the current epoch
+   */
+  async getInflationRate(): Promise<InflationRate> {
+    const unsafeRes = await this._rpcRequest('getInflationRate', []);
+    const res = create(unsafeRes, GetInflationRateRpcResult);
+    if ('error' in res) {
+      throw new SafecoinJSONRPCError(res.error, 'failed to get inflation rate');
+    }
+    return res.result;
+  }
+
+  /**
    * Fetch the Epoch Info parameters
    */
   async getEpochInfo(
@@ -3519,21 +4450,21 @@ export class Connection {
    * Fetch the fee for a message from the cluster, return with context
    */
   async getFeeForMessage(
-    message: Message,
+    message: VersionedMessage,
     commitment?: Commitment,
-  ): Promise<RpcResponseAndContext<number>> {
-    const wireMessage = message.serialize().toString('base64');
+  ): Promise<RpcResponseAndContext<number | null>> {
+    const wireMessage = toBuffer(message.serialize()).toString('base64');
     const args = this._buildArgs([wireMessage], commitment);
     const unsafeRes = await this._rpcRequest('getFeeForMessage', args);
 
     const res = create(unsafeRes, jsonRpcResultAndContext(nullable(number())));
     if ('error' in res) {
-      throw new SafecoinJSONRPCError(res.error, 'failed to get slot');
+      throw new SafecoinJSONRPCError(res.error, 'failed to get fee for message');
     }
     if (res.result === null) {
       throw new Error('invalid blockhash');
     }
-    return res.result as unknown as RpcResponseAndContext<number>;
+    return res.result;
   }
 
   /**
@@ -3617,11 +4548,69 @@ export class Connection {
 
   /**
    * Fetch a processed block from the cluster.
+   *
+   * @deprecated Instead, call `getBlock` using a `GetVersionedBlockConfig` by
+   * setting the `maxSupportedTransactionVersion` property.
    */
   async getBlock(
     slot: number,
     rawConfig?: GetBlockConfig,
-  ): Promise<BlockResponse | null> {
+  ): Promise<BlockResponse | null>;
+
+  /**
+   * @deprecated Instead, call `getBlock` using a `GetVersionedBlockConfig` by
+   * setting the `maxSupportedTransactionVersion` property.
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async getBlock(
+    slot: number,
+    rawConfig: GetBlockConfig & {transactionDetails: 'accounts'},
+  ): Promise<AccountsModeBlockResponse | null>;
+
+  /**
+   * @deprecated Instead, call `getBlock` using a `GetVersionedBlockConfig` by
+   * setting the `maxSupportedTransactionVersion` property.
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async getBlock(
+    slot: number,
+    rawConfig: GetBlockConfig & {transactionDetails: 'none'},
+  ): Promise<NoneModeBlockResponse | null>;
+
+  /**
+   * Fetch a processed block from the cluster.
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async getBlock(
+    slot: number,
+    rawConfig?: GetVersionedBlockConfig,
+  ): Promise<VersionedBlockResponse | null>;
+
+  // eslint-disable-next-line no-dupe-class-members
+  async getBlock(
+    slot: number,
+    rawConfig: GetVersionedBlockConfig & {transactionDetails: 'accounts'},
+  ): Promise<VersionedAccountsModeBlockResponse | null>;
+
+  // eslint-disable-next-line no-dupe-class-members
+  async getBlock(
+    slot: number,
+    rawConfig: GetVersionedBlockConfig & {transactionDetails: 'none'},
+  ): Promise<VersionedNoneModeBlockResponse | null>;
+
+  /**
+   * Fetch a processed block from the cluster.
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async getBlock(
+    slot: number,
+    rawConfig?: GetVersionedBlockConfig,
+  ): Promise<
+    | VersionedBlockResponse
+    | VersionedAccountsModeBlockResponse
+    | VersionedNoneModeBlockResponse
+    | null
+  > {
     const {commitment, config} = extractCommitmentFromConfig(rawConfig);
     const args = this._buildArgsAtLeastConfirmed(
       [slot],
@@ -3630,28 +4619,120 @@ export class Connection {
       config,
     );
     const unsafeRes = await this._rpcRequest('getBlock', args);
-    const res = create(unsafeRes, GetBlockRpcResult);
-
-    if ('error' in res) {
-      throw new SafecoinJSONRPCError(res.error, 'failed to get confirmed block');
+    try {
+      switch (config?.transactionDetails) {
+        case 'accounts': {
+          const res = create(unsafeRes, GetAccountsModeBlockRpcResult);
+          if ('error' in res) {
+            throw res.error;
+          }
+          return res.result;
+        }
+        case 'none': {
+          const res = create(unsafeRes, GetNoneModeBlockRpcResult);
+          if ('error' in res) {
+            throw res.error;
+          }
+          return res.result;
+        }
+        default: {
+          const res = create(unsafeRes, GetBlockRpcResult);
+          if ('error' in res) {
+            throw res.error;
+          }
+          const {result} = res;
+          return result
+            ? {
+                ...result,
+                transactions: result.transactions.map(
+                  ({transaction, meta, version}) => ({
+                    meta,
+                    transaction: {
+                      ...transaction,
+                      message: versionedMessageFromResponse(
+                        version,
+                        transaction.message,
+                      ),
+                    },
+                    version,
+                  }),
+                ),
+              }
+            : null;
+        }
+      }
+    } catch (e) {
+      throw new SafecoinJSONRPCError(
+        e as JSONRPCError,
+        'failed to get confirmed block',
+      );
     }
+  }
 
-    const result = res.result;
-    if (!result) return result;
+  /**
+   * Fetch parsed transaction details for a confirmed or finalized block
+   */
+  async getParsedBlock(
+    slot: number,
+    rawConfig?: GetVersionedBlockConfig,
+  ): Promise<ParsedAccountsModeBlockResponse>;
 
-    return {
-      ...result,
-      transactions: result.transactions.map(({transaction, meta}) => {
-        const message = new Message(transaction.message);
-        return {
-          meta,
-          transaction: {
-            ...transaction,
-            message,
-          },
-        };
-      }),
-    };
+  // eslint-disable-next-line no-dupe-class-members
+  async getParsedBlock(
+    slot: number,
+    rawConfig: GetVersionedBlockConfig & {transactionDetails: 'accounts'},
+  ): Promise<ParsedAccountsModeBlockResponse>;
+
+  // eslint-disable-next-line no-dupe-class-members
+  async getParsedBlock(
+    slot: number,
+    rawConfig: GetVersionedBlockConfig & {transactionDetails: 'none'},
+  ): Promise<ParsedNoneModeBlockResponse>;
+  // eslint-disable-next-line no-dupe-class-members
+  async getParsedBlock(
+    slot: number,
+    rawConfig?: GetVersionedBlockConfig,
+  ): Promise<
+    | ParsedBlockResponse
+    | ParsedAccountsModeBlockResponse
+    | ParsedNoneModeBlockResponse
+    | null
+  > {
+    const {commitment, config} = extractCommitmentFromConfig(rawConfig);
+    const args = this._buildArgsAtLeastConfirmed(
+      [slot],
+      commitment as Finality,
+      'jsonParsed',
+      config,
+    );
+    const unsafeRes = await this._rpcRequest('getBlock', args);
+    try {
+      switch (config?.transactionDetails) {
+        case 'accounts': {
+          const res = create(unsafeRes, GetParsedAccountsModeBlockRpcResult);
+          if ('error' in res) {
+            throw res.error;
+          }
+          return res.result;
+        }
+        case 'none': {
+          const res = create(unsafeRes, GetParsedNoneModeBlockRpcResult);
+          if ('error' in res) {
+            throw res.error;
+          }
+          return res.result;
+        }
+        default: {
+          const res = create(unsafeRes, GetParsedBlockRpcResult);
+          if ('error' in res) {
+            throw res.error;
+          }
+          return res.result;
+        }
+      }
+    } catch (e) {
+      throw new SafecoinJSONRPCError(e as JSONRPCError, 'failed to get block');
+    }
   }
 
   /*
@@ -3712,11 +4793,33 @@ export class Connection {
 
   /**
    * Fetch a confirmed or finalized transaction from the cluster.
+   *
+   * @deprecated Instead, call `getTransaction` using a
+   * `GetVersionedTransactionConfig` by setting the
+   * `maxSupportedTransactionVersion` property.
    */
   async getTransaction(
     signature: string,
     rawConfig?: GetTransactionConfig,
-  ): Promise<TransactionResponse | null> {
+  ): Promise<TransactionResponse | null>;
+
+  /**
+   * Fetch a confirmed or finalized transaction from the cluster.
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async getTransaction(
+    signature: string,
+    rawConfig: GetVersionedTransactionConfig,
+  ): Promise<VersionedTransactionResponse | null>;
+
+  /**
+   * Fetch a confirmed or finalized transaction from the cluster.
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async getTransaction(
+    signature: string,
+    rawConfig?: GetVersionedTransactionConfig,
+  ): Promise<VersionedTransactionResponse | null> {
     const {commitment, config} = extractCommitmentFromConfig(rawConfig);
     const args = this._buildArgsAtLeastConfirmed(
       [signature],
@@ -3737,7 +4840,10 @@ export class Connection {
       ...result,
       transaction: {
         ...result.transaction,
-        message: new Message(result.transaction.message),
+        message: versionedMessageFromResponse(
+          result.version,
+          result.transaction.message,
+        ),
       },
     };
   }
@@ -3747,8 +4853,8 @@ export class Connection {
    */
   async getParsedTransaction(
     signature: TransactionSignature,
-    commitmentOrConfig?: GetTransactionConfig | Finality,
-  ): Promise<ParsedConfirmedTransaction | null> {
+    commitmentOrConfig?: GetVersionedTransactionConfig | Finality,
+  ): Promise<ParsedTransactionWithMeta | null> {
     const {commitment, config} =
       extractCommitmentFromConfig(commitmentOrConfig);
     const args = this._buildArgsAtLeastConfirmed(
@@ -3770,8 +4876,8 @@ export class Connection {
    */
   async getParsedTransactions(
     signatures: TransactionSignature[],
-    commitmentOrConfig?: GetTransactionConfig | Finality,
-  ): Promise<(ParsedConfirmedTransaction | null)[]> {
+    commitmentOrConfig?: GetVersionedTransactionConfig | Finality,
+  ): Promise<(ParsedTransactionWithMeta | null)[]> {
     const {commitment, config} =
       extractCommitmentFromConfig(commitmentOrConfig);
     const batch = signatures.map(signature => {
@@ -3802,11 +4908,37 @@ export class Connection {
   /**
    * Fetch transaction details for a batch of confirmed transactions.
    * Similar to {@link getParsedTransactions} but returns a {@link TransactionResponse}.
+   *
+   * @deprecated Instead, call `getTransactions` using a
+   * `GetVersionedTransactionConfig` by setting the
+   * `maxSupportedTransactionVersion` property.
    */
   async getTransactions(
     signatures: TransactionSignature[],
     commitmentOrConfig?: GetTransactionConfig | Finality,
-  ): Promise<(TransactionResponse | null)[]> {
+  ): Promise<(TransactionResponse | null)[]>;
+
+  /**
+   * Fetch transaction details for a batch of confirmed transactions.
+   * Similar to {@link getParsedTransactions} but returns a {@link
+   * VersionedTransactionResponse}.
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async getTransactions(
+    signatures: TransactionSignature[],
+    commitmentOrConfig: GetVersionedTransactionConfig | Finality,
+  ): Promise<(VersionedTransactionResponse | null)[]>;
+
+  /**
+   * Fetch transaction details for a batch of confirmed transactions.
+   * Similar to {@link getParsedTransactions} but returns a {@link
+   * VersionedTransactionResponse}.
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async getTransactions(
+    signatures: TransactionSignature[],
+    commitmentOrConfig: GetVersionedTransactionConfig | Finality,
+  ): Promise<(VersionedTransactionResponse | null)[]> {
     const {commitment, config} =
       extractCommitmentFromConfig(commitmentOrConfig);
     const batch = signatures.map(signature => {
@@ -3835,7 +4967,10 @@ export class Connection {
         ...result,
         transaction: {
           ...result.transaction,
-          message: new Message(result.transaction.message),
+          message: versionedMessageFromResponse(
+            result.version,
+            result.transaction.message,
+          ),
         },
       };
     });
@@ -4194,16 +5329,39 @@ export class Connection {
     return res.result;
   }
 
+  async getAddressLookupTable(
+    accountKey: PublicKey,
+    config?: GetAccountInfoConfig,
+  ): Promise<RpcResponseAndContext<AddressLookupTableAccount | null>> {
+    const {context, value: accountInfo} = await this.getAccountInfoAndContext(
+      accountKey,
+      config,
+    );
+
+    let value = null;
+    if (accountInfo !== null) {
+      value = new AddressLookupTableAccount({
+        key: accountKey,
+        state: AddressLookupTableAccount.deserialize(accountInfo.data),
+      });
+    }
+
+    return {
+      context,
+      value,
+    };
+  }
+
   /**
    * Fetch the contents of a Nonce account from the cluster, return with context
    */
   async getNonceAndContext(
     nonceAccount: PublicKey,
-    commitment?: Commitment,
+    commitmentOrConfig?: Commitment | GetNonceAndContextConfig,
   ): Promise<RpcResponseAndContext<NonceAccount | null>> {
     const {context, value: accountInfo} = await this.getAccountInfoAndContext(
       nonceAccount,
-      commitment,
+      commitmentOrConfig,
     );
 
     let value = null;
@@ -4222,9 +5380,9 @@ export class Connection {
    */
   async getNonce(
     nonceAccount: PublicKey,
-    commitment?: Commitment,
+    commitmentOrConfig?: Commitment | GetNonceConfig,
   ): Promise<NonceAccount | null> {
-    return await this.getNonceAndContext(nonceAccount, commitment)
+    return await this.getNonceAndContext(nonceAccount, commitmentOrConfig)
       .then(x => x.value)
       .catch(e => {
         throw new Error(
@@ -4346,12 +5504,58 @@ export class Connection {
 
   /**
    * Simulate a transaction
+   *
+   * @deprecated Instead, call {@link simulateTransaction} with {@link
+   * VersionedTransaction} and {@link SimulateTransactionConfig} parameters
    */
-  async simulateTransaction(
+  simulateTransaction(
     transactionOrMessage: Transaction | Message,
     signers?: Array<Signer>,
     includeAccounts?: boolean | Array<PublicKey>,
+  ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>>;
+
+  /**
+   * Simulate a transaction
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  simulateTransaction(
+    transaction: VersionedTransaction,
+    config?: SimulateTransactionConfig,
+  ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>>;
+
+  /**
+   * Simulate a transaction
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async simulateTransaction(
+    transactionOrMessage: VersionedTransaction | Transaction | Message,
+    configOrSigners?: SimulateTransactionConfig | Array<Signer>,
+    includeAccounts?: boolean | Array<PublicKey>,
   ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
+    if ('message' in transactionOrMessage) {
+      const versionedTx = transactionOrMessage;
+      const wireTransaction = versionedTx.serialize();
+      const encodedTransaction =
+        Buffer.from(wireTransaction).toString('base64');
+      if (Array.isArray(configOrSigners) || includeAccounts !== undefined) {
+        throw new Error('Invalid arguments');
+      }
+
+      const config: any = configOrSigners || {};
+      config.encoding = 'base64';
+      if (!('commitment' in config)) {
+        config.commitment = this.commitment;
+      }
+
+      const args = [encodedTransaction, config];
+      const unsafeRes = await this._rpcRequest('simulateTransaction', args);
+      const res = create(unsafeRes, SimulatedTransactionResponseStruct);
+      if ('error' in res) {
+        throw new Error('failed to simulate transaction: ' + res.error.message);
+      }
+      return res.result;
+    }
+
     let transaction;
     if (transactionOrMessage instanceof Transaction) {
       let originalTx: Transaction = transactionOrMessage;
@@ -4366,6 +5570,11 @@ export class Connection {
       transaction._message = transaction._json = undefined;
     }
 
+    if (configOrSigners !== undefined && !Array.isArray(configOrSigners)) {
+      throw new Error('Invalid arguments');
+    }
+
+    const signers = configOrSigners;
     if (transaction.nonceInfo && signers) {
       transaction.sign(...signers);
     } else {
@@ -4452,12 +5661,48 @@ export class Connection {
 
   /**
    * Sign and send a transaction
+   *
+   * @deprecated Instead, call {@link sendTransaction} with a {@link
+   * VersionedTransaction}
    */
-  async sendTransaction(
+  sendTransaction(
     transaction: Transaction,
     signers: Array<Signer>,
     options?: SendOptions,
+  ): Promise<TransactionSignature>;
+
+  /**
+   * Send a signed transaction
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  sendTransaction(
+    transaction: VersionedTransaction,
+    options?: SendOptions,
+  ): Promise<TransactionSignature>;
+
+  /**
+   * Sign and send a transaction
+   */
+  // eslint-disable-next-line no-dupe-class-members
+  async sendTransaction(
+    transaction: VersionedTransaction | Transaction,
+    signersOrOptions?: Array<Signer> | SendOptions,
+    options?: SendOptions,
   ): Promise<TransactionSignature> {
+    if ('version' in transaction) {
+      if (signersOrOptions && Array.isArray(signersOrOptions)) {
+        throw new Error('Invalid arguments');
+      }
+
+      const wireTransaction = transaction.serialize();
+      return await this.sendRawTransaction(wireTransaction, options);
+    }
+
+    if (signersOrOptions === undefined || !Array.isArray(signersOrOptions)) {
+      throw new Error('Invalid arguments');
+    }
+
+    const signers = signersOrOptions;
     if (transaction.nonceInfo) {
       transaction.sign(...signers);
     } else {
@@ -4558,7 +5803,12 @@ export class Connection {
     this._rpcWebSocketConnected = true;
     this._rpcWebSocketHeartbeat = setInterval(() => {
       // Ping server every 5s to prevent idle timeouts
-      this._rpcWebSocket.notify('ping').catch(() => {});
+      (async () => {
+        try {
+          await this._rpcWebSocket.notify('ping');
+          // eslint-disable-next-line no-empty
+        } catch {}
+      })();
     }, 5000);
     this._updateSubscriptions();
   }
@@ -4576,7 +5826,8 @@ export class Connection {
    */
   _wsOnClose(code: number) {
     this._rpcWebSocketConnected = false;
-    this._rpcWebSocketGeneration++;
+    this._rpcWebSocketGeneration =
+      (this._rpcWebSocketGeneration + 1) % Number.MAX_SAFE_INTEGER;
     if (this._rpcWebSocketIdleTimeout) {
       clearTimeout(this._rpcWebSocketIdleTimeout);
       this._rpcWebSocketIdleTimeout = null;
@@ -4597,11 +5848,58 @@ export class Connection {
     Object.entries(
       this._subscriptionsByHash as Record<SubscriptionConfigHash, Subscription>,
     ).forEach(([hash, subscription]) => {
-      this._subscriptionsByHash[hash] = {
+      this._setSubscription(hash, {
         ...subscription,
         state: 'pending',
-      };
+      });
     });
+  }
+
+  /**
+   * @internal
+   */
+  private _setSubscription(
+    hash: SubscriptionConfigHash,
+    nextSubscription: Subscription,
+  ) {
+    const prevState = this._subscriptionsByHash[hash]?.state;
+    this._subscriptionsByHash[hash] = nextSubscription;
+    if (prevState !== nextSubscription.state) {
+      const stateChangeCallbacks =
+        this._subscriptionStateChangeCallbacksByHash[hash];
+      if (stateChangeCallbacks) {
+        stateChangeCallbacks.forEach(cb => {
+          try {
+            cb(nextSubscription.state);
+            // eslint-disable-next-line no-empty
+          } catch {}
+        });
+      }
+    }
+  }
+
+  /**
+   * @internal
+   */
+  private _onSubscriptionStateChange(
+    clientSubscriptionId: ClientSubscriptionId,
+    callback: SubscriptionStateChangeCallback,
+  ): SubscriptionStateChangeDisposeFn {
+    const hash =
+      this._subscriptionHashByClientSubscriptionId[clientSubscriptionId];
+    if (hash == null) {
+      return () => {};
+    }
+    const stateChangeCallbacks = (this._subscriptionStateChangeCallbacksByHash[
+      hash
+    ] ||= new Set());
+    stateChangeCallbacks.add(callback);
+    return () => {
+      stateChangeCallbacks.delete(callback);
+      if (stateChangeCallbacks.size === 0) {
+        delete this._subscriptionStateChangeCallbacksByHash[hash];
+      }
+    };
   }
 
   /**
@@ -4684,17 +5982,17 @@ export class Connection {
             await (async () => {
               const {args, method} = subscription;
               try {
-                this._subscriptionsByHash[hash] = {
+                this._setSubscription(hash, {
                   ...subscription,
                   state: 'subscribing',
-                };
+                });
                 const serverSubscriptionId: ServerSubscriptionId =
                   (await this._rpcWebSocket.call(method, args)) as number;
-                this._subscriptionsByHash[hash] = {
+                this._setSubscription(hash, {
                   ...subscription,
                   serverSubscriptionId,
                   state: 'subscribed',
-                };
+                });
                 this._subscriptionCallbacksByServerSubscriptionId[
                   serverSubscriptionId
                 ] = subscription.callbacks;
@@ -4711,10 +6009,10 @@ export class Connection {
                   return;
                 }
                 // TODO: Maybe add an 'errored' state or a retry limit?
-                this._subscriptionsByHash[hash] = {
+                this._setSubscription(hash, {
                   ...subscription,
                   state: 'pending',
-                };
+                });
                 await this._updateSubscriptions();
               }
             })();
@@ -4742,10 +6040,14 @@ export class Connection {
                     serverSubscriptionId,
                   );
                 } else {
-                  this._subscriptionsByHash[hash] = {
+                  this._setSubscription(hash, {
                     ...subscription,
                     state: 'unsubscribing',
-                  };
+                  });
+                  this._setSubscription(hash, {
+                    ...subscription,
+                    state: 'unsubscribing',
+                  });
                   try {
                     await this._rpcWebSocket.call(unsubscribeMethod, [
                       serverSubscriptionId,
@@ -4758,18 +6060,18 @@ export class Connection {
                       return;
                     }
                     // TODO: Maybe add an 'errored' state or a retry limit?
-                    this._subscriptionsByHash[hash] = {
+                    this._setSubscription(hash, {
                       ...subscription,
                       state: 'subscribed',
-                    };
+                    });
                     await this._updateSubscriptions();
                     return;
                   }
                 }
-                this._subscriptionsByHash[hash] = {
+                this._setSubscription(hash, {
                   ...subscription,
                   state: 'unsubscribed',
-                };
+                });
                 await this._updateSubscriptions();
               })();
             }
@@ -4872,12 +6174,14 @@ export class Connection {
     } else {
       existingSubscription.callbacks.add(subscriptionConfig.callback);
     }
+    this._subscriptionHashByClientSubscriptionId[clientSubscriptionId] = hash;
     this._subscriptionDisposeFunctionsByClientSubscriptionId[
       clientSubscriptionId
     ] = async () => {
       delete this._subscriptionDisposeFunctionsByClientSubscriptionId[
         clientSubscriptionId
       ];
+      delete this._subscriptionHashByClientSubscriptionId[clientSubscriptionId];
       const subscription = this._subscriptionsByHash[hash];
       assert(
         subscription !== undefined,

@@ -3,7 +3,7 @@ extern crate test;
 
 use {
     solana_entry::entry::{next_entry_mut, Entry, EntrySlice},
-    safecoin_sdk::{
+    solana_sdk::{
         hash::{hash, Hash},
         signature::{Keypair, Signer},
         system_transaction,

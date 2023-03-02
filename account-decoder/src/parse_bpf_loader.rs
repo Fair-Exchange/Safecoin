@@ -4,7 +4,7 @@ use {
         UiAccountData, UiAccountEncoding,
     },
     bincode::{deserialize, serialized_size},
-    safecoin_sdk::{bpf_loader_upgradeable::UpgradeableLoaderState, pubkey::Pubkey},
+    solana_sdk::{bpf_loader_upgradeable::UpgradeableLoaderState, pubkey::Pubkey},
 };
 
 pub fn parse_bpf_upgradeable_loader(
@@ -27,7 +27,7 @@ pub fn parse_bpf_upgradeable_loader(
             BpfUpgradeableLoaderAccountType::Buffer(UiBuffer {
                 authority: authority_address.map(|pubkey| pubkey.to_string()),
                 data: UiAccountData::Binary(
-                    base64::encode(&data[offset as usize..]),
+                    base64::encode(&data[offset..]),
                     UiAccountEncoding::Base64,
                 ),
             })
@@ -51,7 +51,7 @@ pub fn parse_bpf_upgradeable_loader(
                 slot,
                 authority: upgrade_authority_address.map(|pubkey| pubkey.to_string()),
                 data: UiAccountData::Binary(
-                    base64::encode(&data[offset as usize..]),
+                    base64::encode(&data[offset..]),
                     UiAccountEncoding::Base64,
                 ),
             })
@@ -92,7 +92,7 @@ pub struct UiProgramData {
 
 #[cfg(test)]
 mod test {
-    use {super::*, bincode::serialize, safecoin_sdk::pubkey::Pubkey};
+    use {super::*, bincode::serialize, solana_sdk::pubkey::Pubkey};
 
     #[test]
     fn test_parse_bpf_upgradeable_loader_accounts() {

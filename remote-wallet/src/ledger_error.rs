@@ -71,6 +71,15 @@ pub enum LedgerError {
     #[error("Ledger received invalid Safecoin message")]
     SafecoinInvalidMessage = 0x6a80,
 
+    #[error("Ledger received message with invalid header")]
+    SafecoinInvalidMessageHeader = 0x6a81,
+
+    #[error("Ledger received message in invalid format")]
+    SafecoinInvalidMessageFormat = 0x6a82,
+
+    #[error("Ledger received message with invalid size")]
+    SafecoinInvalidMessageSize = 0x6a83,
+
     #[error("Safecoin summary finalization failed on Ledger device")]
     SafecoinSummaryFinalizeFailed = 0x6f00,
 

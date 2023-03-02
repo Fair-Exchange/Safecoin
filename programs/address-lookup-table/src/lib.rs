@@ -2,7 +2,7 @@
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(specialization))]
 #![cfg_attr(RUSTC_NEEDS_PROC_MACRO_HYGIENE, feature(proc_macro_hygiene))]
 
-use safecoin_program::declare_id;
+use solana_program::declare_id;
 
 pub mod error;
 pub mod instruction;

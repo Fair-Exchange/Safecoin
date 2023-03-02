@@ -2,7 +2,7 @@ use {
     clap::ArgMatches,
     safecoin_clap_utils::keypair::{pubkey_from_path, signer_from_path},
     safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
-    safecoin_sdk::{
+    solana_sdk::{
         clock::{Epoch, UnixTimestamp},
         pubkey::Pubkey,
         signature::Signer,

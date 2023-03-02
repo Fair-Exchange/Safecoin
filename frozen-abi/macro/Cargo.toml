@@ -1,8 +1,8 @@
 [package]
 name = "safecoin-frozen-abi-macro"
-version = "1.14.3"
+version = "1.15.3"
 description = "Safecoin Frozen ABI Macro"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 repository = "https://github.com/fair-exchange/safecoin"
 homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/safecoin-frozen-abi-macro"

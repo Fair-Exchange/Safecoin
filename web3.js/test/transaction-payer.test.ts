@@ -8,10 +8,10 @@ import {
   SystemProgram,
   LAMPORTS_PER_SAFE,
 } from '../src';
-import invariant from '../src/util/assert';
+import invariant from '../src/utils/assert';
 import {MOCK_PORT, url} from './url';
 import {helpers, mockRpcResponse, mockServer} from './mocks/rpc-http';
-import {stubRpcWebSocket, restoreRpcWebSocket} from './mocks/rpc-websockets';
+import {stubRpcWebSocket, restoreRpcWebSocket} from './mocks/rpc-websocket';
 
 describe('Transaction Payer', () => {
   let connection: Connection;

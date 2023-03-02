@@ -3,7 +3,7 @@
 use {
     dashmap::{mapref::entry::Entry, DashMap},
     index_list::{Index, IndexList},
-    safecoin_sdk::{
+    solana_sdk::{
         account::{AccountSharedData, ReadableAccount},
         clock::Slot,
         pubkey::Pubkey,
@@ -52,6 +52,17 @@ impl ReadOnlyAccountsCache {
             misses: AtomicU64::default(),
             evicts: AtomicU64::default(),
         }
+    }
+
+    /// reset the read only accounts cache
+    /// useful for benches/tests
+    pub fn reset_for_tests(&self) {
+        self.cache.clear();
+        self.queue.lock().unwrap().clear();
+        self.data_size.store(0, Ordering::Relaxed);
+        self.hits.store(0, Ordering::Relaxed);
+        self.misses.store(0, Ordering::Relaxed);
+        self.evicts.store(0, Ordering::Relaxed);
     }
 
     /// true if pubkey is in cache at slot
@@ -158,7 +169,7 @@ mod tests {
             Rng, SeedableRng,
         },
         rand_chacha::ChaChaRng,
-        safecoin_sdk::account::{accounts_equal, Account, WritableAccount},
+        solana_sdk::account::{accounts_equal, Account, WritableAccount},
         std::{collections::HashMap, iter::repeat_with, sync::Arc},
     };
     #[test]

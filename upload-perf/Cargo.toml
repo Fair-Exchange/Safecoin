@@ -1,8 +1,8 @@
 [package]
 name = "safecoin-upload-perf"
-version = "1.14.3"
+version = "1.15.3"
 description = "Metrics Upload Utility"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 edition = "2021"
@@ -10,8 +10,8 @@ homepage = "https://safecoin.org/"
 publish = false
 
 [dependencies]
-serde_json = "1.0.81"
-safecoin-metrics = { path = "../metrics", version = "=1.14.3" }
+serde_json = "1.0.83"
+safecoin-metrics = { path = "../metrics", version = "=1.15.3" }
 
 [[bin]]
 name = "safecoin-upload-perf"

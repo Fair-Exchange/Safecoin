@@ -3,7 +3,7 @@
 extern crate test;
 
 use {
-    safecoin_sdk::{instruction::CompiledInstruction, message::Message, pubkey::Pubkey},
+    solana_sdk::{instruction::CompiledInstruction, message::Message, pubkey::Pubkey},
     safecoin_transaction_status::extract_memos::{safe_memo_id_v1, safe_memo_id_v3, ExtractMemos},
     test::Bencher,
 };

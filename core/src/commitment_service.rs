@@ -8,7 +8,7 @@ use {
         bank::Bank,
         commitment::{BlockCommitment, BlockCommitmentCache, CommitmentSlots, VOTE_THRESHOLD_SIZE},
     },
-    safecoin_sdk::clock::Slot,
+    solana_sdk::clock::Slot,
     solana_vote_program::vote_state::VoteState,
     std::{
         cmp::max,
@@ -227,11 +227,11 @@ impl AggregateCommitmentService {
         }
 
         for vote in &vote_state.votes {
-            while ancestors[ancestors_index] <= vote.slot {
+            while ancestors[ancestors_index] <= vote.slot() {
                 commitment
                     .entry(ancestors[ancestors_index])
                     .or_insert_with(BlockCommitment::default)
-                    .increase_confirmation_stake(vote.confirmation_count as usize, lamports);
+                    .increase_confirmation_stake(vote.confirmation_count() as usize, lamports);
                 ancestors_index += 1;
 
                 if ancestors_index == ancestors.len() {
@@ -256,10 +256,10 @@ mod tests {
             bank_forks::BankForks,
             genesis_utils::{create_genesis_config_with_vote_accounts, ValidatorVoteKeypairs},
         },
-        safecoin_sdk::{account::Account, pubkey::Pubkey, signature::Signer},
+        solana_sdk::{account::Account, pubkey::Pubkey, signature::Signer},
         solana_stake_program::stake_state,
         solana_vote_program::{
-            vote_state::{self, VoteStateVersions},
+            vote_state::{self, process_slot_vote_unchecked, VoteStateVersions},
             vote_transaction,
         },
     };
@@ -309,7 +309,7 @@ mod tests {
 
         let root = ancestors[2];
         vote_state.root_slot = Some(root);
-        vote_state.process_slot_vote_unchecked(*ancestors.last().unwrap());
+        process_slot_vote_unchecked(&mut vote_state, *ancestors.last().unwrap());
         AggregateCommitmentService::aggregate_commitment_for_vote_account(
             &mut commitment,
             &mut rooted_stake,
@@ -341,8 +341,8 @@ mod tests {
         let root = ancestors[2];
         vote_state.root_slot = Some(root);
         assert!(ancestors[4] + 2 >= ancestors[6]);
-        vote_state.process_slot_vote_unchecked(ancestors[4]);
-        vote_state.process_slot_vote_unchecked(ancestors[6]);
+        process_slot_vote_unchecked(&mut vote_state, ancestors[4]);
+        process_slot_vote_unchecked(&mut vote_state, ancestors[6]);
         AggregateCommitmentService::aggregate_commitment_for_vote_account(
             &mut commitment,
             &mut rooted_stake,
@@ -378,22 +378,22 @@ mod tests {
 
         let rooted_stake_amount = 40;
 
-        let sk1 = safecoin_sdk::pubkey::new_rand();
-        let pk1 = safecoin_sdk::pubkey::new_rand();
+        let sk1 = solana_sdk::pubkey::new_rand();
+        let pk1 = solana_sdk::pubkey::new_rand();
         let mut vote_account1 =
-            vote_state::create_account(&pk1, &safecoin_sdk::pubkey::new_rand(), 0, 100);
+            vote_state::create_account(&pk1, &solana_sdk::pubkey::new_rand(), 0, 100);
         let stake_account1 =
             stake_state::create_account(&sk1, &pk1, &vote_account1, &genesis_config.rent, 100);
-        let sk2 = safecoin_sdk::pubkey::new_rand();
-        let pk2 = safecoin_sdk::pubkey::new_rand();
+        let sk2 = solana_sdk::pubkey::new_rand();
+        let pk2 = solana_sdk::pubkey::new_rand();
         let mut vote_account2 =
-            vote_state::create_account(&pk2, &safecoin_sdk::pubkey::new_rand(), 0, 50);
+            vote_state::create_account(&pk2, &solana_sdk::pubkey::new_rand(), 0, 50);
         let stake_account2 =
             stake_state::create_account(&sk2, &pk2, &vote_account2, &genesis_config.rent, 50);
-        let sk3 = safecoin_sdk::pubkey::new_rand();
-        let pk3 = safecoin_sdk::pubkey::new_rand();
+        let sk3 = solana_sdk::pubkey::new_rand();
+        let pk3 = solana_sdk::pubkey::new_rand();
         let mut vote_account3 =
-            vote_state::create_account(&pk3, &safecoin_sdk::pubkey::new_rand(), 0, 1);
+            vote_state::create_account(&pk3, &solana_sdk::pubkey::new_rand(), 0, 1);
         let stake_account3 = stake_state::create_account(
             &sk3,
             &pk3,
@@ -401,10 +401,10 @@ mod tests {
             &genesis_config.rent,
             rooted_stake_amount,
         );
-        let sk4 = safecoin_sdk::pubkey::new_rand();
-        let pk4 = safecoin_sdk::pubkey::new_rand();
+        let sk4 = solana_sdk::pubkey::new_rand();
+        let pk4 = solana_sdk::pubkey::new_rand();
         let mut vote_account4 =
-            vote_state::create_account(&pk4, &safecoin_sdk::pubkey::new_rand(), 0, 1);
+            vote_state::create_account(&pk4, &solana_sdk::pubkey::new_rand(), 0, 1);
         let stake_account4 = stake_state::create_account(
             &sk4,
             &pk4,
@@ -431,30 +431,30 @@ mod tests {
         // Create bank
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
 
-        let mut vote_state1 = VoteState::from(&vote_account1).unwrap();
-        vote_state1.process_slot_vote_unchecked(3);
-        vote_state1.process_slot_vote_unchecked(5);
+        let mut vote_state1 = vote_state::from(&vote_account1).unwrap();
+        process_slot_vote_unchecked(&mut vote_state1, 3);
+        process_slot_vote_unchecked(&mut vote_state1, 5);
         let versioned = VoteStateVersions::new_current(vote_state1);
-        VoteState::to(&versioned, &mut vote_account1).unwrap();
+        vote_state::to(&versioned, &mut vote_account1).unwrap();
         bank.store_account(&pk1, &vote_account1);
 
-        let mut vote_state2 = VoteState::from(&vote_account2).unwrap();
-        vote_state2.process_slot_vote_unchecked(9);
-        vote_state2.process_slot_vote_unchecked(10);
+        let mut vote_state2 = vote_state::from(&vote_account2).unwrap();
+        process_slot_vote_unchecked(&mut vote_state2, 9);
+        process_slot_vote_unchecked(&mut vote_state2, 10);
         let versioned = VoteStateVersions::new_current(vote_state2);
-        VoteState::to(&versioned, &mut vote_account2).unwrap();
+        vote_state::to(&versioned, &mut vote_account2).unwrap();
         bank.store_account(&pk2, &vote_account2);
 
-        let mut vote_state3 = VoteState::from(&vote_account3).unwrap();
+        let mut vote_state3 = vote_state::from(&vote_account3).unwrap();
         vote_state3.root_slot = Some(1);
         let versioned = VoteStateVersions::new_current(vote_state3);
-        VoteState::to(&versioned, &mut vote_account3).unwrap();
+        vote_state::to(&versioned, &mut vote_account3).unwrap();
         bank.store_account(&pk3, &vote_account3);
 
-        let mut vote_state4 = VoteState::from(&vote_account4).unwrap();
+        let mut vote_state4 = vote_state::from(&vote_account4).unwrap();
         vote_state4.root_slot = Some(2);
         let versioned = VoteStateVersions::new_current(vote_state4);
-        VoteState::to(&versioned, &mut vote_account4).unwrap();
+        vote_state::to(&versioned, &mut vote_account4).unwrap();
         bank.store_account(&pk4, &vote_account4);
 
         let (commitment, rooted_stake) =

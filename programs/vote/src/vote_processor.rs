@@ -1,21 +1,20 @@
 //! Vote program processor
 
 use {
-    crate::{
-        id,
-        vote_instruction::VoteInstruction,
-        vote_state::{self, VoteAuthorize},
-    },
+    crate::{vote_error::VoteError, vote_state},
     log::*,
-    safecoin_program_runtime::{
+    solana_program::vote::{instruction::VoteInstruction, program::id, state::VoteAuthorize},
+    solana_program_runtime::{
         invoke_context::InvokeContext, sysvar_cache::get_sysvar_with_account_check,
     },
-    safecoin_sdk::{
+    solana_sdk::{
         feature_set,
         instruction::InstructionError,
         program_utils::limited_deserialize,
         pubkey::Pubkey,
-        transaction_context::{BorrowedAccount, InstructionContext, TransactionContext},
+        transaction_context::{
+            BorrowedAccount, IndexOfAccount, InstructionContext, TransactionContext,
+        },
     },
     std::collections::HashSet,
 };
@@ -59,7 +58,7 @@ fn process_authorize_with_seed_instruction(
 }
 
 pub fn process_instruction(
-    _first_instruction_account: usize,
+    _first_instruction_account: IndexOfAccount,
     invoke_context: &mut InvokeContext,
 ) -> Result<(), InstructionError> {
     let transaction_context = &invoke_context.transaction_context;
@@ -73,7 +72,7 @@ pub fn process_instruction(
         return Err(InstructionError::InvalidAccountOwner);
     }
 
-    let signers = instruction_context.get_signers(transaction_context);
+    let signers = instruction_context.get_signers(transaction_context)?;
     match limited_deserialize(data)? {
         VoteInstruction::InitializeAccount(vote_init) => {
             let rent = get_sysvar_with_account_check::rent(invoke_context, instruction_context, 1)?;
@@ -136,6 +135,16 @@ pub fn process_instruction(
             vote_state::update_validator_identity(&mut me, node_pubkey, &signers)
         }
         VoteInstruction::UpdateCommission(commission) => {
+            if invoke_context.feature_set.is_active(
+                &feature_set::commission_updates_only_allowed_in_first_half_of_epoch::id(),
+            ) {
+                let sysvar_cache = invoke_context.get_sysvar_cache();
+                let epoch_schedule = sysvar_cache.get_epoch_schedule()?;
+                let clock = sysvar_cache.get_clock()?;
+                if !vote_state::is_commission_update_allowed(clock.slot, &epoch_schedule) {
+                    return Err(VoteError::CommissionUpdateTooLate.into());
+                }
+            }
             vote_state::update_commission(&mut me, commission, &signers)
         }
         VoteInstruction::Vote(vote) | VoteInstruction::VoteSwitch(vote, _) => {
@@ -143,7 +152,7 @@ pub fn process_instruction(
                 get_sysvar_with_account_check::slot_hashes(invoke_context, instruction_context, 1)?;
             let clock =
                 get_sysvar_with_account_check::clock(invoke_context, instruction_context, 2)?;
-            vote_state::process_vote(
+            vote_state::process_vote_with_account(
                 &mut me,
                 &slot_hashes,
                 &clock,
@@ -264,20 +273,23 @@ mod tests {
                 vote_switch, withdraw, VoteInstruction,
             },
             vote_state::{
-                Lockout, Vote, VoteAuthorize, VoteAuthorizeCheckedWithSeedArgs,
+                self, Lockout, Vote, VoteAuthorize, VoteAuthorizeCheckedWithSeedArgs,
                 VoteAuthorizeWithSeedArgs, VoteInit, VoteState, VoteStateUpdate, VoteStateVersions,
             },
         },
         bincode::serialize,
-        safecoin_program_runtime::invoke_context::mock_process_instruction,
-        safecoin_sdk::{
+        solana_program_runtime::invoke_context::mock_process_instruction,
+        solana_sdk::{
             account::{self, Account, AccountSharedData, ReadableAccount},
             account_utils::StateMut,
             feature_set::FeatureSet,
             hash::Hash,
             instruction::{AccountMeta, Instruction},
             pubkey::Pubkey,
-            sysvar::{self, clock::Clock, rent::Rent, slot_hashes::SlotHashes},
+            sysvar::{
+                self, clock::Clock, epoch_schedule::EpochSchedule, rent::Rent,
+                slot_hashes::SlotHashes,
+            },
         },
         std::{collections::HashSet, str::FromStr},
     };
@@ -345,6 +357,7 @@ mod tests {
             .map(|meta| meta.pubkey)
             .collect();
         pubkeys.insert(sysvar::clock::id());
+        pubkeys.insert(sysvar::epoch_schedule::id());
         pubkeys.insert(sysvar::rent::id());
         pubkeys.insert(sysvar::slot_hashes::id());
         let transaction_accounts: Vec<_> = pubkeys
@@ -354,6 +367,10 @@ mod tests {
                     *pubkey,
                     if sysvar::clock::check_id(pubkey) {
                         account::create_account_shared_data_for_test(&Clock::default())
+                    } else if sysvar::epoch_schedule::check_id(pubkey) {
+                        account::create_account_shared_data_for_test(
+                            &EpochSchedule::without_warmup(),
+                        )
                     } else if sysvar::slot_hashes::check_id(pubkey) {
                         account::create_account_shared_data_for_test(&SlotHashes::default())
                     } else if sysvar::rent::check_id(pubkey) {
@@ -395,24 +412,24 @@ mod tests {
     fn create_test_account() -> (Pubkey, AccountSharedData) {
         let rent = Rent::default();
         let balance = VoteState::get_rent_exempt_reserve(&rent);
-        let vote_pubkey = safecoin_sdk::pubkey::new_rand();
+        let vote_pubkey = solana_sdk::pubkey::new_rand();
         (
             vote_pubkey,
-            vote_state::create_account(&vote_pubkey, &safecoin_sdk::pubkey::new_rand(), 0, balance),
+            vote_state::create_account(&vote_pubkey, &solana_sdk::pubkey::new_rand(), 0, balance),
         )
     }
 
     fn create_test_account_with_authorized() -> (Pubkey, Pubkey, Pubkey, AccountSharedData) {
-        let vote_pubkey = safecoin_sdk::pubkey::new_rand();
-        let authorized_voter = safecoin_sdk::pubkey::new_rand();
-        let authorized_withdrawer = safecoin_sdk::pubkey::new_rand();
+        let vote_pubkey = solana_sdk::pubkey::new_rand();
+        let authorized_voter = solana_sdk::pubkey::new_rand();
+        let authorized_withdrawer = solana_sdk::pubkey::new_rand();
 
         (
             vote_pubkey,
             authorized_voter,
             authorized_withdrawer,
             vote_state::create_account_with_authorized(
-                &safecoin_sdk::pubkey::new_rand(),
+                &solana_sdk::pubkey::new_rand(),
                 &authorized_voter,
                 &authorized_withdrawer,
                 0,
@@ -462,14 +479,14 @@ mod tests {
         let (vote_pubkey, vote_account) = create_test_account();
         let vote_account_space = vote_account.data().len();
 
-        let mut vote_state = VoteState::from(&vote_account).unwrap();
+        let mut vote_state = vote_state::from(&vote_account).unwrap();
         vote_state.authorized_withdrawer = vote_pubkey;
         vote_state.epoch_credits = Vec::new();
 
-        let mut current_epoch_credits = 0;
+        let mut current_epoch_credits: u64 = 0;
         let mut previous_epoch_credits = 0;
         for (epoch, credits) in credits_to_append.iter().enumerate() {
-            current_epoch_credits += credits;
+            current_epoch_credits = current_epoch_credits.saturating_add(*credits);
             vote_state.epoch_credits.push((
                 u64::try_from(epoch).unwrap(),
                 current_epoch_credits,
@@ -482,7 +499,7 @@ mod tests {
         let mut vote_account_with_epoch_credits =
             AccountSharedData::new(lamports, vote_account_space, &id());
         let versioned = VoteStateVersions::new_current(vote_state);
-        VoteState::to(&versioned, &mut vote_account_with_epoch_credits);
+        vote_state::to(&versioned, &mut vote_account_with_epoch_credits);
 
         (vote_pubkey, vote_account_with_epoch_credits)
     }
@@ -499,9 +516,9 @@ mod tests {
 
     #[test]
     fn test_initialize_vote_account() {
-        let vote_pubkey = safecoin_sdk::pubkey::new_rand();
+        let vote_pubkey = solana_sdk::pubkey::new_rand();
         let vote_account = AccountSharedData::new(100, VoteState::size_of(), &id());
-        let node_pubkey = safecoin_sdk::pubkey::new_rand();
+        let node_pubkey = solana_sdk::pubkey::new_rand();
         let node_account = AccountSharedData::default();
         let instruction_data = serialize(&VoteInstruction::InitializeAccount(VoteInit {
             node_pubkey,
@@ -594,7 +611,7 @@ mod tests {
     fn test_vote_update_validator_identity() {
         let (vote_pubkey, _authorized_voter, authorized_withdrawer, vote_account) =
             create_test_account_with_authorized();
-        let node_pubkey = safecoin_sdk::pubkey::new_rand();
+        let node_pubkey = solana_sdk::pubkey::new_rand();
         let instruction_data = serialize(&VoteInstruction::UpdateValidatorIdentity).unwrap();
         let transaction_accounts = vec![
             (vote_pubkey, vote_account),
@@ -668,6 +685,15 @@ mod tests {
         let transaction_accounts = vec![
             (vote_pubkey, vote_account),
             (authorized_withdrawer, AccountSharedData::default()),
+            // Add the sysvar accounts so they're in the cache for mock processing
+            (
+                sysvar::clock::id(),
+                account::create_account_shared_data_for_test(&Clock::default()),
+            ),
+            (
+                sysvar::epoch_schedule::id(),
+                account::create_account_shared_data_for_test(&EpochSchedule::without_warmup()),
+            ),
         ];
         let mut instruction_accounts = vec![
             AccountMeta {
@@ -781,7 +807,7 @@ mod tests {
             sysvar::slot_hashes::id(),
             account::create_account_shared_data_for_test(&SlotHashes::new(&[(
                 *vote.slots.last().unwrap(),
-                safecoin_sdk::hash::hash(&[0u8]),
+                solana_sdk::hash::hash(&[0u8]),
             )])),
         );
         process_instruction(
@@ -830,7 +856,7 @@ mod tests {
     #[test]
     fn test_authorize_voter() {
         let (vote_pubkey, vote_account) = create_test_account();
-        let authorized_voter_pubkey = safecoin_sdk::pubkey::new_rand();
+        let authorized_voter_pubkey = solana_sdk::pubkey::new_rand();
         let clock = Clock {
             epoch: 1,
             leader_schedule_epoch: 2,
@@ -950,7 +976,7 @@ mod tests {
     #[test]
     fn test_authorize_withdrawer() {
         let (vote_pubkey, vote_account) = create_test_account();
-        let authorized_withdrawer_pubkey = safecoin_sdk::pubkey::new_rand();
+        let authorized_withdrawer_pubkey = solana_sdk::pubkey::new_rand();
         let instruction_data = serialize(&VoteInstruction::Authorize(
             authorized_withdrawer_pubkey,
             VoteAuthorize::Withdrawer,
@@ -1008,7 +1034,7 @@ mod tests {
         );
 
         // should pass, verify authorized_withdrawer can authorize a new authorized_voter
-        let authorized_voter_pubkey = safecoin_sdk::pubkey::new_rand();
+        let authorized_voter_pubkey = solana_sdk::pubkey::new_rand();
         transaction_accounts.push((authorized_voter_pubkey, AccountSharedData::default()));
         let instruction_data = serialize(&VoteInstruction::Authorize(
             authorized_voter_pubkey,
@@ -1035,7 +1061,7 @@ mod tests {
     fn test_vote_withdraw() {
         let (vote_pubkey, vote_account) = create_test_account();
         let lamports = vote_account.lamports();
-        let authorized_withdrawer_pubkey = safecoin_sdk::pubkey::new_rand();
+        let authorized_withdrawer_pubkey = solana_sdk::pubkey::new_rand();
         let mut transaction_accounts = vec![
             (vote_pubkey, vote_account.clone()),
             (sysvar::clock::id(), create_default_clock_account()),
@@ -1125,7 +1151,7 @@ mod tests {
 
     #[test]
     fn test_vote_state_withdraw() {
-        let authorized_withdrawer_pubkey = safecoin_sdk::pubkey::new_rand();
+        let authorized_withdrawer_pubkey = solana_sdk::pubkey::new_rand();
         let (vote_pubkey_1, vote_account_with_epoch_credits_1) =
             create_test_account_with_epoch_credits(&[2, 1]);
         let (vote_pubkey_2, vote_account_with_epoch_credits_2) =

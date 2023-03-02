@@ -5,7 +5,7 @@ import { AccountBalancePair } from "@safecoin/web3.js";
 import { useRichList, useFetchRichList, Status } from "providers/richList";
 import { LoadingCard } from "./common/LoadingCard";
 import { ErrorCard } from "./common/ErrorCard";
-import { SafeBalance } from "utils";
+import { SafeBalance } from "components/common/SafeBalance";
 import { useQuery } from "utils/url";
 import { useSupply } from "providers/supply";
 import { Address } from "./common/Address";

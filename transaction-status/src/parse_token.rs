@@ -3,21 +3,22 @@ use {
         check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
     },
     extension::{
-        default_account_state::*, interest_bearing_mint::*, memo_transfer::*,
-        mint_close_authority::*, reallocate::*, transfer_fee::*,
+        confidential_transfer::*, cpi_guard::*, default_account_state::*, interest_bearing_mint::*,
+        memo_transfer::*, mint_close_authority::*, permanent_delegate::*, reallocate::*,
+        transfer_fee::*,
     },
     serde_json::{json, Map, Value},
     safecoin_account_decoder::parse_token::{
         pubkey_from_safe_token, token_amount_to_ui_amount, UiAccountState,
     },
-    safecoin_sdk::{
+    solana_sdk::{
         instruction::{AccountMeta, CompiledInstruction, Instruction},
         message::AccountKeys,
     },
     safe_token_2022::{
         extension::ExtensionType,
         instruction::{AuthorityType, TokenInstruction},
-        safecoin_program::{
+        solana_program::{
             instruction::Instruction as SafeTokenInstruction, program_option::COption,
             pubkey::Pubkey,
         },
@@ -228,7 +229,8 @@ pub fn parse_token(
                 | AuthorityType::TransferFeeConfig
                 | AuthorityType::WithheldWithdraw
                 | AuthorityType::CloseMint
-                | AuthorityType::InterestRate => "mint",
+                | AuthorityType::InterestRate
+                | AuthorityType::PermanentDelegate => "mint",
                 AuthorityType::AccountOwner | AuthorityType::CloseAccount => "account",
             };
             let mut value = json!({
@@ -510,8 +512,10 @@ pub fn parse_token(
                 account_keys,
             )
         }
-        TokenInstruction::ConfidentialTransferExtension => Err(
-            ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeToken),
+        TokenInstruction::ConfidentialTransferExtension => parse_confidential_transfer_instruction(
+            &instruction.data[1..],
+            &instruction.accounts,
+            account_keys,
         ),
         TokenInstruction::DefaultAccountStateExtension => {
             if instruction.data.len() <= 2 {
@@ -572,6 +576,21 @@ pub fn parse_token(
                 account_keys,
             )
         }
+        TokenInstruction::CpiGuardExtension => {
+            if instruction.data.len() < 2 {
+                return Err(ParseInstructionError::InstructionNotParsable(
+                    ParsableProgram::SafeToken,
+                ));
+            }
+            parse_cpi_guard_instruction(&instruction.data[1..], &instruction.accounts, account_keys)
+        }
+        TokenInstruction::InitializePermanentDelegate { delegate } => {
+            parse_initialize_permanent_delegate_instruction(
+                delegate,
+                &instruction.accounts,
+                account_keys,
+            )
+        }
     }
 }
 
@@ -586,6 +605,7 @@ pub enum UiAuthorityType {
     WithheldWithdraw,
     CloseMint,
     InterestRate,
+    PermanentDelegate,
 }
 
 impl From<AuthorityType> for UiAuthorityType {
@@ -599,6 +619,7 @@ impl From<AuthorityType> for UiAuthorityType {
             AuthorityType::WithheldWithdraw => UiAuthorityType::WithheldWithdraw,
             AuthorityType::CloseMint => UiAuthorityType::CloseMint,
             AuthorityType::InterestRate => UiAuthorityType::InterestRate,
+            AuthorityType::PermanentDelegate => UiAuthorityType::PermanentDelegate,
         }
     }
 }
@@ -617,6 +638,8 @@ pub enum UiExtensionType {
     MemoTransfer,
     NonTransferable,
     InterestBearingConfig,
+    CpiGuard,
+    PermanentDelegate,
 }
 
 impl From<ExtensionType> for UiExtensionType {
@@ -635,6 +658,8 @@ impl From<ExtensionType> for UiExtensionType {
             ExtensionType::MemoTransfer => UiExtensionType::MemoTransfer,
             ExtensionType::NonTransferable => UiExtensionType::NonTransferable,
             ExtensionType::InterestBearingConfig => UiExtensionType::InterestBearingConfig,
+            ExtensionType::CpiGuard => UiExtensionType::CpiGuard,
+            ExtensionType::PermanentDelegate => UiExtensionType::PermanentDelegate,
         }
     }
 }
@@ -696,15 +721,15 @@ fn map_coption_pubkey(pubkey: COption<Pubkey>) -> Option<String> {
 mod test {
     use {
         super::*,
-        safecoin_sdk::{instruction::CompiledInstruction, pubkey::Pubkey},
+        solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey},
         safe_token_2022::{
             instruction::*,
-            safecoin_program::{
+            solana_program::{
                 instruction::CompiledInstruction as SafeTokenCompiledInstruction, message::Message,
                 pubkey::Pubkey as SafeTokenPubkey,
             },
         },
-        std::str::FromStr,
+        std::{iter::repeat_with, str::FromStr},
     };
 
     pub(super) fn convert_pubkey(pubkey: Pubkey) -> SafeTokenPubkey {
@@ -733,7 +758,7 @@ mod test {
         let mint_pubkey = Pubkey::new_unique();
         let mint_authority = Pubkey::new_unique();
         let freeze_authority = Pubkey::new_unique();
-        let rent_sysvar = safecoin_sdk::sysvar::rent::id();
+        let rent_sysvar = solana_sdk::sysvar::rent::id();
 
         // Test InitializeMint variations
         let initialize_mint_ix = initialize_mint(
@@ -1686,13 +1711,11 @@ mod test {
     }
 
     #[test]
-    #[allow(clippy::same_item_push)]
     fn test_parse_token_v3() {
         test_parse_token(&safe_token::id());
     }
 
     #[test]
-    #[allow(clippy::same_item_push)]
     fn test_parse_token_2022() {
         test_parse_token(&safe_token_2022::id());
     }
@@ -1715,17 +1738,14 @@ mod test {
                 info: json!({
                    "payer": payer.to_string(),
                    "nativeMint": safe_token_2022::native_mint::id().to_string(),
-                   "systemProgram": safecoin_sdk::system_program::id().to_string(),
+                   "systemProgram": solana_sdk::system_program::id().to_string(),
                 })
             }
         );
     }
 
     fn test_token_ix_not_enough_keys(program_id: &SafeTokenPubkey) {
-        let mut keys: Vec<Pubkey> = vec![];
-        for _ in 0..10 {
-            keys.push(safecoin_sdk::pubkey::new_rand());
-        }
+        let keys: Vec<Pubkey> = repeat_with(solana_sdk::pubkey::new_rand).take(10).collect();
 
         // Test InitializeMint variations
         let initialize_mint_ix = initialize_mint(
@@ -2200,13 +2220,11 @@ mod test {
     }
 
     #[test]
-    #[allow(clippy::same_item_push)]
     fn test_not_enough_keys_token_v3() {
         test_token_ix_not_enough_keys(&safe_token::id());
     }
 
     #[test]
-    #[allow(clippy::same_item_push)]
     fn test_not_enough_keys_token_2022() {
         test_token_ix_not_enough_keys(&safe_token_2022::id());
     }

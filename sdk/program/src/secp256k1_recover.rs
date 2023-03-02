@@ -170,7 +170,7 @@ impl Secp256k1Pubkey {
 /// this:
 ///
 /// ```rust
-/// # use safecoin_program::program_error::ProgramError;
+/// # use solana_program::program_error::ProgramError;
 /// # let signature_bytes = [
 /// #     0x83, 0x55, 0x81, 0xDF, 0xB1, 0x02, 0xA7, 0xD2,
 /// #     0x2D, 0x33, 0xA4, 0x07, 0xDD, 0x7E, 0xFA, 0x9A,
@@ -192,7 +192,7 @@ impl Secp256k1Pubkey {
 ///
 /// This has the downside that the program must link to the [`libsecp256k1`]
 /// crate and parse the signature just for this check. Note that `libsecp256k1`
-/// version 0.7.0 or greater is required for running on the Safecoin BPF target.
+/// version 0.7.0 or greater is required for running on the Safecoin SBF target.
 ///
 /// [`libsecp256k1`]: https://docs.rs/libsecp256k1/latest/libsecp256k1
 ///
@@ -210,14 +210,14 @@ impl Secp256k1Pubkey {
 ///
 /// If `hash` is not 32 bytes in length this function returns
 /// [`Secp256k1RecoverError::InvalidHash`], though see notes
-/// on BPF-specific behavior below.
+/// on SBF-specific behavior below.
 ///
 /// If `recovery_id` is not in the range [0, 3] this function returns
 /// [`Secp256k1RecoverError::InvalidRecoveryId`].
 ///
 /// If `signature` is not 64 bytes in length this function returns
 /// [`Secp256k1RecoverError::InvalidSignature`], though see notes
-/// on BPF-specific behavior below.
+/// on SBF-specific behavior below.
 ///
 /// If `signature` represents an "overflowing" signature this function returns
 /// [`Secp256k1RecoverError::InvalidSignature`]. Overflowing signatures are
@@ -226,7 +226,7 @@ impl Secp256k1Pubkey {
 /// If `signature` is otherwise invalid this function returns
 /// [`Secp256k1RecoverError::InvalidSignature`].
 ///
-/// # BPF-specific behavior
+/// # SBF-specific behavior
 ///
 /// When calling this function on-chain the caller must verify the correct
 /// lengths of `hash` and `signature` beforehand.
@@ -265,7 +265,7 @@ impl Secp256k1Pubkey {
 /// the secp256k1 signature to prevent malleability.
 ///
 /// ```no_run
-/// use safecoin_program::{
+/// use solana_program::{
 ///     entrypoint::ProgramResult,
 ///     keccak, msg,
 ///     program_error::ProgramError,
@@ -335,11 +335,11 @@ impl Secp256k1Pubkey {
 /// The RPC client program:
 ///
 /// ```no_run
-/// # use safecoin_program::example_mocks::safecoin_client;
-/// # use safecoin_program::example_mocks::safecoin_sdk;
+/// # use solana_program::example_mocks::solana_rpc_client;
+/// # use solana_program::example_mocks::solana_sdk;
 /// use anyhow::Result;
-/// use safecoin_client::rpc_client::RpcClient;
-/// use safecoin_sdk::{
+/// use solana_rpc_client::rpc_client::RpcClient;
+/// use solana_sdk::{
 ///     instruction::Instruction,
 ///     keccak,
 ///     pubkey::Pubkey,

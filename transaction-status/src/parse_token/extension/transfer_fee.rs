@@ -159,9 +159,9 @@ mod test {
     use {
         super::*,
         crate::parse_token::test::*,
-        safecoin_sdk::pubkey::Pubkey,
+        solana_sdk::pubkey::Pubkey,
         safe_token_2022::{
-            extension::transfer_fee::instruction::*, safecoin_program::message::Message,
+            extension::transfer_fee::instruction::*, solana_program::message::Message,
         },
     };
 

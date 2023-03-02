@@ -1,8 +1,8 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
 name = "safecoin-bench-streamer"
-version = "1.14.3"
+version = "1.15.3"
 repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
 homepage = "https://safecoin.org/"
@@ -11,9 +11,9 @@ publish = false
 [dependencies]
 clap = { version = "3.1.5", features = ["cargo"] }
 crossbeam-channel = "0.5"
-safecoin-net-utils = { path = "../net-utils", version = "=1.14.3" }
-safecoin-streamer = { path = "../streamer", version = "=1.14.3" }
-safecoin-version = { path = "../version", version = "=1.14.3" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.15.3" }
+safecoin-streamer = { path = "../streamer", version = "=1.15.3" }
+safecoin-version = { path = "../version", version = "=1.15.3" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
