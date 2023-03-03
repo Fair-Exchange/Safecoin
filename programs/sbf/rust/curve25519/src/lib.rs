@@ -1,9 +1,9 @@
 //! @brief curve25519 syscall tests
 
-extern crate solana_program;
+extern crate safecoin_program;
 use {
-    solana_program::{custom_heap_default, custom_panic_default, msg},
-    solana_zk_token_sdk::curve25519::{edwards, ristretto, scalar},
+    safecoin_program::{custom_heap_default, custom_panic_default, msg},
+    safe_zk_token_sdk::curve25519::{edwards, ristretto, scalar},
 };
 
 #[no_mangle]

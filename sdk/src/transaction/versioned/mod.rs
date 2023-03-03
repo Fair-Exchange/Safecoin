@@ -22,7 +22,7 @@ mod sanitized;
 pub use sanitized::*;
 use {
     crate::program_utils::limited_deserialize,
-    solana_program::{
+    safecoin_program::{
         nonce::NONCED_TX_MARKER_IX_INDEX, system_instruction::SystemInstruction, system_program,
     },
 };
@@ -227,7 +227,7 @@ mod tests {
             signer::{keypair::Keypair, Signer},
             system_instruction, sysvar,
         },
-        solana_program::{
+        safecoin_program::{
             instruction::{AccountMeta, Instruction},
             pubkey::Pubkey,
         },

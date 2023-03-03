@@ -2,17 +2,17 @@
  * @brief Example C-based SBF program that exercises duplicate keyed accounts
  * passed to it
  */
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 /**
  * Custom error for when input serialization fails
  */
 
 extern uint64_t entrypoint(const uint8_t *input) {
-  SolAccountInfo accounts[5];
-  SolParameters params = (SolParameters){.ka = accounts};
+  SafeAccountInfo accounts[5];
+  SafeParameters params = (SafeParameters){.ka = accounts};
 
-  if (!sol_deserialize(input, &params, SOL_ARRAY_SIZE(accounts))) {
+  if (!sol_deserialize(input, &params, SAFE_ARRAY_SIZE(accounts))) {
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -60,26 +60,26 @@ extern uint64_t entrypoint(const uint8_t *input) {
 
     if (params.ka_num > 4) {
       {
-        SolAccountMeta arguments[] = {{accounts[0].key, true, true},
+        SafeAccountMeta arguments[] = {{accounts[0].key, true, true},
                                       {accounts[1].key, true, false},
                                       {accounts[2].key, true, false},
                                       {accounts[3].key, false, true}};
         uint8_t data[] = {7};
-        const SolInstruction instruction = {
-            (SolPubkey *)params.program_id, arguments,
-            SOL_ARRAY_SIZE(arguments), data, SOL_ARRAY_SIZE(data)};
+        const SafeInstruction instruction = {
+            (SafePubkey *)params.program_id, arguments,
+            SAFE_ARRAY_SIZE(arguments), data, SAFE_ARRAY_SIZE(data)};
         sol_assert(SUCCESS ==
                    sol_invoke(&instruction, accounts, params.ka_num));
       }
       {
-        SolAccountMeta arguments[] = {{accounts[0].key, true, true},
+        SafeAccountMeta arguments[] = {{accounts[0].key, true, true},
                                       {accounts[1].key, true, false},
                                       {accounts[2].key, true, false},
                                       {accounts[3].key, true, false}};
         uint8_t data[] = {3};
-        const SolInstruction instruction = {
-            (SolPubkey *)params.program_id, arguments,
-            SOL_ARRAY_SIZE(arguments), data, SOL_ARRAY_SIZE(data)};
+        const SafeInstruction instruction = {
+            (SafePubkey *)params.program_id, arguments,
+            SAFE_ARRAY_SIZE(arguments), data, SAFE_ARRAY_SIZE(data)};
         sol_assert(SUCCESS ==
                    sol_invoke(&instruction, accounts, params.ka_num));
       }

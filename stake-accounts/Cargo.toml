@@ -1,27 +1,27 @@
 [package]
-name = "solana-stake-accounts"
-description = "Blockchain, Rebuilt for Scale"
-authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
+name = "safecoin-stake-accounts"
+description = "Safecoin: Enterprise Security for the Community by the Community"
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
 version = "1.15.3"
-repository = "https://github.com/solana-labs/solana"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-stake-accounts"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-stake-accounts"
 
 [dependencies]
 clap = "2.33.1"
-solana-clap-utils = { path = "../clap-utils", version = "=1.15.3" }
-solana-cli-config = { path = "../cli-config", version = "=1.15.3" }
-solana-remote-wallet = { path = "../remote-wallet", version = "=1.15.3" }
-solana-rpc-client = { path = "../rpc-client", version = "=1.15.3" }
-solana-rpc-client-api = { path = "../rpc-client-api", version = "=1.15.3" }
-solana-sdk = { path = "../sdk", version = "=1.15.3" }
-solana-stake-program = { path = "../programs/stake", version = "=1.15.3" }
-solana-version = { path = "../version", version = "=1.15.3" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.15.3" }
+safecoin-cli-config = { path = "../cli-config", version = "=1.15.3" }
+safecoin-remote-wallet = { path = "../remote-wallet", version = "=1.15.3" }
+safecoin-rpc-client = { path = "../rpc-client", version = "=1.15.3" }
+safecoin-rpc-client-api = { path = "../rpc-client-api", version = "=1.15.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.15.3" }
+safecoin-stake-program = { path = "../programs/stake", version = "=1.15.3" }
+safecoin-version = { path = "../version", version = "=1.15.3" }
 
 [dev-dependencies]
-solana-runtime = { path = "../runtime", version = "=1.15.3" }
+safecoin-runtime = { path = "../runtime", version = "=1.15.3" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

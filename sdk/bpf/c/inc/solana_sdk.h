@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana C-based BPF program types and utility functions
+ * @brief Safecoin C-based BPF program types and utility functions
  */
 
 #include <sol/alt_bn128.h>

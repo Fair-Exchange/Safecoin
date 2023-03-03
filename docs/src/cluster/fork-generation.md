@@ -3,9 +3,9 @@ title: Fork Generation
 description: "A fork is created when validators do not agree on a newly produced block. Using a consensus algorithm validators vote on which will be finalized."
 ---
 
-The Solana protocol doesn’t wait for all validators to agree on a newly produced block before the next block is produced. Because of that, it’s quite common for two different blocks to be chained to the same parent block. In those situations, we call each conflicting chain a [“fork.”](./fork-generation.md)
+The Safecoin protocol doesn’t wait for all validators to agree on a newly produced block before the next block is produced. Because of that, it’s quite common for two different blocks to be chained to the same parent block. In those situations, we call each conflicting chain a [“fork.”](./fork-generation.md)
 
-Solana validators need to vote on one of these forks and reach agreement on which one to use through a consensus algorithm (that is beyond the scope of this article). The main point you need to remember is that when there are competing forks, only one fork will be finalized by the cluster and the abandoned blocks in competing forks are all discarded.
+Safecoin validators need to vote on one of these forks and reach agreement on which one to use through a consensus algorithm (that is beyond the scope of this article). The main point you need to remember is that when there are competing forks, only one fork will be finalized by the cluster and the abandoned blocks in competing forks are all discarded.
 
 This section describes how forks naturally occur as a consequence of [leader rotation](./leader-rotation.md).
 

@@ -7,11 +7,11 @@ use {
     },
     crossbeam_channel::{unbounded, Sender},
     lru::LruCache,
-    solana_gossip::cluster_info::ClusterInfo,
+    safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::shred::{should_discard_shred, ShredFetchStats},
     solana_perf::packet::{Packet, PacketBatch, PacketBatchRecycler, PacketFlags},
     solana_runtime::{bank::Bank, bank_forks::BankForks},
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, DEFAULT_MS_PER_SLOT},
         feature_set,
     },

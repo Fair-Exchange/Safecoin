@@ -1,7 +1,7 @@
-//! A future Solana message format.
+//! A future Safecoin message format.
 //!
 //! This crate defines two versions of `Message` in their own modules:
-//! [`legacy`] and [`v0`]. `legacy` is the current version as of Solana 1.10.0.
+//! [`legacy`] and [`v0`]. `legacy` is the current version as of Safecoin 1.10.0.
 //! `v0` is a [future message format] that encodes more account keys into a
 //! transaction than the legacy format.
 //!
@@ -42,7 +42,7 @@ pub struct MessageAddressTableLookup {
     pub readonly_indexes: Vec<u8>,
 }
 
-/// A Solana transaction message (v0).
+/// A Safecoin transaction message (v0).
 ///
 /// This message format supports succinct account loading with
 /// on-chain address lookup tables.
@@ -182,25 +182,25 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_address_lookup_table_program`], [`solana_rpc_client`], [`solana_sdk`], and [`anyhow`] crates.
+    /// This example uses the [`solana_address_lookup_table_program`], [`safecoin_rpc_client`], [`safecoin_sdk`], and [`anyhow`] crates.
     ///
-    /// [`solana_address_lookup_table_program`]: https://docs.rs/solana-address-lookup-table-program
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
-    /// [`solana_sdk`]: https://docs.rs/solana-sdk
+    /// [`solana_address_lookup_table_program`]: https://docs.rs/safecoin-address-lookup-table-program
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
+    /// [`safecoin_sdk`]: https://docs.rs/safecoin-sdk
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_program::example_mocks::{
+    /// # use safecoin_program::example_mocks::{
     /// #     solana_address_lookup_table_program,
-    /// #     solana_rpc_client,
-    /// #     solana_sdk,
+    /// #     safecoin_rpc_client,
+    /// #     safecoin_sdk,
     /// # };
     /// # use std::borrow::Cow;
-    /// # use solana_sdk::account::Account;
+    /// # use safecoin_sdk::account::Account;
     /// use anyhow::Result;
     /// use solana_address_lookup_table_program::state::AddressLookupTable;
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///      address_lookup_table_account::AddressLookupTableAccount,
     ///      instruction::{AccountMeta, Instruction},
     ///      message::{VersionedMessage, v0},

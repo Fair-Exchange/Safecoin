@@ -10,19 +10,19 @@ use {
     itertools::{izip, Itertools},
     lru::LruCache,
     rayon::{prelude::*, ThreadPool, ThreadPoolBuilder},
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::ClusterInfo, legacy_contact_info::LegacyContactInfo as ContactInfo,
     },
     solana_ledger::{
         leader_schedule_cache::LeaderScheduleCache,
         shred::{self, ShredId},
     },
-    solana_measure::measure::Measure,
-    solana_rayon_threadlimit::get_thread_count,
-    solana_rpc::{max_slots::MaxSlots, rpc_subscriptions::RpcSubscriptions},
-    solana_rpc_client_api::response::SlotUpdate,
+    safecoin_measure::measure::Measure,
+    safecoin_rayon_threadlimit::get_thread_count,
+    safecoin_rpc::{max_slots::MaxSlots, rpc_subscriptions::RpcSubscriptions},
+    safecoin_rpc_client_api::response::SlotUpdate,
     solana_runtime::{bank::Bank, bank_forks::BankForks},
-    solana_sdk::{clock::Slot, pubkey::Pubkey, timing::timestamp},
+    safecoin_sdk::{clock::Slot, pubkey::Pubkey, timing::timestamp},
     solana_streamer::{
         sendmmsg::{multi_target_send, SendPktsError},
         socket::SocketAddrSpace,

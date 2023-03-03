@@ -1,6 +1,6 @@
 //! Example Rust-based SBF program that prints out the parameters passed to it
 
-use solana_program::{
+use safecoin_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, log::*, msg, program::set_return_data,
     pubkey::Pubkey,
 };
@@ -17,7 +17,7 @@ fn return_sstruct() -> SStruct {
     SStruct { x: 1, y: 2, z: 3 }
 }
 
-solana_program::entrypoint!(process_instruction);
+safecoin_program::entrypoint!(process_instruction);
 fn process_instruction(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

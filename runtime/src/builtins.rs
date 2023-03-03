@@ -1,9 +1,9 @@
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-use solana_frozen_abi::abi_example::AbiExample;
+use safecoin_frozen_abi::abi_example::AbiExample;
 use {
     crate::system_instruction_processor,
-    solana_program_runtime::invoke_context::ProcessInstructionWithContext,
-    solana_sdk::{feature_set, pubkey::Pubkey, stake, system_program},
+    safecoin_program_runtime::invoke_context::ProcessInstructionWithContext,
+    safecoin_sdk::{feature_set, pubkey::Pubkey, stake, system_program},
     std::fmt,
 };
 
@@ -145,7 +145,7 @@ fn builtin_feature_transitions() -> Vec<BuiltinFeatureTransition> {
         BuiltinFeatureTransition::Add {
             builtin: Builtin::new(
                 "compute_budget_program",
-                solana_sdk::compute_budget::id(),
+                safecoin_sdk::compute_budget::id(),
                 solana_compute_budget_program::process_instruction,
             ),
             feature_id: feature_set::add_compute_budget_program::id(),
@@ -161,8 +161,8 @@ fn builtin_feature_transitions() -> Vec<BuiltinFeatureTransition> {
         BuiltinFeatureTransition::Add {
             builtin: Builtin::new(
                 "zk_token_proof_program",
-                solana_zk_token_sdk::zk_token_proof_program::id(),
-                solana_zk_token_proof_program::process_instruction,
+                safe_zk_token_sdk::zk_token_proof_program::id(),
+                safe_zk_token_proof_program::process_instruction,
             ),
             feature_id: feature_set::zk_token_sdk_enabled::id(),
         },

@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 import { Link } from "react-router-dom";
 import { fromProgramData } from "utils/security-txt";
 import { clusterPath } from "utils/url";

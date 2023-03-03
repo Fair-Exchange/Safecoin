@@ -22,7 +22,7 @@ doc
 # VIM swap files
 *.sw*
 
-# `solana-test-validator` ledger location
+# `safecoin-test-validator` ledger location
 test-ledger/
 
 # TypeScript

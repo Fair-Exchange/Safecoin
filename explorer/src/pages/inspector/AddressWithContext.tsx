@@ -1,5 +1,5 @@
 import React from "react";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { PublicKey, SystemProgram } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 import {
   Account,
@@ -9,7 +9,7 @@ import {
 } from "providers/accounts";
 import { ClusterStatus, useCluster } from "providers/cluster";
 import { addressLabel } from "utils/tx";
-import { lamportsToSolString } from "utils";
+import { lamportsToSafeString } from "utils";
 
 type AccountValidator = (account: Account) => string | undefined;
 
@@ -120,7 +120,7 @@ function AccountInfo({
   return (
     <span className="text-muted">
       {`Owned by ${ownerLabel || ownerAddress}.`}
-      {` Balance is ${lamportsToSolString(account.lamports)} SOL.`}
+      {` Balance is ${lamportsToSafeString(account.lamports)} SAFE.`}
       {account.space !== undefined &&
         ` Size is ${new Intl.NumberFormat("en-US").format(
           account.space

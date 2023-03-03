@@ -2,12 +2,12 @@
 //!
 //! [BIP-44]: https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
 //!
-//! Includes definitions and helpers for Solana derivation paths.
-//! The standard Solana BIP-44 derivation path prefix is
+//! Includes definitions and helpers for Safecoin derivation paths.
+//! The standard Safecoin BIP-44 derivation path prefix is
 //!
 //! > `m/44'/501'`
 //!
-//! with 501 being the Solana coin type.
+//! with 501 being the Safecoin coin type.
 
 use {
     core::{iter::IntoIterator, slice::Iter},
@@ -67,7 +67,7 @@ impl DerivationPath {
     }
 
     pub fn from_key_str(path: &str) -> Result<Self, DerivationPathError> {
-        Self::from_key_str_with_coin(path, Solana)
+        Self::from_key_str_with_coin(path, Safecoin)
     }
 
     fn from_key_str_with_coin<T: Bip44>(path: &str, coin: T) -> Result<Self, DerivationPathError> {
@@ -104,7 +104,7 @@ impl DerivationPath {
     }
 
     pub fn new_bip44(account: Option<u32>, change: Option<u32>) -> Self {
-        Self::new_bip44_with_coin(Solana, account, change)
+        Self::new_bip44_with_coin(Safecoin, account, change)
     }
 
     fn new_bip44_with_coin<T: Bip44>(coin: T, account: Option<u32>, change: Option<u32>) -> Self {
@@ -169,7 +169,7 @@ impl DerivationPath {
             let key = query.get(QueryKey::Key.as_ref());
             if let Some(key) = key {
                 // Use from_key_str instead of TryInto here to make it more explicit that this
-                // generates a Solana bip44 DerivationPath
+                // generates a Safecoin bip44 DerivationPath
                 return Self::from_key_str(key).map(Some);
             }
             if key_only {
@@ -260,9 +260,9 @@ trait Bip44 {
     }
 }
 
-struct Solana;
+struct Safecoin;
 
-impl Bip44 for Solana {
+impl Bip44 for Safecoin {
     const COIN: u32 = 501;
 }
 
@@ -336,7 +336,7 @@ mod tests {
             DerivationPath::new_bip44(Some(1), Some(2))
         );
 
-        // Test non-Solana Bip44
+        // Test non-Safecoin Bip44
         let s = "m/44'/999'/1/2";
         assert_eq!(
             DerivationPath::from_absolute_path_str(s).unwrap(),

@@ -7,13 +7,13 @@ use {
         BanksTransactionResultWithSimulation, TransactionConfirmationStatus, TransactionMetadata,
         TransactionSimulationDetails, TransactionStatus,
     },
-    solana_client::connection_cache::ConnectionCache,
+    safecoin_client::connection_cache::ConnectionCache,
     solana_runtime::{
         bank::{Bank, TransactionExecutionResult, TransactionSimulationResult},
         bank_forks::BankForks,
         commitment::BlockCommitmentCache,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::Account,
         clock::Slot,
         commitment_config::CommitmentLevel,
@@ -25,7 +25,7 @@ use {
         signature::Signature,
         transaction::{self, MessageHash, SanitizedTransaction, VersionedTransaction},
     },
-    solana_send_transaction_service::{
+    safecoin_send_transaction_service::{
         send_transaction_service::{SendTransactionService, TransactionInfo},
         tpu_info::NullTpuInfo,
     },

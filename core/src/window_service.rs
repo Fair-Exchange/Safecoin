@@ -12,17 +12,17 @@ use {
     },
     crossbeam_channel::{unbounded, Receiver, RecvTimeoutError, Sender},
     rayon::{prelude::*, ThreadPool},
-    solana_gossip::cluster_info::ClusterInfo,
+    safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::{
         blockstore::{Blockstore, BlockstoreInsertionMetrics},
         leader_schedule_cache::LeaderScheduleCache,
         shred::{self, Nonce, ReedSolomonCache, Shred},
     },
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_metrics::inc_new_counter_error,
     solana_perf::packet::{Packet, PacketBatch},
-    solana_rayon_threadlimit::get_thread_count,
-    solana_sdk::clock::Slot,
+    safecoin_rayon_threadlimit::get_thread_count,
+    safecoin_sdk::clock::Slot,
     std::{
         cmp::Reverse,
         collections::{HashMap, HashSet},
@@ -173,7 +173,7 @@ fn verify_repair(
                 .register_response(
                     repair_meta.nonce,
                     shred,
-                    solana_sdk::timing::timestamp(),
+                    safecoin_sdk::timing::timestamp(),
                     |_| (),
                 )
                 .is_some()
@@ -479,14 +479,14 @@ impl WindowService {
 mod test {
     use {
         super::*,
-        solana_entry::entry::{create_ticks, Entry},
-        solana_gossip::contact_info::ContactInfo,
+        safecoin_entry::entry::{create_ticks, Entry},
+        safecoin_gossip::contact_info::ContactInfo,
         solana_ledger::{
             blockstore::{make_many_slot_entries, Blockstore},
             get_tmp_ledger_path,
             shred::{ProcessShredsStats, Shredder},
         },
-        solana_sdk::{
+        safecoin_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},
             timing::timestamp,

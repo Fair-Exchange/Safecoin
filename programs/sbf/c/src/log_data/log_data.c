@@ -1,16 +1,16 @@
 /**
  * @brief Example C-based SBF program uses sol_log_data
  */
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 static const uint8_t return_data[] = { 0x08, 0x01, 0x44 };
 
 extern uint64_t entrypoint(const uint8_t *input) {
-  SolAccountInfo ka[1];
-  SolParameters params = (SolParameters) { .ka = ka };
-  SolBytes fields[2];
+  SafeAccountInfo ka[1];
+  SafeParameters params = (SafeParameters) { .ka = ka };
+  SafeBytes fields[2];
 
-  if (!sol_deserialize(input, &params, SOL_ARRAY_SIZE(ka))) {
+  if (!sol_deserialize(input, &params, SAFE_ARRAY_SIZE(ka))) {
     return ERROR_INVALID_ARGUMENT;
   }
 

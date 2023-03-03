@@ -1,7 +1,7 @@
 //! Alt_bn128 Syscalls tests
 
-extern crate solana_program;
-use solana_program::{
+extern crate safecoin_program;
+use safecoin_program::{
     alt_bn128::prelude::{alt_bn128_addition, alt_bn128_multiplication, alt_bn128_pairing},
     custom_panic_default, msg,
 };

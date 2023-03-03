@@ -5,7 +5,7 @@ use {
         heaviest_subtree_fork_choice::HeaviestSubtreeForkChoice,
     },
     solana_ledger::blockstore::Blockstore,
-    solana_sdk::{clock::Slot, hash::Hash},
+    safecoin_sdk::{clock::Slot, hash::Hash},
     std::collections::{BTreeMap, BTreeSet, HashMap},
 };
 

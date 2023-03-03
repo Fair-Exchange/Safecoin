@@ -15,8 +15,8 @@ import {
   PingInfo,
   PingRollupInfo,
   PingStatus,
-  useSolanaPingInfo,
-} from "providers/stats/SolanaPingProvider";
+  useSafecoinPingInfo,
+} from "providers/stats/SafecoinPingProvider";
 
 type Series = "short" | "medium" | "long";
 type SetSeries = (series: Series) => void;
@@ -298,7 +298,7 @@ function PingStatsCardBody({
   series: Series;
   setSeries: SetSeries;
 }) {
-  const pingInfo = useSolanaPingInfo();
+  const pingInfo = useSafecoinPingInfo();
 
   if (pingInfo.status !== PingStatus.Ready) {
     return (
@@ -319,7 +319,7 @@ function PingStatsNotReady({ error, retry }: StatsNotReadyProps) {
   if (error) {
     return (
       <div className="card-body text-center">
-        There was a problem loading solana ping stats.{" "}
+        There was a problem loading safecoin ping stats.{" "}
         {retry && (
           <button
             className="btn btn-white btn-sm"

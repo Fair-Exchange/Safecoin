@@ -4,7 +4,7 @@ use {
         StringAmount,
     },
     bincode::deserialize,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Epoch, UnixTimestamp},
         stake::state::{Authorized, Delegation, Lockup, Meta, Stake, StakeState},
     },
@@ -147,8 +147,8 @@ mod test {
             StakeAccountType::Uninitialized
         );
 
-        let pubkey = solana_sdk::pubkey::new_rand();
-        let custodian = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
+        let custodian = safecoin_sdk::pubkey::new_rand();
         let authorized = Authorized::auto(&pubkey);
         let lockup = Lockup {
             unix_timestamp: 0,
@@ -182,7 +182,7 @@ mod test {
             })
         );
 
-        let voter_pubkey = solana_sdk::pubkey::new_rand();
+        let voter_pubkey = safecoin_sdk::pubkey::new_rand();
         let stake = Stake {
             delegation: Delegation {
                 voter_pubkey,

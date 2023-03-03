@@ -1,4 +1,4 @@
-# Solana JavaScript API
+# Safecoin JavaScript API
 
 ## Development Environment Setup
 
@@ -6,7 +6,7 @@
 
 Cache build artifacts remotely so that you, others, and the CI server can take advantage of each others' build efforts.
 
-1. Log the Turborepo CLI into the Solana Vercel account
+1. Log the Turborepo CLI into the Safecoin Vercel account
     ```shell
     pnpm turbo login
     ```

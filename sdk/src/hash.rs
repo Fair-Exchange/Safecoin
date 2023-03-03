@@ -3,7 +3,7 @@
 //! [SHA-256]: https://en.wikipedia.org/wiki/SHA-2
 //! [`Hash`]: struct@Hash
 
-pub use solana_program::hash::*;
+pub use safecoin_program::hash::*;
 
 /// Random hash value for tests and benchmarks.
 #[cfg(feature = "full")]

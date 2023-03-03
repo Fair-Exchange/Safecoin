@@ -7,14 +7,14 @@
  * you are trying to tune.
  */
 
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 #define NUM_KA 1
 
 extern uint64_t entrypoint(const uint8_t *input) {
-  SolAccountInfo ka[NUM_KA];
-  SolParameters params = (SolParameters){.ka = ka};
-  if (!sol_deserialize(input, &params, SOL_ARRAY_SIZE(ka))) {
+  SafeAccountInfo ka[NUM_KA];
+  SafeParameters params = (SafeParameters){.ka = ka};
+  if (!sol_deserialize(input, &params, SAFE_ARRAY_SIZE(ka))) {
     return ERROR_INVALID_ARGUMENT;
   }
 

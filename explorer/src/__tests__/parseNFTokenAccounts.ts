@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 import { expect } from "chai";
 import { NFTOKEN_ADDRESS } from "../components/account/nftoken/nftoken";
 import { parseNFTokenNFTAccount } from "../components/account/nftoken/isNFTokenAccount";

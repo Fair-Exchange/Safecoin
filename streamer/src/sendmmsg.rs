@@ -10,7 +10,7 @@ use {
     std::os::unix::io::AsRawFd,
 };
 use {
-    solana_sdk::transport::TransportError,
+    safecoin_sdk::transport::TransportError,
     std::{
         borrow::Borrow,
         io,
@@ -166,7 +166,7 @@ mod tests {
             recvmmsg::recv_mmsg,
             sendmmsg::{batch_send, multi_target_send, SendPktsError},
         },
-        solana_sdk::packet::PACKET_DATA_SIZE,
+        safecoin_sdk::packet::PACKET_DATA_SIZE,
         std::{
             io::ErrorKind,
             net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket},

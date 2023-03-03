@@ -1,6 +1,6 @@
 use {
     crate::{invoke_context::InvokeContext, timings::ExecuteDetailsTimings},
-    solana_sdk::{instruction::InstructionError, saturating_add_assign},
+    safecoin_sdk::{instruction::InstructionError, saturating_add_assign},
 };
 
 /// Program executor

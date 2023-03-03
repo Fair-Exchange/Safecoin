@@ -14,14 +14,14 @@ use {
     bincode::serialize,
     crossbeam_channel::{unbounded, Receiver, Sender},
     dashmap::{mapref::entry::Entry::Occupied, DashMap},
-    solana_gossip::{cluster_info::ClusterInfo, ping_pong::Pong},
+    safecoin_gossip::{cluster_info::ClusterInfo, ping_pong::Pong},
     solana_ledger::blockstore::Blockstore,
     solana_perf::{
         packet::{deserialize_from_with_limit, Packet, PacketBatch},
         recycler::Recycler,
     },
     solana_runtime::bank::Bank,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, DEFAULT_MS_PER_SLOT},
         pubkey::Pubkey,
         signature::Signable,
@@ -770,13 +770,13 @@ mod test {
             serve_repair::MAX_ANCESTOR_RESPONSES,
             vote_simulator::VoteSimulator,
         },
-        solana_gossip::{
+        safecoin_gossip::{
             cluster_info::{ClusterInfo, Node},
             contact_info::ContactInfo,
         },
         solana_ledger::{blockstore::make_many_slot_entries, get_tmp_ledger_path, shred::Nonce},
         solana_runtime::{accounts_background_service::AbsRequestSender, bank_forks::BankForks},
-        solana_sdk::{
+        safecoin_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},
         },

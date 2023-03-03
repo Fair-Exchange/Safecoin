@@ -1,7 +1,7 @@
 use {
     super::Bank,
     solana_address_lookup_table_program::error::AddressLookupError,
-    solana_sdk::{
+    safecoin_sdk::{
         message::{
             v0::{LoadedAddresses, MessageAddressTableLookup},
             AddressLoaderError,

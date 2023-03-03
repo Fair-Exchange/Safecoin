@@ -1,6 +1,6 @@
 ---
 title: Terminology
-description: "Learn the essential terminology used throughout the Solana blockchain and development models."
+description: "Learn the essential terminology used throughout the Safecoin blockchain and development models."
 keywords:
   - terms
   - dictionary
@@ -9,13 +9,13 @@ keywords:
   - programming models
 ---
 
-The following terms are used throughout the Solana documentation and development ecosystem.
+The following terms are used throughout the Safecoin documentation and development ecosystem.
 
 ## account
 
-A record in the Solana ledger that either holds data or is an executable program.
+A record in the Safecoin ledger that either holds data or is an executable program.
 
-Like an account at a traditional bank, a Solana account may hold funds called [lamports](#lamport). Like a file in Linux, it is addressable by a key, often referred to as a [public key](#public-key-pubkey) or pubkey.
+Like an account at a traditional bank, a Safecoin account may hold funds called [lamports](#lamport). Like a file in Linux, it is addressable by a key, often referred to as a [public key](#public-key-pubkey) or pubkey.
 
 The key may be one of:
 
@@ -29,7 +29,7 @@ The address of the program that owns the account. Only the owning program is cap
 
 ## app
 
-A front-end application that interacts with a Solana cluster.
+A front-end application that interacts with a Safecoin cluster.
 
 ## bank state
 
@@ -41,7 +41,7 @@ A contiguous set of [entries](#entry) on the ledger covered by a [vote](#ledger-
 
 ## blockhash
 
-A unique value ([hash](#hash)) that identifies a record (block). Solana computes a blockhash from the last [entry id](#entry-id) of the block.
+A unique value ([hash](#hash)) that identifies a record (block). Safecoin computes a blockhash from the last [entry id](#entry-id) of the block.
 
 ## block height
 
@@ -53,11 +53,11 @@ The [validator](#validator) that produces the genesis (first) [block](#block) of
 
 ## BPF loader
 
-The Solana program that owns and loads [BPF](developing/on-chain-programs/faq#berkeley-packet-filter-bpf) smart contract programs, allowing the program to interface with the runtime.
+The Safecoin program that owns and loads [BPF](developing/on-chain-programs/faq#berkeley-packet-filter-bpf) smart contract programs, allowing the program to interface with the runtime.
 
 ## client
 
-A computer program that accesses the Solana server network [cluster](#cluster).
+A computer program that accesses the Safecoin server network [cluster](#cluster).
 
 ## commitment
 
@@ -151,7 +151,7 @@ A digital fingerprint of a sequence of bytes.
 
 ## inflation
 
-An increase in token supply over time used to fund rewards for validation and to fund continued development of Solana.
+An increase in token supply over time used to fund rewards for validation and to fund continued development of Safecoin.
 
 ## inner instruction
 
@@ -230,7 +230,7 @@ The private key of a [keypair](#keypair).
 
 ## program
 
-The executable code that interprets the [instructions](#instruction) sent inside of each [transaction](#transaction) on the Solana. These programs are often referred to as "[_smart contracts_](./developing//intro/programs.md)" on other blockchains.
+The executable code that interprets the [instructions](#instruction) sent inside of each [transaction](#transaction) on the Safecoin. These programs are often referred to as "[_smart contracts_](./developing//intro/programs.md)" on other blockchains.
 
 ## program derived account (PDA)
 
@@ -276,7 +276,7 @@ The component of a [validator](#validator) responsible for [program](#program) e
 
 ## Sealevel
 
-Solana's parallel smart contracts run-time.
+Safecoin's parallel smart contracts run-time.
 
 ## shred
 
@@ -306,11 +306,11 @@ A program on a blockchain that can read and modify accounts over which it has co
 
 ## sol
 
-The [native token](#native-token) of a Solana [cluster](#cluster).
+The [native token](#native-token) of a Safecoin [cluster](#cluster).
 
-## Solana Program Library (SPL)
+## Safecoin Program Library (SPL)
 
-A [library of programs](https://spl.solana.com/) on Solana such as spl-token that facilitates tasks such as creating and using tokens.
+A [library of programs](https://spl.solana.com/) on Safecoin such as safe-token that facilitates tasks such as creating and using tokens.
 
 ## stake
 
@@ -362,7 +362,7 @@ A set of [transactions](#transaction) that may be executed in parallel.
 
 ## validator
 
-A full participant in a Solana network [cluster](#cluster) that produces new [blocks](#block). A validator validates the transactions added to the [ledger](#ledger)
+A full participant in a Safecoin network [cluster](#cluster) that produces new [blocks](#block). A validator validates the transactions added to the [ledger](#ledger)
 
 ## VDF
 

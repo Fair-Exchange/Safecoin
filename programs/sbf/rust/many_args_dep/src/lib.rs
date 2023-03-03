@@ -1,7 +1,7 @@
-//! Solana Rust-based SBF program utility functions and types
+//! Safecoin Rust-based SBF program utility functions and types
 
-extern crate solana_program;
-use solana_program::{log::sol_log_64, msg};
+extern crate safecoin_program;
+use safecoin_program::{log::sol_log_64, msg};
 
 pub fn many_args(
     arg1: u64,

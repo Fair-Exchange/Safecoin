@@ -13,7 +13,7 @@ use {
         sigverify_stage::{SigVerifier, SigVerifyServiceError},
     },
     solana_perf::{cuda_runtime::PinnedVec, packet::PacketBatch, recycler::Recycler, sigverify},
-    solana_sdk::{packet::Packet, saturating_add_assign},
+    safecoin_sdk::{packet::Packet, saturating_add_assign},
 };
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

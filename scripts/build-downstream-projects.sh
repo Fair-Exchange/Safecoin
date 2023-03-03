@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Builds known downstream projects against local solana source
+# Builds known downstream projects against local safecoin source
 #
 
 set -e
@@ -28,7 +28,7 @@ example_helloworld() {
     cd example-helloworld
 
     update_solana_dependencies src/program-rust "$solana_ver"
-    patch_crates_io_solana src/program-rust/Cargo.toml "$solana_dir"
+    patch_crates_io_safecoin src/program-rust/Cargo.toml "$solana_dir"
     echo "[workspace]" >> src/program-rust/Cargo.toml
 
     $cargo_build_sbf \
@@ -57,13 +57,13 @@ spl() {
     )
     set -x
     rm -rf spl
-    git clone https://github.com/solana-labs/solana-program-library.git spl
+    git clone https://github.com/fair-exchange/safecoin-program-library.git spl
     # copy toolchain file to use solana's rust version
     cp "$solana_dir"/rust-toolchain.toml spl/
     cd spl
 
-    project_used_solana_version=$(sed -nE 's/solana-sdk = \"[>=<~]*(.*)\"/\1/p' <"token/program/Cargo.toml")
-    echo "used solana version: $project_used_solana_version"
+    project_used_solana_version=$(sed -nE 's/safecoin-sdk = \"[>=<~]*(.*)\"/\1/p' <"token/program/Cargo.toml")
+    echo "used safecoin version: $project_used_solana_version"
     if semverGT "$project_used_solana_version" "$solana_ver"; then
       echo "skip"
       return
@@ -75,7 +75,7 @@ spl() {
       $cargo_test_sbf --manifest-path "$program"/Cargo.toml
     done
 
-    # TODO better: `build.rs` for spl-token-cli doesn't seem to properly build
+    # TODO better: `build.rs` for safe-token-cli doesn't seem to properly build
     # the required programs to run the tests, so instead we run the tests
     # after we know programs have been built
     cargo build
@@ -93,11 +93,11 @@ openbook_dex() {
     cd openbook-dex
 
     update_solana_dependencies . "$solana_ver"
-    patch_crates_io_solana Cargo.toml "$solana_dir"
+    patch_crates_io_safecoin Cargo.toml "$solana_dir"
     cat >> Cargo.toml <<EOF
 anchor-lang = { git = "https://github.com/coral-xyz/anchor.git", branch = "master" }
 EOF
-    patch_crates_io_solana dex/Cargo.toml "$solana_dir"
+    patch_crates_io_safecoin dex/Cargo.toml "$solana_dir"
     cat >> dex/Cargo.toml <<EOF
 anchor-lang = { git = "https://github.com/coral-xyz/anchor.git", branch = "master" }
 [workspace]

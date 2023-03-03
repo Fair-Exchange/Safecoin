@@ -1,7 +1,7 @@
-//! The original and current Solana message format.
+//! The original and current Safecoin message format.
 //!
 //! This crate defines two versions of `Message` in their own modules:
-//! [`legacy`] and [`v0`]. `legacy` is the current version as of Solana 1.10.0.
+//! [`legacy`] and [`v0`]. `legacy` is the current version as of Safecoin 1.10.0.
 //! `v0` is a [future message format] that encodes more account keys into a
 //! transaction than the legacy format.
 //!
@@ -87,7 +87,7 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Pubkey]) -> Vec<CompiledIns
     ixs.iter().map(|ix| compile_instruction(ix, keys)).collect()
 }
 
-/// A Solana transaction message (legacy).
+/// A Safecoin transaction message (legacy).
 ///
 /// See the [`message`] module documentation for further description.
 ///
@@ -169,19 +169,19 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_sdk`], [`solana_rpc_client`] and [`anyhow`] crates.
+    /// This example uses the [`safecoin_sdk`], [`safecoin_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_sdk`]: https://docs.rs/solana-sdk
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+    /// [`safecoin_sdk`]: https://docs.rs/safecoin-sdk
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_program::example_mocks::solana_sdk;
-    /// # use solana_program::example_mocks::solana_rpc_client;
+    /// # use safecoin_program::example_mocks::safecoin_sdk;
+    /// # use safecoin_program::example_mocks::safecoin_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///     instruction::Instruction,
     ///     message::Message,
     ///     pubkey::Pubkey,
@@ -240,19 +240,19 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_sdk`], [`solana_rpc_client`] and [`anyhow`] crates.
+    /// This example uses the [`safecoin_sdk`], [`safecoin_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_sdk`]: https://docs.rs/solana-sdk
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+    /// [`safecoin_sdk`]: https://docs.rs/safecoin-sdk
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_program::example_mocks::solana_sdk;
-    /// # use solana_program::example_mocks::solana_rpc_client;
+    /// # use safecoin_program::example_mocks::safecoin_sdk;
+    /// # use safecoin_program::example_mocks::safecoin_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///     instruction::Instruction,
     ///     message::Message,
     ///     pubkey::Pubkey,
@@ -336,19 +336,19 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_sdk`], [`solana_rpc_client`] and [`anyhow`] crates.
+    /// This example uses the [`safecoin_sdk`], [`safecoin_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_sdk`]: https://docs.rs/solana-sdk
-    /// [`solana_rpc_client`]: https://docs.rs/solana-client
+    /// [`safecoin_sdk`]: https://docs.rs/safecoin-sdk
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_program::example_mocks::solana_sdk;
-    /// # use solana_program::example_mocks::solana_rpc_client;
+    /// # use safecoin_program::example_mocks::safecoin_sdk;
+    /// # use safecoin_program::example_mocks::safecoin_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///     hash::Hash,
     ///     instruction::Instruction,
     ///     message::Message,

@@ -1,6 +1,6 @@
 use {
     serde::Serialize,
-    solana_cli_output::{QuietDisplay, VerboseDisplay},
+    safecoin_cli_output::{QuietDisplay, VerboseDisplay},
     std::fmt::{Display, Formatter, Result},
 };
 

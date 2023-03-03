@@ -7,7 +7,7 @@
 //! [`Clock`] implements [`Sysvar::get`] and can be loaded efficiently without
 //! passing the sysvar account ID to the program.
 //!
-//! See also the Solana [documentation on the clock sysvar][sdoc].
+//! See also the Safecoin [documentation on the clock sysvar][sdoc].
 //!
 //! [sdoc]: https://docs.solana.com/developing/runtime-facilities/sysvars#clock
 //!
@@ -16,7 +16,7 @@
 //! Accessing via on-chain program directly:
 //!
 //! ```no_run
-//! # use solana_program::{
+//! # use safecoin_program::{
 //! #    account_info::{AccountInfo, next_account_info},
 //! #    entrypoint::ProgramResult,
 //! #    msg,
@@ -24,7 +24,7 @@
 //! #    sysvar::clock::{self, Clock},
 //! #    sysvar::Sysvar,
 //! # };
-//! # use solana_program::program_error::ProgramError;
+//! # use safecoin_program::program_error::ProgramError;
 //! #
 //! fn process_instruction(
 //!     program_id: &Pubkey,
@@ -38,7 +38,7 @@
 //!     Ok(())
 //! }
 //! #
-//! # use solana_program::sysvar::SysvarId;
+//! # use safecoin_program::sysvar::SysvarId;
 //! # let p = Clock::id();
 //! # let l = &mut 1169280;
 //! # let d = &mut vec![240, 153, 233, 7, 0, 0, 0, 0, 11, 115, 118, 98, 0, 0, 0, 0, 51, 1, 0, 0, 0, 0, 0, 0, 52, 1, 0, 0, 0, 0, 0, 0, 121, 50, 119, 98, 0, 0, 0, 0];
@@ -55,7 +55,7 @@
 //! Accessing via on-chain program's account parameters:
 //!
 //! ```
-//! # use solana_program::{
+//! # use safecoin_program::{
 //! #    account_info::{AccountInfo, next_account_info},
 //! #    entrypoint::ProgramResult,
 //! #    msg,
@@ -63,7 +63,7 @@
 //! #    sysvar::clock::{self, Clock},
 //! #    sysvar::Sysvar,
 //! # };
-//! # use solana_program::program_error::ProgramError;
+//! # use safecoin_program::program_error::ProgramError;
 //! #
 //! fn process_instruction(
 //!     program_id: &Pubkey,
@@ -81,7 +81,7 @@
 //!     Ok(())
 //! }
 //! #
-//! # use solana_program::sysvar::SysvarId;
+//! # use safecoin_program::sysvar::SysvarId;
 //! # let p = Clock::id();
 //! # let l = &mut 1169280;
 //! # let d = &mut vec![240, 153, 233, 7, 0, 0, 0, 0, 11, 115, 118, 98, 0, 0, 0, 0, 51, 1, 0, 0, 0, 0, 0, 0, 52, 1, 0, 0, 0, 0, 0, 0, 121, 50, 119, 98, 0, 0, 0, 0];
@@ -98,18 +98,18 @@
 //! Accessing via the RPC client:
 //!
 //! ```
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
-//! # use solana_sdk::account::Account;
-//! # use solana_rpc_client::rpc_client::RpcClient;
-//! # use solana_sdk::sysvar::clock::{self, Clock};
+//! # use safecoin_program::example_mocks::safecoin_sdk;
+//! # use safecoin_program::example_mocks::safecoin_rpc_client;
+//! # use safecoin_sdk::account::Account;
+//! # use safecoin_rpc_client::rpc_client::RpcClient;
+//! # use safecoin_sdk::sysvar::clock::{self, Clock};
 //! # use anyhow::Result;
 //! #
 //! fn print_sysvar_clock(client: &RpcClient) -> Result<()> {
 //! #   client.set_get_account_response(clock::ID, Account {
 //! #       lamports: 1169280,
 //! #       data: vec![240, 153, 233, 7, 0, 0, 0, 0, 11, 115, 118, 98, 0, 0, 0, 0, 51, 1, 0, 0, 0, 0, 0, 0, 52, 1, 0, 0, 0, 0, 0, 0, 121, 50, 119, 98, 0, 0, 0, 0],
-//! #       owner: solana_sdk::system_program::ID,
+//! #       owner: safecoin_sdk::system_program::ID,
 //! #       executable: false,
 //! #       rent_epoch: 307,
 //! #   });

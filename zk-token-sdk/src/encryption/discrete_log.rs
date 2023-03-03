@@ -83,7 +83,7 @@ lazy_static::lazy_static! {
     };
 }
 
-/// Solves the discrete log instance using a 16/16 bit offline/online split
+/// Safeves the discrete log instance using a 16/16 bit offline/online split
 impl DiscreteLog {
     /// Discrete log instance constructor.
     ///
@@ -126,7 +126,7 @@ impl DiscreteLog {
         Ok(())
     }
 
-    /// Solves the discrete log problem under the assumption that the solution
+    /// Safeves the discrete log problem under the assumption that the solution
     /// is a positive 32-bit number.
     pub fn decode_u32(self) -> Option<u64> {
         let mut starting_point = self.target;

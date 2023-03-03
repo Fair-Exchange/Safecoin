@@ -4,11 +4,11 @@ use {
         ProgressBar,
     },
     console::style,
-    solana_core::validator::ValidatorStartProgress,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::{client_error, request, response::RpcContactInfo},
-    solana_sdk::{
-        clock::Slot, commitment_config::CommitmentConfig, exit::Exit, native_token::Sol,
+    safecoin_core::validator::ValidatorStartProgress,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::{client_error, request, response::RpcContactInfo},
+    safecoin_sdk::{
+        clock::Slot, commitment_config::CommitmentConfig, exit::Exit, native_token::Safe,
         pubkey::Pubkey,
     },
     std::{
@@ -260,7 +260,7 @@ fn get_contact_info(rpc_client: &RpcClient, identity: &Pubkey) -> Option<RpcCont
 fn get_validator_stats(
     rpc_client: &RpcClient,
     identity: &Pubkey,
-) -> client_error::Result<(Slot, Slot, Slot, u64, Sol, String)> {
+) -> client_error::Result<(Slot, Slot, Slot, u64, Safe, String)> {
     let finalized_slot = rpc_client.get_slot_with_commitment(CommitmentConfig::finalized())?;
     let confirmed_slot = rpc_client.get_slot_with_commitment(CommitmentConfig::confirmed())?;
     let processed_slot = rpc_client.get_slot_with_commitment(CommitmentConfig::processed())?;
@@ -294,7 +294,7 @@ fn get_validator_stats(
         confirmed_slot,
         finalized_slot,
         transaction_count,
-        Sol(identity_balance),
+        Safe(identity_balance),
         health,
     ))
 }

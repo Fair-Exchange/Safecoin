@@ -6,12 +6,12 @@ use {
         parse_nonce::parse_nonce,
         parse_stake::parse_stake,
         parse_sysvar::parse_sysvar,
-        parse_token::{parse_token, spl_token_2022_id, spl_token_id},
+        parse_token::{parse_token, safe_token_2022_id, safe_token_id},
         parse_vote::parse_vote,
     },
     inflector::Inflector,
     serde_json::Value,
-    solana_sdk::{
+    safecoin_sdk::{
         instruction::InstructionError, pubkey::Pubkey, stake, system_program, sysvar, vote,
     },
     std::collections::HashMap,
@@ -20,7 +20,7 @@ use {
 
 lazy_static! {
     static ref ADDRESS_LOOKUP_PROGRAM_ID: Pubkey = solana_address_lookup_table_program::id();
-    static ref BPF_UPGRADEABLE_LOADER_PROGRAM_ID: Pubkey = solana_sdk::bpf_loader_upgradeable::id();
+    static ref BPF_UPGRADEABLE_LOADER_PROGRAM_ID: Pubkey = safecoin_sdk::bpf_loader_upgradeable::id();
     static ref CONFIG_PROGRAM_ID: Pubkey = solana_config_program::id();
     static ref STAKE_PROGRAM_ID: Pubkey = stake::program::id();
     static ref SYSTEM_PROGRAM_ID: Pubkey = system_program::id();
@@ -38,8 +38,8 @@ lazy_static! {
         );
         m.insert(*CONFIG_PROGRAM_ID, ParsableAccount::Config);
         m.insert(*SYSTEM_PROGRAM_ID, ParsableAccount::Nonce);
-        m.insert(spl_token_id(), ParsableAccount::SplToken);
-        m.insert(spl_token_2022_id(), ParsableAccount::SplToken2022);
+        m.insert(safe_token_id(), ParsableAccount::SafeToken);
+        m.insert(safe_token_2022_id(), ParsableAccount::SafeToken2022);
         m.insert(*STAKE_PROGRAM_ID, ParsableAccount::Stake);
         m.insert(*SYSVAR_PROGRAM_ID, ParsableAccount::Sysvar);
         m.insert(*VOTE_PROGRAM_ID, ParsableAccount::Vote);
@@ -80,8 +80,8 @@ pub enum ParsableAccount {
     BpfUpgradeableLoader,
     Config,
     Nonce,
-    SplToken,
-    SplToken2022,
+    SafeToken,
+    SafeToken2022,
     Stake,
     Sysvar,
     Vote,
@@ -89,7 +89,7 @@ pub enum ParsableAccount {
 
 #[derive(Clone, Copy, Default)]
 pub struct AccountAdditionalData {
-    pub spl_token_decimals: Option<u8>,
+    pub safe_token_decimals: Option<u8>,
 }
 
 pub fn parse_account_data(
@@ -111,8 +111,8 @@ pub fn parse_account_data(
         }
         ParsableAccount::Config => serde_json::to_value(parse_config(data, pubkey)?)?,
         ParsableAccount::Nonce => serde_json::to_value(parse_nonce(data)?)?,
-        ParsableAccount::SplToken | ParsableAccount::SplToken2022 => {
-            serde_json::to_value(parse_token(data, additional_data.spl_token_decimals)?)?
+        ParsableAccount::SafeToken | ParsableAccount::SafeToken2022 => {
+            serde_json::to_value(parse_token(data, additional_data.safe_token_decimals)?)?
         }
         ParsableAccount::Stake => serde_json::to_value(parse_stake(data)?)?,
         ParsableAccount::Sysvar => serde_json::to_value(parse_sysvar(data, pubkey)?)?,
@@ -129,7 +129,7 @@ pub fn parse_account_data(
 mod test {
     use {
         super::*,
-        solana_sdk::{
+        safecoin_sdk::{
             nonce::{
                 state::{Data, Versions},
                 State,
@@ -143,8 +143,8 @@ mod test {
 
     #[test]
     fn test_parse_account_data() {
-        let account_pubkey = solana_sdk::pubkey::new_rand();
-        let other_program = solana_sdk::pubkey::new_rand();
+        let account_pubkey = safecoin_sdk::pubkey::new_rand();
+        let other_program = safecoin_sdk::pubkey::new_rand();
         let data = vec![0; 4];
         assert!(parse_account_data(&account_pubkey, &other_program, &data, None).is_err());
 

@@ -5,12 +5,12 @@
 
 #[deprecated(
     since = "1.8.0",
-    note = "Please use `solana_sdk::stake::state` or `solana_program::stake::state` instead"
+    note = "Please use `safecoin_sdk::stake::state` or `safecoin_program::stake::state` instead"
 )]
-pub use solana_sdk::stake::state::*;
+pub use safecoin_sdk::stake::state::*;
 use {
-    solana_program_runtime::{ic_msg, invoke_context::InvokeContext},
-    solana_sdk::{
+    safecoin_program_runtime::{ic_msg, invoke_context::InvokeContext},
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount, WritableAccount},
         account_utils::StateMut,
         clock::{Clock, Epoch},
@@ -264,7 +264,7 @@ fn calculate_stake_points_and_credits(
             //    history sysvar. And properly handling all the cases
             //    regarding deactivation epoch/warm-up/cool-down without
             //    introducing incentive skew is hard.
-            //  - Conceptually, it should be acceptable for the staked SOLs at
+            //  - Conceptually, it should be acceptable for the staked SAFEs at
             //    the recreated vote to receive rewards again immediately after
             //    rewind even if it looks like instant activation. That's
             //    because it must have passed the required warmed-up at least
@@ -1779,8 +1779,8 @@ mod tests {
     use {
         super::*,
         proptest::prelude::*,
-        solana_program_runtime::invoke_context::InvokeContext,
-        solana_sdk::{
+        safecoin_program_runtime::invoke_context::InvokeContext,
+        safecoin_sdk::{
             account::{create_account_shared_data_for_test, AccountSharedData},
             native_token,
             pubkey::Pubkey,
@@ -1791,7 +1791,7 @@ mod tests {
 
     #[test]
     fn test_authorized_authorize() {
-        let staker = solana_sdk::pubkey::new_rand();
+        let staker = safecoin_sdk::pubkey::new_rand();
         let mut authorized = Authorized::auto(&staker);
         let mut signers = HashSet::new();
         assert_eq!(
@@ -1807,9 +1807,9 @@ mod tests {
 
     #[test]
     fn test_authorized_authorize_with_custodian() {
-        let staker = solana_sdk::pubkey::new_rand();
-        let custodian = solana_sdk::pubkey::new_rand();
-        let invalid_custodian = solana_sdk::pubkey::new_rand();
+        let staker = safecoin_sdk::pubkey::new_rand();
+        let custodian = safecoin_sdk::pubkey::new_rand();
+        let invalid_custodian = safecoin_sdk::pubkey::new_rand();
         let mut authorized = Authorized::auto(&staker);
         let mut signers = HashSet::new();
         signers.insert(staker);
@@ -2555,7 +2555,7 @@ mod tests {
         let mut vote_state = VoteState::default();
 
         // bootstrap means fully-vested stake at epoch 0 with
-        //  10_000_000 SOL is a big but not unreasaonable stake
+        //  10_000_000 SAFE is a big but not unreasaonable stake
         let stake = new_stake(
             native_token::sol_to_lamports(10_000_000f64),
             &Pubkey::default(),
@@ -2930,7 +2930,7 @@ mod tests {
 
     #[test]
     fn test_lockup_is_expired() {
-        let custodian = solana_sdk::pubkey::new_rand();
+        let custodian = safecoin_sdk::pubkey::new_rand();
         let lockup = Lockup {
             epoch: 1,
             unix_timestamp: 1,
@@ -2989,9 +2989,9 @@ mod tests {
     fn test_dbg_stake_minimum_balance() {
         let minimum_balance = Rent::default().minimum_balance(StakeState::size_of());
         panic!(
-            "stake minimum_balance: {} lamports, {} SOL",
+            "stake minimum_balance: {} lamports, {} SAFE",
             minimum_balance,
-            minimum_balance as f64 / solana_sdk::native_token::LAMPORTS_PER_SOL as f64
+            minimum_balance as f64 / safecoin_sdk::native_token::LAMPORTS_PER_SAFE as f64
         );
     }
 
@@ -3016,7 +3016,7 @@ mod tests {
             rent_exempt_reserve
         );
 
-        let even_larger_data = solana_sdk::system_instruction::MAX_PERMITTED_DATA_LENGTH;
+        let even_larger_data = safecoin_sdk::system_instruction::MAX_PERMITTED_DATA_LENGTH;
         let even_larger_rent_exempt_reserve = rent.minimum_balance(even_larger_data as usize);
         assert_eq!(
             calculate_split_rent_exempt_reserve(rent_exempt_reserve, data_len, even_larger_data),

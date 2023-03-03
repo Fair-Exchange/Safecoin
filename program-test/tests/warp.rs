@@ -3,10 +3,10 @@ use {
     bincode::deserialize,
     log::debug,
     solana_banks_client::BanksClient,
-    solana_program_test::{
+    safecoin_program_test::{
         processor, ProgramTest, ProgramTestBanksClientExt, ProgramTestContext, ProgramTestError,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::Account,
         account_info::{next_account_info, AccountInfo},
         clock::Clock,

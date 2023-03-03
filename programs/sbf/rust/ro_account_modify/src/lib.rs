@@ -1,4 +1,4 @@
-use solana_program::{
+use safecoin_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
     instruction::{AccountMeta, Instruction},
@@ -14,7 +14,7 @@ const INSTRUCTION_INVOKE_MODIFY: u8 = 1;
 const INSTRUCTION_MODIFY_INVOKE: u8 = 2;
 const INSTRUCTION_VERIFY_MODIFIED: u8 = 3;
 
-solana_program::entrypoint!(process_instruction);
+safecoin_program::entrypoint!(process_instruction);
 fn process_instruction(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

@@ -1,13 +1,13 @@
 #![allow(clippy::integer_arithmetic)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-use solana_entry::entry::{self, create_ticks, init_poh, EntrySlice, VerifyRecyclers};
+use safecoin_entry::entry::{self, create_ticks, init_poh, EntrySlice, VerifyRecyclers};
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-use solana_entry::entry::{create_ticks, init_poh, EntrySlice, VerifyRecyclers};
+use safecoin_entry::entry::{create_ticks, init_poh, EntrySlice, VerifyRecyclers};
 use {
     clap::{crate_description, crate_name, Arg, Command},
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_perf::perf_libs,
-    solana_sdk::hash::hash,
+    safecoin_sdk::hash::hash,
 };
 
 fn main() {

@@ -4,7 +4,7 @@
 
 use {
     crate::instructions::*,
-    solana_program::{
+    safecoin_program::{
         account_info::AccountInfo,
         bpf_loader,
         entrypoint::{ProgramResult, MAX_PERMITTED_DATA_INCREASE},
@@ -17,7 +17,7 @@ use {
     },
 };
 
-solana_program::entrypoint!(process_instruction);
+safecoin_program::entrypoint!(process_instruction);
 #[allow(clippy::cognitive_complexity)]
 fn process_instruction(
     program_id: &Pubkey,
@@ -254,7 +254,7 @@ fn process_instruction(
                 let from_lamports = accounts[FROM_INDEX].lamports();
                 let to_lamports = accounts[DERIVED_KEY2_INDEX].lamports();
                 assert_eq!(accounts[DERIVED_KEY2_INDEX].data_len(), 0);
-                assert!(solana_program::system_program::check_id(
+                assert!(safecoin_program::system_program::check_id(
                     accounts[DERIVED_KEY2_INDEX].owner
                 ));
 

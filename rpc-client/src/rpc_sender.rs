@@ -1,7 +1,7 @@
 //! A transport for RPC calls.
 use {
     async_trait::async_trait,
-    solana_rpc_client_api::{client_error::Result, request::RpcRequest},
+    safecoin_rpc_client_api::{client_error::Result, request::RpcRequest},
     std::time::Duration,
 };
 
@@ -21,7 +21,7 @@ pub struct RpcTransportStats {
 /// A transport for RPC calls.
 ///
 /// `RpcSender` implements the underlying transport of requests to, and
-/// responses from, a Solana node, and is used primarily by [`RpcClient`].
+/// responses from, a Safecoin node, and is used primarily by [`RpcClient`].
 ///
 /// [`RpcClient`]: crate::rpc_client::RpcClient
 #[async_trait]

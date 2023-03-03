@@ -3,13 +3,13 @@ title: Versioned Transactions
 description: ""
 ---
 
-[Versioned Transactions](./versioned-transactions.md) are the new transaction format that allow for additional functionality in the Solana runtime, including [Address Lookup Tables](./lookup-tables.md).
+[Versioned Transactions](./versioned-transactions.md) are the new transaction format that allow for additional functionality in the Safecoin runtime, including [Address Lookup Tables](./lookup-tables.md).
 
 While changes to [on chain](./on-chain-programs/overview.md) programs are **NOT** required to support the new functionality of versioned transactions (or for backwards compatibility), developers **WILL** need update their client side code to prevent [errors due to different transaction versions](#max-supported-transaction-version).
 
 ## Current Transaction Versions
 
-The Solana runtime supports two transaction versions:
+The Safecoin runtime supports two transaction versions:
 
 - `legacy` - older transaction format with no additional benefit
 - `0` - added support for [Address Lookup Tables](./lookup-tables.md)
@@ -25,11 +25,11 @@ An RPC request will fail if a [Versioned Transaction](./versioned-transactions.m
 
 ## How to set max supported version
 
-You can set the `maxSupportedTransactionVersion` using both the [`@solana/web3.js`](https://solana-labs.github.io/solana-web3.js/) library and JSON formatted requests directly to an RPC endpoint.
+You can set the `maxSupportedTransactionVersion` using both the [`@safecoin/web3.js`](https://solana-labs.github.io/solana-web3.js/) library and JSON formatted requests directly to an RPC endpoint.
 
 ### Using web3.js
 
-Using the [`@solana/web3.js`](https://solana-labs.github.io/solana-web3.js/) library, you can retrieve the most recent block or get a specific transaction:
+Using the [`@safecoin/web3.js`](https://solana-labs.github.io/solana-web3.js/) library, you can retrieve the most recent block or get a specific transaction:
 
 ```js
 // connect to the `devnet` cluster and get the current `slot`
@@ -68,11 +68,11 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d \
 
 Versioned transactions can be created similar to the older method of creating transactions. There are differences in using certain libraries that should be noted.
 
-Below is an example of how to create a Versioned Transaction, using the `@solana/web3.js` library, to send perform a SOL transfer between two accounts.
+Below is an example of how to create a Versioned Transaction, using the `@safecoin/web3.js` library, to send perform a SAFE transfer between two accounts.
 
 #### Notes:
 
-- `payer` is a valid `Keypair` wallet, funded with SOL
+- `payer` is a valid `Keypair` wallet, funded with SAFE
 - `toAccount` a valid `Keypair`
 
 Firstly, import the web3.js library and create a `connection` to your desired cluster.
@@ -80,7 +80,7 @@ Firstly, import the web3.js library and create a `connection` to your desired cl
 We then define the recent `blockhash` and `minRent` we will need for our transaction and the account:
 
 ```js
-const web3 = require("@solana/web3.js");
+const web3 = require("@safecoin/web3.js");
 
 // connect to the cluster and get the minimum rent for rent exempt status
 const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
@@ -90,7 +90,7 @@ let blockhash = await connection
   .then((res) => res.blockhash);
 ```
 
-Create an `array` of all the `instructions` you desire to send in your transaction. In this example below, we are creating a simple SOL transfer instruction:
+Create an `array` of all the `instructions` you desire to send in your transaction. In this example below, we are creating a simple SAFE transfer instruction:
 
 ```js
 // create an array with your desires `instructions`
@@ -145,5 +145,5 @@ console.log(`https://explorer.solana.com/tx/${txid}?cluster=devnet`);
 ## More Resources
 
 - using [Versioned Transactions for Address Lookup Tables](./lookup-tables.md#how-to-create-an-address-lookup-table)
-- view an [example of a v0 transaction](https://explorer.solana.com/tx/3jpoANiFeVGisWRY5UP648xRXs3iQasCHABPWRWnoEjeA93nc79WrnGgpgazjq4K9m8g2NJoyKoWBV1Kx5VmtwHQ/?cluster=devnet) on Solana Explorer
+- view an [example of a v0 transaction](https://explorer.solana.com/tx/3jpoANiFeVGisWRY5UP648xRXs3iQasCHABPWRWnoEjeA93nc79WrnGgpgazjq4K9m8g2NJoyKoWBV1Kx5VmtwHQ/?cluster=devnet) on Safecoin Explorer
 - read the [accepted proposal](./../proposals/versioned-transactions.md) for Versioned Transaction and Address Lookup Tables

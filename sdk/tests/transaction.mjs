@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import {
-  solana_program_init,
+  safecoin_program_init,
   Pubkey,
   Keypair,
   Hash,
@@ -8,7 +8,7 @@ import {
   Instructions,
   Transaction,
 } from "crate";
-solana_program_init();
+safecoin_program_init();
 
 describe("Transaction", function () {
   it("SystemInstruction::Transfer", () => {

@@ -5,23 +5,23 @@ use {
     log::*,
     rand::{thread_rng, Rng},
     rayon::prelude::*,
-    solana_client::connection_cache::ConnectionCache,
-    solana_core::{
+    safecoin_client::connection_cache::ConnectionCache,
+    safecoin_core::{
         banking_stage::BankingStage,
         banking_trace::{BankingPacketBatch, BankingTracer, BANKING_TRACE_DIR_DEFAULT_BYTE_LIMIT},
     },
-    solana_gossip::cluster_info::{ClusterInfo, Node},
+    safecoin_gossip::cluster_info::{ClusterInfo, Node},
     solana_ledger::{
         blockstore::Blockstore,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
         get_tmp_ledger_path,
         leader_schedule_cache::LeaderScheduleCache,
     },
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_perf::packet::{to_packet_batches, PacketBatch},
-    solana_poh::poh_recorder::{create_test_recorder, PohRecorder, WorkingBankEntry},
+    safecoin_poh::poh_recorder::{create_test_recorder, PohRecorder, WorkingBankEntry},
     solana_runtime::{bank::Bank, bank_forks::BankForks},
-    solana_sdk::{
+    safecoin_sdk::{
         compute_budget::ComputeBudgetInstruction,
         hash::Hash,
         message::Message,
@@ -32,7 +32,7 @@ use {
         transaction::Transaction,
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_tpu_client::tpu_client::DEFAULT_TPU_CONNECTION_POOL_SIZE,
+    safecoin_tpu_client::tpu_client::DEFAULT_TPU_CONNECTION_POOL_SIZE,
     std::{
         sync::{atomic::Ordering, Arc, RwLock},
         thread::sleep,
@@ -461,7 +461,7 @@ fn main() {
         let mut tx_total_us = 0;
         let base_tx_count = bank.transaction_count();
         let mut txs_processed = 0;
-        let collector = solana_sdk::pubkey::new_rand();
+        let collector = safecoin_sdk::pubkey::new_rand();
         let mut total_sent = 0;
         for current_iteration_index in 0..iterations {
             trace!("RUNNING ITERATION {}", current_iteration_index);

@@ -5,7 +5,7 @@ use {
     solana_bpf_loader_program::{
         create_vm, serialization::serialize_parameters, syscalls::create_loader,
     },
-    solana_program_runtime::{
+    safecoin_program_runtime::{
         compute_budget::ComputeBudget,
         invoke_context::{prepare_mock_invoke_context, InvokeContext},
     },
@@ -13,7 +13,7 @@ use {
         assembler::assemble, elf::Executable, static_analysis::Analysis,
         verifier::RequisiteVerifier, vm::VerifiedExecutable,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::AccountSharedData, bpf_loader, instruction::AccountMeta, pubkey::Pubkey,
         sysvar::rent::Rent, transaction_context::TransactionContext,
     },
@@ -52,9 +52,9 @@ fn load_accounts(path: &Path) -> Result<Input> {
 
 fn main() {
     solana_logger::setup();
-    let matches = Command::new("Solana SBF CLI")
+    let matches = Command::new("Safecoin SBF CLI")
         .version(crate_version!())
-        .author("Solana Labs Maintainers <maintainers@solanalabs.com>")
+        .author("Safecoin Labs Maintainers <maintainers@solanalabs.com>")
         .about(
             r##"CLI to test and analyze SBF programs.
 
@@ -171,7 +171,7 @@ before execting it in the virtual machine.",
     let mut transaction_accounts = vec![
         (
             loader_id,
-            AccountSharedData::new(0, 0, &solana_sdk::native_loader::id()),
+            AccountSharedData::new(0, 0, &safecoin_sdk::native_loader::id()),
         ),
         (
             Pubkey::new_unique(),

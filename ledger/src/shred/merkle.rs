@@ -20,7 +20,7 @@ use {
     rayon::{prelude::*, ThreadPool},
     reed_solomon_erasure::Error::{InvalidIndex, TooFewParityShards, TooFewShards},
     solana_perf::packet::deserialize_from_with_limit,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         hash::{hashv, Hash},
         pubkey::Pubkey,
@@ -43,8 +43,8 @@ const_assert_eq!(ShredData::SIZE_OF_PAYLOAD, 1203);
 // https://en.wikipedia.org/wiki/Merkle_tree#Second_preimage_attack
 // Following Certificate Transparency, 0x00 and 0x01 bytes are prepended to
 // hash data when computing leaf and internal node hashes respectively.
-const MERKLE_HASH_PREFIX_LEAF: &[u8] = b"\x00SOLANA_MERKLE_SHREDS_LEAF";
-const MERKLE_HASH_PREFIX_NODE: &[u8] = b"\x01SOLANA_MERKLE_SHREDS_NODE";
+const MERKLE_HASH_PREFIX_LEAF: &[u8] = b"\x00SAFECOIN_MERKLE_SHREDS_LEAF";
+const MERKLE_HASH_PREFIX_NODE: &[u8] = b"\x01SAFECOIN_MERKLE_SHREDS_NODE";
 
 type MerkleProofEntry = [u8; 20];
 
@@ -373,7 +373,7 @@ impl<'a> ShredTrait<'a> for ShredData {
     const SIZE_OF_HEADERS: usize = SIZE_OF_DATA_SHRED_HEADERS;
 
     fn from_payload(mut payload: Vec<u8>) -> Result<Self, Error> {
-        // see: https://github.com/solana-labs/solana/pull/10109
+        // see: https://github.com/fair-exchange/safecoin/pull/10109
         if payload.len() < Self::SIZE_OF_PAYLOAD {
             return Err(Error::InvalidPayloadSize(payload.len()));
         }
@@ -451,7 +451,7 @@ impl<'a> ShredTrait<'a> for ShredCode {
             return Err(Error::InvalidShredVariant);
         }
         let coding_header = deserialize_from_with_limit(&mut cursor)?;
-        // see: https://github.com/solana-labs/solana/pull/10109
+        // see: https://github.com/fair-exchange/safecoin/pull/10109
         if payload.len() < Self::SIZE_OF_PAYLOAD {
             return Err(Error::InvalidPayloadSize(payload.len()));
         }
@@ -1061,7 +1061,7 @@ mod test {
         matches::assert_matches,
         rand::{seq::SliceRandom, CryptoRng, Rng},
         rayon::ThreadPoolBuilder,
-        solana_sdk::signature::{Keypair, Signer},
+        safecoin_sdk::signature::{Keypair, Signer},
         std::{cmp::Ordering, iter::repeat_with},
         test_case::test_case,
     };

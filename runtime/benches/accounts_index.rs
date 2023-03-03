@@ -11,7 +11,7 @@ use {
             ACCOUNTS_INDEX_CONFIG_FOR_BENCHMARKS,
         },
     },
-    solana_sdk::{account::AccountSharedData, pubkey},
+    safecoin_sdk::{account::AccountSharedData, pubkey},
     std::sync::Arc,
     test::Bencher,
 };

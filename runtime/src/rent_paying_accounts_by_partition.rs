@@ -1,7 +1,7 @@
 //! Provide fast iteration of all pubkeys which could possibly be rent paying, grouped by rent collection partition
 use {
     crate::bank::{Bank, PartitionIndex, PartitionsPerCycle},
-    solana_sdk::{epoch_schedule::EpochSchedule, pubkey::Pubkey},
+    safecoin_sdk::{epoch_schedule::EpochSchedule, pubkey::Pubkey},
     std::collections::HashSet,
 };
 

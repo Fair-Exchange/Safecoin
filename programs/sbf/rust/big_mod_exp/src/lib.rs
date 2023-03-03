@@ -1,7 +1,7 @@
 //! Big_mod_exp Syscall tests
 
-extern crate solana_program;
-use solana_program::{big_mod_exp::big_mod_exp, custom_panic_default, msg};
+extern crate safecoin_program;
+use safecoin_program::{big_mod_exp::big_mod_exp, custom_panic_default, msg};
 
 fn big_mod_exp_test() {
     #[derive(serde::Deserialize)]

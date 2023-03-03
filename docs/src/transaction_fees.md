@@ -12,18 +12,18 @@ keywords:
   - affordable blockchain
 ---
 
-The small fees paid to process [instructions](./terminology.md#instruction) on the Solana blockchain are known as "_transaction fees_".
+The small fees paid to process [instructions](./terminology.md#instruction) on the Safecoin blockchain are known as "_transaction fees_".
 
-As each transaction (which contains one or more instructions) is sent through the network, it gets processed by the current leader validation-client. Once confirmed as a global state transaction, this _transaction fee_ is paid to the network to help support the [economic design](#economic-design) of the Solana blockchain.
+As each transaction (which contains one or more instructions) is sent through the network, it gets processed by the current leader validation-client. Once confirmed as a global state transaction, this _transaction fee_ is paid to the network to help support the [economic design](#economic-design) of the Safecoin blockchain.
 
 > **NOTE:** Transaction fees are different from [account rent](./terminology.md#rent)!
-> While transaction fees are paid to process instructions on the Solana network, rent is paid to store data on the blockchain.
+> While transaction fees are paid to process instructions on the Safecoin network, rent is paid to store data on the blockchain.
 
 > You can learn more about rent here: [What is rent?](./developing/intro/rent.md)
 
 ## Why pay transaction fees?
 
-Transaction fees offer many benefits in the Solana [economic design](#basic-economic-design) described below. Mainly:
+Transaction fees offer many benefits in the Safecoin [economic design](#basic-economic-design) described below. Mainly:
 
 - they provide compensation to the validator network for the CPU/GPU resources necessary to process transactions,
 - reduce network spam by introducing real cost to transactions,
@@ -35,14 +35,14 @@ Transaction fees offer many benefits in the Solana [economic design](#basic-econ
 
 Many blockchain networks \(e.g. Bitcoin and Ethereum\), rely on inflationary _protocol-based rewards_ to secure the network in the short-term. Over the long-term, these networks will increasingly rely on _transaction fees_ to sustain security.
 
-The same is true on Solana. Specifically:
+The same is true on Safecoin. Specifically:
 
 - A fixed proportion (initially 50%) of each transaction fee is _burned_ (destroyed), with the remaining going to the current [leader](./terminology.md#leader) processing the transaction.
-- A scheduled global inflation rate provides a source for [rewards](./implemented-proposals/staking-rewards.md) distributed to [Solana Validators](../src/running-validator.md).
+- A scheduled global inflation rate provides a source for [rewards](./implemented-proposals/staking-rewards.md) distributed to [Safecoin Validators](../src/running-validator.md).
 
 ### Why burn some fees?
 
-As mentioned above, a fixed proportion of each transaction fee is _burned_ (destroyed). This is intended to cement the economic value of SOL and thus sustain the network's security. Unlike a scheme where transactions fees are completely burned, leaders are still incentivized to include as many transactions as possible in their slots.
+As mentioned above, a fixed proportion of each transaction fee is _burned_ (destroyed). This is intended to cement the economic value of SAFE and thus sustain the network's security. Unlike a scheme where transactions fees are completely burned, leaders are still incentivized to include as many transactions as possible in their slots.
 
 Burnt fees can also help prevent malicious validators from censoring transactions by being considered in [fork](./terminology.md#fork) selection.
 
@@ -69,7 +69,7 @@ The execution of each instruction within a transaction consumes a different numb
 
 ## Prioritization fee
 
-Recently, Solana has introduced an optional fee called the "_[prioritization fee](./terminology.md#prioritization-fee)_". This additional fee can be paid to help boost how a transaction is prioritized against others, resulting in faster transaction execution times.
+Recently, Safecoin has introduced an optional fee called the "_[prioritization fee](./terminology.md#prioritization-fee)_". This additional fee can be paid to help boost how a transaction is prioritized against others, resulting in faster transaction execution times.
 
 The prioritization fee is calculated by multiplying the requested maximum _compute units_ by the compute-unit price (specified in increments of 0.000001 lamports per compute unit) rounded up to the nearest lamport.
 

@@ -10,7 +10,7 @@ use {
     core::time::Duration,
     crossbeam_channel::{RecvTimeoutError, SendError},
     itertools::Itertools,
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_perf::{
         deduper::Deduper,
         packet::{Packet, PacketBatch},
@@ -18,7 +18,7 @@ use {
             count_discarded_packets, count_packets_in_batches, count_valid_packets, shrink_batches,
         },
     },
-    solana_sdk::timing,
+    safecoin_sdk::timing,
     solana_streamer::streamer::{self, StreamerError},
     std::{
         thread::{self, Builder, JoinHandle},
@@ -469,7 +469,7 @@ mod tests {
             packet::{to_packet_batches, Packet},
             test_tx::test_tx,
         },
-        solana_sdk::packet::PacketFlags,
+        safecoin_sdk::packet::PacketFlags,
     };
 
     fn count_non_discard(packet_batches: &[PacketBatch]) -> usize {

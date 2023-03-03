@@ -16,17 +16,17 @@ use {
         Serialize,
     },
     serde_json::json,
-    solana_account_decoder::{UiAccount, UiAccountData, UiAccountEncoding},
-    solana_clap_utils::{
+    safecoin_account_decoder::{UiAccount, UiAccountData, UiAccountEncoding},
+    safecoin_clap_utils::{
         input_parsers::{cluster_type_of, pubkey_of, pubkeys_of},
         input_validators::{
             is_parsable, is_pow2, is_pubkey, is_pubkey_or_keypair, is_slot, is_valid_percentage,
         },
     },
-    solana_cli_output::{CliAccount, CliAccountNewConfig, OutputFormat},
-    solana_core::system_monitor_service::{SystemMonitorService, SystemMonitorStatsReportConfig},
-    solana_entry::entry::Entry,
-    solana_geyser_plugin_manager::geyser_plugin_service::GeyserPluginService,
+    safecoin_cli_output::{CliAccount, CliAccountNewConfig, OutputFormat},
+    safecoin_core::system_monitor_service::{SystemMonitorService, SystemMonitorStatsReportConfig},
+    safecoin_entry::entry::Entry,
+    safecoin_geyser_plugin_manager::geyser_plugin_service::GeyserPluginService,
     solana_ledger::{
         ancestor_iterator::AncestorIterator,
         bank_forks_utils,
@@ -39,7 +39,7 @@ use {
         blockstore_processor::{self, BlockstoreProcessorError, ProcessOptions},
         shred::Shred,
     },
-    solana_measure::{measure, measure::Measure},
+    safecoin_measure::{measure, measure::Measure},
     solana_runtime::{
         accounts::Accounts,
         accounts_background_service::{
@@ -66,7 +66,7 @@ use {
             SnapshotVersion, DEFAULT_ARCHIVE_COMPRESSION, SUPPORTED_ARCHIVE_COMPRESSION,
         },
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount, WritableAccount},
         account_utils::StateMut,
         clock::{Epoch, Slot},
@@ -75,7 +75,7 @@ use {
         genesis_config::{ClusterType, GenesisConfig},
         hash::Hash,
         inflation::Inflation,
-        native_token::{lamports_to_sol, sol_to_lamports, Sol},
+        native_token::{lamports_to_sol, sol_to_lamports, Safe},
         pubkey::Pubkey,
         rent::Rent,
         shred_version::compute_shred_version,
@@ -188,7 +188,7 @@ fn output_entry(
                     })
                     .map(|meta| meta.into());
 
-                solana_cli_output::display::println_transaction(
+                safecoin_cli_output::display::println_transaction(
                     &transaction,
                     tx_status_meta.as_ref(),
                     "      ",
@@ -382,7 +382,7 @@ fn output_account(
     encoding: UiAccountEncoding,
 ) {
     println!("{pubkey}:");
-    println!("  balance: {} SOL", lamports_to_sol(account.lamports()));
+    println!("  balance: {} SAFE", lamports_to_sol(account.lamports()));
     println!("  owner: '{}'", account.owner());
     println!("  executable: {}", account.executable());
     if let Some(slot) = modified_slot {
@@ -582,7 +582,7 @@ fn graph_forks(bank_forks: &BankForks, config: &GraphConfig) -> String {
                         slot_stake_and_vote_count.get(&bank.slot())
                     {
                         format!(
-                            "\nvotes: {}, stake: {:.1} SOL ({:.1}%)",
+                            "\nvotes: {}, stake: {:.1} SAFE ({:.1}%)",
                             votes,
                             lamports_to_sol(*stake),
                             *stake as f64 / *total_stake as f64 * 100.,
@@ -679,7 +679,7 @@ fn graph_forks(bank_forks: &BankForks, config: &GraphConfig) -> String {
                     )
                 };
             dot.push(format!(
-                r#"  "last vote {}"[shape=box,label="Latest validator vote: {}\nstake: {} SOL\nroot slot: {}\n{}"];"#,
+                r#"  "last vote {}"[shape=box,label="Latest validator vote: {}\nstake: {} SAFE\nroot slot: {}\n{}"];"#,
                 node_pubkey,
                 node_pubkey,
                 lamports_to_sol(*stake),
@@ -702,7 +702,7 @@ fn graph_forks(bank_forks: &BankForks, config: &GraphConfig) -> String {
     // Annotate the final "..." node with absent vote and stake information
     if absent_votes > 0 {
         dot.push(format!(
-            r#"    "..."[label="...\nvotes: {}, stake: {:.1} SOL {:.1}%"];"#,
+            r#"    "..."[label="...\nvotes: {}, stake: {:.1} SAFE {:.1}%"];"#,
             absent_votes,
             lamports_to_sol(absent_stake),
             absent_stake as f64 / lowest_total_stake as f64 * 100.,
@@ -2436,7 +2436,7 @@ fn main() {
 
                 if let Some(hashes_per_tick) = arg_matches.value_of("hashes_per_tick") {
                     genesis_config.poh_config.hashes_per_tick = match hashes_per_tick {
-                        // Note: Unlike `solana-genesis`, "auto" is not supported here.
+                        // Note: Unlike `safecoin-genesis`, "auto" is not supported here.
                         "sleep" => None,
                         _ => Some(value_t_or_exit!(arg_matches, "hashes_per_tick", u64)),
                     }
@@ -3058,7 +3058,7 @@ fn main() {
 
                             if let Some(hashes_per_tick) = hashes_per_tick {
                                 child_bank.set_hashes_per_tick(match hashes_per_tick {
-                                    // Note: Unlike `solana-genesis`, "auto" is not supported here.
+                                    // Note: Unlike `safecoin-genesis`, "auto" is not supported here.
                                     "sleep" => None,
                                     _ => {
                                         Some(value_t_or_exit!(arg_matches, "hashes_per_tick", u64))
@@ -3394,7 +3394,7 @@ fn main() {
                     if let Some((pubkey, account, slot)) = some_account_tuple
                         .filter(|(_, account, _)| Accounts::is_loadable(account.lamports()))
                     {
-                        if !include_sysvars && solana_sdk::sysvar::is_sysvar_id(pubkey) {
+                        if !include_sysvars && safecoin_sdk::sysvar::is_sysvar_id(pubkey) {
                             return;
                         }
 
@@ -3470,7 +3470,7 @@ fn main() {
                             if old_capitalization == bank.capitalization() {
                                 eprintln!(
                                     "Capitalization was identical: {}",
-                                    Sol(old_capitalization)
+                                    Safe(old_capitalization)
                                 );
                             }
                         }
@@ -3717,9 +3717,9 @@ fn main() {
                                 / warped_bank.epoch_duration_in_years(base_bank.epoch());
                             println!(
                                 "Capitalization: {} => {} (+{} {}%; annualized {}%)",
-                                Sol(base_bank.capitalization()),
-                                Sol(warped_bank.capitalization()),
-                                Sol(warped_bank.capitalization() - base_bank.capitalization()),
+                                Safe(base_bank.capitalization()),
+                                Safe(warped_bank.capitalization()),
+                                Safe(warped_bank.capitalization() - base_bank.capitalization()),
                                 interest_per_epoch,
                                 interest_per_year,
                             );
@@ -3777,7 +3777,7 @@ fn main() {
                             for (pubkey, warped_account) in all_accounts {
                                 // Don't output sysvars; it's always updated but not related to
                                 // inflation.
-                                if solana_sdk::sysvar::is_sysvar_id(&pubkey) {
+                                if safecoin_sdk::sysvar::is_sysvar_id(&pubkey) {
                                     continue;
                                 }
 
@@ -3790,9 +3790,9 @@ fn main() {
                                         "{:<45}({}): {} => {} (+{} {:>4.9}%) {:?}",
                                         format!("{pubkey}"), // format! is needed to pad/justify correctly.
                                         base_account.owner(),
-                                        Sol(base_account.lamports()),
-                                        Sol(warped_account.lamports()),
-                                        Sol(delta),
+                                        Safe(base_account.lamports()),
+                                        Safe(warped_account.lamports()),
+                                        Safe(delta),
                                         ((warped_account.lamports() as f64)
                                             / (base_account.lamports() as f64)
                                             * 100_f64)
@@ -3936,7 +3936,7 @@ fn main() {
                                 }
                             }
                             if overall_delta > 0 {
-                                println!("Sum of lamports changes: {}", Sol(overall_delta));
+                                println!("Sum of lamports changes: {}", Safe(overall_delta));
                             }
                         } else {
                             if arg_matches.is_present("recalculate_capitalization") {
@@ -3953,7 +3953,7 @@ fn main() {
                             assert_capitalization(&bank);
                             println!("Inflation: {:?}", bank.inflation());
                             println!("RentCollector: {:?}", bank.rent_collector());
-                            println!("Capitalization: {}", Sol(bank.capitalization()));
+                            println!("Capitalization: {}", Safe(bank.capitalization()));
                         }
                     }
                     Err(err) => {

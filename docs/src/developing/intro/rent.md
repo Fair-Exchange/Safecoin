@@ -1,19 +1,19 @@
 ---
 title: What is rent?
-description: "Rent: the small fee Solana accounts incur to store data on the blockchain. Accounts with >2 years of rent are rent exempt and do not pay the periodic fee."
+description: "Rent: the small fee Safecoin accounts incur to store data on the blockchain. Accounts with >2 years of rent are rent exempt and do not pay the periodic fee."
 ---
 
-The fee every Solana Account to store data on the blockchain is called "_rent_". This _time and space_ based fee is required to keep an account, and its therefore its data, alive on the blockchain since [clusters](../../cluster/overview.md) must actively maintain this data.
+The fee every Safecoin Account to store data on the blockchain is called "_rent_". This _time and space_ based fee is required to keep an account, and its therefore its data, alive on the blockchain since [clusters](../../cluster/overview.md) must actively maintain this data.
 
-All Solana Accounts (and therefore Programs) are required to maintain a high enough LAMPORT balance to become [rent exempt](#rent-exempt) and remain on the Solana blockchain.
+All Safecoin Accounts (and therefore Programs) are required to maintain a high enough LAMPORT balance to become [rent exempt](#rent-exempt) and remain on the Safecoin blockchain.
 
 When an Account no longer has enough LAMPORTS to pay its rent, it will be removed from the network in a process known as [Garbage Collection](#garbage-collection).
 
-> **Note:** Rent is different from [transactions fees](../../transaction_fees.md). Rent is paid (or held in an Account) to keep data stored on the Solana blockchain. Where as transaction fees are paid to process [instructions](../developing/../programming-model/transactions.md#instructions) on the network.
+> **Note:** Rent is different from [transactions fees](../../transaction_fees.md). Rent is paid (or held in an Account) to keep data stored on the Safecoin blockchain. Where as transaction fees are paid to process [instructions](../developing/../programming-model/transactions.md#instructions) on the network.
 
 ### Rent rate
 
-The Solana rent rate is set on a network wide basis, primarily based on the set LAMPORTS _per_ byte _per_ year.
+The Safecoin rent rate is set on a network wide basis, primarily based on the set LAMPORTS _per_ byte _per_ year.
 
 Currently, the rent rate is a static amount and stored in the the [Rent sysvar](../runtime-facilities/sysvars.md#rent).
 
@@ -33,7 +33,7 @@ You can learn more about [garbage collection here](../../implemented-proposals/p
 
 ## Learn more about Rent
 
-You can learn more about Solana Rent with the following articles and documentation:
+You can learn more about Safecoin Rent with the following articles and documentation:
 
 - [Implemented Proposals - Rent](../../implemented-proposals/rent.md)
 - [Implemented Proposals - Account Storage](../../implemented-proposals/persistent-account-storage.md)

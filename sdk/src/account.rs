@@ -1,4 +1,4 @@
-//! The Solana [`Account`] type.
+//! The Safecoin [`Account`] type.
 
 use {
     crate::{
@@ -10,7 +10,7 @@ use {
         ser::{Serialize, Serializer},
         Deserialize,
     },
-    solana_program::{account_info::AccountInfo, debug_account_data::*, sysvar::Sysvar},
+    safecoin_program::{account_info::AccountInfo, debug_account_data::*, sysvar::Sysvar},
     std::{
         cell::{Ref, RefCell},
         fmt, ptr,
@@ -648,7 +648,7 @@ pub fn create_account_with_fields<S: Sysvar>(
     (lamports, rent_epoch): InheritableAccountFields,
 ) -> Account {
     let data_len = S::size_of().max(bincode::serialized_size(sysvar).unwrap() as usize);
-    let mut account = Account::new(lamports, data_len, &solana_program::sysvar::id());
+    let mut account = Account::new(lamports, data_len, &safecoin_program::sysvar::id());
     to_account::<S, Account>(sysvar, &mut account).unwrap();
     account.rent_epoch = rent_epoch;
     account
@@ -696,7 +696,7 @@ pub fn to_account<S: Sysvar, T: WritableAccount>(sysvar: &S, account: &mut T) ->
 
 /// Return the information required to construct an `AccountInfo`.  Used by the
 /// `AccountInfo` conversion implementations.
-impl solana_program::account_info::Account for Account {
+impl safecoin_program::account_info::Account for Account {
     fn get(&mut self) -> (&mut u64, &mut [u8], &Pubkey, bool, Epoch) {
         (
             &mut self.lamports,

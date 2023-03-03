@@ -4,7 +4,7 @@ use {
     },
     bincode::deserialize,
     serde_json::json,
-    solana_sdk::{
+    safecoin_sdk::{
         instruction::CompiledInstruction, message::AccountKeys,
         system_instruction::SystemInstruction,
     },
@@ -211,7 +211,7 @@ fn check_num_system_accounts(accounts: &[u8], num: usize) -> Result<(), ParseIns
 mod test {
     use {
         super::*,
-        solana_sdk::{message::Message, pubkey::Pubkey, system_instruction, sysvar},
+        safecoin_sdk::{message::Message, pubkey::Pubkey, system_instruction, sysvar},
     };
 
     #[test]

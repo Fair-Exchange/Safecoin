@@ -1,7 +1,7 @@
 //! trait for abstracting underlying storage of pubkey and account pairs to be written
 use {
     crate::{accounts_db::IncludeSlotInHash, append_vec::StoredAccountMeta},
-    solana_sdk::{account::ReadableAccount, clock::Slot, hash::Hash, pubkey::Pubkey},
+    safecoin_sdk::{account::ReadableAccount, clock::Slot, hash::Hash, pubkey::Pubkey},
 };
 
 /// abstract access to pubkey, account, slot, target_slot of either:
@@ -213,7 +213,7 @@ pub mod tests {
             accounts_db::INCLUDE_SLOT_IN_HASH_TESTS,
             append_vec::{AccountMeta, StoredAccountMeta, StoredMeta},
         },
-        solana_sdk::{
+        safecoin_sdk::{
             account::{accounts_equal, AccountSharedData, WritableAccount},
             hash::Hash,
         },

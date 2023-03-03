@@ -2,13 +2,13 @@
 
 use {
     log::*,
-    solana_cli_output::CliAccount,
-    solana_client::rpc_request::MAX_MULTIPLE_ACCOUNTS,
-    solana_core::{
+    safecoin_cli_output::CliAccount,
+    safecoin_client::rpc_request::MAX_MULTIPLE_ACCOUNTS,
+    safecoin_core::{
         tower_storage::TowerStorage,
         validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     },
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::{ClusterInfo, Node},
         gossip_service::discover_cluster,
         socketaddr,
@@ -18,16 +18,16 @@ use {
         create_new_tmp_ledger,
     },
     solana_net_utils::PortRange,
-    solana_program_runtime::compute_budget::ComputeBudget,
-    solana_rpc::{rpc::JsonRpcConfig, rpc_pubsub_service::PubSubConfig},
-    solana_rpc_client::{nonblocking, rpc_client::RpcClient},
+    safecoin_program_runtime::compute_budget::ComputeBudget,
+    safecoin_rpc::{rpc::JsonRpcConfig, rpc_pubsub_service::PubSubConfig},
+    safecoin_rpc_client::{nonblocking, rpc_client::RpcClient},
     solana_runtime::{
         accounts_db::AccountsDbConfig, accounts_index::AccountsIndexConfig, bank_forks::BankForks,
         genesis_utils::create_genesis_config_with_leader_ex,
         hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE, runtime_config::RuntimeConfig,
         snapshot_config::SnapshotConfig, snapshot_utils::create_accounts_run_and_snapshot_dirs,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{Account, AccountSharedData},
         clock::{Slot, DEFAULT_MS_PER_SLOT},
         commitment_config::CommitmentConfig,
@@ -44,7 +44,7 @@ use {
         signature::{read_keypair_file, write_keypair_file, Keypair, Signer},
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_tpu_client::tpu_client::{
+    safecoin_tpu_client::tpu_client::{
         DEFAULT_TPU_CONNECTION_POOL_SIZE, DEFAULT_TPU_ENABLE_UDP, DEFAULT_TPU_USE_QUIC,
     },
     std::{
@@ -317,7 +317,7 @@ impl TestValidatorGenesis {
         accounts: &[AccountInfo],
     ) -> Result<&mut Self, String> {
         for account in accounts {
-            let account_path = match solana_program_test::find_file(account.filename) {
+            let account_path = match safecoin_program_test::find_file(account.filename) {
                 Some(path) => path,
                 None => return Err(format!("Unable to locate {}", account.filename)),
             };
@@ -397,8 +397,8 @@ impl TestValidatorGenesis {
             address,
             AccountSharedData::from(Account {
                 lamports,
-                data: solana_program_test::read_file(
-                    solana_program_test::find_file(filename).unwrap_or_else(|| {
+                data: safecoin_program_test::read_file(
+                    safecoin_program_test::find_file(filename).unwrap_or_else(|| {
                         panic!("Unable to locate {filename}");
                     }),
                 ),
@@ -436,12 +436,12 @@ impl TestValidatorGenesis {
     /// `program_name` will also used to locate the SBF shared object in the current or fixtures
     /// directory.
     pub fn add_program(&mut self, program_name: &str, program_id: Pubkey) -> &mut Self {
-        let program_path = solana_program_test::find_file(&format!("{program_name}.so"))
+        let program_path = safecoin_program_test::find_file(&format!("{program_name}.so"))
             .unwrap_or_else(|| panic!("Unable to locate program {program_name}"));
 
         self.programs.push(ProgramInfo {
             program_id,
-            loader: solana_sdk::bpf_loader::id(),
+            loader: safecoin_sdk::bpf_loader::id(),
             program_path,
         });
         self
@@ -621,14 +621,14 @@ impl TestValidator {
         let validator_stake_account = Keypair::new();
         let validator_identity_lamports = sol_to_lamports(500.);
         let validator_stake_lamports = sol_to_lamports(1_000_000.);
-        let mint_lamports = sol_to_lamports(500_000_000.);
+        let mint_lamports = sol_to_lamports(33_370_166.);
 
         let mut accounts = config.accounts.clone();
-        for (address, account) in solana_program_test::programs::spl_programs(&config.rent) {
+        for (address, account) in safecoin_program_test::programs::spl_programs(&config.rent) {
             accounts.entry(address).or_insert(account);
         }
         for program in &config.programs {
-            let data = solana_program_test::read_file(&program.program_path);
+            let data = safecoin_program_test::read_file(&program.program_path);
             accounts.insert(
                 program.program_id,
                 AccountSharedData::from(Account {
@@ -651,7 +651,7 @@ impl TestValidator {
             validator_identity_lamports,
             config.fee_rate_governor.clone(),
             config.rent,
-            solana_sdk::genesis_config::ClusterType::Development,
+            safecoin_sdk::genesis_config::ClusterType::Development,
             accounts.into_iter().collect(),
         );
         genesis_config.epoch_schedule = config

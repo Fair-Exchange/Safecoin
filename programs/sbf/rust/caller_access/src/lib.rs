@@ -1,5 +1,5 @@
 use {
-    solana_program::{
+    safecoin_program::{
         account_info::AccountInfo,
         entrypoint::ProgramResult,
         instruction::{AccountMeta, Instruction},
@@ -10,7 +10,7 @@ use {
     std::convert::TryInto,
 };
 
-solana_program::entrypoint!(process_instruction);
+safecoin_program::entrypoint!(process_instruction);
 fn process_instruction(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

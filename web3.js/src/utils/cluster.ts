@@ -1,13 +1,13 @@
 const endpoint = {
   http: {
-    devnet: 'http://api.devnet.solana.com',
-    testnet: 'http://api.testnet.solana.com',
-    'mainnet-beta': 'http://api.mainnet-beta.solana.com/',
+    devnet: 'http://api.devnet.safecoin.org',
+    testnet: 'http://api.testnet.safecoin.org',
+    'mainnet-beta': 'http://api.mainnet-beta.safecoin.org/',
   },
   https: {
-    devnet: 'https://api.devnet.solana.com',
-    testnet: 'https://api.testnet.solana.com',
-    'mainnet-beta': 'https://api.mainnet-beta.solana.com/',
+    devnet: 'https://api.devnet.safecoin.org',
+    testnet: 'https://api.testnet.safecoin.org',
+    'mainnet-beta': 'https://api.mainnet-beta.safecoin.org/',
   },
 };
 

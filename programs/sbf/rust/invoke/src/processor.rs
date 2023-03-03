@@ -5,7 +5,7 @@
 
 use {
     crate::instructions::*,
-    solana_program::{
+    safecoin_program::{
         account_info::AccountInfo,
         entrypoint::{ProgramResult, MAX_PERMITTED_DATA_INCREASE},
         instruction::Instruction,
@@ -18,7 +18,7 @@ use {
         },
         system_instruction,
     },
-    solana_sbf_rust_invoked::instructions::*,
+    safecoin_sbf_rust_invoked::instructions::*,
 };
 
 fn do_nested_invokes(num_nested_invokes: u64, accounts: &[AccountInfo]) -> ProgramResult {
@@ -62,7 +62,7 @@ fn do_nested_invokes(num_nested_invokes: u64, accounts: &[AccountInfo]) -> Progr
     Ok(())
 }
 
-solana_program::entrypoint!(process_instruction);
+safecoin_program::entrypoint!(process_instruction);
 fn process_instruction(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -81,7 +81,7 @@ fn process_instruction(
                 let from_lamports = accounts[FROM_INDEX].lamports();
                 let to_lamports = accounts[DERIVED_KEY1_INDEX].lamports();
                 assert_eq!(accounts[DERIVED_KEY1_INDEX].data_len(), 0);
-                assert!(solana_program::system_program::check_id(
+                assert!(safecoin_program::system_program::check_id(
                     accounts[DERIVED_KEY1_INDEX].owner
                 ));
 

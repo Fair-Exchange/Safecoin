@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 import { NFTOKEN_ADDRESS } from "./nftoken";
 import { Account } from "../../../providers/accounts";
 import { NftokenTypes } from "./nftoken-types";

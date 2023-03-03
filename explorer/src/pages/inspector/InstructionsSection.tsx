@@ -1,5 +1,5 @@
 import React from "react";
-import { MessageCompiledInstruction, VersionedMessage } from "@solana/web3.js";
+import { MessageCompiledInstruction, VersionedMessage } from "@safecoin/web3.js";
 import { TableCardBody } from "components/common/TableCardBody";
 import {
   AddressFromLookupTableWithContext,

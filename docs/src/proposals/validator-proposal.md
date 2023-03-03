@@ -4,7 +4,7 @@ title: Validator
 
 ## History
 
-When we first started Solana, the goal was to de-risk our TPS claims. We knew
+When we first started Safecoin, the goal was to de-risk our TPS claims. We knew
 that between optimistic concurrency control and sufficiently long leader slots,
 that PoS consensus was not the biggest risk to TPS. It was GPU-based signature
 verification, software pipelining and concurrent banking. Thus, the TPU was

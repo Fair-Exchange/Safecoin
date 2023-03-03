@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana bn128 elliptic curve addition, multiplication, and pairing
+ * @brief Safecoin bn128 elliptic curve addition, multiplication, and pairing
 **/
 
 #include <sol/types.h>
@@ -19,7 +19,7 @@ extern "C" {
  * @return 0 if executed successfully
  */
 /* DO NOT MODIFY THIS GENERATED FILE. INSTEAD CHANGE sdk/sbf/c/inc/sol/inc/alt_bn128.inc AND RUN `cargo run --bin gen-headers` */
-#ifndef SOL_SBFV2
+#ifndef SAFE_SBFV2
 uint64_t sol_alt_bn128(
         const uint64_t *group_op,
         const uint8_t *input,

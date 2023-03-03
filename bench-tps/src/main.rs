@@ -3,22 +3,22 @@
 use {
     clap::value_t,
     log::*,
-    solana_bench_tps::{
+    safecoin_bench_tps::{
         bench::{do_bench_tps, max_lamports_for_prioritization},
         bench_tps_client::BenchTpsClient,
         cli::{self, ExternalClientType},
         keypairs::get_keypairs,
         send_batch::{generate_durable_nonce_accounts, generate_keypairs},
     },
-    solana_client::{
+    safecoin_client::{
         connection_cache::ConnectionCache,
         thin_client::ThinClient,
         tpu_client::{TpuClient, TpuClientConfig},
     },
-    solana_genesis::Base64Account,
-    solana_gossip::gossip_service::{discover_cluster, get_client, get_multi_client},
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_genesis::Base64Account,
+    safecoin_gossip::gossip_service::{discover_cluster, get_client, get_multi_client},
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_sdk::{
         commitment_config::CommitmentConfig, fee_calculator::FeeRateGovernor, pubkey::Pubkey,
         system_program,
     },
@@ -244,7 +244,7 @@ fn main() {
         );
         client
             .get_account(&instruction_padding_config.program_id)
-            .expect("Instruction padding program must be deployed to this cluster. Deploy the program using `solana program deploy ./bench-tps/tests/fixtures/spl_instruction_padding.so` and pass the resulting program id with `--instruction-padding-program-id`");
+            .expect("Instruction padding program must be deployed to this cluster. Deploy the program using `safecoin program deploy ./bench-tps/tests/fixtures/safe_instruction_padding.so` and pass the resulting program id with `--instruction-padding-program-id`");
     }
     let keypairs = get_keypairs(
         client.clone(),

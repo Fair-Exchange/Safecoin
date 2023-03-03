@@ -1,16 +1,16 @@
 use {
-    solana_account_decoder::parse_token::{
-        is_known_spl_token_id, pubkey_from_spl_token, spl_token_native_mint,
+    safecoin_account_decoder::parse_token::{
+        is_known_safe_token_id, pubkey_from_safe_token, safe_token_native_mint,
         token_amount_to_ui_amount, UiTokenAmount,
     },
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_metrics::datapoint_debug,
     solana_runtime::{bank::Bank, transaction_batch::TransactionBatch},
-    solana_sdk::{account::ReadableAccount, pubkey::Pubkey},
-    solana_transaction_status::{
+    safecoin_sdk::{account::ReadableAccount, pubkey::Pubkey},
+    safecoin_transaction_status::{
         token_balances::TransactionTokenBalances, TransactionTokenBalance,
     },
-    spl_token_2022::{
+    safe_token_2022::{
         extension::StateWithExtensions,
         state::{Account as TokenAccount, Mint},
     },
@@ -18,12 +18,12 @@ use {
 };
 
 fn get_mint_decimals(bank: &Bank, mint: &Pubkey) -> Option<u8> {
-    if mint == &spl_token_native_mint() {
-        Some(spl_token::native_mint::DECIMALS)
+    if mint == &safe_token_native_mint() {
+        Some(safe_token::native_mint::DECIMALS)
     } else {
         let mint_account = bank.get_account(mint)?;
 
-        if !is_known_spl_token_id(mint_account.owner()) {
+        if !is_known_safe_token_id(mint_account.owner()) {
             return None;
         }
 
@@ -45,12 +45,12 @@ pub fn collect_token_balances(
 
     for transaction in batch.sanitized_transactions() {
         let account_keys = transaction.message().account_keys();
-        let has_token_program = account_keys.iter().any(is_known_spl_token_id);
+        let has_token_program = account_keys.iter().any(is_known_safe_token_id);
 
         let mut transaction_balances: Vec<TransactionTokenBalance> = vec![];
         if has_token_program {
             for (index, account_id) in account_keys.iter().enumerate() {
-                if transaction.message().is_invoked(index) || is_known_spl_token_id(account_id) {
+                if transaction.message().is_invoked(index) || is_known_safe_token_id(account_id) {
                     continue;
                 }
 
@@ -96,12 +96,12 @@ fn collect_token_balance_from_account(
 ) -> Option<TokenBalanceData> {
     let account = bank.get_account(account_id)?;
 
-    if !is_known_spl_token_id(account.owner()) {
+    if !is_known_safe_token_id(account.owner()) {
         return None;
     }
 
     let token_account = StateWithExtensions::<TokenAccount>::unpack(account.data()).ok()?;
-    let mint = pubkey_from_spl_token(&token_account.base.mint);
+    let mint = pubkey_from_safe_token(&token_account.base.mint);
 
     let decimals = mint_decimals.get(&mint).cloned().or_else(|| {
         let decimals = get_mint_decimals(bank, &mint)?;
@@ -121,15 +121,15 @@ fn collect_token_balance_from_account(
 mod test {
     use {
         super::*,
-        solana_account_decoder::parse_token::{pubkey_from_spl_token, spl_token_pubkey},
-        solana_sdk::{account::Account, genesis_config::create_genesis_config},
-        spl_token_2022::{
+        safecoin_account_decoder::parse_token::{pubkey_from_safe_token, safe_token_pubkey},
+        safecoin_sdk::{account::Account, genesis_config::create_genesis_config},
+        safe_token_2022::{
             extension::{
                 immutable_owner::ImmutableOwner, memo_transfer::MemoTransfer,
                 mint_close_authority::MintCloseAuthority, ExtensionType, StateWithExtensionsMut,
             },
             pod::OptionalNonZeroPubkey,
-            solana_program::{program_option::COption, program_pack::Pack},
+            safecoin_program::{program_option::COption, program_pack::Pack},
         },
         std::collections::BTreeMap,
     };
@@ -154,7 +154,7 @@ mod test {
         let mint = Account {
             lamports: 100,
             data: data.to_vec(),
-            owner: pubkey_from_spl_token(&spl_token::id()),
+            owner: pubkey_from_safe_token(&safe_token::id()),
             executable: false,
             rent_epoch: 0,
         };
@@ -162,18 +162,18 @@ mod test {
         let other_mint = Account {
             lamports: 100,
             data: data.to_vec(),
-            owner: Pubkey::new_unique(), // !is_known_spl_token_id
+            owner: Pubkey::new_unique(), // !is_known_safe_token_id
             executable: false,
             rent_epoch: 0,
         };
 
         let token_owner = Pubkey::new_unique();
         let token_data = TokenAccount {
-            mint: spl_token_pubkey(&mint_pubkey),
-            owner: spl_token_pubkey(&token_owner),
+            mint: safe_token_pubkey(&mint_pubkey),
+            owner: safe_token_pubkey(&token_owner),
             amount: 42,
             delegate: COption::None,
-            state: spl_token_2022::state::AccountState::Initialized,
+            state: safe_token_2022::state::AccountState::Initialized,
             is_native: COption::Some(100),
             delegated_amount: 0,
             close_authority: COption::None,
@@ -181,27 +181,27 @@ mod test {
         let mut data = [0; TokenAccount::LEN];
         TokenAccount::pack(token_data, &mut data).unwrap();
 
-        let spl_token_account = Account {
+        let safe_token_account = Account {
             lamports: 100,
             data: data.to_vec(),
-            owner: pubkey_from_spl_token(&spl_token::id()),
+            owner: pubkey_from_safe_token(&safe_token::id()),
             executable: false,
             rent_epoch: 0,
         };
         let other_account = Account {
             lamports: 100,
             data: data.to_vec(),
-            owner: Pubkey::new_unique(), // !is_known_spl_token_id
+            owner: Pubkey::new_unique(), // !is_known_safe_token_id
             executable: false,
             rent_epoch: 0,
         };
 
         let other_mint_data = TokenAccount {
-            mint: spl_token_pubkey(&other_mint_pubkey),
-            owner: spl_token_pubkey(&token_owner),
+            mint: safe_token_pubkey(&other_mint_pubkey),
+            owner: safe_token_pubkey(&token_owner),
             amount: 42,
             delegate: COption::None,
-            state: spl_token_2022::state::AccountState::Initialized,
+            state: safe_token_2022::state::AccountState::Initialized,
             is_native: COption::Some(100),
             delegated_amount: 0,
             close_authority: COption::None,
@@ -212,7 +212,7 @@ mod test {
         let other_mint_token_account = Account {
             lamports: 100,
             data: data.to_vec(),
-            owner: pubkey_from_spl_token(&spl_token::id()),
+            owner: pubkey_from_safe_token(&safe_token::id()),
             executable: false,
             rent_epoch: 0,
         };
@@ -223,8 +223,8 @@ mod test {
         accounts.insert(account_pubkey, account);
         accounts.insert(mint_pubkey, mint);
         accounts.insert(other_mint_pubkey, other_mint);
-        let spl_token_account_pubkey = Pubkey::new_unique();
-        accounts.insert(spl_token_account_pubkey, spl_token_account);
+        let safe_token_account_pubkey = Pubkey::new_unique();
+        accounts.insert(safe_token_account_pubkey, safe_token_account);
         let other_account_pubkey = Pubkey::new_unique();
         accounts.insert(other_account_pubkey, other_account);
         let other_mint_account_pubkey = Pubkey::new_unique();
@@ -235,7 +235,7 @@ mod test {
         let bank = Bank::new_for_tests(&genesis_config);
         let mut mint_decimals = HashMap::new();
 
-        // Account is not owned by spl_token (nor does it have TokenAccount state)
+        // Account is not owned by safe_token (nor does it have TokenAccount state)
         assert_eq!(
             collect_token_balance_from_account(&bank, &account_pubkey, &mut mint_decimals),
             None
@@ -247,11 +247,11 @@ mod test {
             None
         );
 
-        // TokenAccount owned by spl_token::id() works
+        // TokenAccount owned by safe_token::id() works
         assert_eq!(
             collect_token_balance_from_account(
                 &bank,
-                &spl_token_account_pubkey,
+                &safe_token_account_pubkey,
                 &mut mint_decimals
             ),
             Some(TokenBalanceData {
@@ -263,17 +263,17 @@ mod test {
                     amount: "42".to_string(),
                     ui_amount_string: "0.42".to_string(),
                 },
-                program_id: spl_token::id().to_string(),
+                program_id: safe_token::id().to_string(),
             })
         );
 
-        // TokenAccount is not owned by known spl-token program_id
+        // TokenAccount is not owned by known safe-token program_id
         assert_eq!(
             collect_token_balance_from_account(&bank, &other_account_pubkey, &mut mint_decimals),
             None
         );
 
-        // TokenAccount's mint is not owned by known spl-token program_id
+        // TokenAccount's mint is not owned by known safe-token program_id
         assert_eq!(
             collect_token_balance_from_account(
                 &bank,
@@ -285,7 +285,7 @@ mod test {
     }
 
     #[test]
-    fn test_collect_token_balance_from_spl_token_2022_account() {
+    fn test_collect_token_balance_from_safe_token_2022_account() {
         let (mut genesis_config, _mint_keypair) = create_genesis_config(500);
 
         // Add a variety of accounts, token and not
@@ -311,13 +311,13 @@ mod test {
             .init_extension::<MintCloseAuthority>(true)
             .unwrap();
         mint_close_authority.close_authority =
-            OptionalNonZeroPubkey::try_from(Some(spl_token_pubkey(&mint_authority))).unwrap();
+            OptionalNonZeroPubkey::try_from(Some(safe_token_pubkey(&mint_authority))).unwrap();
 
         let mint_pubkey = Pubkey::new_unique();
         let mint = Account {
             lamports: 100,
             data: mint_data.to_vec(),
-            owner: pubkey_from_spl_token(&spl_token_2022::id()),
+            owner: pubkey_from_safe_token(&safe_token_2022::id()),
             executable: false,
             rent_epoch: 0,
         };
@@ -332,11 +332,11 @@ mod test {
 
         let token_owner = Pubkey::new_unique();
         let token_base = TokenAccount {
-            mint: spl_token_pubkey(&mint_pubkey),
-            owner: spl_token_pubkey(&token_owner),
+            mint: safe_token_pubkey(&mint_pubkey),
+            owner: safe_token_pubkey(&token_owner),
             amount: 42,
             delegate: COption::None,
-            state: spl_token_2022::state::AccountState::Initialized,
+            state: safe_token_2022::state::AccountState::Initialized,
             is_native: COption::Some(100),
             delegated_amount: 0,
             close_authority: COption::None,
@@ -358,10 +358,10 @@ mod test {
         let mut memo_transfer = account_state.init_extension::<MemoTransfer>(true).unwrap();
         memo_transfer.require_incoming_transfer_memos = true.into();
 
-        let spl_token_account = Account {
+        let safe_token_account = Account {
             lamports: 100,
             data: account_data.to_vec(),
-            owner: pubkey_from_spl_token(&spl_token_2022::id()),
+            owner: pubkey_from_safe_token(&safe_token_2022::id()),
             executable: false,
             rent_epoch: 0,
         };
@@ -374,11 +374,11 @@ mod test {
         };
 
         let other_mint_token_base = TokenAccount {
-            mint: spl_token_pubkey(&other_mint_pubkey),
-            owner: spl_token_pubkey(&token_owner),
+            mint: safe_token_pubkey(&other_mint_pubkey),
+            owner: safe_token_pubkey(&token_owner),
             amount: 42,
             delegate: COption::None,
-            state: spl_token_2022::state::AccountState::Initialized,
+            state: safe_token_2022::state::AccountState::Initialized,
             is_native: COption::Some(100),
             delegated_amount: 0,
             close_authority: COption::None,
@@ -403,7 +403,7 @@ mod test {
         let other_mint_token_account = Account {
             lamports: 100,
             data: account_data.to_vec(),
-            owner: pubkey_from_spl_token(&spl_token_2022::id()),
+            owner: pubkey_from_safe_token(&safe_token_2022::id()),
             executable: false,
             rent_epoch: 0,
         };
@@ -414,8 +414,8 @@ mod test {
         accounts.insert(account_pubkey, account);
         accounts.insert(mint_pubkey, mint);
         accounts.insert(other_mint_pubkey, other_mint);
-        let spl_token_account_pubkey = Pubkey::new_unique();
-        accounts.insert(spl_token_account_pubkey, spl_token_account);
+        let safe_token_account_pubkey = Pubkey::new_unique();
+        accounts.insert(safe_token_account_pubkey, safe_token_account);
         let other_account_pubkey = Pubkey::new_unique();
         accounts.insert(other_account_pubkey, other_account);
         let other_mint_account_pubkey = Pubkey::new_unique();
@@ -426,7 +426,7 @@ mod test {
         let bank = Bank::new_for_tests(&genesis_config);
         let mut mint_decimals = HashMap::new();
 
-        // Account is not owned by spl_token (nor does it have TokenAccount state)
+        // Account is not owned by safe_token (nor does it have TokenAccount state)
         assert_eq!(
             collect_token_balance_from_account(&bank, &account_pubkey, &mut mint_decimals),
             None
@@ -438,11 +438,11 @@ mod test {
             None
         );
 
-        // TokenAccount owned by spl_token_2022::id() works
+        // TokenAccount owned by safe_token_2022::id() works
         assert_eq!(
             collect_token_balance_from_account(
                 &bank,
-                &spl_token_account_pubkey,
+                &safe_token_account_pubkey,
                 &mut mint_decimals
             ),
             Some(TokenBalanceData {
@@ -454,17 +454,17 @@ mod test {
                     amount: "42".to_string(),
                     ui_amount_string: "0.42".to_string(),
                 },
-                program_id: spl_token_2022::id().to_string(),
+                program_id: safe_token_2022::id().to_string(),
             })
         );
 
-        // TokenAccount is not owned by known spl-token program_id
+        // TokenAccount is not owned by known safe-token program_id
         assert_eq!(
             collect_token_balance_from_account(&bank, &other_account_pubkey, &mut mint_decimals),
             None
         );
 
-        // TokenAccount's mint is not owned by known spl-token program_id
+        // TokenAccount's mint is not owned by known safe-token program_id
         assert_eq!(
             collect_token_balance_from_account(
                 &bank,

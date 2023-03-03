@@ -1,7 +1,7 @@
 use {
     itertools::Itertools,
     lru::LruCache,
-    solana_sdk::pubkey::Pubkey,
+    safecoin_sdk::pubkey::Pubkey,
     std::{cmp::Reverse, collections::HashMap},
 };
 
@@ -101,7 +101,7 @@ impl ReceivedCacheEntry {
         debug_assert!((0.0..=1.0).contains(&stake_threshold));
         debug_assert!(self.num_upserts >= ReceivedCache::MIN_NUM_UPSERTS);
         // Enforce a minimum aggregate ingress stake; see:
-        // https://github.com/solana-labs/solana/issues/3214
+        // https://github.com/fair-exchange/safecoin/issues/3214
         let min_ingress_stake = {
             let stake = stakes.get(pubkey).min(stakes.get(origin));
             (stake.copied().unwrap_or_default() as f64 * stake_threshold) as u64

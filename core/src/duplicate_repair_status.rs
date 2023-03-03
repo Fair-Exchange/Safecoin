@@ -1,6 +1,6 @@
 use {
     solana_ledger::blockstore::Blockstore,
-    solana_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey, timing::timestamp},
+    safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey, timing::timestamp},
     std::{collections::HashMap, net::SocketAddr},
 };
 

@@ -7,12 +7,12 @@ use {
     },
     lazy_static::lazy_static,
     log::*,
-    solana_connection_cache::{
+    safecoin_connection_cache::{
         client_connection::{ClientConnection, ClientStats},
         connection_cache_stats::ConnectionCacheStats,
         nonblocking::client_connection::ClientConnection as NonblockingClientConnection,
     },
-    solana_sdk::transport::{Result as TransportResult, TransportError},
+    safecoin_sdk::transport::{Result as TransportResult, TransportError},
     std::{
         net::SocketAddr,
         sync::{atomic::Ordering, Arc, Condvar, Mutex, MutexGuard},

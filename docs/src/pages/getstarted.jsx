@@ -9,17 +9,17 @@ function GetStartedPage() {
     <CardLayout
       sidebarKey="developerSidebar"
       title="Developer Quick Start Guides"
-      description="Solana Documentation"
+      description="Safecoin Documentation"
       path="/getstarted"
     >
       <section className={styles.features}>
         <div className="container">
           <section>
-            <h1>Get started with Solana development</h1>
+            <h1>Get started with Safecoin development</h1>
 
             <div className="container__spacer">
               <p>
-                Build and deploy your first on chain Solana program directly in
+                Build and deploy your first on chain Safecoin program directly in
                 your browser.
               </p>
 
@@ -39,7 +39,7 @@ function GetStartedPage() {
                 }}
                 body={{
                   label:
-                    "Write and deploy your first Solana program directly in your browser. No install needed.",
+                    "Write and deploy your first Safecoin program directly in your browser. No install needed.",
                   translateId: "getstarted-hello-body",
                 }}
               />
@@ -65,7 +65,7 @@ function GetStartedPage() {
                 }}
                 body={{
                   label:
-                    "Build and deploy an on chain Solana program with the Rust language.",
+                    "Build and deploy an on chain Safecoin program with the Rust language.",
                   translateId: "getstarted-rust-body",
                 }}
               />
@@ -84,7 +84,7 @@ function GetStartedPage() {
                   translateId: "getstarted-anchor",
                 }}
                 body={{
-                  label: "Rust based framework for writing Solana programs.",
+                  label: "Rust based framework for writing Safecoin programs.",
                   translateId: "start-building",
                 }}
               />
@@ -97,7 +97,7 @@ function GetStartedPage() {
                   translateId: "getstarted-seahorse",
                 }}
                 body={{
-                  label: "Write Anchor-compatible Solana programs in Python.",
+                  label: "Write Anchor-compatible Safecoin programs in Python.",
                   translateId: "learn-hello-world",
                 }}
               />
@@ -106,12 +106,12 @@ function GetStartedPage() {
                 externalIcon={true}
                 to="https://beta.solpg.io/"
                 header={{
-                  label: "Solana Playground",
+                  label: "Safecoin Playground",
                   translateId: "developer-examples",
                 }}
                 body={{
                   label:
-                    "Quickly develop, deploy and test Solana programs from the browser.",
+                    "Quickly develop, deploy and test Safecoin programs from the browser.",
                   translateId: "learn-by-example",
                 }}
               />

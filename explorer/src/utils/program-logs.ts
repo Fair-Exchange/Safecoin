@@ -1,4 +1,4 @@
-import { TransactionError } from "@solana/web3.js";
+import { TransactionError } from "@safecoin/web3.js";
 import { Cluster } from "providers/cluster";
 import { getProgramName } from "utils/tx";
 import { getTransactionInstructionError } from "utils/program-err";

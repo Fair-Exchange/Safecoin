@@ -1,16 +1,16 @@
 #![allow(clippy::integer_arithmetic)]
 use {
-    solana_cli::{
+    safecoin_cli::{
         check_balance,
         cli::{process_command, request_and_confirm_airdrop, CliCommand, CliConfig},
         spend_utils::SpendAmount,
         test_utils::check_ready,
     },
-    solana_cli_output::{parse_sign_only_reply_string, OutputFormat},
-    solana_faucet::faucet::run_local_faucet,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_nonce_utils::blockhash_query::{self, BlockhashQuery},
-    solana_sdk::{
+    safecoin_cli_output::{parse_sign_only_reply_string, OutputFormat},
+    safecoin_faucet::faucet::run_local_faucet,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_nonce_utils::blockhash_query::{self, BlockhashQuery},
+    safecoin_sdk::{
         commitment_config::CommitmentConfig,
         hash::Hash,
         native_token::sol_to_lamports,
@@ -19,7 +19,7 @@ use {
         system_program,
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_test_validator::TestValidator,
+    safecoin_test_validator::TestValidator,
 };
 
 #[test]
@@ -164,7 +164,7 @@ fn full_battery_tests(
     assert_ne!(first_nonce, third_nonce);
 
     // Withdraw from nonce account
-    let payee_pubkey = solana_sdk::pubkey::new_rand();
+    let payee_pubkey = safecoin_sdk::pubkey::new_rand();
     config_payer.signers = authorized_signers;
     config_payer.command = CliCommand::WithdrawFromNonceAccount {
         nonce_account,
@@ -323,12 +323,12 @@ fn test_create_account_with_seed() {
     check_balance!(0, &rpc_client, &to_address);
 
     // Fetch nonce hash
-    let nonce_hash = solana_rpc_client_nonce_utils::get_account_with_commitment(
+    let nonce_hash = safecoin_rpc_client_nonce_utils::get_account_with_commitment(
         &rpc_client,
         &nonce_address,
         CommitmentConfig::processed(),
     )
-    .and_then(|ref a| solana_rpc_client_nonce_utils::data_from_account(a))
+    .and_then(|ref a| safecoin_rpc_client_nonce_utils::data_from_account(a))
     .unwrap()
     .blockhash();
 

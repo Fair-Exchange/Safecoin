@@ -1,5 +1,5 @@
 use {
-    solana_sdk::{
+    safecoin_sdk::{
         transaction::TransactionError, transaction_context::TransactionReturnData,
         transport::TransportError,
     },

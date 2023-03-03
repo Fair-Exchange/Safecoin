@@ -6,8 +6,8 @@ use {
     console::style,
     log::*,
     rand::{seq::SliceRandom, thread_rng},
-    solana_clap_utils::input_parsers::{keypair_of, keypairs_of, pubkey_of, value_of},
-    solana_core::{
+    safecoin_clap_utils::input_parsers::{keypair_of, keypairs_of, pubkey_of, value_of},
+    safecoin_core::{
         banking_trace::DISABLED_BAKING_TRACE_DIR,
         ledger_cleanup_service::{DEFAULT_MAX_LEDGER_SHREDS, DEFAULT_MIN_MAX_LEDGER_SHREDS},
         system_monitor_service::SystemMonitorService,
@@ -15,18 +15,18 @@ use {
         tpu::DEFAULT_TPU_COALESCE_MS,
         validator::{is_snapshot_config_valid, Validator, ValidatorConfig, ValidatorStartProgress},
     },
-    solana_gossip::{cluster_info::Node, legacy_contact_info::LegacyContactInfo as ContactInfo},
+    safecoin_gossip::{cluster_info::Node, legacy_contact_info::LegacyContactInfo as ContactInfo},
     solana_ledger::blockstore_options::{
         BlockstoreCompressionType, BlockstoreRecoveryMode, LedgerColumnOptions, ShredStorageType,
     },
     solana_perf::recycler::enable_recycler_warming,
-    solana_poh::poh_service,
-    solana_rpc::{
+    safecoin_poh::poh_service,
+    safecoin_rpc::{
         rpc::{JsonRpcConfig, RpcBigtableConfig},
         rpc_pubsub_service::PubSubConfig,
     },
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::config::RpcLeaderScheduleConfig,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::config::RpcLeaderScheduleConfig,
     solana_runtime::{
         accounts_db::{AccountShrinkThreshold, AccountsDb, AccountsDbConfig, FillerAccountsConfig},
         accounts_index::{
@@ -39,17 +39,17 @@ use {
             self, create_accounts_run_and_snapshot_dirs, ArchiveFormat, SnapshotVersion,
         },
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, DEFAULT_S_PER_SLOT},
         commitment_config::CommitmentConfig,
         hash::Hash,
         pubkey::Pubkey,
         signature::{read_keypair, Keypair, Signer},
     },
-    solana_send_transaction_service::send_transaction_service::{self},
+    safecoin_send_transaction_service::send_transaction_service::{self},
     solana_streamer::socket::SocketAddrSpace,
-    solana_tpu_client::tpu_client::DEFAULT_TPU_ENABLE_UDP,
-    solana_validator::{
+    safecoin_tpu_client::tpu_client::DEFAULT_TPU_ENABLE_UDP,
+    safecoin_validator::{
         admin_rpc_service,
         admin_rpc_service::{load_staked_nodes_overrides, StakedNodesOverrides},
         bootstrap,
@@ -769,7 +769,7 @@ pub fn main() {
         let logfile = matches
             .value_of("logfile")
             .map(|s| s.into())
-            .unwrap_or_else(|| format!("solana-validator-{}.log", identity_keypair.pubkey()));
+            .unwrap_or_else(|| format!("safecoin-validator-{}.log", identity_keypair.pubkey()));
 
         if logfile == "-" {
             None
@@ -790,7 +790,7 @@ pub fn main() {
         enable_recycler_warming();
     }
 
-    solana_core::validator::report_target_features();
+    safecoin_core::validator::report_target_features();
 
     let authorized_voter_keypairs = keypairs_of(&matches, "authorized_voter_keypairs")
         .map(|keypairs| keypairs.into_iter().map(Arc::new).collect())
@@ -953,7 +953,7 @@ pub fn main() {
         .ok()
         .or_else(|| get_cluster_shred_version(&entrypoint_addrs));
 
-    let tower_storage: Arc<dyn solana_core::tower_storage::TowerStorage> =
+    let tower_storage: Arc<dyn safecoin_core::tower_storage::TowerStorage> =
         match value_t_or_exit!(matches, "tower_storage", String).as_str() {
             "file" => {
                 let tower_path = value_t!(matches, "tower", PathBuf)
@@ -1155,7 +1155,7 @@ pub fn main() {
                 SocketAddr::new(rpc_bind_address, rpc_port + 1),
                 // If additional ports are added, +2 needs to be skipped to avoid a conflict with
                 // the websocket port (which is +2) in web3.js This odd port shifting is tracked at
-                // https://github.com/solana-labs/solana/issues/12250
+                // https://github.com/fair-exchange/safecoin/issues/12250
             )
         }),
         pubsub_config: PubSubConfig {
@@ -1630,7 +1630,7 @@ pub fn main() {
 
     solana_metrics::set_host_id(identity_keypair.pubkey().to_string());
     solana_metrics::set_panic_hook("validator", Some(String::from(solana_version)));
-    solana_entry::entry::init_poh();
+    safecoin_entry::entry::init_poh();
     snapshot_utils::remove_tmp_snapshot_archives(&full_snapshot_archives_dir);
     snapshot_utils::remove_tmp_snapshot_archives(&incremental_snapshot_archives_dir);
 
@@ -1710,8 +1710,8 @@ fn process_account_indexes(matches: &ArgMatches) -> AccountSecondaryIndexes {
         .unwrap_or_default()
         .map(|value| match value {
             "program-id" => AccountIndex::ProgramId,
-            "spl-token-mint" => AccountIndex::SplTokenMint,
-            "spl-token-owner" => AccountIndex::SplTokenOwner,
+            "safe-token-mint" => AccountIndex::SafeTokenMint,
+            "safe-token-owner" => AccountIndex::SafeTokenOwner,
             _ => unreachable!(),
         })
         .collect();

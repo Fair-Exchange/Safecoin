@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 import { TableCardBody } from "components/common/TableCardBody";
 import { Account, useFetchAccountInfo } from "providers/accounts";

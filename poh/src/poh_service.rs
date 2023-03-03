@@ -4,9 +4,9 @@ use {
     crate::poh_recorder::{PohRecorder, Record},
     crossbeam_channel::Receiver,
     log::*,
-    solana_entry::poh::Poh,
-    solana_measure::{measure, measure::Measure},
-    solana_sdk::poh_config::PohConfig,
+    safecoin_entry::poh::Poh,
+    safecoin_measure::{measure, measure::Measure},
+    safecoin_sdk::poh_config::PohConfig,
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -390,10 +390,10 @@ mod tests {
             get_tmp_ledger_path,
             leader_schedule_cache::LeaderScheduleCache,
         },
-        solana_measure::measure::Measure,
+        safecoin_measure::measure::Measure,
         solana_perf::test_tx::test_tx,
         solana_runtime::bank::Bank,
-        solana_sdk::{
+        safecoin_sdk::{
             clock, hash::hash, pubkey::Pubkey, timing, transaction::VersionedTransaction,
         },
         std::{thread::sleep, time::Duration},

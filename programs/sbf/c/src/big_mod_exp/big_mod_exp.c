@@ -2,7 +2,7 @@
  * @brief Big integer modular exponentiation Syscall test
  */
 
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 extern uint64_t entrypoint(const uint8_t *input) {
 

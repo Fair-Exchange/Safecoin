@@ -4,7 +4,7 @@ sidebar_position: 1
 sidebar_label: Overview
 ---
 
-These architectural proposals have been accepted and implemented by the Solana maintainers. Any designs that may be subject to future change are noted in the specific proposal page.
+These architectural proposals have been accepted and implemented by the Safecoin maintainers. Any designs that may be subject to future change are noted in the specific proposal page.
 
 ## Not Yet Implemented
 

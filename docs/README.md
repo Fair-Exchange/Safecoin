@@ -1,11 +1,11 @@
-# Solana Docs Readme
+# Safecoin Docs Readme
 
-Solana's Docs are built using [Docusaurus v2](https://v2.docusaurus.io/) with `npm`.
+Safecoin's Docs are built using [Docusaurus v2](https://v2.docusaurus.io/) with `npm`.
 Static content delivery is handled using `vercel`.
 
 ## Local Development
 
-To set up the Solana Docs site locally:
+To set up the Safecoin Docs site locally:
 
 - install dependencies using `npm`
 - build locally via `./build.sh`
@@ -30,11 +30,11 @@ The build script generates static content into the `build` directory and can be 
 ./build.sh
 ```
 
-Running this build script requires **Docker**, and will auto fetch the [solanalabs/rust](https://hub.docker.com/r/solanalabs/rust) image from Docker hub to compile the desired version of the [Solana CLI](https://docs.solana.com/cli) from source.
+Running this build script requires **Docker**, and will auto fetch the [solanalabs/rust](https://hub.docker.com/r/solanalabs/rust) image from Docker hub to compile the desired version of the [Safecoin CLI](https://docs.solana.com/cli) from source.
 
 This build script will also:
 
-- generate the `cli/usage.md` document from the output of each of the Solana CLI commands and sub-commands
+- generate the `cli/usage.md` document from the output of each of the Safecoin CLI commands and sub-commands
 - convert each of the `art/*.bob` files into SVG images used throughout the docs
 - generate the language [Translations](#translations)
 

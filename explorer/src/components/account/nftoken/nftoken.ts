@@ -1,6 +1,6 @@
 import axios from "axios";
 import pLimit from "p-limit";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@safecoin/web3.js";
 import bs58 from "bs58";
 import { NftokenTypes } from "./nftoken-types";
 

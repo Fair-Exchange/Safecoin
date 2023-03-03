@@ -6,8 +6,8 @@
 
 use {
     crossbeam_channel::{Receiver, Sender},
-    solana_gossip::cluster_info::{ClusterInfo, MAX_SNAPSHOT_HASHES},
-    solana_measure::{measure, measure::Measure},
+    safecoin_gossip::cluster_info::{ClusterInfo, MAX_SNAPSHOT_HASHES},
+    safecoin_measure::{measure, measure::Measure},
     solana_runtime::{
         accounts_hash::{AccountsHash, CalcAccountsHashConfig, HashStats},
         epoch_accounts_hash::EpochAccountsHash,
@@ -18,7 +18,7 @@ use {
         },
         sorted_storages::SortedStorages,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, DEFAULT_MS_PER_SLOT},
         hash::Hash,
         pubkey::Pubkey,
@@ -328,7 +328,7 @@ impl AccountsHashVerifier {
     fn generate_fault_hash(original_hash: &Hash) -> Hash {
         use {
             rand::{thread_rng, Rng},
-            solana_sdk::hash::extend_and_hash,
+            safecoin_sdk::hash::extend_and_hash,
         };
 
         let rand = thread_rng().gen_range(0, 10);
@@ -464,8 +464,8 @@ mod tests {
     use {
         super::*,
         rand::seq::SliceRandom,
-        solana_gossip::{cluster_info::make_accounts_hashes_message, contact_info::ContactInfo},
-        solana_sdk::{
+        safecoin_gossip::{cluster_info::make_accounts_hashes_message, contact_info::ContactInfo},
+        safecoin_sdk::{
             hash::hash,
             signature::{Keypair, Signer},
             timing::timestamp,

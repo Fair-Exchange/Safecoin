@@ -2,7 +2,7 @@
 title: Turbine Block Propagation
 ---
 
-A Solana cluster uses a multi-layer block propagation mechanism called _Turbine_ to broadcast transaction shreds to all nodes with minimal amount of duplicate messages. The cluster divides itself into small collections of nodes, called _neighborhoods_. Each node is responsible for propagating any data it receives on to a small set of nodes in downstream neighborhoods and possibly sharing data with the other nodes in its neighborhood. This way each node only has to communicate with a small number of nodes.
+A Safecoin cluster uses a multi-layer block propagation mechanism called _Turbine_ to broadcast transaction shreds to all nodes with minimal amount of duplicate messages. The cluster divides itself into small collections of nodes, called _neighborhoods_. Each node is responsible for propagating any data it receives on to a small set of nodes in downstream neighborhoods and possibly sharing data with the other nodes in its neighborhood. This way each node only has to communicate with a small number of nodes.
 
 ## Neighborhood Assignment - Weighted Selection
 

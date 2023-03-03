@@ -2,10 +2,10 @@ use {
     super::*,
     crate::cluster_nodes::ClusterNodesCache,
     itertools::Itertools,
-    solana_entry::entry::Entry,
-    solana_gossip::legacy_contact_info::LegacyContactInfo as ContactInfo,
+    safecoin_entry::entry::Entry,
+    safecoin_gossip::legacy_contact_info::LegacyContactInfo as ContactInfo,
     solana_ledger::shred::{ProcessShredsStats, ReedSolomonCache, Shredder},
-    solana_sdk::{
+    safecoin_sdk::{
         hash::Hash,
         signature::{Keypair, Signature, Signer},
         system_transaction,

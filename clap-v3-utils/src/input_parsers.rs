@@ -5,8 +5,8 @@ use {
     },
     chrono::DateTime,
     clap::ArgMatches,
-    solana_remote_wallet::remote_wallet::RemoteWalletManager,
-    solana_sdk::{
+    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
+    safecoin_sdk::{
         clock::UnixTimestamp,
         commitment_config::CommitmentConfig,
         genesis_config::ClusterType,
@@ -199,7 +199,7 @@ mod tests {
     use {
         super::*,
         clap::{Arg, Command},
-        solana_sdk::signature::write_keypair_file,
+        safecoin_sdk::signature::write_keypair_file,
         std::fs,
     };
 
@@ -229,8 +229,8 @@ mod tests {
         assert_eq!(values_of(&matches, "multiple"), Some(vec![50, 39]));
         assert_eq!(values_of::<u64>(&matches, "single"), None);
 
-        let pubkey0 = solana_sdk::pubkey::new_rand();
-        let pubkey1 = solana_sdk::pubkey::new_rand();
+        let pubkey0 = safecoin_sdk::pubkey::new_rand();
+        let pubkey1 = safecoin_sdk::pubkey::new_rand();
         let matches = app().get_matches_from(vec![
             "test",
             "--multiple",
@@ -250,7 +250,7 @@ mod tests {
         assert_eq!(value_of(&matches, "single"), Some(50));
         assert_eq!(value_of::<u64>(&matches, "multiple"), None);
 
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let matches = app().get_matches_from(vec!["test", "--single", &pubkey.to_string()]);
         assert_eq!(value_of(&matches, "single"), Some(pubkey));
     }
@@ -316,8 +316,8 @@ mod tests {
 
     #[test]
     fn test_pubkeys_sigs_of() {
-        let key1 = solana_sdk::pubkey::new_rand();
-        let key2 = solana_sdk::pubkey::new_rand();
+        let key1 = safecoin_sdk::pubkey::new_rand();
+        let key2 = safecoin_sdk::pubkey::new_rand();
         let sig1 = Keypair::new().sign_message(&[0u8]);
         let sig2 = Keypair::new().sign_message(&[1u8]);
         let signer1 = format!("{key1}={sig1}");
@@ -336,7 +336,7 @@ mod tests {
         assert_eq!(lamports_of_sol(&matches, "single"), Some(50_000_000_000));
         assert_eq!(lamports_of_sol(&matches, "multiple"), None);
         let matches = app().get_matches_from(vec!["test", "--single", "1.5"]);
-        assert_eq!(lamports_of_sol(&matches, "single"), Some(1_500_000_000));
+        assert_eq!(lamports_of_sol(&matches, "single"), Some(1_33_370_166));
         assert_eq!(lamports_of_sol(&matches, "multiple"), None);
         let matches = app().get_matches_from(vec!["test", "--single", "0.03"]);
         assert_eq!(lamports_of_sol(&matches, "single"), Some(30_000_000));

@@ -1,27 +1,27 @@
 use {
     crate::{parse_instruction::parse_memo_data, VersionedTransactionWithStatusMeta},
-    solana_sdk::{
+    safecoin_sdk::{
         instruction::CompiledInstruction,
         message::{AccountKeys, Message, SanitizedMessage},
         pubkey::Pubkey,
     },
 };
 
-// A helper function to convert spl_memo::v1::id() as spl_sdk::pubkey::Pubkey to
-// solana_sdk::pubkey::Pubkey
-pub fn spl_memo_id_v1() -> Pubkey {
+// A helper function to convert safe_memo::v1::id() as spl_sdk::pubkey::Pubkey to
+// safecoin_sdk::pubkey::Pubkey
+pub fn safe_memo_id_v1() -> Pubkey {
     *MEMO_PROGRAM_ID_V1
 }
 
-// A helper function to convert spl_memo::id() as spl_sdk::pubkey::Pubkey to
-// solana_sdk::pubkey::Pubkey
-pub fn spl_memo_id_v3() -> Pubkey {
+// A helper function to convert safe_memo::id() as spl_sdk::pubkey::Pubkey to
+// safecoin_sdk::pubkey::Pubkey
+pub fn safe_memo_id_v3() -> Pubkey {
     *MEMO_PROGRAM_ID_V3
 }
 
 lazy_static! {
-    static ref MEMO_PROGRAM_ID_V1: Pubkey = Pubkey::new_from_array(spl_memo::v1::id().to_bytes());
-    static ref MEMO_PROGRAM_ID_V3: Pubkey = Pubkey::new_from_array(spl_memo::id().to_bytes());
+    static ref MEMO_PROGRAM_ID_V1: Pubkey = Pubkey::new_from_array(safe_memo::v1::id().to_bytes());
+    static ref MEMO_PROGRAM_ID_V3: Pubkey = Pubkey::new_from_array(safe_memo::id().to_bytes());
 }
 
 pub fn extract_and_fmt_memos<T: ExtractMemos>(message: &T) -> Option<String> {
@@ -134,9 +134,9 @@ mod test {
         ];
         let static_keys = vec![
             fee_payer,
-            spl_memo_id_v1(),
+            safe_memo_id_v1(),
             another_program_id,
-            spl_memo_id_v3(),
+            safe_memo_id_v3(),
         ];
         let account_keys = AccountKeys::new(&static_keys, None);
 

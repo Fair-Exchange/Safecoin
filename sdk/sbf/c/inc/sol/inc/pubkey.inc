@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana Public key
+ * @brief Safecoin Public key
  */
 
 #include <sol/types.h>
@@ -19,14 +19,14 @@ extern "C" {
  */
 typedef struct {
   uint8_t x[SIZE_PUBKEY];
-} SolPubkey;
+} SafePubkey;
 
 /**
  * Prints the hexadecimal representation of a public key
  *
  * @param key The public key to print
  */
-@SYSCALL void sol_log_pubkey(const SolPubkey *);
+@SYSCALL void sol_log_pubkey(const SafePubkey *);
 
 /**
  * Compares two public keys
@@ -35,7 +35,7 @@ typedef struct {
  * @param two Second public key
  * @return true if the same
  */
-static bool SolPubkey_same(const SolPubkey *one, const SolPubkey *two) {
+static bool SafePubkey_same(const SafePubkey *one, const SafePubkey *two) {
   for (int i = 0; i < sizeof(*one); i++) {
     if (one->x[i] != two->x[i]) {
       return false;
@@ -50,16 +50,16 @@ static bool SolPubkey_same(const SolPubkey *one, const SolPubkey *two) {
 typedef struct {
   const uint8_t *addr; /** Seed bytes */
   uint64_t len; /** Length of the seed bytes */
-} SolSignerSeed;
+} SafeSignerSeed;
 
 /**
  * Seeds used by a signer to create a program address or passed to
  * sol_invoke_signed
  */
 typedef struct {
-  const SolSignerSeed *addr; /** An array of a signer's seeds */
+  const SafeSignerSeed *addr; /** An array of a signer's seeds */
   uint64_t len; /** Number of seeds */
-} SolSignerSeeds;
+} SafeSignerSeeds;
 
 /**
  * Create a program address
@@ -69,7 +69,7 @@ typedef struct {
  * @param program_id Program id of the signer
  * @param program_address Program address created, filled on return
  */
-@SYSCALL uint64_t sol_create_program_address(const SolSignerSeed *, int, const SolPubkey *, SolPubkey *);
+@SYSCALL uint64_t sol_create_program_address(const SafeSignerSeed *, int, const SafePubkey *, SafePubkey *);
 
 /**
  * Try to find a program address and return corresponding bump seed
@@ -80,16 +80,16 @@ typedef struct {
  * @param program_address Program address created, filled on return
  * @param bump_seed Bump seed required to create a valid program address
  */
-@SYSCALL uint64_t sol_try_find_program_address(const SolSignerSeed *, int, const SolPubkey *, SolPubkey *, uint8_t *);
+@SYSCALL uint64_t sol_try_find_program_address(const SafeSignerSeed *, int, const SafePubkey *, SafePubkey *, uint8_t *);
 
-#ifdef SOL_TEST
+#ifdef SAFE_TEST
 /**
  * Stub functions when building tests
  */
 #include <stdio.h>
 
 void sol_log_pubkey(
-  const SolPubkey *pubkey
+  const SafePubkey *pubkey
 ) {
   printf("Program log: ");
   for (int i = 0; i < SIZE_PUBKEY; i++) {

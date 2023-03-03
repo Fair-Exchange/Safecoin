@@ -5,13 +5,13 @@ extern crate test;
 use {
     rand::{thread_rng, Rng},
     rayon::ThreadPoolBuilder,
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::MAX_BLOOM_SIZE,
         crds::{Crds, GossipRoute},
         crds_gossip_pull::{CrdsFilter, CrdsGossipPull},
         crds_value::CrdsValue,
     },
-    solana_sdk::hash,
+    safecoin_sdk::hash,
     std::sync::RwLock,
     test::Bencher,
 };

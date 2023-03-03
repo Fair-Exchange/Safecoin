@@ -3,12 +3,12 @@ mod tests {
     use {
         crossbeam_channel::{unbounded, Receiver},
         log::*,
-        solana_connection_cache::connection_cache_stats::ConnectionCacheStats,
+        safecoin_connection_cache::connection_cache_stats::ConnectionCacheStats,
         solana_perf::packet::PacketBatch,
-        solana_quic_client::nonblocking::quic_client::{
+        safecoin_quic_client::nonblocking::quic_client::{
             QuicClientCertificate, QuicLazyInitializedEndpoint,
         },
-        solana_sdk::{packet::PACKET_DATA_SIZE, signature::Keypair},
+        safecoin_sdk::{packet::PACKET_DATA_SIZE, signature::Keypair},
         solana_streamer::{
             nonblocking::quic::DEFAULT_WAIT_FOR_CHUNK_TIMEOUT_MS, quic::StreamStats,
             streamer::StakedNodes, tls_certificates::new_self_signed_tls_certificate,
@@ -67,8 +67,8 @@ mod tests {
     #[test]
     fn test_quic_client_multiple_writes() {
         use {
-            solana_connection_cache::client_connection::ClientConnection,
-            solana_quic_client::quic_client::QuicClientConnection,
+            safecoin_connection_cache::client_connection::ClientConnection,
+            safecoin_quic_client::quic_client::QuicClientConnection,
         };
         solana_logger::setup();
         let (sender, receiver) = unbounded();
@@ -114,8 +114,8 @@ mod tests {
     #[tokio::test]
     async fn test_nonblocking_quic_client_multiple_writes() {
         use {
-            solana_connection_cache::nonblocking::client_connection::ClientConnection,
-            solana_quic_client::nonblocking::quic_client::QuicClientConnection,
+            safecoin_connection_cache::nonblocking::client_connection::ClientConnection,
+            safecoin_quic_client::nonblocking::quic_client::QuicClientConnection,
         };
         solana_logger::setup();
         let (sender, receiver) = unbounded();
@@ -167,8 +167,8 @@ mod tests {
         /// In this we demonstrate that the request sender and the response receiver use the
         /// same quic Endpoint, and the same UDP socket.
         use {
-            solana_connection_cache::client_connection::ClientConnection,
-            solana_quic_client::quic_client::QuicClientConnection,
+            safecoin_connection_cache::client_connection::ClientConnection,
+            safecoin_quic_client::quic_client::QuicClientConnection,
         };
         solana_logger::setup();
 

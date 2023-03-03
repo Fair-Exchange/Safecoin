@@ -1,7 +1,7 @@
 use {
     crate::update_manifest::UpdateManifest,
     serde::{Deserialize, Serialize},
-    solana_sdk::pubkey::Pubkey,
+    safecoin_sdk::pubkey::Pubkey,
     std::{
         fs::{create_dir_all, File},
         io::{self, Write},
@@ -142,7 +142,7 @@ mod test {
     #[test]
     fn test_save() {
         let root_dir = env::var("CARGO_MANIFEST_DIR").expect("$CARGO_MANIFEST_DIR");
-        let json_rpc_url = "https://api.mainnet-beta.solana.com";
+        let json_rpc_url = "https://api.mainnet-beta.safecoin.org";
         let pubkey = Pubkey::default();
         let config_name = "config.yaml";
         let config_path = format!("{root_dir}/{config_name}");
@@ -158,7 +158,7 @@ mod test {
             read_to_string(&config_path).unwrap(),
             format!(
                 "---
-json_rpc_url: https://api.mainnet-beta.solana.com
+json_rpc_url: https://api.mainnet-beta.safecoin.org
 update_manifest_pubkey:
 - 0
 - 0

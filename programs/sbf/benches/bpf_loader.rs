@@ -10,8 +10,8 @@ use {
     solana_bpf_loader_program::{
         create_vm, serialization::serialize_parameters, syscalls::create_loader,
     },
-    solana_measure::measure::Measure,
-    solana_program_runtime::{
+    safecoin_measure::measure::Measure,
+    safecoin_program_runtime::{
         compute_budget::ComputeBudget,
         invoke_context::{with_mock_invoke_context, InvokeContext},
     },
@@ -28,7 +28,7 @@ use {
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
         loader_utils::{load_program, load_program_from_file},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         bpf_loader,
         client::SyncClient,
         entrypoint::SUCCESS,

@@ -1,6 +1,6 @@
 use {
-    solana_sdk::{instruction::Instruction, pubkey::Pubkey},
-    spl_memo::id,
+    safecoin_sdk::{instruction::Instruction, pubkey::Pubkey},
+    safe_memo::id,
 };
 
 pub trait WithMemo {

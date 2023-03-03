@@ -10,8 +10,8 @@ use {
     },
     rand::{thread_rng, Rng},
     solana_bucket_map::bucket_api::BucketApi,
-    solana_measure::measure::Measure,
-    solana_sdk::{clock::Slot, pubkey::Pubkey},
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::{clock::Slot, pubkey::Pubkey},
     std::{
         collections::{hash_map::Entry, HashMap},
         fmt::Debug,
@@ -1878,8 +1878,8 @@ mod tests {
 
     #[test]
     fn test_remove_if_slot_list_empty_entry() {
-        let key = solana_sdk::pubkey::new_rand();
-        let unknown_key = solana_sdk::pubkey::new_rand();
+        let key = safecoin_sdk::pubkey::new_rand();
+        let unknown_key = safecoin_sdk::pubkey::new_rand();
 
         let test = new_for_test::<u64>();
 

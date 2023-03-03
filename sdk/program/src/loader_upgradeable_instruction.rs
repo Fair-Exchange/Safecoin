@@ -49,8 +49,8 @@ pub enum UpgradeableLoaderInstruction {
     /// follows:
     ///
     /// ```
-    /// # use solana_program::pubkey::Pubkey;
-    /// # use solana_program::bpf_loader_upgradeable;
+    /// # use safecoin_program::pubkey::Pubkey;
+    /// # use safecoin_program::bpf_loader_upgradeable;
     /// # let program_address = &[];
     /// let (program_data_address, _) = Pubkey::find_program_address(
     ///      &[program_address],
@@ -74,7 +74,7 @@ pub enum UpgradeableLoaderInstruction {
     ///      authority
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
-    ///   6. `[]` System program (`solana_sdk::system_program::id()`).
+    ///   6. `[]` System program (`safecoin_sdk::system_program::id()`).
     ///   7. `[signer]` The program's authority
     DeployWithMaxDataLen {
         /// Maximum length that the program can be upgraded to.
@@ -139,7 +139,7 @@ pub enum UpgradeableLoaderInstruction {
     /// # Account references
     ///   0. `[writable]` The ProgramData account.
     ///   1. `[writable]` The ProgramData account's associated Program account.
-    ///   2. `[]` System program (`solana_sdk::system_program::id()`), optional, used to transfer
+    ///   2. `[]` System program (`safecoin_sdk::system_program::id()`), optional, used to transfer
     ///      lamports from the payer to the ProgramData account.
     ///   3. `[signer]` The payer account, optional, that will pay necessary rent exemption costs
     ///      for the increased storage size.

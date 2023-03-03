@@ -36,8 +36,8 @@ use {
     log::*,
     rayon::prelude::*,
     regex::Regex,
-    solana_measure::{measure, measure::Measure},
-    solana_sdk::{
+    safecoin_measure::{measure, measure::Measure},
+    safecoin_sdk::{
         clock::Slot,
         genesis_config::GenesisConfig,
         hash::Hash,
@@ -2453,7 +2453,7 @@ mod tests {
         crate::{accounts_db::ACCOUNTS_DB_CONFIG_FOR_TESTING, status_cache::Status},
         assert_matches::assert_matches,
         bincode::{deserialize_from, serialize_into},
-        solana_sdk::{
+        safecoin_sdk::{
             genesis_config::create_genesis_config,
             native_token::sol_to_lamports,
             signature::{Keypair, Signer},

@@ -1141,7 +1141,7 @@ describe('VersionedTransaction', () => {
             },
           ],
           programId: new PublicKey(
-            'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+            'MEMWKbqsjEB8o972BvDHExZFSauzGZKvB4xHDVPFowh',
           ),
         }),
       ],

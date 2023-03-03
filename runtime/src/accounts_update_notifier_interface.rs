@@ -1,6 +1,6 @@
 use {
     crate::append_vec::StoredAccountMeta,
-    solana_sdk::{account::AccountSharedData, clock::Slot, pubkey::Pubkey, signature::Signature},
+    safecoin_sdk::{account::AccountSharedData, clock::Slot, pubkey::Pubkey, signature::Signature},
     std::sync::{Arc, RwLock},
 };
 

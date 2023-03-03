@@ -10,7 +10,7 @@ import { InfoTooltip } from "components/common/InfoTooltip";
 import { clusterPath } from "utils/url";
 import { Link } from "react-router-dom";
 import { EditionInfo } from "providers/accounts/utils/getEditionInfo";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 
 export function MetaplexNFTHeader({
   nftData,

@@ -1,16 +1,16 @@
 [package]
-name = "solana-sbf-rust-noop"
+name = "safecoin-sbf-rust-noop"
 version = "1.15.3"
-description = "Solana SBF test program written in Rust"
-authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
-repository = "https://github.com/solana-labs/solana"
+description = "Safecoin SBF test program written in Rust"
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-sbf-rust-noop"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-sbf-rust-noop"
 edition = "2021"
 
 [dependencies]
-solana-program = { path = "../../../../sdk/program", version = "=1.15.3" }
+safecoin-program = { path = "../../../../sdk/program", version = "=1.15.3" }
 
 [lib]
 crate-type = ["cdylib"]

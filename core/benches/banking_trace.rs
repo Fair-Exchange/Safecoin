@@ -3,7 +3,7 @@
 extern crate test;
 
 use {
-    solana_core::banking_trace::{
+    safecoin_core::banking_trace::{
         for_test::{
             drop_and_clean_temp_dir_unless_suppressed, sample_packet_batch, terminate_tracer,
         },

@@ -1,6 +1,6 @@
 use {
     crate::prioritization_fee::{PrioritizationFeeDetails, PrioritizationFeeType},
-    solana_sdk::{
+    safecoin_sdk::{
         borsh::try_from_slice_unchecked,
         compute_budget::{self, ComputeBudgetInstruction},
         entrypoint::HEAP_LENGTH as MIN_HEAP_FRAME_BYTES,
@@ -15,7 +15,7 @@ pub const MAX_COMPUTE_UNIT_LIMIT: u32 = 1_400_000;
 const MAX_HEAP_FRAME_BYTES: u32 = 256 * 1024;
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-impl ::solana_frozen_abi::abi_example::AbiExample for ComputeBudget {
+impl ::safecoin_frozen_abi::abi_example::AbiExample for ComputeBudget {
     fn example() -> Self {
         // ComputeBudget is not Serialize so just rely on Default.
         ComputeBudget::default()
@@ -260,7 +260,7 @@ impl ComputeBudget {
 mod tests {
     use {
         super::*,
-        solana_sdk::{
+        safecoin_sdk::{
             hash::Hash,
             instruction::Instruction,
             message::Message,

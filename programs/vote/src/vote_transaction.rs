@@ -1,9 +1,9 @@
 use {
-    solana_program::vote::{
+    safecoin_program::vote::{
         self,
         state::{Vote, VoteStateUpdate},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         hash::Hash,
         signature::{Keypair, Signer},

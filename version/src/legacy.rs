@@ -1,7 +1,7 @@
 use {
     crate::compute_commit,
     serde_derive::{Deserialize, Serialize},
-    solana_sdk::sanitize::Sanitize,
+    safecoin_sdk::sanitize::Sanitize,
     std::{convert::TryInto, fmt},
 };
 
@@ -40,7 +40,7 @@ impl From<LegacyVersion1> for LegacyVersion2 {
 impl Default for LegacyVersion2 {
     fn default() -> Self {
         let feature_set = u32::from_le_bytes(
-            solana_sdk::feature_set::ID.as_ref()[..4]
+            safecoin_sdk::feature_set::ID.as_ref()[..4]
                 .try_into()
                 .unwrap(),
         );

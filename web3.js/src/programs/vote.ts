@@ -328,7 +328,7 @@ const VOTE_INSTRUCTION_LAYOUTS = Object.freeze<{
  * VoteAuthorize type
  */
 export type VoteAuthorizationType = {
-  /** The VoteAuthorize index (from solana-vote-program) */
+  /** The VoteAuthorize index (from safecoin-vote-program) */
   index: number;
 };
 
@@ -363,9 +363,9 @@ export class VoteProgram {
   /**
    * Max space of a Vote account
    *
-   * This is generated from the solana-vote-program VoteState struct as
+   * This is generated from the safecoin-vote-program VoteState struct as
    * `VoteState::size_of()`:
-   * https://docs.rs/solana-vote-program/1.9.5/solana_vote_program/vote_state/struct.VoteState.html#method.size_of
+   * https://docs.rs/safecoin-vote-program/1.9.5/solana_vote_program/vote_state/struct.VoteState.html#method.size_of
    */
   static space: number = 3731;
 

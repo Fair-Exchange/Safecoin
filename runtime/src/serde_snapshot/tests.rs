@@ -20,7 +20,7 @@ use {
     },
     bincode::serialize_into,
     rand::{thread_rng, Rng},
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount},
         clock::Slot,
         feature_set::{self, disable_fee_calculator},

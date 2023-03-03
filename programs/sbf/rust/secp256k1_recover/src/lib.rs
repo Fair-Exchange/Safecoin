@@ -1,7 +1,7 @@
 //! Secp256k1Recover Syscall test
 
-extern crate solana_program;
-use solana_program::{
+extern crate safecoin_program;
+use safecoin_program::{
     custom_heap_default, custom_panic_default, msg, secp256k1_recover::secp256k1_recover,
 };
 
@@ -36,7 +36,7 @@ fn test_secp256k1_recover() {
 fn test_secp256k1_recover_malleability() {
     let message = b"hello world";
     let message_hash = {
-        let mut hasher = solana_program::keccak::Hasher::default();
+        let mut hasher = safecoin_program::keccak::Hasher::default();
         hasher.hash(message);
         hasher.result()
     };

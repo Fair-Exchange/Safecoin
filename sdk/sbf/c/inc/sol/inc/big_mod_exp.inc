@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana big_mod_exp system call
+ * @brief Safecoin big_mod_exp system call
 **/
 
 #ifdef __cplusplus

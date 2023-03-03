@@ -6,7 +6,7 @@ import {
   PublicKey,
   SignatureResult,
   TransactionInstruction,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { enums, number, type, Infer, create } from "superstruct";
 import { BigIntFromString } from "validators/number";
 
@@ -15,7 +15,7 @@ export const OPEN_BOOK_PROGRAM_ID =
 
 const SERUM_PROGRAM_IDS = [
   "4ckmDgGdxQoPDLUkDT3vHgSAkzA3QRdNq5ywwY4sUSJn",
-  "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+  "SRMrEgnzRgGMQ8QzcL8cjWr5xpdVs1KQCQ58Jkkq1qx",
   OPEN_BOOK_PROGRAM_ID,
 ];
 

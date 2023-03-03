@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana bn128 elliptic curve addition, multiplication, and pairing
+ * @brief Safecoin bn128 elliptic curve addition, multiplication, and pairing
 **/
 
 #include <sol/types.h>

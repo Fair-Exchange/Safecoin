@@ -10,7 +10,7 @@ pub fn limited_deserialize<T>(instruction_data: &[u8]) -> Result<T, InstructionE
 where
     T: serde::de::DeserializeOwned,
 {
-    solana_program::program_utils::limited_deserialize(
+    safecoin_program::program_utils::limited_deserialize(
         instruction_data,
         crate::packet::PACKET_DATA_SIZE as u64,
     )

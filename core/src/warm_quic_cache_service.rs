@@ -3,9 +3,9 @@
 
 use {
     rand::{thread_rng, Rng},
-    solana_client::{connection_cache::ConnectionCache, tpu_connection::TpuConnection},
-    solana_gossip::cluster_info::ClusterInfo,
-    solana_poh::poh_recorder::PohRecorder,
+    safecoin_client::{connection_cache::ConnectionCache, tpu_connection::TpuConnection},
+    safecoin_gossip::cluster_info::ClusterInfo,
+    safecoin_poh::poh_recorder::PohRecorder,
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},

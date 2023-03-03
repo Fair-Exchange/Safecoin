@@ -3,7 +3,7 @@
 #![allow(non_snake_case)]
 use {
     crate::{hash::Hash, message::Message, signer::keypair::Keypair, transaction::Transaction},
-    solana_program::{
+    safecoin_program::{
         pubkey::Pubkey,
         wasm::{display_to_jsvalue, instructions::Instructions},
     },

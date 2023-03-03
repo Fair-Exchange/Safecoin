@@ -7,7 +7,7 @@ import {
   PublicKey,
   VOTE_PROGRAM_ID,
   VersionedBlockResponse,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { ErrorCard } from "components/common/ErrorCard";
 import { Signature } from "components/common/Signature";
 import { Address } from "components/common/Address";
@@ -15,7 +15,7 @@ import { pickClusterParams, useQuery } from "utils/url";
 import { useCluster } from "providers/cluster";
 import { displayAddress } from "utils/tx";
 import { parseProgramLogs } from "utils/program-logs";
-import { SolBalance } from "components/common/SolBalance";
+import { SafeBalance } from "components/common/SafeBalance";
 
 const PAGE_SIZE = 25;
 
@@ -293,7 +293,7 @@ export function BlockHistoryCard({ block }: { block: VersionedBlockResponse }) {
 
                     <td className="text-end">
                       {tx.meta !== null ? (
-                        <SolBalance lamports={tx.meta.fee} />
+                        <SafeBalance lamports={tx.meta.fee} />
                       ) : (
                         "Unknown"
                       )}

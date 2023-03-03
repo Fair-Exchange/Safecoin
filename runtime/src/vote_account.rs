@@ -2,7 +2,7 @@ use {
     itertools::Itertools,
     once_cell::sync::OnceCell,
     serde::ser::{Serialize, Serializer},
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount},
         instruction::InstructionError,
         pubkey::Pubkey,
@@ -323,7 +323,7 @@ mod tests {
         super::*,
         bincode::Options,
         rand::Rng,
-        solana_sdk::{pubkey::Pubkey, sysvar::clock::Clock},
+        safecoin_sdk::{pubkey::Pubkey, sysvar::clock::Clock},
         solana_vote_program::vote_state::{VoteInit, VoteStateVersions},
         std::iter::repeat_with,
     };

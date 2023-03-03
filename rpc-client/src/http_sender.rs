@@ -9,7 +9,7 @@ use {
         header::{self, CONTENT_TYPE, RETRY_AFTER},
         StatusCode,
     },
-    solana_rpc_client_api::{
+    safecoin_rpc_client_api::{
         client_error::Result,
         custom_error,
         error_object::RpcErrorObject,
@@ -49,7 +49,7 @@ impl HttpSender {
     pub fn new_with_timeout<U: ToString>(url: U, timeout: Duration) -> Self {
         let mut default_headers = header::HeaderMap::new();
         default_headers.append(
-            header::HeaderName::from_static("solana-client"),
+            header::HeaderName::from_static("safecoin-client"),
             header::HeaderValue::from_str(
                 format!("rust/{}", solana_version::Version::default()).as_str(),
             )

@@ -1,6 +1,6 @@
 import React from "react";
 import { TableCardBody } from "components/common/TableCardBody";
-import { SolBalance } from "components/common/SolBalance";
+import { SafeBalance } from "components/common/SafeBalance";
 import { displayTimestampUtc } from "utils/date";
 import { Account, useFetchAccountInfo } from "providers/accounts";
 import { Address } from "components/common/Address";
@@ -9,7 +9,7 @@ import {
   StakeMeta,
   StakeAccountType,
 } from "validators/accounts/stake";
-import { StakeActivationData } from "@solana/web3.js";
+import { StakeActivationData } from "@safecoin/web3.js";
 import { Epoch } from "components/common/Epoch";
 
 const U64_MAX = BigInt("0xffffffffffffffff");
@@ -123,15 +123,15 @@ function OverviewCard({
           </td>
         </tr>
         <tr>
-          <td>Balance (SOL)</td>
+          <td>Balance (SAFE)</td>
           <td className="text-lg-end text-uppercase">
-            <SolBalance lamports={account.lamports} />
+            <SafeBalance lamports={account.lamports} />
           </td>
         </tr>
         <tr>
-          <td>Rent Reserve (SOL)</td>
+          <td>Rent Reserve (SAFE)</td>
           <td className="text-lg-end">
-            <SolBalance lamports={stakeAccount.meta.rentExemptReserve} />
+            <SafeBalance lamports={stakeAccount.meta.rentExemptReserve} />
           </td>
         </tr>
         {hideDelegation && (
@@ -188,25 +188,25 @@ function DelegationCard({
         {stake && (
           <>
             <tr>
-              <td>Delegated Stake (SOL)</td>
+              <td>Delegated Stake (SAFE)</td>
               <td className="text-lg-end">
-                <SolBalance lamports={stake.delegation.stake} />
+                <SafeBalance lamports={stake.delegation.stake} />
               </td>
             </tr>
 
             {activation && (
               <>
                 <tr>
-                  <td>Active Stake (SOL)</td>
+                  <td>Active Stake (SAFE)</td>
                   <td className="text-lg-end">
-                    <SolBalance lamports={activation.active} />
+                    <SafeBalance lamports={activation.active} />
                   </td>
                 </tr>
 
                 <tr>
-                  <td>Inactive Stake (SOL)</td>
+                  <td>Inactive Stake (SAFE)</td>
                   <td className="text-lg-end">
-                    <SolBalance lamports={activation.inactive} />
+                    <SafeBalance lamports={activation.inactive} />
                   </td>
                 </tr>
               </>

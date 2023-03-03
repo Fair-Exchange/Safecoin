@@ -26,7 +26,7 @@ fi
 BENCH_FILE=bench_output.log
 BENCH_ARTIFACT=current_bench_results.log
 
-# solana-keygen required when building C programs
+# safecoin-keygen required when building C programs
 _ cargo build --manifest-path=keygen/Cargo.toml
 export PATH="$PWD/target/debug":$PATH
 
@@ -68,10 +68,10 @@ _ $cargoNightly bench --manifest-path programs/sbf/Cargo.toml ${V:+--verbose} --
 _ $cargoNightly run --release --manifest-path banking-bench/Cargo.toml ${V:+--verbose} | tee -a "$BENCH_FILE"
 _ $cargoNightly run --release --manifest-path accounts-bench/Cargo.toml ${V:+--verbose} -- --num_accounts 10000 --num_slots 4 | tee -a "$BENCH_FILE"
 
-# `solana-upload-perf` disabled as it can take over 30 minutes to complete for some
+# `safecoin-upload-perf` disabled as it can take over 30 minutes to complete for some
 # reason
 exit 0
-_ $cargoNightly run --release --package solana-upload-perf \
+_ $cargoNightly run --release --package safecoin-upload-perf \
   -- "$BENCH_FILE" "$TARGET_BRANCH" "$UPLOAD_METRICS" | tee "$BENCH_ARTIFACT"
 
 upload-ci-artifact "$BENCH_FILE"

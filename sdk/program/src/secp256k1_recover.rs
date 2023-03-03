@@ -17,7 +17,7 @@
 //! - Performing secp256k1 public key recovery generally.
 //! - Verifying a single secp256k1 signature.
 //!
-//! While `secp256k1_recover` can be used to verify secp256k1 signatures, Solana
+//! While `secp256k1_recover` can be used to verify secp256k1 signatures, Safecoin
 //! also provides the [secp256k1 program][sp], which is more flexible, has lower CPU
 //! cost, and can validate many signatures at once.
 //!
@@ -127,7 +127,7 @@ impl Secp256k1Pubkey {
 /// `signature`.
 ///
 /// While `secp256k1_recover` can be used to verify secp256k1 signatures by
-/// comparing the recovered key against an expected key, Solana also provides
+/// comparing the recovered key against an expected key, Safecoin also provides
 /// the [secp256k1 program][sp], which is more flexible, has lower CPU cost, and
 /// can validate many signatures at once.
 ///
@@ -158,9 +158,9 @@ impl Secp256k1Pubkey {
 /// a unique representation this can be the source of bugs, potentially with
 /// security implications.
 ///
-/// **The solana `secp256k1_recover` function does not prevent signature
+/// **The safecoin `secp256k1_recover` function does not prevent signature
 /// malleability**. This is in contrast to the Bitcoin secp256k1 library, which
-/// does prevent malleability by default. Solana accepts signatures with `S`
+/// does prevent malleability by default. Safecoin accepts signatures with `S`
 /// values that are either in the _high order_ or in the _low order_, and it
 /// is trivial to produce one from the other.
 ///
@@ -170,7 +170,7 @@ impl Secp256k1Pubkey {
 /// this:
 ///
 /// ```rust
-/// # use solana_program::program_error::ProgramError;
+/// # use safecoin_program::program_error::ProgramError;
 /// # let signature_bytes = [
 /// #     0x83, 0x55, 0x81, 0xDF, 0xB1, 0x02, 0xA7, 0xD2,
 /// #     0x2D, 0x33, 0xA4, 0x07, 0xDD, 0x7E, 0xFA, 0x9A,
@@ -192,7 +192,7 @@ impl Secp256k1Pubkey {
 ///
 /// This has the downside that the program must link to the [`libsecp256k1`]
 /// crate and parse the signature just for this check. Note that `libsecp256k1`
-/// version 0.7.0 or greater is required for running on the Solana SBF target.
+/// version 0.7.0 or greater is required for running on the Safecoin SBF target.
 ///
 /// [`libsecp256k1`]: https://docs.rs/libsecp256k1/latest/libsecp256k1
 ///
@@ -244,7 +244,7 @@ impl Secp256k1Pubkey {
 /// # Examples
 ///
 /// This example demonstrates recovering a public key and using it to very a
-/// signature with the `secp256k1_recover` syscall. It has three parts: a Solana
+/// signature with the `secp256k1_recover` syscall. It has three parts: a Safecoin
 /// program, an RPC client to call the program, and common definitions shared
 /// between the two.
 ///
@@ -261,11 +261,11 @@ impl Secp256k1Pubkey {
 /// }
 /// ```
 ///
-/// The Solana program. Note that it uses `libsecp256k1` version 0.7.0 to parse
+/// The Safecoin program. Note that it uses `libsecp256k1` version 0.7.0 to parse
 /// the secp256k1 signature to prevent malleability.
 ///
 /// ```no_run
-/// use solana_program::{
+/// use safecoin_program::{
 ///     entrypoint::ProgramResult,
 ///     keccak, msg,
 ///     program_error::ProgramError,
@@ -302,7 +302,7 @@ impl Secp256k1Pubkey {
 ///     };
 ///
 ///     // Reject high-s value signatures to prevent malleability.
-///     // Solana does not do this itself.
+///     // Safecoin does not do this itself.
 ///     // This may or may not be necessary depending on use case.
 ///     {
 ///         let signature = libsecp256k1::Signature::parse_standard_slice(&instruction.signature)
@@ -335,11 +335,11 @@ impl Secp256k1Pubkey {
 /// The RPC client program:
 ///
 /// ```no_run
-/// # use solana_program::example_mocks::solana_rpc_client;
-/// # use solana_program::example_mocks::solana_sdk;
+/// # use safecoin_program::example_mocks::safecoin_rpc_client;
+/// # use safecoin_program::example_mocks::safecoin_sdk;
 /// use anyhow::Result;
-/// use solana_rpc_client::rpc_client::RpcClient;
-/// use solana_sdk::{
+/// use safecoin_rpc_client::rpc_client::RpcClient;
+/// use safecoin_sdk::{
 ///     instruction::Instruction,
 ///     keccak,
 ///     pubkey::Pubkey,

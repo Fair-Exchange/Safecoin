@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana string and memory system calls and utilities
+ * @brief Safecoin string and memory system calls and utilities
  */
 
 #include <sol/constants.h>

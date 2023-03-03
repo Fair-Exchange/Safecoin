@@ -130,7 +130,7 @@ impl<'a> AccountInfo<'a> {
     /// memory.
     ///
     /// Note:  Account data can be increased within a single call by up to
-    /// `solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE` bytes.
+    /// `safecoin_program::entrypoint::MAX_PERMITTED_DATA_INCREASE` bytes.
     ///
     /// Note: Memory used to grow is already zero-initialized upon program
     /// entrypoint and re-zeroing it wastes compute units.  If within the same
@@ -289,12 +289,12 @@ impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Pubkey, T) {
 /// # Examples
 ///
 /// ```
-/// use solana_program::{
+/// use safecoin_program::{
 ///    account_info::{AccountInfo, next_account_info},
 ///    entrypoint::ProgramResult,
 ///    pubkey::Pubkey,
 /// };
-/// # use solana_program::program_error::ProgramError;
+/// # use safecoin_program::program_error::ProgramError;
 ///
 /// pub fn process_instruction(
 ///     program_id: &Pubkey,
@@ -340,12 +340,12 @@ pub fn next_account_info<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
 /// # Examples
 ///
 /// ```
-/// use solana_program::{
+/// use safecoin_program::{
 ///    account_info::{AccountInfo, next_account_info, next_account_infos},
 ///    entrypoint::ProgramResult,
 ///    pubkey::Pubkey,
 /// };
-/// # use solana_program::program_error::ProgramError;
+/// # use safecoin_program::program_error::ProgramError;
 ///
 /// pub fn process_instruction(
 ///     program_id: &Pubkey,

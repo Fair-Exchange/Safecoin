@@ -2,14 +2,14 @@
 title: Validator Requirements
 ---
 
-## Minimum SOL requirements
+## Minimum SAFE requirements
 
-There is no strict minimum amount of SOL required to run a validator on Solana.
+There is no strict minimum amount of SAFE required to run a validator on Safecoin.
 
 However in order to participate in consensus, a vote account is required which
-has a rent-exempt reserve of 0.02685864 SOL. Voting also requires sending a vote
+has a rent-exempt reserve of 0.02685864 SAFE. Voting also requires sending a vote
 transaction for each block the validator agrees with, which can cost up to
-1.1 SOL per day.
+1.1 SAFE per day.
 
 ## Hardware Recommendations
 
@@ -59,7 +59,7 @@ be cost-efficient over the long term.
 
 However, it may be convenient to run non-voting api nodes on VM instances for
 your own internal usage. This use case includes exchanges and services built on
-Solana.
+Safecoin.
 
 In fact, the mainnet-beta validators operated by the team are currently
 (Mar. 2021) run on GCE `n2-standard-32` (32 vCPUs, 128 GB memory) instances with
@@ -83,7 +83,7 @@ releases at [solanalabs/solana](https://hub.docker.com/r/solanalabs/solana).
 ## Software
 
 - We build and run on Ubuntu 20.04.
-- See [Installing Solana](../cli/install-solana-cli-tools.md) for the current Solana software release.
+- See [Installing Safecoin](../cli/install-safecoin-cli-tools.md) for the current Safecoin software release.
 
 Prebuilt binaries are available for Linux x86_64 on CPUs supporting AVX2 \(Ubuntu 20.04 recommended\).
 MacOS or WSL users may build from source.
@@ -110,6 +110,6 @@ the internet on staked, mainnet-beta validators.
 
 ## GPU Requirements
 
-CUDA is required to make use of the GPU on your system. The provided Solana
+CUDA is required to make use of the GPU on your system. The provided Safecoin
 release binaries are built on Ubuntu 20.04 with [CUDA Toolkit 10.1 update 1](https://developer.nvidia.com/cuda-toolkit-archive). If your machine is using
 a different CUDA version then you will need to rebuild from source.

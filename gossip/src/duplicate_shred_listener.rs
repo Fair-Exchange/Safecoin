@@ -73,7 +73,7 @@ mod tests {
             duplicate_shred_listener::DuplicateShredHandlerTrait,
         },
         solana_ledger::shred::Shredder,
-        solana_sdk::signature::{Keypair, Signer},
+        safecoin_sdk::signature::{Keypair, Signer},
         solana_streamer::socket::SocketAddrSpace,
         std::sync::{
             atomic::{AtomicU32, Ordering},

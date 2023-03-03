@@ -1,20 +1,20 @@
 {
-  "name": "@solana/web3.js",
+  "name": "@safecoin/web3.js",
   "version": "0.0.0-development",
-  "description": "Solana Javascript API",
+  "description": "Safecoin Javascript API",
   "keywords": [
     "api",
     "blockchain"
   ],
   "license": "MIT",
-  "author": "Solana Labs Maintainers <maintainers@solanalabs.com>",
+  "author": "Safecoin Labs Maintainers <maintainers@solanalabs.com>",
   "homepage": "https://solana.com/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/solana-labs/solana-web3.js.git"
+    "url": "https://github.com/fair-exchange/safecoin-web3.js.git"
   },
   "bugs": {
-    "url": "http://github.com/solana-labs/solana-web3.js.git/issues"
+    "url": "http://github.com/fair-exchange/safecoin-web3.js.git/issues"
   },
   "publishConfig": {
     "access": "public"
@@ -50,11 +50,11 @@
     "ok": "run-s lint test doc type:check",
     "pretty": "prettier --check '{,{src,test}/**/}*.{j,t}s'",
     "pretty:fix": "prettier --write '{,{src,test}/**/}*.{j,t}s'",
-    "re": "semantic-release --repository-url git@github.com:solana-labs/solana-web3.js.git",
+    "re": "semantic-release --repository-url git@github.com:fair-exchange/safecoin-web3.js.git",
     "test": "cross-env NODE_ENV=test TS_NODE_COMPILER_OPTIONS='{ \"module\": \"commonjs\", \"target\": \"es2019\" }' ts-mocha -p ./tsconfig.tests.json --require esm './test/**/*.test.ts'",
     "test:cover": "nyc --reporter=lcov npm run test",
     "test:live": "TEST_LIVE=1 npm run test",
-    "test:live-with-test-validator": "start-server-and-test 'solana-test-validator --reset --quiet' http://localhost:8899/health test:live"
+    "test:live-with-test-validator": "start-server-and-test 'safecoin-test-validator --reset --quiet' http://localhost:8899/health test:live"
   },
   "dependencies": {
     "@babel/runtime": "^7.12.5",
@@ -88,7 +88,7 @@
     "@rollup/plugin-multi-entry": "^4.0.0",
     "@rollup/plugin-node-resolve": "^13.0.0",
     "@rollup/plugin-replace": "^4.0.0",
-    "@solana/spl-token": "^0.2.0",
+    "@safecoin/safe-token": "^0.2.0",
     "@types/bn.js": "^5.1.0",
     "@types/bs58": "^4.0.1",
     "@types/chai": "^4.2.15",

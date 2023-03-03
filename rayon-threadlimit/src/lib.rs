@@ -8,7 +8,7 @@ lazy_static! {
     // reduce the number of threads each pool is allowed to half the cpu core count, to avoid rayon
     // hogging cpu
     static ref MAX_RAYON_THREADS: usize =
-            env::var("SOLANA_RAYON_THREADS").ok()
+            env::var("SAFECOIN_RAYON_THREADS").ok()
             .and_then(|num_threads| num_threads.parse().ok())
             .unwrap_or_else(|| num_cpus::get() / 2)
             .max(1);

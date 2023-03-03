@@ -3,11 +3,11 @@ pub mod config_instruction;
 pub mod config_processor;
 pub mod date_instruction;
 
-pub use solana_sdk::config::program::id;
+pub use safecoin_sdk::config::program::id;
 use {
     bincode::{deserialize, serialize, serialized_size},
     serde_derive::{Deserialize, Serialize},
-    solana_sdk::{
+    safecoin_sdk::{
         account::{Account, AccountSharedData},
         pubkey::Pubkey,
         short_vec,
@@ -20,7 +20,7 @@ pub trait ConfigState: serde::Serialize + Default {
     fn max_space() -> u64;
 }
 
-// TODO move ConfigState into `solana_program` to implement trait locally
+// TODO move ConfigState into `safecoin_program` to implement trait locally
 impl ConfigState for StakeConfig {
     fn max_space() -> u64 {
         serialized_size(&StakeConfig::default()).unwrap()

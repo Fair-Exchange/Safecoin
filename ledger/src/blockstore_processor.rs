@@ -10,13 +10,13 @@ use {
     log::*,
     rand::{seq::SliceRandom, thread_rng},
     rayon::{prelude::*, ThreadPool},
-    solana_entry::entry::{
+    safecoin_entry::entry::{
         self, create_ticks, Entry, EntrySlice, EntryType, EntryVerificationStatus, VerifyRecyclers,
     },
-    solana_measure::{measure, measure::Measure},
+    safecoin_measure::{measure, measure::Measure},
     solana_metrics::{datapoint_error, inc_new_counter_debug},
-    solana_program_runtime::timings::{ExecuteTimingType, ExecuteTimings, ThreadExecuteTimings},
-    solana_rayon_threadlimit::{get_max_thread_count, get_thread_count},
+    safecoin_program_runtime::timings::{ExecuteTimingType, ExecuteTimings, ThreadExecuteTimings},
+    safecoin_rayon_threadlimit::{get_max_thread_count, get_thread_count},
     solana_runtime::{
         accounts_background_service::{AbsRequestSender, SnapshotRequestType},
         accounts_db::{AccountShrinkThreshold, AccountsDbConfig},
@@ -37,7 +37,7 @@ use {
         vote_account::VoteAccountsHashMap,
         vote_sender_types::ReplayVoteSender,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, MAX_PROCESSING_AGE},
         genesis_config::GenesisConfig,
         hash::Hash,
@@ -49,7 +49,7 @@ use {
             VersionedTransaction,
         },
     },
-    solana_transaction_status::token_balances::TransactionTokenBalancesSet,
+    safecoin_transaction_status::token_balances::TransactionTokenBalancesSet,
     std::{
         borrow::Cow,
         collections::{HashMap, HashSet},
@@ -75,7 +75,7 @@ struct ReplayEntry {
 }
 
 // get_max_thread_count to match number of threads in the old code.
-// see: https://github.com/solana-labs/solana/pull/24853
+// see: https://github.com/fair-exchange/safecoin/pull/24853
 lazy_static! {
     static ref PAR_THREAD_POOL: ThreadPool = rayon::ThreadPoolBuilder::new()
         .num_threads(get_max_thread_count())
@@ -1757,19 +1757,19 @@ pub mod tests {
         },
         matches::assert_matches,
         rand::{thread_rng, Rng},
-        solana_entry::entry::{create_ticks, next_entry, next_entry_mut},
+        safecoin_entry::entry::{create_ticks, next_entry, next_entry_mut},
         solana_runtime::{
             genesis_utils::{
                 self, create_genesis_config_with_vote_accounts, ValidatorVoteKeypairs,
             },
             vote_account::VoteAccount,
         },
-        solana_sdk::{
+        safecoin_sdk::{
             account::{AccountSharedData, WritableAccount},
             epoch_schedule::EpochSchedule,
             feature_set,
             hash::Hash,
-            native_token::LAMPORTS_PER_SOL,
+            native_token::LAMPORTS_PER_SAFE,
             pubkey::Pubkey,
             signature::{Keypair, Signer},
             system_instruction::SystemError,
@@ -2524,7 +2524,7 @@ pub mod tests {
     #[test]
     fn test_process_ledger_simple() {
         solana_logger::setup();
-        let leader_pubkey = solana_sdk::pubkey::new_rand();
+        let leader_pubkey = safecoin_sdk::pubkey::new_rand();
         let mint = 100;
         let hashes_per_tick = 10;
         let GenesisConfigInfo {
@@ -3093,7 +3093,7 @@ pub mod tests {
                     bank.last_blockhash(),
                     1,
                     0,
-                    &solana_sdk::pubkey::new_rand(),
+                    &safecoin_sdk::pubkey::new_rand(),
                 ));
 
                 next_entry_mut(&mut hash, 0, transactions)
@@ -3254,7 +3254,7 @@ pub mod tests {
             ..
         } = create_genesis_config(11_000);
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         bank.transfer(1_000, &mint_keypair, &pubkey).unwrap();
         assert_eq!(bank.transaction_count(), 1);
         assert_eq!(bank.get_balance(&pubkey), 1_000);
@@ -3513,7 +3513,7 @@ pub mod tests {
                             bank.last_blockhash(),
                             100,
                             100,
-                            &solana_sdk::pubkey::new_rand(),
+                            &safecoin_sdk::pubkey::new_rand(),
                         ));
                         transactions
                     })
@@ -3655,14 +3655,14 @@ pub mod tests {
         // Create array of two transactions which throw different errors
         let account_not_found_tx = system_transaction::transfer(
             &keypair,
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             42,
             bank.last_blockhash(),
         );
         let account_not_found_sig = account_not_found_tx.signatures[0];
         let invalid_blockhash_tx = system_transaction::transfer(
             &mint_keypair,
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             42,
             Hash::default(),
         );
@@ -3707,7 +3707,7 @@ pub mod tests {
 
         let bank1 = Arc::new(Bank::new_from_parent(
             &bank0,
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             1,
         ));
 
@@ -4007,7 +4007,7 @@ pub mod tests {
                     let versioned = VoteStateVersions::new_current(vote_state);
                     VoteState::serialize(&versioned, vote_account.data_as_mut_slice()).unwrap();
                     (
-                        solana_sdk::pubkey::new_rand(),
+                        safecoin_sdk::pubkey::new_rand(),
                         (stake, VoteAccount::try_from(vote_account).unwrap()),
                     )
                 })
@@ -4157,7 +4157,7 @@ pub mod tests {
             genesis_config,
             mint_keypair,
             ..
-        } = create_genesis_config(100 * LAMPORTS_PER_SOL);
+        } = create_genesis_config(100 * LAMPORTS_PER_SAFE);
         let genesis_hash = genesis_config.hash();
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
         let mut timing = ConfirmationTiming::default();
@@ -4167,9 +4167,9 @@ pub mod tests {
         let keypair2 = Keypair::new();
         let keypair3 = Keypair::new();
         let keypair4 = Keypair::new();
-        bank.transfer(LAMPORTS_PER_SOL, &mint_keypair, &keypair1.pubkey())
+        bank.transfer(LAMPORTS_PER_SAFE, &mint_keypair, &keypair1.pubkey())
             .unwrap();
-        bank.transfer(LAMPORTS_PER_SOL, &mint_keypair, &keypair2.pubkey())
+        bank.transfer(LAMPORTS_PER_SAFE, &mint_keypair, &keypair2.pubkey())
             .unwrap();
 
         let (transaction_status_sender, transaction_status_receiver) =
@@ -4270,7 +4270,7 @@ pub mod tests {
 
     #[test]
     fn test_rebatch_transactions() {
-        let dummy_leader_pubkey = solana_sdk::pubkey::new_rand();
+        let dummy_leader_pubkey = safecoin_sdk::pubkey::new_rand();
         let GenesisConfigInfo {
             genesis_config,
             mint_keypair,
@@ -4278,11 +4278,11 @@ pub mod tests {
         } = create_genesis_config_with_leader(500, &dummy_leader_pubkey, 100);
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
 
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let keypair2 = Keypair::new();
-        let pubkey2 = solana_sdk::pubkey::new_rand();
+        let pubkey2 = safecoin_sdk::pubkey::new_rand();
         let keypair3 = Keypair::new();
-        let pubkey3 = solana_sdk::pubkey::new_rand();
+        let pubkey3 = safecoin_sdk::pubkey::new_rand();
 
         let txs = vec![
             SanitizedTransaction::from_transaction_for_tests(system_transaction::transfer(

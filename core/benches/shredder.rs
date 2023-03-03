@@ -6,13 +6,13 @@ extern crate test;
 use {
     rand::seq::SliceRandom,
     raptorq::{Decoder, Encoder},
-    solana_entry::entry::{create_ticks, Entry},
+    safecoin_entry::entry::{create_ticks, Entry},
     solana_ledger::shred::{
         max_entries_per_n_shred, max_ticks_per_n_shreds, ProcessShredsStats, ReedSolomonCache,
         Shred, ShredFlags, Shredder, DATA_SHREDS_PER_FEC_BLOCK, LEGACY_SHRED_DATA_CAPACITY,
     },
     solana_perf::test_tx,
-    solana_sdk::{hash::Hash, packet::PACKET_DATA_SIZE, signature::Keypair},
+    safecoin_sdk::{hash::Hash, packet::PACKET_DATA_SIZE, signature::Keypair},
     test::Bencher,
 };
 

@@ -50,7 +50,7 @@ same vote in 2 slots latency, then validators who could land votes
 consistently wihthin 1 slot would have a credits earning advantage over those
 who could not.  Part of the latency when transmitting votes is unavoidable as
 it's a function of geographical distance between the sender and receiver of
-the vote.  The Solana network is spread around the world but it is not evenly
+the vote.  The Safecoin network is spread around the world but it is not evenly
 distributed over the whole planet; there are some locations which are, on
 average, more distant from the network than others are.
 
@@ -103,7 +103,7 @@ https://www.shinobi-systems.com/timely_voting_proposal
 The above document is somewhat out of date with more recent analysis, which
 occurred in this github issue:
 
-https://github.com/solana-labs/solana/issues/19002
+https://github.com/fair-exchange/safecoin/issues/19002
 
 To summarize the findings of these documents: analysis over many epochs showed
 that almost all validators from all regions have an average vote latency of 1

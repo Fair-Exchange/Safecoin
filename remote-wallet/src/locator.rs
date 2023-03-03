@@ -1,5 +1,5 @@
 use {
-    solana_sdk::pubkey::{ParsePubkeyError, Pubkey},
+    safecoin_sdk::pubkey::{ParsePubkeyError, Pubkey},
     std::{
         convert::{Infallible, TryFrom, TryInto},
         str::FromStr,

@@ -16,9 +16,9 @@ use {
     },
     itertools::Itertools,
     min_max_heap::MinMaxHeap,
-    solana_measure::measure,
+    safecoin_measure::measure,
     solana_runtime::bank::Bank,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::FORWARD_TRANSACTIONS_TO_LEADER_AT_SLOT_OFFSET, feature_set::FeatureSet, hash::Hash,
         saturating_add_assign, transaction::SanitizedTransaction,
     },
@@ -955,7 +955,7 @@ mod tests {
         super::*,
         solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
         solana_perf::packet::{Packet, PacketFlags},
-        solana_sdk::{
+        safecoin_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},
             system_transaction,
@@ -1161,7 +1161,7 @@ mod tests {
     fn test_unprocessed_transaction_storage_insert() -> Result<(), Box<dyn Error>> {
         let keypair = Keypair::new();
         let vote_keypair = Keypair::new();
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
 
         let small_transfer = Packet::from_data(
             None,

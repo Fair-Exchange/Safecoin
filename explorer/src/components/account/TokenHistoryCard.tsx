@@ -4,7 +4,7 @@ import {
   ConfirmedSignatureInfo,
   ParsedInstruction,
   PartiallyDecodedInstruction,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { CacheEntry, FetchStatus } from "providers/cache";
 import {
   useAccountHistories,
@@ -44,7 +44,7 @@ import { useCluster, Cluster } from "providers/cluster";
 import { Link } from "react-router-dom";
 import { Location } from "history";
 import { useQuery } from "utils/url";
-import { TokenInfoMap } from "@solana/spl-token-registry";
+import { TokenInfoMap } from "@safecoin/safe-token-registry";
 import { useTokenRegistry } from "providers/mints/token-registry";
 import { getTokenProgramInstructionName } from "utils/instruction";
 import {
@@ -453,7 +453,7 @@ const TokenTransactionRow = React.memo(
           }
 
           if ("parsed" in ix) {
-            if (ix.program === "spl-token") {
+            if (ix.program === "safe-token") {
               name = getTokenProgramInstructionName(ix, tx);
             } else {
               return undefined;
@@ -563,7 +563,7 @@ function InstructionDetails({
 
   let instructionTypes = instructionType.innerInstructions
     .map((ix) => {
-      if ("parsed" in ix && ix.program === "spl-token") {
+      if ("parsed" in ix && ix.program === "safe-token") {
         return getTokenProgramInstructionName(ix, tx);
       }
       return undefined;

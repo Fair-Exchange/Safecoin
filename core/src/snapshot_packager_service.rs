@@ -1,5 +1,5 @@
 use {
-    solana_gossip::cluster_info::{
+    safecoin_gossip::cluster_info::{
         ClusterInfo, MAX_INCREMENTAL_SNAPSHOT_HASHES, MAX_SNAPSHOT_HASHES,
     },
     solana_perf::thread::renice_this_thread,
@@ -13,7 +13,7 @@ use {
         snapshot_package::{retain_max_n_elements, PendingSnapshotPackage, SnapshotType},
         snapshot_utils,
     },
-    solana_sdk::{clock::Slot, hash::Hash},
+    safecoin_sdk::{clock::Slot, hash::Hash},
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -232,7 +232,7 @@ mod tests {
                 SNAPSHOT_STATUS_CACHE_FILENAME,
             },
         },
-        solana_sdk::hash::Hash,
+        safecoin_sdk::hash::Hash,
         std::{
             fs::{self, remove_dir_all, OpenOptions},
             io::Write,

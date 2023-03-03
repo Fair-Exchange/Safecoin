@@ -8,7 +8,7 @@ import {
   PartiallyDecodedInstruction,
   SignatureResult,
   TransactionSignature,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { BpfLoaderDetailsCard } from "components/instruction/bpf-loader/BpfLoaderDetailsCard";
 import { MemoDetailsCard } from "components/instruction/MemoDetailsCard";
 import { SerumDetailsCard } from "components/instruction/SerumDetailsCard";
@@ -183,7 +183,7 @@ function InstructionCard({
     };
 
     switch (ix.program) {
-      case "spl-token":
+      case "safe-token":
         return <TokenDetailsCard {...props} />;
       case "bpf-loader":
         return <BpfLoaderDetailsCard {...props} />;
@@ -193,9 +193,9 @@ function InstructionCard({
         return <SystemDetailsCard {...props} />;
       case "stake":
         return <StakeDetailsCard {...props} />;
-      case "spl-memo":
+      case "safe-memo":
         return <MemoDetailsCard {...props} />;
-      case "spl-associated-token-account":
+      case "safe-associated-token-account":
         return <AssociatedTokenDetailsCard {...props} />;
       case "vote":
         return <VoteDetailsCard {...props} />;

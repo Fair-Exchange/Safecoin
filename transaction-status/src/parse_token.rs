@@ -8,18 +8,18 @@ use {
         transfer_fee::*,
     },
     serde_json::{json, Map, Value},
-    solana_account_decoder::parse_token::{
-        pubkey_from_spl_token, token_amount_to_ui_amount, UiAccountState,
+    safecoin_account_decoder::parse_token::{
+        pubkey_from_safe_token, token_amount_to_ui_amount, UiAccountState,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         instruction::{AccountMeta, CompiledInstruction, Instruction},
         message::AccountKeys,
     },
-    spl_token_2022::{
+    safe_token_2022::{
         extension::ExtensionType,
         instruction::{AuthorityType, TokenInstruction},
-        solana_program::{
-            instruction::Instruction as SplTokenInstruction, program_option::COption,
+        safecoin_program::{
+            instruction::Instruction as SafeTokenInstruction, program_option::COption,
             pubkey::Pubkey,
         },
     },
@@ -32,13 +32,13 @@ pub fn parse_token(
     account_keys: &AccountKeys,
 ) -> Result<ParsedInstructionEnum, ParseInstructionError> {
     let token_instruction = TokenInstruction::unpack(&instruction.data)
-        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SplToken))?;
+        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeToken))?;
     match instruction.accounts.iter().max() {
         Some(index) if (*index as usize) < account_keys.len() => {}
         _ => {
             // Runtime should prevent this from ever happening
             return Err(ParseInstructionError::InstructionKeyMismatch(
-                ParsableProgram::SplToken,
+                ParsableProgram::SafeToken,
             ));
         }
     }
@@ -231,6 +231,7 @@ pub fn parse_token(
                 | AuthorityType::CloseMint
                 | AuthorityType::InterestRate
                 | AuthorityType::PermanentDelegate => "mint",
+		AuthorityType::ConfidentialTransferMint => todo!(),
                 AuthorityType::AccountOwner | AuthorityType::CloseAccount => "account",
             };
             let mut value = json!({
@@ -520,7 +521,7 @@ pub fn parse_token(
         TokenInstruction::DefaultAccountStateExtension => {
             if instruction.data.len() <= 2 {
                 return Err(ParseInstructionError::InstructionNotParsable(
-                    ParsableProgram::SplToken,
+                    ParsableProgram::SafeToken,
                 ));
             }
             parse_default_account_state_instruction(
@@ -535,7 +536,7 @@ pub fn parse_token(
         TokenInstruction::MemoTransferExtension => {
             if instruction.data.len() < 2 {
                 return Err(ParseInstructionError::InstructionNotParsable(
-                    ParsableProgram::SplToken,
+                    ParsableProgram::SafeToken,
                 ));
             }
             parse_memo_transfer_instruction(
@@ -567,7 +568,7 @@ pub fn parse_token(
         TokenInstruction::InterestBearingMintExtension => {
             if instruction.data.len() < 2 {
                 return Err(ParseInstructionError::InstructionNotParsable(
-                    ParsableProgram::SplToken,
+                    ParsableProgram::SafeToken,
                 ));
             }
             parse_interest_bearing_mint_instruction(
@@ -579,7 +580,7 @@ pub fn parse_token(
         TokenInstruction::CpiGuardExtension => {
             if instruction.data.len() < 2 {
                 return Err(ParseInstructionError::InstructionNotParsable(
-                    ParsableProgram::SplToken,
+                    ParsableProgram::SafeToken,
                 ));
             }
             parse_cpi_guard_instruction(&instruction.data[1..], &instruction.accounts, account_keys)
@@ -620,6 +621,7 @@ impl From<AuthorityType> for UiAuthorityType {
             AuthorityType::CloseMint => UiAuthorityType::CloseMint,
             AuthorityType::InterestRate => UiAuthorityType::InterestRate,
             AuthorityType::PermanentDelegate => UiAuthorityType::PermanentDelegate,
+	    AuthorityType::ConfidentialTransferMint => todo!(),
         }
     }
 }
@@ -660,6 +662,7 @@ impl From<ExtensionType> for UiExtensionType {
             ExtensionType::InterestBearingConfig => UiExtensionType::InterestBearingConfig,
             ExtensionType::CpiGuard => UiExtensionType::CpiGuard,
             ExtensionType::PermanentDelegate => UiExtensionType::PermanentDelegate,
+	    ExtensionType::NonTransferableAccount => todo!()
         }
     }
 }
@@ -691,17 +694,17 @@ fn parse_signers(
 }
 
 fn check_num_token_accounts(accounts: &[u8], num: usize) -> Result<(), ParseInstructionError> {
-    check_num_accounts(accounts, num, ParsableProgram::SplToken)
+    check_num_accounts(accounts, num, ParsableProgram::SafeToken)
 }
 
-pub fn spl_token_instruction(instruction: SplTokenInstruction) -> Instruction {
+pub fn safe_token_instruction(instruction: SafeTokenInstruction) -> Instruction {
     Instruction {
-        program_id: pubkey_from_spl_token(&instruction.program_id),
+        program_id: pubkey_from_safe_token(&instruction.program_id),
         accounts: instruction
             .accounts
             .iter()
             .map(|meta| AccountMeta {
-                pubkey: pubkey_from_spl_token(&meta.pubkey),
+                pubkey: pubkey_from_safe_token(&meta.pubkey),
                 is_signer: meta.is_signer,
                 is_writable: meta.is_writable,
             })
@@ -721,23 +724,23 @@ fn map_coption_pubkey(pubkey: COption<Pubkey>) -> Option<String> {
 mod test {
     use {
         super::*,
-        solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey},
-        spl_token_2022::{
+        safecoin_sdk::{instruction::CompiledInstruction, pubkey::Pubkey},
+        safe_token_2022::{
             instruction::*,
-            solana_program::{
-                instruction::CompiledInstruction as SplTokenCompiledInstruction, message::Message,
-                pubkey::Pubkey as SplTokenPubkey,
+            safecoin_program::{
+                instruction::CompiledInstruction as SafeTokenCompiledInstruction, message::Message,
+                pubkey::Pubkey as SafeTokenPubkey,
             },
         },
         std::{iter::repeat_with, str::FromStr},
     };
 
-    pub(super) fn convert_pubkey(pubkey: Pubkey) -> SplTokenPubkey {
-        SplTokenPubkey::from_str(&pubkey.to_string()).unwrap()
+    pub(super) fn convert_pubkey(pubkey: Pubkey) -> SafeTokenPubkey {
+        SafeTokenPubkey::from_str(&pubkey.to_string()).unwrap()
     }
 
     pub(super) fn convert_compiled_instruction(
-        instruction: &SplTokenCompiledInstruction,
+        instruction: &SafeTokenCompiledInstruction,
     ) -> CompiledInstruction {
         CompiledInstruction {
             program_id_index: instruction.program_id_index,
@@ -750,15 +753,15 @@ mod test {
         message
             .account_keys
             .iter()
-            .map(pubkey_from_spl_token)
+            .map(pubkey_from_safe_token)
             .collect()
     }
 
-    fn test_parse_token(program_id: &SplTokenPubkey) {
+    fn test_parse_token(program_id: &SafeTokenPubkey) {
         let mint_pubkey = Pubkey::new_unique();
         let mint_authority = Pubkey::new_unique();
         let freeze_authority = Pubkey::new_unique();
-        let rent_sysvar = solana_sdk::sysvar::rent::id();
+        let rent_sysvar = safecoin_sdk::sysvar::rent::id();
 
         // Test InitializeMint variations
         let initialize_mint_ix = initialize_mint(
@@ -1624,7 +1627,7 @@ mod test {
         let get_account_data_size_ix = get_account_data_size(
             program_id,
             &convert_pubkey(mint_pubkey),
-            &[], // This emulates the packed data of spl_token::instruction::get_account_data_size
+            &[], // This emulates the packed data of safe_token::instruction::get_account_data_size
         )
         .unwrap();
         let message = Message::new(&[get_account_data_size_ix], None);
@@ -1712,19 +1715,19 @@ mod test {
 
     #[test]
     fn test_parse_token_v3() {
-        test_parse_token(&spl_token::id());
+        test_parse_token(&safe_token::id());
     }
 
     #[test]
     fn test_parse_token_2022() {
-        test_parse_token(&spl_token_2022::id());
+        test_parse_token(&safe_token_2022::id());
     }
 
     #[test]
     fn test_create_native_mint() {
         let payer = Pubkey::new_unique();
         let create_native_mint_ix =
-            create_native_mint(&spl_token_2022::id(), &convert_pubkey(payer)).unwrap();
+            create_native_mint(&safe_token_2022::id(), &convert_pubkey(payer)).unwrap();
         let message = Message::new(&[create_native_mint_ix], None);
         let compiled_instruction = convert_compiled_instruction(&message.instructions[0]);
         assert_eq!(
@@ -1737,15 +1740,15 @@ mod test {
                 instruction_type: "createNativeMint".to_string(),
                 info: json!({
                    "payer": payer.to_string(),
-                   "nativeMint": spl_token_2022::native_mint::id().to_string(),
-                   "systemProgram": solana_sdk::system_program::id().to_string(),
+                   "nativeMint": safe_token_2022::native_mint::id().to_string(),
+                   "systemProgram": safecoin_sdk::system_program::id().to_string(),
                 })
             }
         );
     }
 
-    fn test_token_ix_not_enough_keys(program_id: &SplTokenPubkey) {
-        let keys: Vec<Pubkey> = repeat_with(solana_sdk::pubkey::new_rand).take(10).collect();
+    fn test_token_ix_not_enough_keys(program_id: &SafeTokenPubkey) {
+        let keys: Vec<Pubkey> = repeat_with(safecoin_sdk::pubkey::new_rand).take(10).collect();
 
         // Test InitializeMint variations
         let initialize_mint_ix = initialize_mint(
@@ -2221,11 +2224,11 @@ mod test {
 
     #[test]
     fn test_not_enough_keys_token_v3() {
-        test_token_ix_not_enough_keys(&spl_token::id());
+        test_token_ix_not_enough_keys(&safe_token::id());
     }
 
     #[test]
     fn test_not_enough_keys_token_2022() {
-        test_token_ix_not_enough_keys(&spl_token_2022::id());
+        test_token_ix_not_enough_keys(&safe_token_2022::id());
     }
 }

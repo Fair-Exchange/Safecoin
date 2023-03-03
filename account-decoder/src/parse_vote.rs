@@ -1,6 +1,6 @@
 use {
     crate::{parse_account_data::ParseAccountError, StringAmount},
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Epoch, Slot},
         pubkey::Pubkey,
         vote::state::{BlockTimestamp, Lockout, VoteState},
@@ -123,7 +123,7 @@ struct UiEpochCredits {
 
 #[cfg(test)]
 mod test {
-    use {super::*, solana_sdk::vote::state::VoteStateVersions};
+    use {super::*, safecoin_sdk::vote::state::VoteStateVersions};
 
     #[test]
     fn test_parse_vote() {

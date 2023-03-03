@@ -1,7 +1,7 @@
 #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(min_specialization))]
 #![allow(clippy::integer_arithmetic)]
 #![recursion_limit = "2048"]
-//! The `solana` library implements the Solana high-performance blockchain architecture.
+//! The `solana` library implements the Safecoin high-performance blockchain architecture.
 //! It includes a full Rust implementation of the architecture (see
 //! [Validator](server/struct.Validator.html)) as well as hooks to GPU implementations of its most
 //! paralellizable components (i.e. [SigVerify](sigverify/index.html)).  It also includes
@@ -101,7 +101,7 @@ extern crate serde_derive;
 extern crate solana_metrics;
 
 #[macro_use]
-extern crate solana_frozen_abi_macro;
+extern crate safecoin_frozen_abi_macro;
 
 #[cfg(test)]
 #[macro_use]

@@ -5,16 +5,16 @@ use {
     log::*,
     rand::{thread_rng, Rng},
     rayon::prelude::*,
-    solana_clap_utils::input_parsers::pubkey_of,
-    solana_cli::{
+    safecoin_clap_utils::input_parsers::pubkey_of,
+    safecoin_cli::{
         cli::{process_command, CliCommand, CliConfig},
         program::ProgramCliCommand,
     },
-    solana_client::transaction_executor::TransactionExecutor,
-    solana_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT},
-    solana_gossip::gossip_service::discover,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_client::transaction_executor::TransactionExecutor,
+    safecoin_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT},
+    safecoin_gossip::gossip_service::discover,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_sdk::{
         commitment_config::CommitmentConfig,
         instruction::{AccountMeta, Instruction},
         message::Message,
@@ -537,7 +537,7 @@ fn main() {
     let skip_gossip = !matches.is_present("check_gossip");
     let just_calculate_fees = matches.is_present("just_calculate_fees");
 
-    let port = if skip_gossip { DEFAULT_RPC_PORT } else { 8001 };
+    let port = if skip_gossip { DEFAULT_RPC_PORT } else { 10015 };
     let mut entrypoint_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
     if let Some(addr) = matches.value_of("entrypoint") {
         entrypoint_addr = solana_net_utils::parse_host_port(addr).unwrap_or_else(|e| {
@@ -635,13 +635,13 @@ fn main() {
 pub mod test {
     use {
         super::*,
-        solana_core::validator::ValidatorConfig,
-        solana_local_cluster::{
+        safecoin_core::validator::ValidatorConfig,
+        safecoin_local_cluster::{
             local_cluster::{ClusterConfig, LocalCluster},
             validator_configs::make_identical_validator_configs,
         },
-        solana_measure::measure::Measure,
-        solana_sdk::poh_config::PohConfig,
+        safecoin_measure::measure::Measure,
+        safecoin_sdk::poh_config::PohConfig,
     };
 
     #[test]
@@ -664,7 +664,7 @@ pub mod test {
             &account_metas,
         );
         let signers: Vec<&Keypair> = vec![&keypair];
-        let blockhash = solana_sdk::hash::Hash::default();
+        let blockhash = safecoin_sdk::hash::Hash::default();
         let tx = Transaction::new(&signers, message, blockhash);
         let size = bincode::serialized_size(&tx).unwrap();
         info!("size:{}", size);

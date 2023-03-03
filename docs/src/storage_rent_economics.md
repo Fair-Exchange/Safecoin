@@ -2,7 +2,7 @@
 title: Storage Rent Economics
 ---
 
-Each transaction that is submitted to the Solana ledger imposes costs.
+Each transaction that is submitted to the Safecoin ledger imposes costs.
 Transaction fees paid by the submitter, and collected by a validator, in
 theory, account for the acute, transactional, costs of validating and adding
 that data to the ledger. Unaccounted in this process is the mid-term storage of

@@ -1,6 +1,6 @@
 use {
-    solana_program_test::ProgramTest,
-    solana_sdk::{
+    safecoin_program_test::ProgramTest,
+    safecoin_sdk::{
         bpf_loader_upgradeable::{self, UpgradeableLoaderState},
         signature::{Keypair, Signer},
         transaction::Transaction,

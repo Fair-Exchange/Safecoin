@@ -8,8 +8,8 @@ use {
         snapshot_config::SnapshotConfig,
     },
     log::*,
-    solana_measure::measure::Measure,
-    solana_sdk::{clock::Slot, feature_set, hash::Hash, timing},
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::{clock::Slot, feature_set, hash::Hash, timing},
     std::{
         collections::{hash_map::Entry, HashMap, HashSet},
         ops::Index,
@@ -640,7 +640,7 @@ mod tests {
                 create_genesis_config, create_genesis_config_with_leader, GenesisConfigInfo,
             },
         },
-        solana_sdk::{
+        safecoin_sdk::{
             clock::UnixTimestamp,
             epoch_schedule::EpochSchedule,
             hash::Hash,

@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 import { AnchorAccountCard } from "components/account/AnchorAccountCard";
 import { AnchorProgramCard } from "components/account/AnchorProgramCard";
 import { BlockhashesCard } from "components/account/BlockhashesCard";
@@ -59,7 +59,7 @@ import { LookupTableEntriesCard } from "components/account/address-lookup-table/
 const IDENTICON_WIDTH = 64;
 
 const TABS_LOOKUP: { [id: string]: Tab[] } = {
-  "spl-token:mint": [
+  "safe-token:mint": [
     {
       slug: "transfers",
       title: "Transfers",
@@ -76,7 +76,7 @@ const TABS_LOOKUP: { [id: string]: Tab[] } = {
       path: "/largest",
     },
   ],
-  "spl-token:mint:metaplexNFT": [
+  "safe-token:mint:metaplexNFT": [
     {
       slug: "metadata",
       title: "Metadata",
@@ -152,7 +152,7 @@ const TABS_LOOKUP: { [id: string]: Tab[] } = {
 };
 
 const TOKEN_TABS_HIDDEN = [
-  "spl-token:mint",
+  "safe-token:mint",
   "config",
   "vote",
   "sysvar",
@@ -205,7 +205,7 @@ export function AccountHeader({
   const mintInfo = useMintAccountInfo(address);
   const parsedData = account?.data.parsed;
   const isToken =
-    parsedData?.program === "spl-token" && parsedData?.parsed.type === "mint";
+    parsedData?.program === "safe-token" && parsedData?.parsed.type === "mint";
 
   if (isMetaplexNFT(parsedData, mintInfo)) {
     return (
@@ -362,7 +362,7 @@ function InfoSection({ account }: { account: Account }) {
     );
   } else if (account.owner.toBase58() === NFTOKEN_ADDRESS) {
     return <NFTokenAccountSection account={account} />;
-  } else if (parsedData && parsedData.program === "spl-token") {
+  } else if (parsedData && parsedData.program === "safe-token") {
     return (
       <TokenAccountSection account={account} tokenAccount={parsedData.parsed} />
     );
@@ -577,7 +577,7 @@ function getTabs(pubkey: PublicKey, account: Account): TabComponent[] {
   // Add the key for Metaplex NFTs
   if (
     parsedData &&
-    programTypeKey === "spl-token:mint" &&
+    programTypeKey === "safe-token:mint" &&
     (parsedData as TokenProgramData).nftData
   ) {
     tabs.push(...TABS_LOOKUP[`${programTypeKey}:metaplexNFT`]);

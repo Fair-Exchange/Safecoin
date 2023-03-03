@@ -6,15 +6,15 @@
 use {
     log::*,
     rayon::iter::{IntoParallelIterator, ParallelIterator},
-    solana_connection_cache::{
+    safecoin_connection_cache::{
         client_connection::ClientConnection,
         connection_cache::{
             ConnectionCache, ConnectionManager, ConnectionPool, NewConnectionConfig,
         },
     },
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::{config::RpcProgramAccountsConfig, response::Response},
-    solana_sdk::{
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::{config::RpcProgramAccountsConfig, response::Response},
+    safecoin_sdk::{
         account::Account,
         client::{AsyncClient, Client, SyncClient},
         clock::{Slot, MAX_PROCESSING_AGE},

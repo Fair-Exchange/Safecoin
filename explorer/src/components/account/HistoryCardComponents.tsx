@@ -1,5 +1,5 @@
 import React from "react";
-import { ConfirmedSignatureInfo, TransactionError } from "@solana/web3.js";
+import { ConfirmedSignatureInfo, TransactionError } from "@safecoin/web3.js";
 
 export type TransactionRow = {
   slot: number;

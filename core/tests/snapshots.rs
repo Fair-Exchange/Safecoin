@@ -7,11 +7,11 @@ use {
     fs_extra::dir::CopyOptions,
     itertools::Itertools,
     log::{info, trace},
-    solana_core::{
+    safecoin_core::{
         accounts_hash_verifier::AccountsHashVerifier,
         snapshot_packager_service::SnapshotPackagerService,
     },
-    solana_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
+    safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
     solana_runtime::{
         accounts_background_service::{
             AbsRequestHandlers, AbsRequestSender, AccountsBackgroundService,
@@ -38,7 +38,7 @@ use {
         },
         status_cache::MAX_CACHE_ENTRIES,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         genesis_config::{
             ClusterType::{self, Development, Devnet, MainnetBeta, Testnet},
@@ -95,7 +95,7 @@ impl SnapshotTestConfig {
         // snapshots.
         let mut genesis_config_info = create_genesis_config_with_leader(
             10_000,                          // mint_lamports
-            &solana_sdk::pubkey::new_rand(), // validator_pubkey
+            &safecoin_sdk::pubkey::new_rand(), // validator_pubkey
             1,                               // validator_stake_lamports
         );
         genesis_config_info.genesis_config.cluster_type = cluster_type;
@@ -768,11 +768,11 @@ fn test_bank_forks_incremental_snapshot(
         let bank = {
             let bank = Bank::new_from_parent(&bank_forks[slot - 1], &Pubkey::default(), slot);
 
-            let key = solana_sdk::pubkey::new_rand();
+            let key = safecoin_sdk::pubkey::new_rand();
             let tx = system_transaction::transfer(mint_keypair, &key, 1, bank.last_blockhash());
             assert_eq!(bank.process_transaction(&tx), Ok(()));
 
-            let key = solana_sdk::pubkey::new_rand();
+            let key = safecoin_sdk::pubkey::new_rand();
             let tx = system_transaction::transfer(mint_keypair, &key, 0, bank.last_blockhash());
             assert_eq!(bank.process_transaction(&tx), Ok(()));
 
@@ -1061,11 +1061,11 @@ fn test_snapshots_with_background_services(
                 slot,
             );
 
-            let key = solana_sdk::pubkey::new_rand();
+            let key = safecoin_sdk::pubkey::new_rand();
             let tx = system_transaction::transfer(mint_keypair, &key, 1, bank.last_blockhash());
             assert_eq!(bank.process_transaction(&tx), Ok(()));
 
-            let key = solana_sdk::pubkey::new_rand();
+            let key = safecoin_sdk::pubkey::new_rand();
             let tx = system_transaction::transfer(mint_keypair, &key, 0, bank.last_blockhash());
             assert_eq!(bank.process_transaction(&tx), Ok(()));
 

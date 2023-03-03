@@ -4,7 +4,7 @@ import {
   Connection,
   EpochInfo,
   EpochSchedule,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { useQuery } from "../utils/url";
 import { useHistory, useLocation } from "react-router-dom";
 import { reportError } from "utils/sentry";

@@ -68,7 +68,7 @@ describe('TransactionMessage', () => {
     expect(decompiledMessage.instructions).to.eql(instructions);
   });
 
-  // Regression test for https://github.com/solana-labs/solana/issues/28900
+  // Regression test for https://github.com/fair-exchange/safecoin/issues/28900
   it('decompiles a legacy message the same way as the old API', () => {
     const accountKeys = createTestKeys(7);
     const legacyMessage = new Message({

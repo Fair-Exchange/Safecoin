@@ -1,13 +1,16 @@
 use {
-    solana_sdk::{
+    safecoin_sdk::{
         instruction::{AccountMeta, Instruction},
         pubkey::Pubkey,
     },
-    spl_instruction_padding::solana_program::{
-        instruction::{AccountMeta as SplAccountMeta, Instruction as SplInstruction},
-        pubkey::Pubkey as SplPubkey,
+    safe_instruction_padding::safecoin_program::{
+        instruction::{AccountMeta as SafeAccountMeta, Instruction as SafeInstruction},
+        pubkey::Pubkey as SafePubkey,
     },
 };
+
+
+
 
 pub trait FromOtherSolana<T> {
     fn from(_: T) -> Self;
@@ -22,8 +25,8 @@ macro_rules! impl_pubkey_conversion {
         }
     };
 }
-impl_pubkey_conversion!(SplPubkey, Pubkey);
-impl_pubkey_conversion!(Pubkey, SplPubkey);
+impl_pubkey_conversion!(SafePubkey, Pubkey);
+//impl_pubkey_conversion!(Pubkey, SafePubkey);
 
 macro_rules! impl_account_meta_conversion {
     ($S:ty, $L:ty) => {
@@ -38,8 +41,8 @@ macro_rules! impl_account_meta_conversion {
         }
     };
 }
-impl_account_meta_conversion!(SplAccountMeta, AccountMeta);
-impl_account_meta_conversion!(AccountMeta, SplAccountMeta);
+impl_account_meta_conversion!(SafeAccountMeta, AccountMeta);
+//impl_account_meta_conversion!(AccountMeta, SafeAccountMeta);
 
 macro_rules! impl_instruction_conversion {
     ($S: ty, $L:ty) => {
@@ -58,5 +61,5 @@ macro_rules! impl_instruction_conversion {
         }
     };
 }
-impl_instruction_conversion!(SplInstruction, Instruction);
-impl_instruction_conversion!(Instruction, SplInstruction);
+impl_instruction_conversion!(SafeInstruction, Instruction);
+//impl_instruction_conversion!(Instruction, SafeInstruction);

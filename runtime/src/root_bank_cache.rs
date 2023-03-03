@@ -49,7 +49,7 @@ mod tests {
             bank_forks::BankForks,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
         },
-        solana_sdk::pubkey::Pubkey,
+        safecoin_sdk::pubkey::Pubkey,
     };
 
     #[test]

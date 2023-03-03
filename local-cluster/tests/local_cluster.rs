@@ -6,8 +6,8 @@ use {
     gag::BufferRedirect,
     log::*,
     serial_test::serial,
-    solana_client::thin_client::ThinClient,
-    solana_core::{
+    safecoin_client::thin_client::ThinClient,
+    safecoin_core::{
         broadcast_stage::BroadcastStageType,
         consensus::{Tower, SWITCH_FORK_THRESHOLD, VOTE_THRESHOLD_DEPTH},
         optimistic_confirmation_verifier::OptimisticConfirmationVerifier,
@@ -16,20 +16,20 @@ use {
         validator::ValidatorConfig,
     },
     solana_download_utils::download_snapshot_archive,
-    solana_gossip::{contact_info::LegacyContactInfo, gossip_service::discover_cluster},
+    safecoin_gossip::{contact_info::LegacyContactInfo, gossip_service::discover_cluster},
     solana_ledger::{
         ancestor_iterator::AncestorIterator, bank_forks_utils, blockstore::Blockstore,
         blockstore_processor::ProcessOptions,
     },
-    solana_local_cluster::{
+    safecoin_local_cluster::{
         cluster::{Cluster, ClusterValidatorInfo},
         cluster_tests::{self},
         local_cluster::{ClusterConfig, LocalCluster},
         validator_configs::*,
     },
-    solana_pubsub_client::pubsub_client::PubsubClient,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::{
+    safecoin_pubsub_client::pubsub_client::PubsubClient,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::{
         config::{
             RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcProgramAccountsConfig,
             RpcSignatureSubscribeConfig,
@@ -47,7 +47,7 @@ use {
         },
         vote_parser,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::AccountSharedData,
         client::{AsyncClient, SyncClient},
         clock::{self, Slot, DEFAULT_TICKS_PER_SLOT, MAX_PROCESSING_AGE},
@@ -210,7 +210,7 @@ fn test_local_cluster_signature_subscribe() {
 
     let mut transaction = system_transaction::transfer(
         &cluster.funding_keypair,
-        &solana_sdk::pubkey::new_rand(),
+        &safecoin_sdk::pubkey::new_rand(),
         10,
         blockhash,
     );
@@ -439,12 +439,12 @@ fn test_mainnet_beta_cluster_type() {
     // Programs that are available at epoch 0
     for program_id in [
         &solana_config_program::id(),
-        &solana_sdk::system_program::id(),
-        &solana_sdk::stake::program::id(),
+        &safecoin_sdk::system_program::id(),
+        &safecoin_sdk::stake::program::id(),
         &solana_vote_program::id(),
-        &solana_sdk::bpf_loader_deprecated::id(),
-        &solana_sdk::bpf_loader::id(),
-        &solana_sdk::bpf_loader_upgradeable::id(),
+        &safecoin_sdk::bpf_loader_deprecated::id(),
+        &safecoin_sdk::bpf_loader::id(),
+        &safecoin_sdk::bpf_loader_upgradeable::id(),
     ]
     .iter()
     {
@@ -2096,10 +2096,10 @@ fn test_hard_fork_invalidates_tower() {
     // persistent tower's lockout behavior...
     let hard_fork_slot = min_root - 5;
     let hard_fork_slots = Some(vec![hard_fork_slot]);
-    let mut hard_forks = solana_sdk::hard_forks::HardForks::default();
+    let mut hard_forks = safecoin_sdk::hard_forks::HardForks::default();
     hard_forks.register(hard_fork_slot);
 
-    let expected_shred_version = solana_sdk::shred_version::compute_shred_version(
+    let expected_shred_version = safecoin_sdk::shred_version::compute_shred_version(
         &cluster.lock().unwrap().genesis_config.hash(),
         Some(&hard_forks),
     );
@@ -2275,19 +2275,19 @@ fn test_hard_fork_with_gap_in_roots() {
     let mut hard_forks = HardForks::default();
     hard_forks.register(hard_fork_slot);
 
-    let expected_shred_version = solana_sdk::shred_version::compute_shred_version(
+    let expected_shred_version = safecoin_sdk::shred_version::compute_shred_version(
         &cluster.lock().unwrap().genesis_config.hash(),
         Some(&hard_forks),
     );
 
     // create hard-forked snapshot only for validator a, emulating the manual cluster restart
-    // procedure with `solana-ledger-tool create-snapshot`
+    // procedure with `safecoin-ledger-tool create-snapshot`
     let genesis_slot = 0;
     {
         let blockstore_a = Blockstore::open(&val_a_ledger_path).unwrap();
         create_snapshot_to_hard_fork(&blockstore_a, hard_fork_slot, vec![hard_fork_slot]);
 
-        // Intentionally make solana-validator unbootable by replaying blocks from the genesis to
+        // Intentionally make safecoin-validator unbootable by replaying blocks from the genesis to
         // ensure the hard-forked snapshot is used always.  Otherwise, we couldn't create a gap
         // in the ledger roots column family reliably.
         // There was a bug which caused the hard-forked snapshot at an unrooted slot to forget

@@ -1,6 +1,6 @@
 use {
     crate::bank::Bank,
-    solana_sdk::transaction::{Result, SanitizedTransaction},
+    safecoin_sdk::transaction::{Result, SanitizedTransaction},
     std::borrow::Cow,
 };
 
@@ -60,7 +60,7 @@ mod tests {
     use {
         super::*,
         crate::genesis_utils::{create_genesis_config_with_leader, GenesisConfigInfo},
-        solana_sdk::{signature::Keypair, system_transaction},
+        safecoin_sdk::{signature::Keypair, system_transaction},
     };
 
     #[test]
@@ -103,7 +103,7 @@ mod tests {
     }
 
     fn setup() -> (Bank, Vec<SanitizedTransaction>) {
-        let dummy_leader_pubkey = solana_sdk::pubkey::new_rand();
+        let dummy_leader_pubkey = safecoin_sdk::pubkey::new_rand();
         let GenesisConfigInfo {
             genesis_config,
             mint_keypair,
@@ -111,9 +111,9 @@ mod tests {
         } = create_genesis_config_with_leader(500, &dummy_leader_pubkey, 100);
         let bank = Bank::new_for_tests(&genesis_config);
 
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let keypair2 = Keypair::new();
-        let pubkey2 = solana_sdk::pubkey::new_rand();
+        let pubkey2 = safecoin_sdk::pubkey::new_rand();
 
         let txs = vec![
             SanitizedTransaction::from_transaction_for_tests(system_transaction::transfer(

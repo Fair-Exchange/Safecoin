@@ -1,14 +1,14 @@
 #![feature(test)]
 
-extern crate solana_core;
+extern crate safecoin_core;
 extern crate test;
 
 use {
     crossbeam_channel::unbounded,
     log::*,
-    solana_core::retransmit_stage::retransmitter,
-    solana_entry::entry::Entry,
-    solana_gossip::{
+    safecoin_core::retransmit_stage::retransmitter,
+    safecoin_entry::entry::Entry,
+    safecoin_gossip::{
         cluster_info::{ClusterInfo, Node},
         contact_info::ContactInfo,
     },
@@ -17,9 +17,9 @@ use {
         leader_schedule_cache::LeaderScheduleCache,
         shred::{ProcessShredsStats, ReedSolomonCache, Shredder},
     },
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_runtime::{bank::Bank, bank_forks::BankForks},
-    solana_sdk::{
+    safecoin_sdk::{
         hash::Hash,
         pubkey::Pubkey,
         signature::{Keypair, Signer},
@@ -43,7 +43,7 @@ use {
 // TODO: The benchmark is ignored as it currently may indefinitely block.
 // The code incorrectly expects that the node receiving the shred on tvu socket
 // retransmits that to other nodes in its neighborhood. But that is no longer
-// the case since https://github.com/solana-labs/solana/pull/17716.
+// the case since https://github.com/fair-exchange/safecoin/pull/17716.
 // So depending on shred seed, peers may not receive packets and the receive
 // threads loop indefinitely.
 #[ignore]
@@ -122,7 +122,7 @@ fn bench_retransmitter(bencher: &mut Bencher) {
         leader_schedule_cache,
         cluster_info,
         shreds_receiver,
-        Arc::default(), // solana_rpc::max_slots::MaxSlots
+        Arc::default(), // safecoin_rpc::max_slots::MaxSlots
         None,
     );
 

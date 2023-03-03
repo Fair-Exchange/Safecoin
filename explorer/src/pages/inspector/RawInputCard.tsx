@@ -1,5 +1,5 @@
 import React from "react";
-import { VersionedMessage } from "@solana/web3.js";
+import { VersionedMessage } from "@safecoin/web3.js";
 import type { TransactionData } from "./InspectorPage";
 import { useQuery } from "utils/url";
 import { useHistory, useLocation } from "react-router";

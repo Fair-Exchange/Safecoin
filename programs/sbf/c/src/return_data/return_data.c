@@ -1,13 +1,13 @@
 /**
  * @brief return data Syscall test
  */
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 #define DATA "the quick brown fox jumps over the lazy dog"
 
 extern uint64_t entrypoint(const uint8_t *input) {
   uint8_t buf[1024];
-  SolPubkey me;
+  SafePubkey me;
 
   // There should be no return data on entry
   uint64_t ret = sol_get_return_data(NULL, 0, NULL);

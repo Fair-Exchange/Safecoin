@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { TransactionSignature } from "@solana/web3.js";
+import { TransactionSignature } from "@safecoin/web3.js";
 import { clusterPath } from "utils/url";
 import { Copyable } from "./Copyable";
 

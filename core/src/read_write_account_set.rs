@@ -1,5 +1,5 @@
 use {
-    solana_sdk::{
+    safecoin_sdk::{
         message::{SanitizedMessage, VersionedMessage},
         pubkey::Pubkey,
     },
@@ -108,7 +108,7 @@ mod tests {
         solana_address_lookup_table_program::state::{AddressLookupTable, LookupTableMeta},
         solana_ledger::genesis_utils::GenesisConfigInfo,
         solana_runtime::{bank::Bank, genesis_utils::create_genesis_config},
-        solana_sdk::{
+        safecoin_sdk::{
             account::AccountSharedData,
             hash::Hash,
             message::{

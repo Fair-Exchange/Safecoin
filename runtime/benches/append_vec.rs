@@ -10,7 +10,7 @@ use {
             AppendVec, StorableAccountsWithHashesAndWriteVersions, StoredMeta,
         },
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount},
         clock::Slot,
         hash::Hash,

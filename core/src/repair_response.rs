@@ -3,7 +3,7 @@ use {
         blockstore::Blockstore,
         shred::{Nonce, SIZE_OF_NONCE},
     },
-    solana_sdk::{clock::Slot, packet::Packet},
+    safecoin_sdk::{clock::Slot, packet::Packet},
     std::{io, net::SocketAddr},
 };
 
@@ -57,7 +57,7 @@ mod test {
             shred::{Shred, ShredFlags},
             sigverify_shreds::verify_shred_cpu,
         },
-        solana_sdk::{
+        safecoin_sdk::{
             packet::PacketFlags,
             signature::{Keypair, Signer},
         },

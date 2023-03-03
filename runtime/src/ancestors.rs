@@ -1,7 +1,7 @@
 use {
     crate::rolling_bit_field::RollingBitField,
     core::fmt::{Debug, Formatter},
-    solana_sdk::clock::Slot,
+    safecoin_sdk::clock::Slot,
     std::collections::HashMap,
 };
 
@@ -92,7 +92,7 @@ impl Ancestors {
 #[cfg(test)]
 pub mod tests {
     use {
-        super::*, crate::contains::Contains, log::*, solana_measure::measure::Measure,
+        super::*, crate::contains::Contains, log::*, safecoin_measure::measure::Measure,
         std::collections::HashSet,
     };
 

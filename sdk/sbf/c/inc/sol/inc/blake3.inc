@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana Blake3 system call
+ * @brief Safecoin Blake3 system call
  */
 
 #include <sol/types.h>
@@ -21,7 +21,7 @@ extern "C" {
  * @param bytes_len Number of byte arrays
  * @param result 32 byte array to hold the result
  */
-@SYSCALL uint64_t sol_blake3(const SolBytes *, int, const uint8_t *);
+@SYSCALL uint64_t sol_blake3(const SafeBytes *, int, const uint8_t *);
 
 #ifdef __cplusplus
 }

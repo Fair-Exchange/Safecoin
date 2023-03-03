@@ -151,7 +151,7 @@ fn test_sbf_package(config: &Config, target_directory: &Path, package: &cargo_me
         config.generate_child_script_on_failure,
     );
 
-    // Pass --sbf-out-dir along to the solana-program-test crate
+    // Pass --sbf-out-dir along to the safecoin-program-test crate
     env::set_var("SBF_OUT_DIR", sbf_out_dir);
 
     cargo_args.insert(0, "test");
@@ -266,7 +266,7 @@ fn main() {
                 .long("sbf-sdk")
                 .value_name("PATH")
                 .takes_value(true)
-                .help("Path to the Solana SBF SDK"),
+                .help("Path to the Safecoin SBF SDK"),
         )
         .arg(
             Arg::new("features")

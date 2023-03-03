@@ -79,11 +79,11 @@ budget, or exceeds a bound, the entire invocation chain and the top level
 transaction processing are halted.
 
 The current [compute
-budget](https://github.com/solana-labs/solana/blob/090e11210aa7222d8295610a6ccac4acda711bb9/program-runtime/src/compute_budget.rs#L26-L87) can be found in the Solana Program Runtime.
+budget](https://github.com/fair-exchange/safecoin/blob/090e11210aa7222d8295610a6ccac4acda711bb9/program-runtime/src/compute_budget.rs#L26-L87) can be found in the Safecoin Program Runtime.
 
 #### Example Compute Budget
 
-For example, if the compute budget set in the Solana runtime is:
+For example, if the compute budget set in the Safecoin runtime is:
 
 ```rust
 max_units: 1,400,000,
@@ -118,12 +118,12 @@ for more information.
 A transaction may set the maximum number of compute units it is allowed to
 consume and the compute unit price by including a `SetComputeUnitLimit` and a
 `SetComputeUnitPrice`
-[Compute budget instructions](https://github.com/solana-labs/solana/blob/db32549c00a1b5370fcaf128981ad3323bbd9570/sdk/src/compute_budget.rs#L22)
+[Compute budget instructions](https://github.com/fair-exchange/safecoin/blob/db32549c00a1b5370fcaf128981ad3323bbd9570/sdk/src/compute_budget.rs#L22)
 respectively.
 
 If no `SetComputeUnitLimit` is provided the limit will be calculated as the
 product of the number of instructions in the transaction (excluding the [Compute
-budget instructions](https://github.com/solana-labs/solana/blob/db32549c00a1b5370fcaf128981ad3323bbd9570/sdk/src/compute_budget.rs#L22)) and the default per-instruction units, which is currently 200k.
+budget instructions](https://github.com/fair-exchange/safecoin/blob/db32549c00a1b5370fcaf128981ad3323bbd9570/sdk/src/compute_budget.rs#L22)) and the default per-instruction units, which is currently 200k.
 
 > **NOTE:** A transaction's [prioritization fee](./../../terminology.md#prioritization-fee) is calculated by multiplying the
 > number of _compute units_ by the _compute unit price_ (measured in micro-lamports)
@@ -152,26 +152,26 @@ let instruction = ComputeBudgetInstruction::set_compute_unit_price(1);
 
 ## New Features
 
-As Solana evolves, new features or patches may be introduced that changes the
+As Safecoin evolves, new features or patches may be introduced that changes the
 behavior of the cluster and how programs run. Changes in behavior must be
 coordinated between the various nodes of the cluster. If nodes do not
-coordinate, then these changes can result in a break-down of consensus. Solana
+coordinate, then these changes can result in a break-down of consensus. Safecoin
 supports a mechanism called runtime features to facilitate the smooth adoption
 of changes.
 
 Runtime features are epoch coordinated events where one or more behavior changes
-to the cluster will occur. New changes to Solana that will change behavior are
-wrapped with feature gates and disabled by default. The Solana tools are then
+to the cluster will occur. New changes to Safecoin that will change behavior are
+wrapped with feature gates and disabled by default. The Safecoin tools are then
 used to activate a feature, which marks it pending, once marked pending the
 feature will be activated at the next epoch.
 
-To determine which features are activated use the [Solana command-line
-tools](cli/install-solana-cli-tools.md):
+To determine which features are activated use the [Safecoin command-line
+tools](cli/install-safecoin-cli-tools.md):
 
 ```bash
-solana feature status
+safecoin feature status
 ```
 
-If you encounter problems, first ensure that the Solana tools version you are
-using match the version returned by `solana cluster-version`. If they do not
-match, [install the correct tool suite](cli/install-solana-cli-tools.md).
+If you encounter problems, first ensure that the Safecoin tools version you are
+using match the version returned by `safecoin cluster-version`. If they do not
+match, [install the correct tool suite](cli/install-safecoin-cli-tools.md).

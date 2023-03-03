@@ -12,7 +12,7 @@ pub use self::{
 #[allow(deprecated)]
 use {
     crate::BpfError,
-    solana_program_runtime::{
+    safecoin_program_runtime::{
         compute_budget::ComputeBudget, ic_logger_msg, ic_msg, invoke_context::InvokeContext,
         stable_log, timings::ExecuteTimings,
     },
@@ -21,7 +21,7 @@ use {
         memory_region::{AccessType, MemoryMapping},
         vm::{BuiltInProgram, Config, ProgramResult, PROGRAM_ENVIRONMENT_KEY_SHIFT},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{ReadableAccount, WritableAccount},
         account_info::AccountInfo,
         alt_bn128::prelude::{
@@ -941,7 +941,7 @@ declare_syscall!(
         _arg5: u64,
         memory_mapping: &mut MemoryMapping,
     ) -> Result<u64, EbpfError> {
-        use solana_zk_token_sdk::curve25519::{curve_syscall_traits::*, edwards, ristretto};
+        use safe_zk_token_sdk::curve25519::{curve_syscall_traits::*, edwards, ristretto};
         match curve_id {
             CURVE25519_EDWARDS => {
                 let cost = invoke_context
@@ -998,7 +998,7 @@ declare_syscall!(
         result_point_addr: u64,
         memory_mapping: &mut MemoryMapping,
     ) -> Result<u64, EbpfError> {
-        use solana_zk_token_sdk::curve25519::{
+        use safe_zk_token_sdk::curve25519::{
             curve_syscall_traits::*, edwards, ristretto, scalar,
         };
         match curve_id {
@@ -1199,7 +1199,7 @@ declare_syscall!(
         result_point_addr: u64,
         memory_mapping: &mut MemoryMapping,
     ) -> Result<u64, EbpfError> {
-        use solana_zk_token_sdk::curve25519::{
+        use safe_zk_token_sdk::curve25519::{
             curve_syscall_traits::*, edwards, ristretto, scalar,
         };
         match curve_id {
@@ -1655,7 +1655,7 @@ declare_syscall!(
         _arg5: u64,
         memory_mapping: &mut MemoryMapping,
     ) -> Result<u64, EbpfError> {
-        use solana_sdk::alt_bn128::prelude::{ALT_BN128_ADD, ALT_BN128_MUL, ALT_BN128_PAIRING};
+        use safecoin_sdk::alt_bn128::prelude::{ALT_BN128_ADD, ALT_BN128_MUL, ALT_BN128_PAIRING};
         let budget = invoke_context.get_compute_budget();
         let (cost, output): (u64, usize) = match group_op {
             ALT_BN128_ADD => (
@@ -1805,18 +1805,18 @@ declare_syscall!(
 #[cfg(test)]
 mod tests {
     #[allow(deprecated)]
-    use solana_sdk::sysvar::fees::Fees;
+    use safecoin_sdk::sysvar::fees::Fees;
     use {
         super::*,
         crate::BpfAllocator,
-        solana_program_runtime::{invoke_context::InvokeContext, sysvar_cache::SysvarCache},
+        safecoin_program_runtime::{invoke_context::InvokeContext, sysvar_cache::SysvarCache},
         solana_rbpf::{
             aligned_memory::AlignedMemory,
             ebpf::{self, HOST_ALIGN},
             memory_region::MemoryRegion,
             vm::{BuiltInFunction, Config},
         },
-        solana_sdk::{
+        safecoin_sdk::{
             account::AccountSharedData,
             bpf_loader,
             fee_calculator::FeeCalculator,
@@ -1912,7 +1912,7 @@ mod tests {
     #[test]
     fn test_translate_type() {
         // Pubkey
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let addr = &pubkey as *const _ as u64;
         let config = Config::default();
         let memory_mapping = MemoryMapping::new(
@@ -1933,9 +1933,9 @@ mod tests {
 
         // Instruction
         let instruction = Instruction::new_with_bincode(
-            solana_sdk::pubkey::new_rand(),
+            safecoin_sdk::pubkey::new_rand(),
             &"foobar",
-            vec![AccountMeta::new(solana_sdk::pubkey::new_rand(), false)],
+            vec![AccountMeta::new(safecoin_sdk::pubkey::new_rand(), false)],
         );
         let addr = &instruction as *const _ as u64;
         let mut memory_region = MemoryRegion {
@@ -2048,7 +2048,7 @@ mod tests {
         );
 
         // Pubkeys
-        let mut data = vec![solana_sdk::pubkey::new_rand(); 5];
+        let mut data = vec![safecoin_sdk::pubkey::new_rand(); 5];
         let addr = data.as_ptr() as *const _ as u64;
         let memory_mapping = MemoryMapping::new(
             vec![MemoryRegion {
@@ -2067,7 +2067,7 @@ mod tests {
             translate_slice::<Pubkey>(&memory_mapping, 0x100000000, data.len() as u64, true, true)
                 .unwrap();
         assert_eq!(data, translated_data);
-        *data.first_mut().unwrap() = solana_sdk::pubkey::new_rand(); // Both should point to same place
+        *data.first_mut().unwrap() = safecoin_sdk::pubkey::new_rand(); // Both should point to same place
         assert_eq!(data, translated_data);
     }
 
@@ -2327,7 +2327,7 @@ mod tests {
         );
         let cost = invoke_context.get_compute_budget().log_pubkey_units;
 
-        let pubkey = Pubkey::from_str("MoqiU1vryuCGQSxFKA1SZ316JdLEFFhoAu6cKUNk7dN").unwrap();
+        let pubkey = Pubkey::from_str("BNwVU7MhnDnGEQGAqpJ1dGKVtaYw4SvxbTvoACcdENd2").unwrap();
         let addr = pubkey.as_ref().first().unwrap() as *const _ as u64;
         let config = Config::default();
         let mut memory_mapping = MemoryMapping::new(
@@ -2395,7 +2395,7 @@ mod tests {
                 .unwrap()
                 .borrow()
                 .get_recorded_content(),
-            &["Program log: MoqiU1vryuCGQSxFKA1SZ316JdLEFFhoAu6cKUNk7dN".to_string()]
+            &["Program log: BNwVU7MhnDnGEQGAqpJ1dGKVtaYw4SvxbTvoACcdENd2".to_string()]
         );
     }
 
@@ -2780,7 +2780,7 @@ mod tests {
 
     #[test]
     fn test_syscall_edwards_curve_point_validation() {
-        use solana_zk_token_sdk::curve25519::curve_syscall_traits::CURVE25519_EDWARDS;
+        use safe_zk_token_sdk::curve25519::curve_syscall_traits::CURVE25519_EDWARDS;
 
         let config = Config::default();
         prepare_mockup!(
@@ -2879,7 +2879,7 @@ mod tests {
 
     #[test]
     fn test_syscall_ristretto_curve_point_validation() {
-        use solana_zk_token_sdk::curve25519::curve_syscall_traits::CURVE25519_RISTRETTO;
+        use safe_zk_token_sdk::curve25519::curve_syscall_traits::CURVE25519_RISTRETTO;
 
         let config = Config::default();
         prepare_mockup!(
@@ -2978,7 +2978,7 @@ mod tests {
 
     #[test]
     fn test_syscall_edwards_curve_group_ops() {
-        use solana_zk_token_sdk::curve25519::curve_syscall_traits::{
+        use safe_zk_token_sdk::curve25519::curve_syscall_traits::{
             ADD, CURVE25519_EDWARDS, MUL, SUB,
         };
 
@@ -3190,7 +3190,7 @@ mod tests {
 
     #[test]
     fn test_syscall_ristretto_curve_group_ops() {
-        use solana_zk_token_sdk::curve25519::curve_syscall_traits::{
+        use safe_zk_token_sdk::curve25519::curve_syscall_traits::{
             ADD, CURVE25519_RISTRETTO, MUL, SUB,
         };
 
@@ -3404,7 +3404,7 @@ mod tests {
 
     #[test]
     fn test_syscall_multiscalar_multiplication() {
-        use solana_zk_token_sdk::curve25519::curve_syscall_traits::{
+        use safe_zk_token_sdk::curve25519::curve_syscall_traits::{
             CURVE25519_EDWARDS, CURVE25519_RISTRETTO,
         };
 
@@ -4119,7 +4119,7 @@ mod tests {
 
     #[test]
     fn test_create_program_address() {
-        // These tests duplicate the direct tests in solana_program::pubkey
+        // These tests duplicate the direct tests in safecoin_program::pubkey
 
         prepare_mockup!(
             invoke_context,

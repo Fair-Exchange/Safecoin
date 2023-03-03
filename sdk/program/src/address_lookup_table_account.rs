@@ -4,7 +4,7 @@
 //!
 //! [v0]: crate::message::v0
 
-use solana_program::pubkey::Pubkey;
+use safecoin_program::pubkey::Pubkey;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AddressLookupTableAccount {

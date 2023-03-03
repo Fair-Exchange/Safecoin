@@ -16,11 +16,11 @@ use {
     itertools::Either,
     rayon::prelude::*,
     serde::Serialize,
-    solana_account_decoder::{parse_token::is_known_spl_token_id, UiAccount, UiAccountEncoding},
+    safecoin_account_decoder::{parse_token::is_known_safe_token_id, UiAccount, UiAccountEncoding},
     solana_ledger::{blockstore::Blockstore, get_tmp_ledger_path},
-    solana_measure::measure::Measure,
-    solana_rayon_threadlimit::get_thread_count,
-    solana_rpc_client_api::response::{
+    safecoin_measure::measure::Measure,
+    safecoin_rayon_threadlimit::get_thread_count,
+    safecoin_rpc_client_api::response::{
         ProcessedSignatureResult, ReceivedSignatureResult, Response as RpcResponse, RpcBlockUpdate,
         RpcBlockUpdateError, RpcKeyedAccount, RpcLogsResponse, RpcResponseContext,
         RpcSignatureResult, RpcVote, SlotInfo, SlotUpdate,
@@ -31,7 +31,7 @@ use {
         commitment::{BlockCommitmentCache, CommitmentSlots},
         vote_transaction::VoteTransaction,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount},
         clock::Slot,
         pubkey::Pubkey,
@@ -39,7 +39,7 @@ use {
         timing::timestamp,
         transaction,
     },
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         BlockEncodingOptions, ConfirmedBlock, EncodeError, VersionedConfirmedBlock,
     },
     std::{
@@ -380,7 +380,7 @@ fn filter_account_result(
     // If last_modified_slot < last_notified_slot this means that we last notified for a fork
     // and should notify that the account state has been reverted.
     let account = (last_modified_slot != last_notified_slot).then(|| {
-        if is_known_spl_token_id(account.owner())
+        if is_known_safe_token_id(account.owner())
             && params.encoding == UiAccountEncoding::JsonParsed
         {
             get_parsed_token_account(bank, &params.pubkey, account)
@@ -419,7 +419,7 @@ fn filter_program_results(
             .iter()
             .all(|filter_type| filter_type.allows(account))
     });
-    let accounts = if is_known_spl_token_id(&params.pubkey)
+    let accounts = if is_known_safe_token_id(&params.pubkey)
         && params.encoding == UiAccountEncoding::JsonParsed
         && !accounts_is_empty
     {
@@ -1238,11 +1238,11 @@ pub(crate) mod tests {
                 BankNotification, OptimisticallyConfirmedBank, OptimisticallyConfirmedBankTracker,
             },
             rpc::{create_test_transaction_entries, populate_blockstore_for_tests},
-            rpc_pubsub::RpcSolPubSubInternal,
+            rpc_pubsub::RpcSafePubSubInternal,
             rpc_pubsub_service,
         },
         serial_test::serial,
-        solana_rpc_client_api::config::{
+        safecoin_rpc_client_api::config::{
             RpcAccountInfoConfig, RpcBlockSubscribeConfig, RpcBlockSubscribeFilter,
             RpcProgramAccountsConfig, RpcSignatureSubscribeConfig, RpcTransactionLogsConfig,
             RpcTransactionLogsFilter,
@@ -1251,14 +1251,14 @@ pub(crate) mod tests {
             commitment::BlockCommitment,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
         },
-        solana_sdk::{
+        safecoin_sdk::{
             commitment_config::CommitmentConfig,
             message::Message,
             signature::{Keypair, Signer},
             stake, system_instruction, system_program, system_transaction,
             transaction::Transaction,
         },
-        solana_transaction_status::{TransactionDetails, UiTransactionEncoding},
+        safecoin_transaction_status::{TransactionDetails, UiTransactionEncoding},
         std::{
             collections::HashSet,
             sync::atomic::{AtomicU64, Ordering::Relaxed},
@@ -2406,7 +2406,7 @@ pub(crate) mod tests {
 
         let next_bank = Bank::new_from_parent(
             &bank_forks.get(0).unwrap(),
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             1,
         );
         bank_forks.insert(next_bank);

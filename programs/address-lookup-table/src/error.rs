@@ -1,5 +1,5 @@
 #[cfg(not(target_os = "solana"))]
-use solana_program::message::AddressLoaderError;
+use safecoin_program::message::AddressLoaderError;
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq, Clone)]

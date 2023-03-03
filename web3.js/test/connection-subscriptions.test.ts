@@ -752,7 +752,7 @@ describe('Subscriptions', () => {
    * that the RPC has auto-disposed the subscription.
    *
    * NOTE: There is a proposal to eliminate this special case, here:
-   * https://github.com/solana-labs/solana/issues/18892
+   * https://github.com/fair-exchange/safecoin/issues/18892
    */
   describe('auto-disposing subscriptions', () => {
     let clientSubscriptionId: number;
@@ -906,7 +906,7 @@ describe('Subscriptions', () => {
     });
     /**
      * This is a regression test for the case described here:
-     * https://github.com/solana-labs/solana/pull/24473#discussion_r858437090
+     * https://github.com/fair-exchange/safecoin/pull/24473#discussion_r858437090
      *
      * Essentially, you want to make sure that the state processor, as it recurses
      * always processes the latest version of every subscription. Depending on how

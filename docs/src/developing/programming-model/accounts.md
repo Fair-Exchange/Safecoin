@@ -18,7 +18,7 @@ and collects rent. Any account that drops to zero lamports is purged. Accounts
 can also be marked [rent-exempt](#rent-exemption) if they contain a sufficient
 number of lamports.
 
-In the same way that a Linux user uses a path to look up a file, a Solana client
+In the same way that a Linux user uses a path to look up a file, a Safecoin client
 uses an _address_ to look up an account. The address is a 256-bit public key.
 
 ## Signers
@@ -120,10 +120,10 @@ One example is when programs use a sysvar account. Unless the program checks the
 account's address or owner, it's impossible to be sure whether it's a real and
 valid sysvar account merely by successful deserialization of the account's data.
 
-Accordingly, the Solana SDK [checks the sysvar account's validity during
-deserialization](https://github.com/solana-labs/solana/blob/a95675a7ce1651f7b59443eb146b356bc4b3f374/sdk/program/src/sysvar/mod.rs#L65).
+Accordingly, the Safecoin SDK [checks the sysvar account's validity during
+deserialization](https://github.com/fair-exchange/safecoin/blob/a95675a7ce1651f7b59443eb146b356bc4b3f374/sdk/program/src/sysvar/mod.rs#L65).
 An alternative and safer way to read a sysvar is via the sysvar's [`get()`
-function](https://github.com/solana-labs/solana/blob/64bfc14a75671e4ec3fe969ded01a599645080eb/sdk/program/src/sysvar/mod.rs#L73)
+function](https://github.com/fair-exchange/safecoin/blob/64bfc14a75671e4ec3fe969ded01a599645080eb/sdk/program/src/sysvar/mod.rs#L73)
 which doesn't require these checks.
 
 If the program always modifies the account in question, the address/owner check
@@ -132,7 +132,7 @@ and the containing transaction will be thrown out.
 
 ## Rent
 
-Keeping accounts alive on Solana incurs a storage cost called _rent_ because the
+Keeping accounts alive on Safecoin incurs a storage cost called _rent_ because the
 blockchain cluster must actively maintain the data to process any future transactions.
 This is different from Bitcoin and Ethereum, where storing accounts doesn't
 incur any costs.
@@ -156,19 +156,19 @@ illustrative only.
 :::
 
 For example, a program executable with the size of 15,000 bytes requires a
-balance of 105,290,880 lamports (=~ 0.105 SOL) to be rent-exempt:
+balance of 105,290,880 lamports (=~ 0.105 SAFE) to be rent-exempt:
 
 ```text
 105,290,880 = 19.055441478439427 (fee rate) * (128 + 15_000)(account size including metadata) * ((365.25/2) * 2)(epochs in 2 years)
 ```
 
-Rent can also be estimated via the [`solana rent` CLI subcommand](cli/usage.md#solana-rent)
+Rent can also be estimated via the [`safecoin rent` CLI subcommand](cli/usage.md#solana-rent)
 
 ```text
-$ solana rent 15000
-Rent per byte-year: 0.00000348 SOL
-Rent per epoch: 0.000288276 SOL
-Rent-exempt minimum: 0.10529088 SOL
+$ safecoin rent 15000
+Rent per byte-year: 0.00000348 SAFE
+Rent per epoch: 0.000288276 SAFE
+Rent-exempt minimum: 0.10529088 SAFE
 ```
 
 Note: Rest assured that, should the storage rent rate need to be increased at some

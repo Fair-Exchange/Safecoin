@@ -1,6 +1,6 @@
 import bs58 from 'bs58';
 import {Buffer} from 'buffer';
-import * as splToken from '@solana/spl-token';
+import * as splToken from '@safecoin/safe-token';
 import {expect, use} from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import {Agent as HttpAgent} from 'http';
@@ -15,7 +15,7 @@ import {
   EpochSchedule,
   SystemProgram,
   Transaction,
-  LAMPORTS_PER_SOL,
+  LAMPORTS_PER_SAFE,
   Lockup,
   PublicKey,
   StakeProgram,
@@ -97,7 +97,7 @@ async function mockNonceAccountResponse(
     params: [nonceAccountPubkey, {encoding: 'base64'}],
     value: {
       owner: SystemProgram.programId.toBase58(),
-      lamports: LAMPORTS_PER_SOL,
+      lamports: LAMPORTS_PER_SAFE,
       data: [mockNonceAccountData.toString('base64'), 'base64'],
       executable: false,
       rentEpoch: 20,
@@ -162,7 +162,7 @@ describe('Connection', function () {
       await mockRpcResponse({
         method: 'getVersion',
         params: [],
-        value: {'solana-core': '0.20.4'},
+        value: {'safecoin-core': '0.20.4'},
         withHeaders: headers,
       });
 
@@ -187,7 +187,7 @@ describe('Connection', function () {
       await mockRpcResponse({
         method: 'getVersion',
         params: [],
-        value: {'solana-core': '0.20.4'},
+        value: {'safecoin-core': '0.20.4'},
         withHeaders: {
           Authorization: 'Bearer 123',
         },
@@ -303,20 +303,20 @@ describe('Connection', function () {
       await helpers.airdrop({
         connection,
         address: account1.publicKey,
-        amount: LAMPORTS_PER_SOL,
+        amount: LAMPORTS_PER_SAFE,
       });
 
       await helpers.airdrop({
         connection,
         address: account2.publicKey,
-        amount: LAMPORTS_PER_SOL,
+        amount: LAMPORTS_PER_SAFE,
       });
     }
 
     const value = [
       {
         owner: '11111111111111111111111111111111',
-        lamports: LAMPORTS_PER_SOL,
+        lamports: LAMPORTS_PER_SAFE,
         data: ['', 'base64'],
         executable: false,
         rentEpoch: Math.pow(2, 64) - 1,
@@ -324,7 +324,7 @@ describe('Connection', function () {
       },
       {
         owner: '11111111111111111111111111111111',
-        lamports: LAMPORTS_PER_SOL,
+        lamports: LAMPORTS_PER_SAFE,
         data: ['', 'base64'],
         executable: false,
         rentEpoch: Math.pow(2, 64) - 1,
@@ -350,7 +350,7 @@ describe('Connection', function () {
     const expectedValue = [
       {
         owner: new PublicKey('11111111111111111111111111111111'),
-        lamports: LAMPORTS_PER_SOL,
+        lamports: LAMPORTS_PER_SAFE,
         data: Buffer.from([]),
         executable: false,
         rentEpoch: Math.pow(2, 64) - 1,
@@ -358,7 +358,7 @@ describe('Connection', function () {
       },
       {
         owner: new PublicKey('11111111111111111111111111111111'),
-        lamports: LAMPORTS_PER_SOL,
+        lamports: LAMPORTS_PER_SAFE,
         data: Buffer.from([]),
         executable: false,
         rentEpoch: Math.pow(2, 64) - 1,
@@ -378,7 +378,7 @@ describe('Connection', function () {
       await helpers.airdrop({
         connection,
         address: account0.publicKey,
-        amount: LAMPORTS_PER_SOL,
+        amount: LAMPORTS_PER_SAFE,
       });
 
       const transaction = new Transaction().add(
@@ -400,7 +400,7 @@ describe('Connection', function () {
       await helpers.airdrop({
         connection,
         address: account1.publicKey,
-        amount: 0.5 * LAMPORTS_PER_SOL,
+        amount: 0.5 * LAMPORTS_PER_SAFE,
       });
 
       const transaction = new Transaction().add(
@@ -433,7 +433,7 @@ describe('Connection', function () {
             account: {
               data: ['', 'base64'],
               executable: false,
-              lamports: LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+              lamports: LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -444,7 +444,7 @@ describe('Connection', function () {
               data: ['', 'base64'],
               executable: false,
               lamports:
-                0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+                0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -463,12 +463,12 @@ describe('Connection', function () {
       programAccounts.forEach(function (keyedAccount) {
         if (keyedAccount.pubkey.equals(account0.publicKey)) {
           expect(keyedAccount.account.lamports).to.eq(
-            LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+            LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
           );
         } else {
           expect(keyedAccount.pubkey).to.eql(account1.publicKey);
           expect(keyedAccount.account.lamports).to.eq(
-            0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+            0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
           );
         }
       });
@@ -486,7 +486,7 @@ describe('Connection', function () {
             account: {
               data: ['', 'base64'],
               executable: false,
-              lamports: LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+              lamports: LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -497,7 +497,7 @@ describe('Connection', function () {
               data: ['', 'base64'],
               executable: false,
               lamports:
-                0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+                0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -514,12 +514,12 @@ describe('Connection', function () {
       programAccounts.forEach(function (keyedAccount) {
         if (keyedAccount.pubkey.equals(account0.publicKey)) {
           expect(keyedAccount.account.lamports).to.eq(
-            LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+            LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
           );
         } else {
           expect(keyedAccount.pubkey).to.eql(account1.publicKey);
           expect(keyedAccount.account.lamports).to.eq(
-            0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+            0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
           );
         }
       });
@@ -545,7 +545,7 @@ describe('Connection', function () {
             account: {
               data: ['', 'base64'],
               executable: false,
-              lamports: LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+              lamports: LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -556,7 +556,7 @@ describe('Connection', function () {
               data: ['', 'base64'],
               executable: false,
               lamports:
-                0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+                0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -624,7 +624,7 @@ describe('Connection', function () {
             account: {
               data: ['', 'base64'],
               executable: false,
-              lamports: LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+              lamports: LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -635,7 +635,7 @@ describe('Connection', function () {
               data: ['', 'base64'],
               executable: false,
               lamports:
-                0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+                0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -655,12 +655,12 @@ describe('Connection', function () {
       programAccounts.forEach(function (element) {
         if (element.pubkey.equals(account0.publicKey)) {
           expect(element.account.lamports).to.eq(
-            LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+            LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
           );
         } else {
           expect(element.pubkey).to.eql(account1.publicKey);
           expect(element.account.lamports).to.eq(
-            0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+            0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
           );
         }
       });
@@ -715,7 +715,7 @@ describe('Connection', function () {
             account: {
               data: ['', 'base64'],
               executable: false,
-              lamports: LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+              lamports: LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -726,7 +726,7 @@ describe('Connection', function () {
               data: ['', 'base64'],
               executable: false,
               lamports:
-                0.5 * LAMPORTS_PER_SOL - feeCalculator.lamportsPerSignature,
+                0.5 * LAMPORTS_PER_SAFE - feeCalculator.lamportsPerSignature,
               owner: programId.publicKey.toBase58(),
               rentEpoch: 20,
             },
@@ -1046,7 +1046,7 @@ describe('Connection', function () {
             connection.confirmTransaction(
               await connection.requestAirdrop(
                 keypair.publicKey,
-                LAMPORTS_PER_SOL,
+                LAMPORTS_PER_SAFE,
               ),
             ),
             helpers.latestBlockhash({connection}),
@@ -1061,7 +1061,7 @@ describe('Connection', function () {
               },
             ],
             programId: new PublicKey(
-              'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+              'MEMWKbqsjEB8o972BvDHExZFSauzGZKvB4xHDVPFowh',
             ),
             data: Buffer.from('Hello world', 'utf8'),
           });
@@ -1117,7 +1117,7 @@ describe('Connection', function () {
             connection.confirmTransaction(
               await connection.requestAirdrop(
                 keypair.publicKey,
-                LAMPORTS_PER_SOL,
+                LAMPORTS_PER_SAFE,
               ),
             ),
             helpers.latestBlockhash({connection}),
@@ -1166,7 +1166,7 @@ describe('Connection', function () {
               },
             ],
             programId: new PublicKey(
-              'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+              'MEMWKbqsjEB8o972BvDHExZFSauzGZKvB4xHDVPFowh',
             ),
             data: Buffer.from('Hello world', 'utf8'),
           });
@@ -1804,7 +1804,7 @@ describe('Connection', function () {
             params: [nonceAccountPubkey.toBase58(), {encoding: 'base64'}],
             value: {
               owner: SystemProgram.programId.toBase58(),
-              lamports: LAMPORTS_PER_SOL,
+              lamports: LAMPORTS_PER_SAFE,
               data: ['JUNK_DATA', 'base64'],
               executable: false,
               rentEpoch: 20,
@@ -3174,7 +3174,7 @@ describe('Connection', function () {
                 {
                   accounts: ['va12u4o9DipLEB2z4fuoHszroq1U9NcAB9aooFDPJSf'],
                   data: '37u9WtQpcm6ULa3VtWDFAWoQc1hUvybPrA3dtx99tgHvvcE7pKRZjuGmn7VX2tC3JmYDYGG7',
-                  programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+                  programId: 'ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN',
                 },
               ],
               recentBlockhash: 'GeyAFFRY3WGpmam2hbgrKw4rbU2RKzfVLm5QLSeZwTZE',
@@ -3205,8 +3205,8 @@ describe('Connection', function () {
         params: [confirmedTransaction, {encoding: 'jsonParsed'}],
         value: getMockData({
           parsed: {},
-          program: 'spl-token',
-          programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+          program: 'safe-token',
+          programId: 'ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN',
         }),
       });
 
@@ -3229,7 +3229,7 @@ describe('Connection', function () {
             '6tVrjJhFm5SAvvdh6tysjotQurCSELpxuW3JaAAYeC1m',
           ],
           data: 'ai3535',
-          programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+          programId: 'ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN',
         }),
       });
 
@@ -3508,7 +3508,7 @@ describe('Connection', function () {
         if (process.env.TEST_LIVE) {
           console.warn(
             'WARNING: We ran no assertions about the genesis block because block 0 ' +
-              'could not be found. See https://github.com/solana-labs/solana/issues/23853.',
+              'could not be found. See https://github.com/fair-exchange/safecoin/issues/23853.',
           );
           this.skip();
         } else {
@@ -3856,7 +3856,7 @@ describe('Connection', function () {
         if (process.env.TEST_LIVE) {
           console.warn(
             'WARNING: We ran no assertions about the genesis block because block 0 ' +
-              'could not be found. See https://github.com/solana-labs/solana/issues/23853.',
+              'could not be found. See https://github.com/fair-exchange/safecoin/issues/23853.',
           );
           this.skip();
         } else {
@@ -4100,7 +4100,7 @@ describe('Connection', function () {
         if (process.env.TEST_LIVE) {
           console.warn(
             'WARNING: We ran no assertions about the genesis block because block 0 ' +
-              'could not be found. See https://github.com/solana-labs/solana/issues/23853.',
+              'could not be found. See https://github.com/fair-exchange/safecoin/issues/23853.',
           );
           this.skip();
         } else {
@@ -4462,7 +4462,7 @@ describe('Connection', function () {
   });
 
   const TOKEN_PROGRAM_ID = new PublicKey(
-    'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+    'ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN',
   );
 
   if (process.env.TEST_LIVE) {
@@ -4595,7 +4595,7 @@ describe('Connection', function () {
         expect(signatures[0]).to.eq(testSignature);
         const ix = message.instructions[0];
         if ('parsed' in ix) {
-          expect(ix.program).to.eq('spl-token');
+          expect(ix.program).to.eq('safe-token');
           expect(ix.programId).to.eql(TOKEN_PROGRAM_ID);
         } else {
           expect('parsed' in ix).to.be.true;
@@ -4631,7 +4631,7 @@ describe('Connection', function () {
           if (Buffer.isBuffer(data)) {
             expect(Buffer.isBuffer(data)).to.eq(false);
           } else {
-            expect(data.program).to.eq('spl-token');
+            expect(data.program).to.eq('safe-token');
             expect(data.parsed).to.be.ok;
           }
         }
@@ -4654,7 +4654,7 @@ describe('Connection', function () {
           if (Buffer.isBuffer(data)) {
             expect(Buffer.isBuffer(data)).to.eq(false);
           } else {
-            expect(data.program).to.eq('spl-token');
+            expect(data.program).to.eq('safe-token');
             expect(data.parsed).to.be.ok;
           }
         } else {
@@ -4667,7 +4667,7 @@ describe('Connection', function () {
           if (Buffer.isBuffer(data)) {
             expect(Buffer.isBuffer(data)).to.eq(false);
           } else {
-            expect(data.program).to.eq('spl-token');
+            expect(data.program).to.eq('safe-token');
             expect(data.parsed).to.be.ok;
           }
         } else {
@@ -4697,7 +4697,7 @@ describe('Connection', function () {
             expect(Buffer.isBuffer(data)).to.eq(false);
           } else {
             expect(data.parsed).to.be.ok;
-            expect(data.program).to.eq('spl-token');
+            expect(data.program).to.eq('safe-token');
           }
         });
       });
@@ -4718,7 +4718,7 @@ describe('Connection', function () {
             expect(Buffer.isBuffer(data)).to.eq(false);
           } else {
             expect(data.parsed).to.be.ok;
-            expect(data.program).to.eq('spl-token');
+            expect(data.program).to.eq('safe-token');
           }
         });
       });
@@ -4765,14 +4765,14 @@ describe('Connection', function () {
       const recipient = Keypair.generate();
       let signature = await connection.requestAirdrop(
         sender.publicKey,
-        2 * LAMPORTS_PER_SOL,
+        2 * LAMPORTS_PER_SAFE,
       );
       await connection.confirmTransaction(signature, 'singleGossip');
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: sender.publicKey,
           toPubkey: recipient.publicKey,
-          lamports: LAMPORTS_PER_SOL,
+          lamports: LAMPORTS_PER_SAFE,
         }),
       );
       await sendAndConfirmTransaction(connection, transaction, [sender]);
@@ -4808,7 +4808,7 @@ describe('Connection', function () {
   if (process.env.TEST_LIVE) {
     it('stake activation should return activating for new accounts', async () => {
       // todo: use `Connection.getMinimumStakeDelegation` when implemented
-      const MIN_STAKE_DELEGATION = LAMPORTS_PER_SOL;
+      const MIN_STAKE_DELEGATION = LAMPORTS_PER_SAFE;
       const STAKE_ACCOUNT_MIN_BALANCE =
         await connection.getMinimumBalanceForRentExemption(StakeProgram.space);
 
@@ -4821,7 +4821,7 @@ describe('Connection', function () {
       const authorized = Keypair.generate();
       let signature = await connection.requestAirdrop(
         authorized.publicKey,
-        2 * LAMPORTS_PER_SOL,
+        2 * LAMPORTS_PER_SAFE,
       );
       await connection.confirmTransaction(signature, 'confirmed');
 
@@ -4909,11 +4909,11 @@ describe('Connection', function () {
     await mockRpcResponse({
       method: 'getVersion',
       params: [],
-      value: {'solana-core': '0.20.4'},
+      value: {'safecoin-core': '0.20.4'},
     });
 
     const version = await connection.getVersion();
-    expect(version['solana-core']).to.be.ok;
+    expect(version['safecoin-core']).to.be.ok;
   });
 
   it('getGenesisHash', async () => {
@@ -4933,18 +4933,18 @@ describe('Connection', function () {
     await helpers.airdrop({
       connection,
       address: account.publicKey,
-      amount: LAMPORTS_PER_SOL,
+      amount: LAMPORTS_PER_SAFE,
     });
 
     await mockRpcResponse({
       method: 'getBalance',
       params: [account.publicKey.toBase58(), {commitment: 'confirmed'}],
-      value: LAMPORTS_PER_SOL,
+      value: LAMPORTS_PER_SAFE,
       withContext: true,
     });
 
     const balance = await connection.getBalance(account.publicKey, 'confirmed');
-    expect(balance).to.eq(LAMPORTS_PER_SOL);
+    expect(balance).to.eq(LAMPORTS_PER_SAFE);
 
     await mockRpcResponse({
       method: 'getAccountInfo',
@@ -4954,7 +4954,7 @@ describe('Connection', function () {
       ],
       value: {
         owner: '11111111111111111111111111111111',
-        lamports: LAMPORTS_PER_SOL,
+        lamports: LAMPORTS_PER_SAFE,
         data: ['', 'base64'],
         executable: false,
         rentEpoch: 20,
@@ -4970,7 +4970,7 @@ describe('Connection', function () {
       expect(accountInfo).not.to.be.null;
       return;
     }
-    expect(accountInfo.lamports).to.eq(LAMPORTS_PER_SOL);
+    expect(accountInfo.lamports).to.eq(LAMPORTS_PER_SAFE);
     expect(accountInfo.data).to.have.length(0);
     expect(accountInfo.owner).to.eql(SystemProgram.programId);
 
@@ -4982,7 +4982,7 @@ describe('Connection', function () {
       ],
       value: {
         owner: '11111111111111111111111111111111',
-        lamports: LAMPORTS_PER_SOL,
+        lamports: LAMPORTS_PER_SAFE,
         data: ['', 'base64'],
         executable: false,
         rentEpoch: 20,
@@ -5000,7 +5000,7 @@ describe('Connection', function () {
       expect(parsedAccountInfo.data.parsed).not.to.be.ok;
       return;
     }
-    expect(parsedAccountInfo.lamports).to.eq(LAMPORTS_PER_SOL);
+    expect(parsedAccountInfo.lamports).to.eq(LAMPORTS_PER_SAFE);
     expect(parsedAccountInfo.data).to.have.length(0);
     expect(parsedAccountInfo.owner).to.eql(SystemProgram.programId);
   });
@@ -5011,7 +5011,7 @@ describe('Connection', function () {
     await helpers.airdrop({
       connection,
       address: payer.publicKey,
-      amount: LAMPORTS_PER_SOL,
+      amount: LAMPORTS_PER_SAFE,
     });
 
     const newAccount = Keypair.generate();
@@ -5019,7 +5019,7 @@ describe('Connection', function () {
       SystemProgram.createAccount({
         fromPubkey: payer.publicKey,
         newAccountPubkey: newAccount.publicKey,
-        lamports: LAMPORTS_PER_SOL / 2,
+        lamports: LAMPORTS_PER_SAFE / 2,
         space: 0,
         programId: SystemProgram.programId,
       }),
@@ -5125,7 +5125,7 @@ describe('Connection', function () {
       await helpers.airdrop({
         connection,
         address: payer.publicKey,
-        amount: LAMPORTS_PER_SOL,
+        amount: LAMPORTS_PER_SAFE,
       });
 
       const recentBlockhash = await (
@@ -5156,7 +5156,7 @@ describe('Connection', function () {
       await helpers.airdrop({
         connection,
         address: payer.publicKey,
-        amount: LAMPORTS_PER_SOL,
+        amount: LAMPORTS_PER_SAFE,
       });
 
       const recentBlockhash = await (
@@ -5187,7 +5187,7 @@ describe('Connection', function () {
         {
           data: ['', 'base64'],
           executable: false,
-          lamports: LAMPORTS_PER_SOL - 5000,
+          lamports: LAMPORTS_PER_SAFE - 5000,
           owner: SystemProgram.programId.toBase58(),
           rentEpoch: Math.pow(2, 64) - 1,
           space: 0,
@@ -5204,13 +5204,13 @@ describe('Connection', function () {
       await helpers.airdrop({
         connection,
         address: account1.publicKey,
-        amount: LAMPORTS_PER_SOL,
+        amount: LAMPORTS_PER_SAFE,
       });
 
       await helpers.airdrop({
         connection,
         address: account2.publicKey,
-        amount: LAMPORTS_PER_SOL,
+        amount: LAMPORTS_PER_SAFE,
       });
 
       const recentBlockhash = await (
@@ -5220,7 +5220,7 @@ describe('Connection', function () {
         accountKeys: [
           account1.publicKey.toString(),
           account2.publicKey.toString(),
-          'Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo',
+          'MEMDqRW2fYAU19mcFnoDVoqG4Br4t7TdyWjjv38P6Nc',
         ],
         header: {
           numReadonlySignedAccounts: 1,
@@ -5371,11 +5371,11 @@ describe('Connection', function () {
 
       let signature = await connection.requestAirdrop(
         accountFrom.publicKey,
-        LAMPORTS_PER_SOL,
+        LAMPORTS_PER_SAFE,
       );
       await connection.confirmTransaction(signature);
       expect(await connection.getBalance(accountFrom.publicKey)).to.eq(
-        LAMPORTS_PER_SOL,
+        LAMPORTS_PER_SAFE,
       );
 
       const minimumAmount = await connection.getMinimumBalanceForRentExemption(
@@ -5428,12 +5428,12 @@ describe('Connection', function () {
         expect(response).not.to.be.null;
       }
 
-      // accountFrom may have less than LAMPORTS_PER_SOL due to transaction fees
+      // accountFrom may have less than LAMPORTS_PER_SAFE due to transaction fees
       expect(
         await connection.getBalance(accountFrom.publicKey),
       ).to.be.greaterThan(0);
       expect(await connection.getBalance(accountFrom.publicKey)).to.be.at.most(
-        LAMPORTS_PER_SOL,
+        LAMPORTS_PER_SAFE,
       );
 
       expect(await connection.getBalance(accountTo.publicKey)).to.eq(
@@ -5471,9 +5471,9 @@ describe('Connection', function () {
               );
             },
           );
-          connection.requestAirdrop(owner.publicKey, LAMPORTS_PER_SOL);
+          connection.requestAirdrop(owner.publicKey, LAMPORTS_PER_SAFE);
           const accountInfo = await accountInfoPromise;
-          expect(accountInfo.lamports).to.eq(LAMPORTS_PER_SOL);
+          expect(accountInfo.lamports).to.eq(LAMPORTS_PER_SAFE);
           expect(accountInfo.owner.equals(SystemProgram.programId)).to.be.true;
         } finally {
           if (subscriptionId != null) {
@@ -5504,7 +5504,7 @@ describe('Connection', function () {
           await helpers.airdrop({
             connection,
             address: owner.publicKey,
-            amount: LAMPORTS_PER_SOL,
+            amount: LAMPORTS_PER_SAFE,
           });
 
           const transaction = new Transaction().add(
@@ -5578,7 +5578,7 @@ describe('Connection', function () {
         const owner = Keypair.generate();
         const signature = await connection.requestAirdrop(
           owner.publicKey,
-          LAMPORTS_PER_SOL,
+          LAMPORTS_PER_SAFE,
         );
         const signatureResult = await new Promise<SignatureResult>(resolve => {
           // NOTE: Signature subscriptions auto-remove themselves, so there's no
@@ -5605,7 +5605,7 @@ describe('Connection', function () {
           });
 
           // Execute a transaction so that we can pickup its logs.
-          await connection.requestAirdrop(owner.publicKey, LAMPORTS_PER_SOL);
+          await connection.requestAirdrop(owner.publicKey, LAMPORTS_PER_SAFE);
 
           const [logsRes, ctx] = await logPromise;
           expect(ctx.slot).to.be.greaterThan(0);
@@ -5625,9 +5625,9 @@ describe('Connection', function () {
     });
 
     it('https request', async () => {
-      const connection = new Connection('https://api.mainnet-beta.solana.com');
+      const connection = new Connection('https://api.mainnet-beta.safecoin.org');
       const version = await connection.getVersion();
-      expect(version['solana-core']).to.be.ok;
+      expect(version['safecoin-core']).to.be.ok;
     }).timeout(20 * 1000);
 
     let lookupTableKey: PublicKey;
@@ -5643,7 +5643,7 @@ describe('Connection', function () {
         await helpers.airdrop({
           connection,
           address: payer.publicKey,
-          amount: 10 * LAMPORTS_PER_SOL,
+          amount: 10 * LAMPORTS_PER_SAFE,
         });
       });
 
@@ -5726,7 +5726,7 @@ describe('Connection', function () {
         await helpers.airdrop({
           connection,
           address: payer.publicKey,
-          amount: 10 * LAMPORTS_PER_SOL,
+          amount: 10 * LAMPORTS_PER_SAFE,
         });
       });
 
@@ -5763,7 +5763,7 @@ describe('Connection', function () {
         const {blockhash, lastValidBlockHeight} =
           await connection.getLatestBlockhash();
         const transferIxData = encodeData(SYSTEM_INSTRUCTION_LAYOUTS.Transfer, {
-          lamports: BigInt(LAMPORTS_PER_SOL),
+          lamports: BigInt(LAMPORTS_PER_SAFE),
         });
         addressTableLookups = [
           {
@@ -5813,7 +5813,7 @@ describe('Connection', function () {
           {commitment: 'confirmed', dataSlice: {length: 0, offset: 0}},
         );
         expect(transferToAccount?.data.length).to.be.eq(0);
-        expect(transferToAccount?.lamports).to.be.eq(LAMPORTS_PER_SOL);
+        expect(transferToAccount?.lamports).to.be.eq(LAMPORTS_PER_SAFE);
       });
 
       it('getTransaction (failure)', async () => {

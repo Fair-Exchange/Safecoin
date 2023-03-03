@@ -3,7 +3,7 @@
 #![allow(non_snake_case)]
 use {
     crate::signer::{keypair::Keypair, Signer},
-    solana_program::{pubkey::Pubkey, wasm::display_to_jsvalue},
+    safecoin_program::{pubkey::Pubkey, wasm::display_to_jsvalue},
     wasm_bindgen::prelude::*,
 };
 

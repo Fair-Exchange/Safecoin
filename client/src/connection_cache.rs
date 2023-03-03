@@ -1,16 +1,16 @@
 use {
     quinn::Endpoint,
-    solana_connection_cache::{
+    safecoin_connection_cache::{
         client_connection::ClientConnection,
         connection_cache::{
             BaseClientConnection, ConnectionCache as BackendConnectionCache, ConnectionPool,
             NewConnectionConfig,
         },
     },
-    solana_quic_client::{QuicConfig, QuicConnectionManager, QuicPool},
-    solana_sdk::{pubkey::Pubkey, signature::Keypair, transport::Result as TransportResult},
+    safecoin_quic_client::{QuicConfig, QuicConnectionManager, QuicPool},
+    safecoin_sdk::{pubkey::Pubkey, signature::Keypair, transport::Result as TransportResult},
     solana_streamer::streamer::StakedNodes,
-    solana_udp_client::{UdpConfig, UdpConnectionManager, UdpPool},
+    safecoin_udp_client::{UdpConfig, UdpConnectionManager, UdpPool},
     std::{
         error::Error,
         net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -165,7 +165,7 @@ impl ClientConnection for BlockingClientConnection {
 }
 
 #[async_trait::async_trait]
-impl solana_connection_cache::nonblocking::client_connection::ClientConnection
+impl safecoin_connection_cache::nonblocking::client_connection::ClientConnection
     for NonblockingClientConnection
 {
     dispatch!(fn server_addr(&self) -> &SocketAddr);
@@ -191,7 +191,7 @@ mod tests {
         super::*,
         crate::connection_cache::ConnectionCache,
         crossbeam_channel::unbounded,
-        solana_sdk::{quic::QUIC_PORT_OFFSET, signature::Keypair},
+        safecoin_sdk::{quic::QUIC_PORT_OFFSET, signature::Keypair},
         solana_streamer::{
             nonblocking::quic::DEFAULT_WAIT_FOR_CHUNK_TIMEOUT_MS, quic::StreamStats,
             streamer::StakedNodes,

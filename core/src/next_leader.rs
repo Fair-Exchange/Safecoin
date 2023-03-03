@@ -1,9 +1,9 @@
 use {
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::ClusterInfo, legacy_contact_info::LegacyContactInfo as ContactInfo,
     },
-    solana_poh::poh_recorder::PohRecorder,
-    solana_sdk::{clock::FORWARD_TRANSACTIONS_TO_LEADER_AT_SLOT_OFFSET, pubkey::Pubkey},
+    safecoin_poh::poh_recorder::PohRecorder,
+    safecoin_sdk::{clock::FORWARD_TRANSACTIONS_TO_LEADER_AT_SLOT_OFFSET, pubkey::Pubkey},
     std::{net::SocketAddr, sync::RwLock},
 };
 

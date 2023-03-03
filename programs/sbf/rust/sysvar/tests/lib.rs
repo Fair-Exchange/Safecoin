@@ -1,7 +1,7 @@
 use {
-    solana_program_test::*,
-    solana_sbf_rust_sysvar::process_instruction,
-    solana_sdk::{
+    safecoin_program_test::*,
+    safecoin_sbf_rust_sysvar::process_instruction,
+    safecoin_sdk::{
         feature_set::disable_fees_sysvar,
         instruction::{AccountMeta, Instruction},
         pubkey::Pubkey,
@@ -19,7 +19,7 @@ async fn test_sysvars() {
     let program_id = Pubkey::new_unique();
 
     let program_test = ProgramTest::new(
-        "solana_sbf_rust_sysvar",
+        "safecoin_sbf_rust_sysvar",
         program_id,
         processor!(process_instruction),
     );
@@ -51,7 +51,7 @@ async fn test_sysvars() {
     banks_client.process_transaction(transaction).await.unwrap();
 
     let mut program_test = ProgramTest::new(
-        "solana_sbf_rust_sysvar",
+        "safecoin_sbf_rust_sysvar",
         program_id,
         processor!(process_instruction),
     );

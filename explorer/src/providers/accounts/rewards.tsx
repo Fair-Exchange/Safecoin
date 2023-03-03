@@ -1,7 +1,7 @@
 import React from "react";
 import { Cluster, useCluster } from "providers/cluster";
 import * as Cache from "providers/cache";
-import { Connection, InflationReward, PublicKey } from "@solana/web3.js";
+import { Connection, InflationReward, PublicKey } from "@safecoin/web3.js";
 import { ActionType } from "providers/block";
 import { FetchStatus } from "providers/cache";
 import { reportError } from "utils/sentry";

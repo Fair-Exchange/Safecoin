@@ -8,7 +8,7 @@
 use {
     crate::waitable_condvar::WaitableCondvar,
     log::*,
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     std::{
         io::*,
         sync::{

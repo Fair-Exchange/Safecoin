@@ -29,9 +29,9 @@ use {
         window_service::WindowService,
     },
     crossbeam_channel::{unbounded, Receiver},
-    solana_client::connection_cache::ConnectionCache,
-    solana_geyser_plugin_manager::block_metadata_notifier_interface::BlockMetadataNotifierLock,
-    solana_gossip::{
+    safecoin_client::connection_cache::ConnectionCache,
+    safecoin_geyser_plugin_manager::block_metadata_notifier_interface::BlockMetadataNotifierLock,
+    safecoin_gossip::{
         cluster_info::ClusterInfo, duplicate_shred_handler::DuplicateShredHandler,
         duplicate_shred_listener::DuplicateShredListener,
     },
@@ -39,8 +39,8 @@ use {
         blockstore::Blockstore, blockstore_processor::TransactionStatusSender,
         leader_schedule_cache::LeaderScheduleCache,
     },
-    solana_poh::poh_recorder::PohRecorder,
-    solana_rpc::{
+    safecoin_poh::poh_recorder::PohRecorder,
+    safecoin_rpc::{
         max_slots::MaxSlots, optimistically_confirmed_bank_tracker::BankNotificationSender,
         rpc_subscriptions::RpcSubscriptions,
     },
@@ -49,7 +49,7 @@ use {
         commitment::BlockCommitmentCache, prioritization_fee_cache::PrioritizationFeeCache,
         vote_sender_types::ReplayVoteSender,
     },
-    solana_sdk::{clock::Slot, pubkey::Pubkey, signature::Keypair},
+    safecoin_sdk::{clock::Slot, pubkey::Pubkey, signature::Keypair},
     std::{
         collections::HashSet,
         net::UdpSocket,
@@ -365,17 +365,17 @@ pub mod tests {
     use {
         super::*,
         serial_test::serial,
-        solana_gossip::cluster_info::{ClusterInfo, Node},
+        safecoin_gossip::cluster_info::{ClusterInfo, Node},
         solana_ledger::{
             blockstore::BlockstoreSignals,
             blockstore_options::BlockstoreOptions,
             create_new_tmp_ledger,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
         },
-        solana_poh::poh_recorder::create_test_recorder,
-        solana_rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
+        safecoin_poh::poh_recorder::create_test_recorder,
+        safecoin_rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
         solana_runtime::bank::Bank,
-        solana_sdk::signature::{Keypair, Signer},
+        safecoin_sdk::signature::{Keypair, Signer},
         solana_streamer::socket::SocketAddrSpace,
         std::sync::atomic::{AtomicU64, Ordering},
     };

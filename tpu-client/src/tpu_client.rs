@@ -2,11 +2,11 @@ pub use crate::nonblocking::tpu_client::TpuSenderError;
 use {
     crate::nonblocking::tpu_client::TpuClient as NonblockingTpuClient,
     rayon::iter::{IntoParallelIterator, ParallelIterator},
-    solana_connection_cache::connection_cache::{
+    safecoin_connection_cache::connection_cache::{
         ConnectionCache, ConnectionManager, ConnectionPool, NewConnectionConfig,
     },
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{clock::Slot, transaction::Transaction, transport::Result as TransportResult},
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_sdk::{clock::Slot, transaction::Transaction, transport::Result as TransportResult},
     std::{
         collections::VecDeque,
         net::UdpSocket,
@@ -15,7 +15,7 @@ use {
 };
 #[cfg(feature = "spinner")]
 use {
-    solana_sdk::{message::Message, signers::Signers, transaction::TransactionError},
+    safecoin_sdk::{message::Message, signers::Signers, transaction::TransactionError},
     tokio::time::Duration,
 };
 

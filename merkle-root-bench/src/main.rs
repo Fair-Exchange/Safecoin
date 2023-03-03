@@ -1,9 +1,9 @@
 extern crate log;
 use {
     clap::{crate_description, crate_name, value_t, App, Arg},
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_runtime::accounts_hash::AccountsHasher,
-    solana_sdk::{hash::Hash, pubkey::Pubkey},
+    safecoin_sdk::{hash::Hash, pubkey::Pubkey},
 };
 
 fn main() {

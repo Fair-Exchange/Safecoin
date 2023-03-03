@@ -34,8 +34,8 @@
 //! on behalf of the caller, and a low-level API for when they have
 //! already been signed and verified.
 #[allow(deprecated)]
-use solana_sdk::recent_blockhashes_account;
-pub use solana_sdk::reward_type::RewardType;
+use safecoin_sdk::recent_blockhashes_account;
+pub use safecoin_sdk::reward_type::RewardType;
 use {
     crate::{
         account_overrides::AccountOverrides,
@@ -59,7 +59,7 @@ use {
         cost_tracker::CostTracker,
         epoch_accounts_hash::{self, EpochAccountsHash},
         epoch_stakes::{EpochStakes, NodeVoteAccounts},
-        inline_spl_associated_token_account, inline_spl_token,
+        inline_safe_associated_token_account, inline_safe_token,
         message_processor::MessageProcessor,
         rent_collector::{CollectedInfo, RentCollector},
         runtime_config::RuntimeConfig,
@@ -86,10 +86,10 @@ use {
         iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
         ThreadPool, ThreadPoolBuilder,
     },
-    solana_measure::{measure, measure::Measure, measure_us},
+    safecoin_measure::{measure, measure::Measure, measure_us},
     solana_metrics::{inc_new_counter_debug, inc_new_counter_info},
     solana_perf::perf_libs,
-    solana_program_runtime::{
+    safecoin_program_runtime::{
         accounts_data_meter::MAX_ACCOUNTS_DATA_LEN,
         compute_budget::{self, ComputeBudget},
         executor::Executor,
@@ -102,7 +102,7 @@ use {
         sysvar_cache::SysvarCache,
         timings::{ExecuteTimingType, ExecuteTimings},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{
             create_account_shared_data_with_fields as create_account, from_account, Account,
             AccountSharedData, InheritableAccountFields, ReadableAccount, WritableAccount,
@@ -135,7 +135,7 @@ use {
         lamports::LamportsError,
         message::{AccountKeys, SanitizedMessage},
         native_loader,
-        native_token::{sol_to_lamports, LAMPORTS_PER_SOL},
+        native_token::{sol_to_lamports, LAMPORTS_PER_SAFE},
         nonce::{self, state::DurableNonce, NONCED_TX_MARKER_IX_INDEX},
         nonce_account,
         packet::PACKET_DATA_SIZE,
@@ -326,7 +326,7 @@ pub struct BankRc {
 }
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-use solana_frozen_abi::abi_example::AbiExample;
+use safecoin_frozen_abi::abi_example::AbiExample;
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 impl AbiExample for BankRc {
@@ -2634,7 +2634,7 @@ impl Bank {
             let num_stake_delegations = stakes.stake_delegations().len();
             let min_stake_delegation =
                 solana_stake_program::get_minimum_delegation(&self.feature_set)
-                    .max(LAMPORTS_PER_SOL);
+                    .max(LAMPORTS_PER_SAFE);
 
             let (stake_delegations, filter_timer) = measure!(stakes
                 .stake_delegations()
@@ -5306,7 +5306,7 @@ impl Bank {
         let can_skip_rewrites = self.bank_hash_skips_rent_rewrites();
         let set_exempt_rent_epoch_max: bool = self
             .feature_set
-            .is_active(&solana_sdk::feature_set::set_exempt_rent_epoch_max::id());
+            .is_active(&safecoin_sdk::feature_set::set_exempt_rent_epoch_max::id());
         for (pubkey, account, _loaded_slot) in accounts.iter_mut() {
             let (rent_collected_info, measure) =
                 measure!(self.rent_collector.collect_from_existing_account(
@@ -5944,7 +5944,7 @@ impl Bank {
     fn use_multi_epoch_collection_cycle(&self, epoch: Epoch) -> bool {
         // Force normal behavior, disabling multi epoch collection cycle for manual local testing
         #[cfg(not(test))]
-        if self.slot_count_per_normal_epoch() == solana_sdk::epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
+        if self.slot_count_per_normal_epoch() == safecoin_sdk::epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
         {
             return false;
         }
@@ -5956,7 +5956,7 @@ impl Bank {
     pub(crate) fn use_fixed_collection_cycle(&self) -> bool {
         // Force normal behavior, disabling fixed collection cycle for manual local testing
         #[cfg(not(test))]
-        if self.slot_count_per_normal_epoch() == solana_sdk::epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
+        if self.slot_count_per_normal_epoch() == safecoin_sdk::epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
         {
             return false;
         }
@@ -7467,20 +7467,20 @@ impl Bank {
             self.rent_collector.rent.burn_percent = 50; // 50% rent burn
         }
 
-        if new_feature_activations.contains(&feature_set::spl_token_v3_4_0::id()) {
+        if new_feature_activations.contains(&feature_set::safe_token_v3_4_0::id()) {
             self.replace_program_account(
-                &inline_spl_token::id(),
-                &inline_spl_token::program_v3_4_0::id(),
-                "bank-apply_spl_token_v3_4_0",
+                &inline_safe_token::id(),
+                &inline_safe_token::program_v3_4_0::id(),
+                "bank-apply_safe_token_v3_4_0",
             );
         }
 
-        if new_feature_activations.contains(&feature_set::spl_associated_token_account_v1_1_0::id())
+        if new_feature_activations.contains(&feature_set::safe_associated_token_account_v1_1_0::id())
         {
             self.replace_program_account(
-                &inline_spl_associated_token_account::id(),
-                &inline_spl_associated_token_account::program_v1_1_0::id(),
-                "bank-apply_spl_associated_token_account_v1_1_0",
+                &inline_safe_associated_token_account::id(),
+                &inline_safe_associated_token_account::program_v1_1_0::id(),
+                "bank-apply_safe_associated_token_account_v1_1_0",
             );
         }
 
@@ -7637,27 +7637,27 @@ impl Bank {
             ClusterType::Development => true,
             ClusterType::Devnet => true,
             ClusterType::Testnet => self.epoch() == 93,
-            ClusterType::MainnetBeta => self.epoch() == 75,
+            ClusterType::MainnetBeta => self.epoch() == 9999999,
         };
 
         if reconfigure_token2_native_mint {
-            let mut native_mint_account = solana_sdk::account::AccountSharedData::from(Account {
-                owner: inline_spl_token::id(),
-                data: inline_spl_token::native_mint::ACCOUNT_DATA.to_vec(),
+            let mut native_mint_account = safecoin_sdk::account::AccountSharedData::from(Account {
+                owner: inline_safe_token::id(),
+                data: inline_safe_token::native_mint::ACCOUNT_DATA.to_vec(),
                 lamports: sol_to_lamports(1.),
                 executable: false,
                 rent_epoch: self.epoch() + 1,
             });
 
             // As a workaround for
-            // https://github.com/solana-labs/solana-program-library/issues/374, ensure that the
-            // spl-token 2 native mint account is owned by the spl-token 2 program.
+            // https://github.com/fair-exchange/safecoin-program-library/issues/374, ensure that the
+            // safe-token 2 native mint account is owned by the safe-token 2 program.
             let old_account_data_size;
             let store = if let Some(existing_native_mint_account) =
-                self.get_account_with_fixed_root(&inline_spl_token::native_mint::id())
+                self.get_account_with_fixed_root(&inline_safe_token::native_mint::id())
             {
                 old_account_data_size = existing_native_mint_account.data().len();
-                if existing_native_mint_account.owner() == &solana_sdk::system_program::id() {
+                if existing_native_mint_account.owner() == &safecoin_sdk::system_program::id() {
                     native_mint_account.set_lamports(existing_native_mint_account.lamports());
                     true
                 } else {
@@ -7671,7 +7671,7 @@ impl Bank {
             };
 
             if store {
-                self.store_account(&inline_spl_token::native_mint::id(), &native_mint_account);
+                self.store_account(&inline_safe_token::native_mint::id(), &native_mint_account);
                 self.calculate_and_update_accounts_data_size_delta_off_chain(
                     old_account_data_size,
                     native_mint_account.data().len(),
@@ -7934,7 +7934,7 @@ impl Drop for Bank {
 pub mod test_utils {
     use {
         super::Bank,
-        solana_sdk::{hash::hashv, pubkey::Pubkey},
+        safecoin_sdk::{hash::hashv, pubkey::Pubkey},
         solana_vote_program::vote_state::{self, BlockTimestamp, VoteStateVersions},
     };
     pub fn goto_end_of_slot(bank: &mut Bank) {

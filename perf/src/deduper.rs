@@ -4,7 +4,7 @@ use {
     crate::packet::{Packet, PacketBatch},
     ahash::AHasher,
     rand::{thread_rng, Rng},
-    solana_sdk::saturating_add_assign,
+    safecoin_sdk::saturating_add_assign,
     std::{
         convert::TryFrom,
         hash::Hasher,

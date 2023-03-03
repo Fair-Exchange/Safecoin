@@ -5,13 +5,13 @@ extern crate test;
 
 use {
     log::*,
-    solana_program_runtime::invoke_context::InvokeContext,
+    safecoin_program_runtime::invoke_context::InvokeContext,
     solana_runtime::{
         bank::{test_utils::goto_end_of_slot, *},
         bank_client::BankClient,
         loader_utils::create_invoke_instruction,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         client::{AsyncClient, SyncClient},
         clock::MAX_RECENT_BLOCKHASHES,
         genesis_config::create_genesis_config,

@@ -83,28 +83,28 @@ if [[ $CI_OS_NAME = windows ]]; then
     cargo-test-bpf
     cargo-test-sbf
     solana
-    solana-install
-    solana-install-init
-    solana-keygen
-    solana-stake-accounts
-    solana-test-validator
-    solana-tokens
+    safecoin-install
+    safecoin-install-init
+    safecoin-keygen
+    safecoin-stake-accounts
+    safecoin-test-validator
+    safecoin-tokens
   )
 else
   ./fetch-perf-libs.sh
 
   BINS=(
     solana
-    solana-bench-tps
-    solana-faucet
-    solana-gossip
-    solana-install
-    solana-keygen
-    solana-ledger-tool
-    solana-log-analyzer
-    solana-net-shaper
-    solana-sys-tuner
-    solana-validator
+    safecoin-bench-tps
+    safecoin-faucet
+    safecoin-gossip
+    safecoin-install
+    safecoin-keygen
+    safecoin-ledger-tool
+    safecoin-log-analyzer
+    safecoin-net-shaper
+    safecoin-sys-tuner
+    safecoin-validator
     rbpf-cli
   )
 
@@ -115,18 +115,18 @@ else
       cargo-build-sbf
       cargo-test-bpf
       cargo-test-sbf
-      solana-dos
-      solana-install-init
-      solana-stake-accounts
-      solana-test-validator
-      solana-tokens
-      solana-watchtower
+      safecoin-dos
+      safecoin-install-init
+      safecoin-stake-accounts
+      safecoin-test-validator
+      safecoin-tokens
+      safecoin-watchtower
     )
   fi
 
-  #XXX: Ensure `solana-genesis` is built LAST!
-  # See https://github.com/solana-labs/solana/issues/5826
-  BINS+=(solana-genesis)
+  #XXX: Ensure `safecoin-genesis` is built LAST!
+  # See https://github.com/fair-exchange/safecoin/issues/5826
+  BINS+=(safecoin-genesis)
 fi
 
 binArgs=()
@@ -141,10 +141,10 @@ mkdir -p "$installDir/bin"
   # shellcheck disable=SC2086 # Don't want to double quote $rust_version
   "$cargo" $maybeRustVersion build $maybeReleaseFlag "${binArgs[@]}"
 
-  # Exclude `spl-token` binary for net.sh builds
+  # Exclude `safe-token` binary for net.sh builds
   if [[ -z "$validatorOnly" ]]; then
     # shellcheck disable=SC2086 # Don't want to double quote $rust_version
-    "$cargo" $maybeRustVersion install --locked spl-token-cli --root "$installDir"
+    "$cargo" $maybeRustVersion install --locked safe-token-cli --root "$installDir"
   fi
 )
 

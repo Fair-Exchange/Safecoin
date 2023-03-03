@@ -169,7 +169,7 @@ pub enum OffchainMessage {
 }
 
 impl OffchainMessage {
-    pub const SIGNING_DOMAIN: &'static [u8] = b"\xffsolana offchain";
+    pub const SIGNING_DOMAIN: &'static [u8] = b"\xffsafecoin offchain";
     // Header Length = Signing Domain (16) + Header Version (1)
     pub const HEADER_LEN: usize = Self::SIGNING_DOMAIN.len() + 1;
 

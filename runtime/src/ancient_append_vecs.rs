@@ -5,7 +5,7 @@
 //! Otherwise, an ancient append vec is the same as any other append vec
 use {
     crate::append_vec::{AppendVec, StoredAccountMeta},
-    solana_sdk::clock::Slot,
+    safecoin_sdk::clock::Slot,
 };
 
 /// a set of accounts need to be stored.
@@ -98,7 +98,7 @@ pub mod tests {
             accounts_db::get_temp_accounts_paths,
             append_vec::{AccountMeta, StoredAccountMeta, StoredMeta},
         },
-        solana_sdk::{
+        safecoin_sdk::{
             account::{AccountSharedData, ReadableAccount},
             hash::Hash,
             pubkey::Pubkey,

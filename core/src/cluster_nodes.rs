@@ -4,7 +4,7 @@ use {
     lru::LruCache,
     rand::{seq::SliceRandom, Rng, SeedableRng},
     rand_chacha::ChaChaRng,
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::{compute_retransmit_peers, ClusterInfo, DATA_PLANE_FANOUT},
         crds::GossipRoute,
         crds_gossip_pull::CRDS_GOSSIP_PULL_CRDS_TIMEOUT_MS,
@@ -14,7 +14,7 @@ use {
     },
     solana_ledger::shred::ShredId,
     solana_runtime::bank::Bank,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Epoch, Slot},
         feature_set,
         pubkey::Pubkey,
@@ -460,10 +460,10 @@ pub fn make_test_cluster<R: Rng>(
     HashMap<Pubkey, u64>, // stakes
     ClusterInfo,
 ) {
-    use solana_gossip::contact_info::ContactInfo;
+    use safecoin_gossip::contact_info::ContactInfo;
     let (unstaked_numerator, unstaked_denominator) = unstaked_ratio.unwrap_or((1, 7));
     let mut nodes: Vec<_> = repeat_with(|| {
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         ContactInfo::new_localhost(&pubkey, /*wallclock:*/ timestamp())
     })
     .take(num_nodes)

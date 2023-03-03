@@ -1,4 +1,4 @@
-# Solana Coding Guidelines
+# Safecoin Coding Guidelines
 
 The goal of these guidelines is to improve developer productivity by allowing
 developers to jump into any file in the codebase and not need to adapt to
@@ -45,14 +45,14 @@ $ git pull --rebase upstream master
 
 If there are no functional changes, PRs can be very large and that's no
 problem. If, however, your changes are making meaningful changes or additions,
-then about 1,000 lines of changes is about the most you should ask a Solana
+then about 1,000 lines of changes is about the most you should ask a Safecoin
 maintainer to review.
 
 ### Should I send small PRs as I develop large, new components?
 
 Add only code to the codebase that is ready to be deployed. If you are building
 a large library, consider developing it in a separate git repository. When it
-is ready to be integrated, the Solana Labs Maintainers will work with you to decide
+is ready to be integrated, the Safecoin Labs Maintainers will work with you to decide
 on a path forward. Smaller libraries may be copied in whereas very large ones
 may be pulled in with a package manager.
 
@@ -148,13 +148,13 @@ matches the logical flow in your PR description.
 
 ### The PR / Issue Labels
 Labels make it easier to manage and track PRs / issues.  Below some common labels
-that we use in Solana.  For the complete list of labels, please refer to the
-[label page](https://github.com/solana-labs/solana/issues/labels):
+that we use in Safecoin.  For the complete list of labels, please refer to the
+[label page](https://github.com/fair-exchange/safecoin/issues/labels):
 
 * "feature-gate": when you add a new feature gate or modify the behavior of
 an existing feature gate, please add the "feature-gate" label to your PR.
 New feature gates should also always have a corresponding tracking issue
-(go to "New Issue" -> "Feature Gate Tracker [Get Started](https://github.com/solana-labs/solana/issues/new?assignees=&labels=feature-gate&template=1-feature-gate.yml&title=Feature+Gate%3A+)")
+(go to "New Issue" -> "Feature Gate Tracker [Get Started](https://github.com/fair-exchange/safecoin/issues/new?assignees=&labels=feature-gate&template=1-feature-gate.yml&title=Feature+Gate%3A+)")
 and should be updated each time the feature is activated on a cluster.
 
 * "automerge": When a PR is labelled with "automerge", the PR will be
@@ -197,7 +197,7 @@ when you feel your PR is ready for another pass.
 ## Draft Pull Requests
 
 If you want early feedback on your PR, use GitHub's "Draft Pull Request"
-mechanism. Draft PRs are a convenient way to collaborate with the Solana
+mechanism. Draft PRs are a convenient way to collaborate with the Safecoin
 maintainers without triggering notifications as you make changes. When you feel
 your PR is ready for a broader audience, you can transition your draft PR to a
 standard PR with the click of a button.
@@ -222,9 +222,9 @@ before the PR can be merged.  Here are the steps:
 name = "solana-<PACKAGE_NAME>"
 version = "0.0.1"
 description = "<DESCRIPTION>"
-authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
-repository = "https://github.com/solana-labs/solana"
-homepage = "https://solana.com/"
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/fair-exchange/safecoin"
+homepage = "https://safecoin.org/"
 documentation = "https://docs.rs/solana-<PACKAGE_NAME>"
 license = "Apache-2.0"
 edition = "2021"
@@ -285,8 +285,8 @@ confused with 3-letter acronyms.
 
 ## Design Proposals
 
-Solana's architecture is described by docs generated from markdown files in the `docs/src/`
-directory and viewable on the official [Solana Documentation](https://docs.solana.com) website.
+Safecoin's architecture is described by docs generated from markdown files in the `docs/src/`
+directory and viewable on the official [Safecoin Documentation](https://docs.solana.com) website.
 
 Current design proposals may be viewed on the docs site:
 

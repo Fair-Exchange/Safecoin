@@ -7,7 +7,7 @@ import {
   usePerformanceInfo,
   useStatsProvider,
 } from "providers/stats/solanaClusterStats";
-import { abbreviatedNumber, lamportsToSol, slotsToHumanString } from "utils";
+import { abbreviatedNumber, lamportsToSafe, slotsToHumanString } from "utils";
 import { ClusterStatus, useCluster } from "providers/cluster";
 import { LiveTransactionStatsCard } from "components/LiveTransactionStatsCard";
 import { displayTimestampWithoutDate } from "utils/date";
@@ -198,7 +198,7 @@ function StakingComponent() {
 }
 
 function displayLamports(value: number) {
-  return abbreviatedNumber(lamportsToSol(value));
+  return abbreviatedNumber(lamportsToSafe(value));
 }
 
 function StatsCardBody() {

@@ -1,7 +1,7 @@
 use {
     core::fmt,
     enum_iterator::Sequence,
-    solana_sdk::{clock::Slot, pubkey::Pubkey, saturating_add_assign},
+    safecoin_sdk::{clock::Slot, pubkey::Pubkey, saturating_add_assign},
     std::{
         collections::HashMap,
         ops::{Index, IndexMut},

@@ -6,7 +6,7 @@ use {
     bincode::deserialize,
     serde_json::Value,
     solana_config_program::{get_config_data, ConfigKeys},
-    solana_sdk::{
+    safecoin_sdk::{
         pubkey::Pubkey,
         stake::config::{self as stake_config, Config as StakeConfig},
     },
@@ -93,7 +93,7 @@ pub struct UiConfig<T> {
 mod test {
     use {
         super::*, crate::validator_info::ValidatorInfo, serde_json::json,
-        solana_config_program::create_config_account, solana_sdk::account::ReadableAccount,
+        solana_config_program::create_config_account, safecoin_sdk::account::ReadableAccount,
     };
 
     #[test]
@@ -113,11 +113,11 @@ mod test {
 
         let validator_info = ValidatorInfo {
             info: serde_json::to_string(&json!({
-                "name": "Solana",
+                "name": "Safecoin",
             }))
             .unwrap(),
         };
-        let info_pubkey = solana_sdk::pubkey::new_rand();
+        let info_pubkey = safecoin_sdk::pubkey::new_rand();
         let validator_info_config_account = create_config_account(
             vec![(validator_info::id(), false), (info_pubkey, true)],
             &validator_info,
@@ -136,7 +136,7 @@ mod test {
                         signer: true,
                     }
                 ],
-                config_data: serde_json::from_str(r#"{"name":"Solana"}"#).unwrap(),
+                config_data: serde_json::from_str(r#"{"name":"Safecoin"}"#).unwrap(),
             }),
         );
 

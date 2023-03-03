@@ -3,9 +3,9 @@ title: "Overview of Writing Programs"
 sidebar_label: "Overview"
 ---
 
-Developers can write and deploy their own programs to the Solana blockchain. While developing these "on-chain" programs can seem cumbersome, the entire process can be broadly summarized into a few key steps.
+Developers can write and deploy their own programs to the Safecoin blockchain. While developing these "on-chain" programs can seem cumbersome, the entire process can be broadly summarized into a few key steps.
 
-## Solana Development Lifecycle
+## Safecoin Development Lifecycle
 
 1. Setup your development environment
 2. Write your program
@@ -15,13 +15,13 @@ Developers can write and deploy their own programs to the Solana blockchain. Whi
 
 ### 1. Setup your development environment
 
-The most robust way of getting started with Solana development, is [installing the Solana CLI](./../../cli/install-solana-cli-tools.md) tools on your local computer. This will allow you to have the most powerful development environment.
+The most robust way of getting started with Safecoin development, is [installing the Safecoin CLI](./../../cli/install-safecoin-cli-tools.md) tools on your local computer. This will allow you to have the most powerful development environment.
 
-Some developers may also opt for using [Solana Playground](https://beta.solpg.io/), a browser based IDE. It will let you write, build, and deploy on-chain programs. All from your browser. No installation needed.
+Some developers may also opt for using [Safecoin Playground](https://beta.solpg.io/), a browser based IDE. It will let you write, build, and deploy on-chain programs. All from your browser. No installation needed.
 
 ### 2. Write your program
 
-Writing Solana programs is most commonly done so using the Rust language. These Rust programs are effectively the same as creating a traditional [Rust library](https://doc.rust-lang.org/rust-by-example/crates/lib.html).
+Writing Safecoin programs is most commonly done so using the Rust language. These Rust programs are effectively the same as creating a traditional [Rust library](https://doc.rust-lang.org/rust-by-example/crates/lib.html).
 
 > You can read more about other [supported languages](#support-languages) below.
 
@@ -31,7 +31,7 @@ Once the program is written, it must be complied down to [Berkley Packet Filter]
 
 ### 4. Generate the program's public address
 
-Using the [Solana CLI](./../../cli/install-solana-cli-tools.md), the developer will generate a new unique [Keypair](./../../terminology.md#keypair) for the new program. The public address (aka [Pubkey](./../../terminology.md#public-key-pubkey)) from this Keypair will be used on-chain as the program's public address (aka [`programId`](./../../terminology.md#program-id)).
+Using the [Safecoin CLI](./../../cli/install-safecoin-cli-tools.md), the developer will generate a new unique [Keypair](./../../terminology.md#keypair) for the new program. The public address (aka [Pubkey](./../../terminology.md#public-key-pubkey)) from this Keypair will be used on-chain as the program's public address (aka [`programId`](./../../terminology.md#program-id)).
 
 ### 5. Deploying the program
 
@@ -41,7 +41,7 @@ Once the entire program has been sent to the blockchain, a final transaction is 
 
 ## Support languages
 
-Solana programs are typically written in the [Rust language](./developing-rust.md), but [C/C++](./developing-c.md) are also supported.
+Safecoin programs are typically written in the [Rust language](./developing-rust.md), but [C/C++](./developing-c.md) are also supported.
 
 There are also various community driven efforts to enable writing on-chain programs using other languages, including:
 
@@ -61,4 +61,4 @@ Read more details on the [Limitations](./limitations.md) page
 
 ## Frequently asked questions
 
-Discover many of the [frequently asked questions](./faq.md) other developers have about writing/understanding Solana programs.
+Discover many of the [frequently asked questions](./faq.md) other developers have about writing/understanding Safecoin programs.

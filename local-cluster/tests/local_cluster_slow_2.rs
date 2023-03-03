@@ -5,16 +5,16 @@ use {
     common::*,
     log::*,
     serial_test::serial,
-    solana_core::validator::ValidatorConfig,
-    solana_gossip::gossip_service::discover_cluster,
+    safecoin_core::validator::ValidatorConfig,
+    safecoin_gossip::gossip_service::discover_cluster,
     solana_ledger::{ancestor_iterator::AncestorIterator, blockstore::Blockstore},
-    solana_local_cluster::{
+    safecoin_local_cluster::{
         cluster::Cluster,
         cluster_tests,
         local_cluster::{ClusterConfig, LocalCluster},
         validator_configs::*,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         client::SyncClient,
         clock::Slot,
         poh_config::PohConfig,
@@ -269,7 +269,7 @@ fn test_ledger_cleanup_service() {
 #[test]
 fn test_slot_hash_expiry() {
     solana_logger::setup_with_default(RUST_LOG_FILTER);
-    solana_sdk::slot_hashes::set_entries_for_tests_only(64);
+    safecoin_sdk::slot_hashes::set_entries_for_tests_only(64);
 
     let slots_per_epoch = 2048;
     let node_stakes = vec![60 * DEFAULT_NODE_STAKE, 40 * DEFAULT_NODE_STAKE];
@@ -372,14 +372,14 @@ fn test_slot_hash_expiry() {
 
     info!(
         "Run A on majority fork until it reaches slot hash expiry {}",
-        solana_sdk::slot_hashes::get_entries()
+        safecoin_sdk::slot_hashes::get_entries()
     );
     let mut last_vote_on_a;
     // Keep A running for a while longer so the majority fork has some decent size
     loop {
         last_vote_on_a = wait_for_last_vote_in_tower_to_land_in_ledger(&a_ledger_path, &a_pubkey);
         if last_vote_on_a
-            >= common_ancestor_slot + 2 * (solana_sdk::slot_hashes::get_entries() as u64)
+            >= common_ancestor_slot + 2 * (safecoin_sdk::slot_hashes::get_entries() as u64)
         {
             let blockstore = open_blockstore(&a_ledger_path);
             info!(

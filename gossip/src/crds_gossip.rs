@@ -21,7 +21,7 @@ use {
     rand::{CryptoRng, Rng},
     rayon::ThreadPool,
     solana_ledger::shred::Shred,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         hash::Hash,
         pubkey::Pubkey,
@@ -419,7 +419,7 @@ mod test {
     use {
         super::*,
         crate::crds_value::CrdsData,
-        solana_sdk::{hash::hash, timing::timestamp},
+        safecoin_sdk::{hash::hash, timing::timestamp},
     };
 
     #[test]

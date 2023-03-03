@@ -1,5 +1,5 @@
 #![allow(clippy::integer_arithmetic)]
-pub use solana_test_validator as test_validator;
+pub use safecoin_test_validator as test_validator;
 use {
     console::style,
     fd_lock::{RwLock, RwLockWriteGuard},

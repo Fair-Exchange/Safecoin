@@ -10,8 +10,8 @@ use {
         blockstore::{Blockstore, PurgeType},
         blockstore_db::{Result as BlockstoreResult, DATA_SHRED_CF},
     },
-    solana_measure::measure::Measure,
-    solana_sdk::clock::Slot,
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::clock::Slot,
     std::{
         string::ToString,
         sync::{

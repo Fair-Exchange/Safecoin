@@ -2,10 +2,10 @@
 
 #![cfg(feature = "program")]
 
-extern crate solana_program;
+extern crate safecoin_program;
 use {
     crate::instructions::*,
-    solana_program::{
+    safecoin_program::{
         account_info::AccountInfo,
         entrypoint::{ProgramResult, MAX_PERMITTED_DATA_INCREASE},
         msg,
@@ -16,7 +16,7 @@ use {
     std::convert::TryInto,
 };
 
-solana_program::entrypoint!(process_instruction);
+safecoin_program::entrypoint!(process_instruction);
 #[allow(clippy::unnecessary_wraps)]
 fn process_instruction(
     program_id: &Pubkey,

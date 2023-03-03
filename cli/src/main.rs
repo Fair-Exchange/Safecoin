@@ -1,23 +1,23 @@
 use {
     clap::{crate_description, crate_name, value_t_or_exit, ArgMatches},
     console::style,
-    solana_clap_utils::{
+    safecoin_clap_utils::{
         input_validators::normalize_to_url_if_moniker,
         keypair::{CliSigners, DefaultSigner},
         DisplayError,
     },
-    solana_cli::{
+    safecoin_cli::{
         clap_app::get_clap_app,
         cli::{parse_command, process_command, CliCommandInfo, CliConfig},
     },
-    solana_cli_config::{Config, ConfigInput},
-    solana_cli_output::{
+    safecoin_cli_config::{Config, ConfigInput},
+    safecoin_cli_output::{
         display::{println_name_value, println_name_value_or},
         OutputFormat,
     },
-    solana_remote_wallet::remote_wallet::RemoteWalletManager,
-    solana_rpc_client_api::config::RpcSendTransactionConfig,
-    solana_tpu_client::tpu_client::DEFAULT_TPU_ENABLE_UDP,
+    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
+    safecoin_rpc_client_api::config::RpcSendTransactionConfig,
+    safecoin_tpu_client::tpu_client::DEFAULT_TPU_ENABLE_UDP,
     std::{collections::HashMap, error, path::PathBuf, sync::Arc, time::Duration},
 };
 

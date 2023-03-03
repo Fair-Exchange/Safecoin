@@ -3,8 +3,8 @@ use {
     chrono::{DateTime, Local, NaiveDateTime, SecondsFormat, TimeZone, Utc},
     console::style,
     indicatif::{ProgressBar, ProgressStyle},
-    solana_cli_config::SettingType,
-    solana_sdk::{
+    safecoin_cli_config::SettingType,
+    safecoin_sdk::{
         clock::UnixTimestamp,
         hash::Hash,
         instruction::CompiledInstruction,
@@ -16,10 +16,10 @@ use {
         stake,
         transaction::{TransactionError, TransactionVersion, VersionedTransaction},
     },
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         Rewards, UiReturnDataEncoding, UiTransactionReturnData, UiTransactionStatusMeta,
     },
-    spl_memo::{id as spl_memo_id, v1::id as spl_memo_v1_id},
+    safe_memo::{id as safe_memo_id, v1::id as safe_memo_v1_id},
     std::{collections::HashMap, fmt, io, time::Duration},
 };
 
@@ -42,7 +42,7 @@ impl Default for BuildBalanceMessageConfig {
 
 fn is_memo_program(k: &Pubkey) -> bool {
     let k_str = k.to_string();
-    (k_str == spl_memo_v1_id().to_string()) || (k_str == spl_memo_id().to_string())
+    (k_str == safe_memo_v1_id().to_string()) || (k_str == safe_memo_id().to_string())
 }
 
 pub fn build_balance_message_with_config(
@@ -68,7 +68,7 @@ pub fn build_balance_message_with_config(
             let ess = if lamports == 1 { "" } else { "s" };
             format!(" lamport{ess}")
         } else {
-            " SOL".to_string()
+            " SAFE".to_string()
         }
     } else {
         "".to_string()
@@ -455,9 +455,9 @@ fn write_instruction<'a, W: io::Write>(
                 writeln!(w, "{prefix}  {stake_instruction:?}")?;
                 raw = false;
             }
-        } else if program_pubkey == &solana_sdk::system_program::id() {
+        } else if program_pubkey == &safecoin_sdk::system_program::id() {
             if let Ok(system_instruction) = limited_deserialize::<
-                solana_sdk::system_instruction::SystemInstruction,
+                safecoin_sdk::system_instruction::SystemInstruction,
             >(&instruction.data)
             {
                 writeln!(w, "{prefix}  {system_instruction:?}")?;
@@ -724,7 +724,7 @@ pub fn unix_timestamp_to_string(unix_timestamp: UnixTimestamp) -> String {
 mod test {
     use {
         super::*,
-        solana_sdk::{
+        safecoin_sdk::{
             message::{
                 v0::{self, LoadedAddresses},
                 Message as LegacyMessage, MessageHeader, VersionedMessage,
@@ -734,7 +734,7 @@ mod test {
             transaction::Transaction,
             transaction_context::TransactionReturnData,
         },
-        solana_transaction_status::{Reward, RewardType, TransactionStatusMeta},
+        safecoin_transaction_status::{Reward, RewardType, TransactionStatusMeta},
         std::io::BufWriter,
     };
 

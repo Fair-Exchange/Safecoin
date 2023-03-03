@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 import { useAnchorProgram } from "providers/anchor";
 import { useCluster } from "providers/cluster";
 import ReactJson from "react-json-view";

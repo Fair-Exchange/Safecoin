@@ -1,4 +1,4 @@
-use solana_sdk::{compute_budget::ComputeBudgetInstruction, instruction::Instruction};
+use safecoin_sdk::{compute_budget::ComputeBudgetInstruction, instruction::Instruction};
 
 pub trait WithComputeUnitPrice {
     fn with_compute_unit_price(self, compute_unit_price: Option<&u64>) -> Self;

@@ -5,7 +5,7 @@
 use {
     crate::{ic_logger_msg, log_collector::LogCollector},
     itertools::Itertools,
-    solana_sdk::{instruction::InstructionError, pubkey::Pubkey},
+    safecoin_sdk::{instruction::InstructionError, pubkey::Pubkey},
     std::{cell::RefCell, rc::Rc},
 };
 

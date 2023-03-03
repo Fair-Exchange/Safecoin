@@ -2,11 +2,11 @@ use {
     crate::result::Result,
     bincode::serialized_size,
     crossbeam_channel::Receiver,
-    solana_entry::entry::Entry,
+    safecoin_entry::entry::Entry,
     solana_ledger::shred::ShredData,
-    solana_poh::poh_recorder::WorkingBankEntry,
+    safecoin_poh::poh_recorder::WorkingBankEntry,
     solana_runtime::bank::Bank,
-    solana_sdk::clock::Slot,
+    safecoin_sdk::clock::Slot,
     std::{
         sync::Arc,
         time::{Duration, Instant},
@@ -103,7 +103,7 @@ mod tests {
         super::*,
         crossbeam_channel::unbounded,
         solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
-        solana_sdk::{
+        safecoin_sdk::{
             genesis_config::GenesisConfig, pubkey::Pubkey, system_transaction,
             transaction::Transaction,
         },
@@ -118,7 +118,7 @@ mod tests {
         let bank0 = Arc::new(Bank::new_for_tests(&genesis_config));
         let tx = system_transaction::transfer(
             &mint_keypair,
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             1,
             genesis_config.hash(),
         );

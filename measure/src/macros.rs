@@ -12,7 +12,7 @@
 ///
 /// ```
 /// // Measure functions
-/// # use solana_measure::{measure, measure_us};
+/// # use safecoin_measure::{measure, measure_us};
 /// # fn foo() {}
 /// # fn bar(x: i32) {}
 /// # fn add(x: i32, y: i32) -> i32 {x + y}
@@ -25,7 +25,7 @@
 ///
 /// ```
 /// // Measure methods
-/// # use solana_measure::{measure, measure_us};
+/// # use safecoin_measure::{measure, measure_us};
 /// # struct Foo {
 /// #     f: i32,
 /// # }
@@ -42,7 +42,7 @@
 ///
 /// ```
 /// // Measure expression blocks
-/// # use solana_measure::measure;
+/// # use safecoin_measure::measure;
 /// # fn complex_calculation() -> i32 { 42 }
 /// # fn complex_transform(x: i32) -> i32 { x + 3 }
 /// # fn record_result(y: i32) {}
@@ -62,7 +62,7 @@
 ///
 /// ```
 /// // The `name` parameter is optional
-/// # use solana_measure::{measure, measure_us};
+/// # use safecoin_measure::{measure, measure_us};
 /// # fn meow() {};
 /// let (result, measure) = measure!(meow());
 /// let (result, measure_us) = measure_us!(meow());

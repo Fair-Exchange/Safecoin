@@ -15,14 +15,14 @@ use {
         quic_client::QuicClientConnection as BlockingQuicClientConnection,
     },
     quinn::Endpoint,
-    solana_connection_cache::{
+    safecoin_connection_cache::{
         connection_cache::{
             BaseClientConnection, ClientError, ConnectionManager, ConnectionPool,
             ConnectionPoolError, NewConnectionConfig,
         },
         connection_cache_stats::ConnectionCacheStats,
     },
-    solana_sdk::{pubkey::Pubkey, quic::QUIC_PORT_OFFSET, signature::Keypair},
+    safecoin_sdk::{pubkey::Pubkey, quic::QUIC_PORT_OFFSET, signature::Keypair},
     solana_streamer::{
         nonblocking::quic::{compute_max_allowed_uni_streams, ConnectionPeerType},
         streamer::StakedNodes,
@@ -229,7 +229,7 @@ impl QuicConnectionManager {
 mod tests {
     use {
         super::*,
-        solana_sdk::quic::{
+        safecoin_sdk::quic::{
             QUIC_MAX_UNSTAKED_CONCURRENT_STREAMS, QUIC_MIN_STAKED_CONCURRENT_STREAMS,
             QUIC_TOTAL_STAKED_CONCURRENT_STREAMS,
         },

@@ -1,4 +1,4 @@
-//! The solana-program-test provides a BanksClient-based test framework SBF programs
+//! The safecoin-program-test provides a BanksClient-based test framework SBF programs
 #![allow(clippy::integer_arithmetic)]
 
 // Export tokio for test clients
@@ -8,9 +8,9 @@ use {
     chrono_humanize::{Accuracy, HumanTime, Tense},
     log::*,
     solana_banks_client::start_client,
-    solana_banks_server::banks_server::start_local_server,
+    safecoin_banks_server::banks_server::start_local_server,
     solana_bpf_loader_program::serialization::serialize_parameters,
-    solana_program_runtime::{
+    safecoin_program_runtime::{
         compute_budget::ComputeBudget, ic_msg, invoke_context::ProcessInstructionWithContext,
         stable_log, timings::ExecuteTimings,
     },
@@ -24,7 +24,7 @@ use {
         genesis_utils::{create_genesis_config_with_leader_ex, GenesisConfigInfo},
         runtime_config::RuntimeConfig,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{Account, AccountSharedData},
         account_info::AccountInfo,
         clock::Slot,
@@ -60,12 +60,12 @@ use {
     thiserror::Error,
     tokio::task::JoinHandle,
 };
-// Export types so test clients can limit their solana crate dependencies
+// Export types so test clients can limit their safecoin crate dependencies
 pub use {
     solana_banks_client::{BanksClient, BanksClientError},
     solana_banks_interface::BanksTransactionResultWithMetadata,
-    solana_program_runtime::invoke_context::InvokeContext,
-    solana_sdk::transaction_context::IndexOfAccount,
+    safecoin_program_runtime::invoke_context::InvokeContext,
+    safecoin_sdk::transaction_context::IndexOfAccount,
 };
 
 pub mod programs;
@@ -97,7 +97,7 @@ fn get_invoke_context<'a, 'b>() -> &'a mut InvokeContext<'b> {
 }
 
 pub fn builtin_process_instruction(
-    process_instruction: solana_sdk::entrypoint::ProcessInstruction,
+    process_instruction: safecoin_sdk::entrypoint::ProcessInstruction,
     _first_instruction_account: IndexOfAccount,
     invoke_context: &mut InvokeContext,
 ) -> Result<(), InstructionError> {
@@ -175,14 +175,14 @@ pub fn builtin_process_instruction(
     Ok(())
 }
 
-/// Converts a `solana-program`-style entrypoint into the runtime's entrypoint style, for
+/// Converts a `safecoin-program`-style entrypoint into the runtime's entrypoint style, for
 /// use with `ProgramTest::add_program`
 #[macro_export]
 macro_rules! processor {
     ($process_instruction:expr) => {
         Some(
             |first_instruction_account: $crate::IndexOfAccount,
-             invoke_context: &mut solana_program_test::InvokeContext| {
+             invoke_context: &mut safecoin_program_test::InvokeContext| {
                 $crate::builtin_process_instruction(
                     $process_instruction,
                     first_instruction_account,
@@ -215,7 +215,7 @@ fn get_sysvar<T: Default + Sysvar + Sized + serde::de::DeserializeOwned + Clone>
 }
 
 struct SyscallStubs {}
-impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
+impl safecoin_sdk::program_stubs::SyscallStubs for SyscallStubs {
     fn sol_log(&self, message: &str) {
         let invoke_context = get_invoke_context();
         ic_msg!(invoke_context, "Program log: {}", message);
@@ -464,7 +464,7 @@ impl Default for ProgramTest {
             "solana_rbpf::vm=debug,\
              solana_runtime::message_processor=debug,\
              solana_runtime::system_instruction_processor=trace,\
-             solana_program_test=info",
+             safecoin_program_test=info",
         );
         let prefer_bpf =
             std::env::var("BPF_OUT_DIR").is_ok() || std::env::var("SBF_OUT_DIR").is_ok();
@@ -618,7 +618,7 @@ impl ProgramTest {
                 Account {
                     lamports: Rent::default().minimum_balance(data.len()).max(1),
                     data,
-                    owner: solana_sdk::bpf_loader::id(),
+                    owner: safecoin_sdk::bpf_loader::id(),
                     executable: true,
                     rent_epoch: 0,
                 },
@@ -725,7 +725,7 @@ impl ProgramTest {
             static ONCE: Once = Once::new();
 
             ONCE.call_once(|| {
-                solana_sdk::program_stubs::set_syscall_stubs(Box::new(SyscallStubs {}));
+                safecoin_sdk::program_stubs::set_syscall_stubs(Box::new(SyscallStubs {}));
             });
         }
 
@@ -890,7 +890,7 @@ impl ProgramTest {
     /// Start the test client
     ///
     /// Returns a `BanksClient` interface into the test environment as well as a payer `Keypair`
-    /// with SOL for sending transactions
+    /// with SAFE for sending transactions
     pub async fn start_with_context(self) -> ProgramTestContext {
         let (bank_forks, block_commitment_cache, last_blockhash, gci) = self.setup_bank();
         let target_tick_duration = gci.genesis_config.poh_config.target_tick_duration;

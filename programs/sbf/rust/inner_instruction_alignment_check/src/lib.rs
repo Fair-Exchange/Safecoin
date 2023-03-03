@@ -1,6 +1,6 @@
 //! Example Rust-based SBF noop program
 
-use solana_program::{
+use safecoin_program::{
     account_info::AccountInfo,
     custom_heap_default,
     entrypoint_deprecated::ProgramResult,
@@ -10,7 +10,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-solana_program::entrypoint_deprecated!(process_instruction);
+safecoin_program::entrypoint_deprecated!(process_instruction);
 #[allow(clippy::unnecessary_wraps)]
 fn process_instruction(
     _program_id: &Pubkey,

@@ -10,7 +10,7 @@ export class SendTransactionError extends Error {
 
 // Keep in sync with client/src/rpc_custom_errors.rs
 // Typescript `enums` thwart tree-shaking. See https://bargsten.org/jsts/enums/
-export const SolanaJSONRPCErrorCode = {
+export const SafecoinJSONRPCErrorCode = {
   JSON_RPC_SERVER_ERROR_BLOCK_CLEANED_UP: -32001,
   JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE: -32002,
   JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE: -32003,
@@ -28,11 +28,11 @@ export const SolanaJSONRPCErrorCode = {
   JSON_RPC_SERVER_ERROR_UNSUPPORTED_TRANSACTION_VERSION: -32015,
   JSON_RPC_SERVER_ERROR_MIN_CONTEXT_SLOT_NOT_REACHED: -32016,
 } as const;
-export type SolanaJSONRPCErrorCodeEnum =
-  typeof SolanaJSONRPCErrorCode[keyof typeof SolanaJSONRPCErrorCode];
+export type SafecoinJSONRPCErrorCodeEnum =
+  typeof SafecoinJSONRPCErrorCode[keyof typeof SafecoinJSONRPCErrorCode];
 
-export class SolanaJSONRPCError extends Error {
-  code: SolanaJSONRPCErrorCodeEnum | unknown;
+export class SafecoinJSONRPCError extends Error {
+  code: SafecoinJSONRPCErrorCodeEnum | unknown;
   data?: any;
   constructor(
     {
@@ -45,6 +45,6 @@ export class SolanaJSONRPCError extends Error {
     super(customMessage != null ? `${customMessage}: ${message}` : message);
     this.code = code;
     this.data = data;
-    this.name = 'SolanaJSONRPCError';
+    this.name = 'SafecoinJSONRPCError';
   }
 }

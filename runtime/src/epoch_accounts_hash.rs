@@ -7,7 +7,7 @@
 //!
 //! This results in all nodes effectively voting on the accounts state (at least) once per epoch.
 
-use {crate::accounts_hash::AccountsHash, solana_sdk::hash::Hash};
+use {crate::accounts_hash::AccountsHash, safecoin_sdk::hash::Hash};
 
 mod utils;
 pub use utils::*;

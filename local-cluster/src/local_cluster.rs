@@ -6,12 +6,12 @@ use {
     },
     itertools::izip,
     log::*,
-    solana_client::{connection_cache::ConnectionCache, thin_client::ThinClient},
-    solana_core::{
+    safecoin_client::{connection_cache::ConnectionCache, thin_client::ThinClient},
+    safecoin_core::{
         tower_storage::FileTowerStorage,
         validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     },
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::Node,
         contact_info::{ContactInfo, LegacyContactInfo},
         gossip_service::discover_cluster,
@@ -25,7 +25,7 @@ use {
         snapshot_config::SnapshotConfig,
         snapshot_utils::create_accounts_run_and_snapshot_dirs,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{Account, AccountSharedData},
         client::SyncClient,
         clock::{DEFAULT_DEV_SLOTS_PER_EPOCH, DEFAULT_TICKS_PER_SLOT},
@@ -45,7 +45,7 @@ use {
     },
     solana_stake_program::{config::create_account as create_stake_config_account, stake_state},
     solana_streamer::socket::SocketAddrSpace,
-    solana_tpu_client::tpu_client::{
+    safecoin_tpu_client::tpu_client::{
         DEFAULT_TPU_CONNECTION_POOL_SIZE, DEFAULT_TPU_ENABLE_UDP, DEFAULT_TPU_USE_QUIC,
     },
     solana_vote_program::{

@@ -2,7 +2,7 @@ use {
     clap::{crate_description, crate_name, value_t, value_t_or_exit, App, Arg},
     log::*,
     solana_runtime::append_vec::{AppendVec, StoredAccountMeta},
-    solana_sdk::{account::AccountSharedData, hash::Hash, pubkey::Pubkey},
+    safecoin_sdk::{account::AccountSharedData, hash::Hash, pubkey::Pubkey},
 };
 
 fn main() {

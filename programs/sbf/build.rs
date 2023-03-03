@@ -105,7 +105,7 @@ fn main() {
             "upgraded",
         ];
         for program in rust_programs.iter() {
-            println!("cargo:warning=(not a warning) Building Rust-based SBF programs: solana_sbf_rust_{program}");
+            println!("cargo:warning=(not a warning) Building Rust-based SBF programs: safecoin_sbf_rust_{program}");
             assert!(Command::new("../../cargo-build-sbf")
                 .args([
                     "--manifest-path",

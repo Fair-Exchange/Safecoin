@@ -2,17 +2,17 @@
 
 ## Problem
 
-Messages transmitted to Solana validators must not exceed the IPv6 MTU size to
+Messages transmitted to Safecoin validators must not exceed the IPv6 MTU size to
 ensure fast and reliable network transmission of cluster info over UDP.
-Solana's networking stack uses a conservative MTU size of 1280 bytes which,
+Safecoin's networking stack uses a conservative MTU size of 1280 bytes which,
 after accounting for headers, leaves 1232 bytes for packet data like serialized
 transactions.
 
-Developers building applications on Solana must design their on-chain program
+Developers building applications on Safecoin must design their on-chain program
 interfaces within the above transaction size limit constraint. One common
 work-around is to store state temporarily on-chain and consume that state in
 later transactions. This is the approach used by the BPF loader program for
-deploying Solana programs.
+deploying Safecoin programs.
 
 However, this workaround doesn't work well when developers compose many on-chain
 programs in a single atomic transaction. With more composition comes more
@@ -94,7 +94,7 @@ slot.
 
 In order to support address table lookups, the structure of serialized
 transactions must be modified. The new transaction format should not
-affect transaction processing in the Solana program runtime beyond the
+affect transaction processing in the Safecoin program runtime beyond the
 increased capacity for accounts and program invocations. Invoked
 programs will be unaware of which transaction format was used.
 
@@ -275,7 +275,7 @@ Transactions may not load an account more than once whether directly through
 1. Account prefixes
 
 Needing to pre-register accounts in an on-chain address lookup table is cumbersome
-because it adds an extra step for transaction processing. Instead, Solana
+because it adds an extra step for transaction processing. Instead, Safecoin
 transactions could use variable length address prefixes to specify accounts.
 These prefix shortcuts can save on data usage without needing to setup on-chain
 state.
@@ -286,7 +286,7 @@ to disrupt transactions.
 
 2. Transaction builder program
 
-Solana can provide a new on-chain program which allows "Big" transactions to be
+Safecoin can provide a new on-chain program which allows "Big" transactions to be
 constructed on-chain by normal transactions. Once the transaction is
 constructed, a final "Execute" transaction can trigger a node to process the big
 transaction as a normal transaction without needing to fit it into an MTU sized

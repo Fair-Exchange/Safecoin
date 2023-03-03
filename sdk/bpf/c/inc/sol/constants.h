@@ -1,12 +1,12 @@
 #pragma once
 /**
- * @brief Solana constants
+ * @brief Safecoin constants
  */
 
 /**
- * The Solana runtime provides a memory region that is available to programs at
+ * The Safecoin runtime provides a memory region that is available to programs at
  * a fixed virtual address and length. The builtin functions `sol_calloc` and
- * `sol_free` call into the Solana runtime to allocate from this memory region
+ * `sol_free` call into the Safecoin runtime to allocate from this memory region
  * for heap operations.  Because the memory region is directly available to
  * programs another option is a program can implement their own heap directly on
  * top of that region.  If a program chooses to implement their own heap they

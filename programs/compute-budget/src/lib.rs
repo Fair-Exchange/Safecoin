@@ -1,6 +1,6 @@
 use {
-    solana_program_runtime::invoke_context::InvokeContext,
-    solana_sdk::{instruction::InstructionError, transaction_context::IndexOfAccount},
+    safecoin_program_runtime::invoke_context::InvokeContext,
+    safecoin_sdk::{instruction::InstructionError, transaction_context::IndexOfAccount},
 };
 
 pub fn process_instruction(

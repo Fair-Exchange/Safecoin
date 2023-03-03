@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana logging utilities
+ * @brief Safecoin logging utilities
  */
 
 #include <sol/types.h>
@@ -15,7 +15,7 @@ extern "C" {
  * Prints a string to stdout
  */
 /* DO NOT MODIFY THIS GENERATED FILE. INSTEAD CHANGE sdk/sbf/c/inc/sol/inc/log.inc AND RUN `cargo run --bin gen-headers` */
-#ifndef SOL_SBFV2
+#ifndef SAFE_SBFV2
 void sol_log_(const char *, uint64_t);
 #else
 typedef void(*sol_log__pointer_type)(const char *, uint64_t);
@@ -30,7 +30,7 @@ static void sol_log_(const char * arg1, uint64_t arg2) {
  * Prints a 64 bit values represented in hexadecimal to stdout
  */
 /* DO NOT MODIFY THIS GENERATED FILE. INSTEAD CHANGE sdk/sbf/c/inc/sol/inc/log.inc AND RUN `cargo run --bin gen-headers` */
-#ifndef SOL_SBFV2
+#ifndef SAFE_SBFV2
 void sol_log_64_(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 #else
 typedef void(*sol_log_64__pointer_type)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
@@ -45,7 +45,7 @@ static void sol_log_64_(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t ar
  * Prints the current compute unit consumption to stdout
  */
 /* DO NOT MODIFY THIS GENERATED FILE. INSTEAD CHANGE sdk/sbf/c/inc/sol/inc/log.inc AND RUN `cargo run --bin gen-headers` */
-#ifndef SOL_SBFV2
+#ifndef SAFE_SBFV2
 void sol_log_compute_units_();
 #else
 typedef void(*sol_log_compute_units__pointer_type)();
@@ -71,11 +71,11 @@ static void sol_log_array(const uint8_t *array, int len) {
  * Print the base64 representation of some arrays.
  */
 /* DO NOT MODIFY THIS GENERATED FILE. INSTEAD CHANGE sdk/sbf/c/inc/sol/inc/log.inc AND RUN `cargo run --bin gen-headers` */
-#ifndef SOL_SBFV2
-void sol_log_data(SolBytes *, uint64_t);
+#ifndef SAFE_SBFV2
+void sol_log_data(SafeBytes *, uint64_t);
 #else
-typedef void(*sol_log_data_pointer_type)(SolBytes *, uint64_t);
-static void sol_log_data(SolBytes * arg1, uint64_t arg2) {
+typedef void(*sol_log_data_pointer_type)(SafeBytes *, uint64_t);
+static void sol_log_data(SafeBytes * arg1, uint64_t arg2) {
   sol_log_data_pointer_type sol_log_data_pointer = (sol_log_data_pointer_type) 1930933300;
   sol_log_data_pointer(arg1, arg2);
 }
@@ -84,9 +84,9 @@ static void sol_log_data(SolBytes * arg1, uint64_t arg2) {
 /**
  * Prints the program's input parameters
  *
- * @param params Pointer to a SolParameters structure
+ * @param params Pointer to a SafeParameters structure
  */
-static void sol_log_params(const SolParameters *params) {
+static void sol_log_params(const SafeParameters *params) {
   sol_log("- Program identifier:");
   sol_log_pubkey(params->program_id);
 
@@ -114,7 +114,7 @@ static void sol_log_params(const SolParameters *params) {
   sol_log_array(params->data, params->data_len);
 }
 
-#ifdef SOL_TEST
+#ifdef SAFE_TEST
 /**
  * Stub functions when building tests
  */

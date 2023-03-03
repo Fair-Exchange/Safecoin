@@ -1,7 +1,7 @@
 use {
     crate::{StoredExtendedRewards, StoredTransactionStatusMeta},
-    solana_account_decoder::parse_token::{real_number_string_trimmed, UiTokenAmount},
-    solana_sdk::{
+    safecoin_account_decoder::parse_token::{real_number_string_trimmed, UiTokenAmount},
+    safecoin_sdk::{
         hash::Hash,
         instruction::{CompiledInstruction, InstructionError},
         message::{
@@ -14,7 +14,7 @@ use {
         transaction::{Transaction, TransactionError, VersionedTransaction},
         transaction_context::TransactionReturnData,
     },
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         ConfirmedBlock, InnerInstruction, InnerInstructions, Reward, RewardType,
         TransactionByAddrInfo, TransactionStatusMeta, TransactionTokenBalance,
         TransactionWithStatusMeta, VersionedConfirmedBlock, VersionedTransactionWithStatusMeta,

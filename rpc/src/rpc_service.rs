@@ -1,4 +1,4 @@
-//! The `rpc_service` module implements the Solana JSON RPC service.
+//! The `rpc_service` module implements the Safecoin JSON RPC service.
 
 use {
     crate::{
@@ -19,8 +19,8 @@ use {
         RequestMiddlewareAction, ServerBuilder,
     },
     regex::Regex,
-    solana_client::connection_cache::ConnectionCache,
-    solana_gossip::cluster_info::ClusterInfo,
+    safecoin_client::connection_cache::ConnectionCache,
+    safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::{
         bigtable_upload::ConfirmedBlockUploadConfig,
         bigtable_upload_service::BigTableUploadService, blockstore::Blockstore,
@@ -28,18 +28,18 @@ use {
     },
     solana_metrics::inc_new_counter_info,
     solana_perf::thread::renice_this_thread,
-    solana_poh::poh_recorder::PohRecorder,
+    safecoin_poh::poh_recorder::PohRecorder,
     solana_runtime::{
         bank_forks::BankForks, commitment::BlockCommitmentCache,
         prioritization_fee_cache::PrioritizationFeeCache,
         snapshot_archive_info::SnapshotArchiveInfoGetter, snapshot_config::SnapshotConfig,
         snapshot_utils,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         exit::Exit, genesis_config::DEFAULT_GENESIS_DOWNLOAD_PATH, hash::Hash,
         native_token::lamports_to_sol, pubkey::Pubkey,
     },
-    solana_send_transaction_service::send_transaction_service::{self, SendTransactionService},
+    safecoin_send_transaction_service::send_transaction_service::{self, SendTransactionService},
     solana_storage_bigtable::CredentialType,
     std::{
         collections::HashSet,
@@ -578,7 +578,7 @@ mod tests {
     use {
         super::*,
         crate::rpc::{create_validator_exit, tests::new_test_cluster_info},
-        solana_gossip::{
+        safecoin_gossip::{
             crds::GossipRoute,
             crds_value::{CrdsData, CrdsValue, SnapshotHashes},
         },
@@ -586,9 +586,9 @@ mod tests {
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
             get_tmp_ledger_path,
         },
-        solana_rpc_client_api::config::RpcContextConfig,
+        safecoin_rpc_client_api::config::RpcContextConfig,
         solana_runtime::bank::Bank,
-        solana_sdk::{
+        safecoin_sdk::{
             genesis_config::{ClusterType, DEFAULT_GENESIS_ARCHIVE},
             signature::Signer,
         },
@@ -892,9 +892,9 @@ mod tests {
         let override_health_check = Arc::new(AtomicBool::new(false));
         let startup_verification_complete = Arc::new(AtomicBool::new(true));
         let known_validators = vec![
-            solana_sdk::pubkey::new_rand(),
-            solana_sdk::pubkey::new_rand(),
-            solana_sdk::pubkey::new_rand(),
+            safecoin_sdk::pubkey::new_rand(),
+            safecoin_sdk::pubkey::new_rand(),
+            safecoin_sdk::pubkey::new_rand(),
         ];
 
         let health = Arc::new(RpcHealth::new(

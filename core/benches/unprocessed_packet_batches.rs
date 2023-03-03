@@ -5,21 +5,21 @@ extern crate test;
 
 use {
     rand::distributions::{Distribution, Uniform},
-    solana_core::{
+    safecoin_core::{
         forward_packet_batches_by_accounts::ForwardPacketBatchesByAccounts,
         unprocessed_packet_batches::*,
         unprocessed_transaction_storage::{
             ThreadType, UnprocessedTransactionStorage, UNPROCESSED_BUFFER_STEP_SIZE,
         },
     },
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_perf::packet::{Packet, PacketBatch},
     solana_runtime::{
         bank::Bank,
         bank_forks::BankForks,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
     },
-    solana_sdk::{hash::Hash, signature::Keypair, system_transaction},
+    safecoin_sdk::{hash::Hash, signature::Keypair, system_transaction},
     std::sync::{Arc, RwLock},
     test::Bencher,
 };
@@ -33,7 +33,7 @@ fn build_packet_batch(
             .map(|sender_stake| {
                 let tx = system_transaction::transfer(
                     &Keypair::new(),
-                    &solana_sdk::pubkey::new_rand(),
+                    &safecoin_sdk::pubkey::new_rand(),
                     1,
                     recent_blockhash.unwrap_or_else(Hash::new_unique),
                 );
@@ -60,7 +60,7 @@ fn build_randomized_packet_batch(
             .map(|_| {
                 let tx = system_transaction::transfer(
                     &Keypair::new(),
-                    &solana_sdk::pubkey::new_rand(),
+                    &safecoin_sdk::pubkey::new_rand(),
                     1,
                     recent_blockhash.unwrap_or_else(Hash::new_unique),
                 );

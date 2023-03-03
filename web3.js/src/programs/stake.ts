@@ -565,7 +565,7 @@ export const STAKE_INSTRUCTION_LAYOUTS = Object.freeze<{
  * Stake authorization type
  */
 export type StakeAuthorizationType = {
-  /** The Stake Authorization index (from solana-stake-program) */
+  /** The Stake Authorization index (from safecoin-stake-program) */
   index: number;
 };
 
@@ -600,9 +600,9 @@ export class StakeProgram {
   /**
    * Max space of a Stake account
    *
-   * This is generated from the solana-stake-program StakeState struct as
+   * This is generated from the safecoin-stake-program StakeState struct as
    * `StakeState::size_of()`:
-   * https://docs.rs/solana-stake-program/latest/solana_stake_program/stake_state/enum.StakeState.html
+   * https://docs.rs/safecoin-stake-program/latest/solana_stake_program/stake_state/enum.StakeState.html
    */
   static space: number = 200;
 

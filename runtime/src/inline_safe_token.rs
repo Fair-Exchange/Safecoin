@@ -1,14 +1,14 @@
-/// Partial SPL Token declarations inlined to avoid an external dependency on the spl-token crate
-use solana_sdk::pubkey::{Pubkey, PUBKEY_BYTES};
+/// Partial SPL Token declarations inlined to avoid an external dependency on the safe-token crate
+use safecoin_sdk::pubkey::{Pubkey, PUBKEY_BYTES};
 
-solana_sdk::declare_id!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+safecoin_sdk::declare_id!("ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN");
 
 pub(crate) mod program_v3_4_0 {
-    solana_sdk::declare_id!("NToK4t5AQzxPNpUA84DkxgfXaVDbDQQjpHKCqsbY46B");
+    safecoin_sdk::declare_id!("NToWZEGXbb8dvy6qbKHb3ZTL8jf9UpZo3VDzm9fkwHr");
 }
 
 /*
-    spl_token::state::Account {
+    safe_token::state::Account {
         mint: Pubkey,
         owner: Pubkey,
         amount: u64,
@@ -19,21 +19,21 @@ pub(crate) mod program_v3_4_0 {
         close_authority: COption<Pubkey>,
     }
 */
-pub const SPL_TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
-pub const SPL_TOKEN_ACCOUNT_OWNER_OFFSET: usize = 32;
-const SPL_TOKEN_ACCOUNT_LENGTH: usize = 165;
+pub const SAFE_TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
+pub const SAFE_TOKEN_ACCOUNT_OWNER_OFFSET: usize = 32;
+const SAFE_TOKEN_ACCOUNT_LENGTH: usize = 165;
 
 pub(crate) trait GenericTokenAccount {
     fn valid_account_data(account_data: &[u8]) -> bool;
 
     // Call after account length has already been verified
     fn unpack_account_owner_unchecked(account_data: &[u8]) -> &Pubkey {
-        Self::unpack_pubkey_unchecked(account_data, SPL_TOKEN_ACCOUNT_OWNER_OFFSET)
+        Self::unpack_pubkey_unchecked(account_data, SAFE_TOKEN_ACCOUNT_OWNER_OFFSET)
     }
 
     // Call after account length has already been verified
     fn unpack_account_mint_unchecked(account_data: &[u8]) -> &Pubkey {
-        Self::unpack_pubkey_unchecked(account_data, SPL_TOKEN_ACCOUNT_MINT_OFFSET)
+        Self::unpack_pubkey_unchecked(account_data, SAFE_TOKEN_ACCOUNT_MINT_OFFSET)
     }
 
     // Call after account length has already been verified
@@ -61,18 +61,18 @@ pub(crate) trait GenericTokenAccount {
 pub struct Account;
 impl Account {
     pub fn get_packed_len() -> usize {
-        SPL_TOKEN_ACCOUNT_LENGTH
+        SAFE_TOKEN_ACCOUNT_LENGTH
     }
 }
 
 impl GenericTokenAccount for Account {
     fn valid_account_data(account_data: &[u8]) -> bool {
-        account_data.len() == SPL_TOKEN_ACCOUNT_LENGTH
+        account_data.len() == SAFE_TOKEN_ACCOUNT_LENGTH
     }
 }
 
 pub mod native_mint {
-    solana_sdk::declare_id!("So11111111111111111111111111111111111111112");
+    safecoin_sdk::declare_id!("Safe111111111111111111111111111111111111111");
 
     /*
         Mint {

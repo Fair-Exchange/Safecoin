@@ -6,14 +6,14 @@ use {
     jsonrpc_server_utils::tokio,
     log::*,
     serde::{de::Deserializer, Deserialize, Serialize},
-    solana_core::{
+    safecoin_core::{
         consensus::Tower, tower_storage::TowerStorage, validator::ValidatorStartProgress,
     },
-    solana_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
-    solana_rpc::rpc::verify_pubkey,
-    solana_rpc_client_api::{config::RpcAccountIndex, custom_error::RpcCustomError},
+    safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
+    safecoin_rpc::rpc::verify_pubkey,
+    safecoin_rpc_client_api::{config::RpcAccountIndex, custom_error::RpcCustomError},
     solana_runtime::{accounts_index::AccountIndex, bank_forks::BankForks},
-    solana_sdk::{
+    safecoin_sdk::{
         exit::Exit,
         pubkey::Pubkey,
         signature::{read_keypair_file, Keypair, Signer},
@@ -509,16 +509,16 @@ impl AdminRpcImpl {
 fn rpc_account_index_from_account_index(account_index: &AccountIndex) -> RpcAccountIndex {
     match account_index {
         AccountIndex::ProgramId => RpcAccountIndex::ProgramId,
-        AccountIndex::SplTokenOwner => RpcAccountIndex::SplTokenOwner,
-        AccountIndex::SplTokenMint => RpcAccountIndex::SplTokenMint,
+        AccountIndex::SafeTokenOwner => RpcAccountIndex::SafeTokenOwner,
+        AccountIndex::SafeTokenMint => RpcAccountIndex::SafeTokenMint,
     }
 }
 
 fn account_index_from_rpc_account_index(rpc_account_index: &RpcAccountIndex) -> AccountIndex {
     match rpc_account_index {
         RpcAccountIndex::ProgramId => AccountIndex::ProgramId,
-        RpcAccountIndex::SplTokenOwner => AccountIndex::SplTokenOwner,
-        RpcAccountIndex::SplTokenMint => AccountIndex::SplTokenMint,
+        RpcAccountIndex::SafeTokenOwner => AccountIndex::SafeTokenOwner,
+        RpcAccountIndex::SafeTokenMint => AccountIndex::SafeTokenMint,
     }
 }
 
@@ -641,24 +641,24 @@ mod tests {
         super::*,
         rand::{distributions::Uniform, thread_rng, Rng},
         serde_json::Value,
-        solana_account_decoder::parse_token::spl_token_pubkey,
-        solana_core::tower_storage::NullTowerStorage,
+        safecoin_account_decoder::parse_token::safe_token_pubkey,
+        safecoin_core::tower_storage::NullTowerStorage,
         solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
-        solana_rpc::rpc::create_validator_exit,
+        safecoin_rpc::rpc::create_validator_exit,
         solana_runtime::{
             accounts_index::AccountSecondaryIndexes,
             bank::{Bank, BankTestConfig},
-            inline_spl_token,
+            inline_safe_token,
             secondary_index::MAX_NUM_LARGEST_INDEX_KEYS_RETURNED,
         },
-        solana_sdk::{
+        safecoin_sdk::{
             account::{Account, AccountSharedData},
             pubkey::Pubkey,
             system_program,
         },
         solana_streamer::socket::SocketAddrSpace,
-        spl_token_2022::{
-            solana_program::{program_option::COption, program_pack::Pack},
+        safe_token_2022::{
+            safecoin_program::{program_option::COption, program_pack::Pack},
             state::{Account as TokenAccount, AccountState as TokenAccountState, Mint},
         },
         std::{collections::HashSet, str::FromStr, sync::atomic::AtomicBool},
@@ -685,7 +685,7 @@ mod tests {
             let cluster_info = Arc::new(ClusterInfo::new(
                 ContactInfo::new(
                     keypair.pubkey(),
-                    solana_sdk::timing::timestamp(), // wallclock
+                    safecoin_sdk::timing::timestamp(), // wallclock
                     0u16,                            // shred_version
                 ),
                 keypair,
@@ -753,8 +753,8 @@ mod tests {
                     keys: None,
                     indexes: HashSet::from([
                         AccountIndex::ProgramId,
-                        AccountIndex::SplTokenMint,
-                        AccountIndex::SplTokenOwner,
+                        AccountIndex::SafeTokenMint,
+                        AccountIndex::SafeTokenOwner,
                     ]),
                 }
             } else {
@@ -776,9 +776,9 @@ mod tests {
             let wallet1_pubkey = Pubkey::new_unique();
             let wallet2_pubkey = Pubkey::new_unique();
             let non_existent_pubkey = Pubkey::new_unique();
-            let delegate = spl_token_pubkey(&Pubkey::new_unique());
+            let delegate = safe_token_pubkey(&Pubkey::new_unique());
 
-            let mut num_default_spl_token_program_accounts = 0;
+            let mut num_default_safe_token_program_accounts = 0;
             let mut num_default_system_program_accounts = 0;
 
             if !secondary_index_enabled {
@@ -796,7 +796,7 @@ mod tests {
                 // Count SPL Token Program Default Accounts
                 let req = format!(
                     r#"{{"jsonrpc":"2.0","id":1,"method":"getSecondaryIndexKeySize","params":["{}"]}}"#,
-                    inline_spl_token::id(),
+                    inline_safe_token::id(),
                 );
                 let res = io.handle_request_sync(&req, meta.clone());
                 let result: Value = serde_json::from_str(&res.expect("actual response"))
@@ -804,7 +804,7 @@ mod tests {
                 let sizes: HashMap<RpcAccountIndex, usize> =
                     serde_json::from_value(result["result"].clone()).unwrap();
                 assert_eq!(sizes.len(), 1);
-                num_default_spl_token_program_accounts =
+                num_default_safe_token_program_accounts =
                     *sizes.get(&RpcAccountIndex::ProgramId).unwrap();
                 // Count System Program Default Accounts
                 let req = format!(
@@ -838,20 +838,20 @@ mod tests {
             // Add a token account
             let mut account1_data = vec![0; TokenAccount::get_packed_len()];
             let token_account1 = TokenAccount {
-                mint: spl_token_pubkey(&mint1_pubkey),
-                owner: spl_token_pubkey(&wallet1_pubkey),
+                mint: safe_token_pubkey(&mint1_pubkey),
+                owner: safe_token_pubkey(&wallet1_pubkey),
                 delegate: COption::Some(delegate),
                 amount: 420,
                 state: TokenAccountState::Initialized,
                 is_native: COption::None,
                 delegated_amount: 30,
-                close_authority: COption::Some(spl_token_pubkey(&wallet1_pubkey)),
+                close_authority: COption::Some(safe_token_pubkey(&wallet1_pubkey)),
             };
             TokenAccount::pack(token_account1, &mut account1_data).unwrap();
             let token_account1 = AccountSharedData::from(Account {
                 lamports: 111,
                 data: account1_data.to_vec(),
-                owner: inline_spl_token::id(),
+                owner: inline_safe_token::id(),
                 ..Account::default()
             });
             bank.store_account(&token_account1_pubkey, &token_account1);
@@ -859,17 +859,17 @@ mod tests {
             // Add the mint
             let mut mint1_data = vec![0; Mint::get_packed_len()];
             let mint1_state = Mint {
-                mint_authority: COption::Some(spl_token_pubkey(&wallet1_pubkey)),
+                mint_authority: COption::Some(safe_token_pubkey(&wallet1_pubkey)),
                 supply: 500,
                 decimals: 2,
                 is_initialized: true,
-                freeze_authority: COption::Some(spl_token_pubkey(&wallet1_pubkey)),
+                freeze_authority: COption::Some(safe_token_pubkey(&wallet1_pubkey)),
             };
             Mint::pack(mint1_state, &mut mint1_data).unwrap();
             let mint_account1 = AccountSharedData::from(Account {
                 lamports: 222,
                 data: mint1_data.to_vec(),
-                owner: inline_spl_token::id(),
+                owner: inline_safe_token::id(),
                 ..Account::default()
             });
             bank.store_account(&mint1_pubkey, &mint_account1);
@@ -877,20 +877,20 @@ mod tests {
             // Add another token account with the different owner, but same delegate, and mint
             let mut account2_data = vec![0; TokenAccount::get_packed_len()];
             let token_account2 = TokenAccount {
-                mint: spl_token_pubkey(&mint1_pubkey),
-                owner: spl_token_pubkey(&wallet2_pubkey),
+                mint: safe_token_pubkey(&mint1_pubkey),
+                owner: safe_token_pubkey(&wallet2_pubkey),
                 delegate: COption::Some(delegate),
                 amount: 420,
                 state: TokenAccountState::Initialized,
                 is_native: COption::None,
                 delegated_amount: 30,
-                close_authority: COption::Some(spl_token_pubkey(&wallet2_pubkey)),
+                close_authority: COption::Some(safe_token_pubkey(&wallet2_pubkey)),
             };
             TokenAccount::pack(token_account2, &mut account2_data).unwrap();
             let token_account2 = AccountSharedData::from(Account {
                 lamports: 333,
                 data: account2_data.to_vec(),
-                owner: inline_spl_token::id(),
+                owner: inline_safe_token::id(),
                 ..Account::default()
             });
             bank.store_account(&token_account2_pubkey, &token_account2);
@@ -898,20 +898,20 @@ mod tests {
             // Add another token account with the same owner and delegate but different mint
             let mut account3_data = vec![0; TokenAccount::get_packed_len()];
             let token_account3 = TokenAccount {
-                mint: spl_token_pubkey(&mint2_pubkey),
-                owner: spl_token_pubkey(&wallet2_pubkey),
+                mint: safe_token_pubkey(&mint2_pubkey),
+                owner: safe_token_pubkey(&wallet2_pubkey),
                 delegate: COption::Some(delegate),
                 amount: 42,
                 state: TokenAccountState::Initialized,
                 is_native: COption::None,
                 delegated_amount: 30,
-                close_authority: COption::Some(spl_token_pubkey(&wallet2_pubkey)),
+                close_authority: COption::Some(safe_token_pubkey(&wallet2_pubkey)),
             };
             TokenAccount::pack(token_account3, &mut account3_data).unwrap();
             let token_account3 = AccountSharedData::from(Account {
                 lamports: 444,
                 data: account3_data.to_vec(),
-                owner: inline_spl_token::id(),
+                owner: inline_safe_token::id(),
                 ..Account::default()
             });
             bank.store_account(&token_account3_pubkey, &token_account3);
@@ -919,17 +919,17 @@ mod tests {
             // Add the new mint
             let mut mint2_data = vec![0; Mint::get_packed_len()];
             let mint2_state = Mint {
-                mint_authority: COption::Some(spl_token_pubkey(&wallet2_pubkey)),
+                mint_authority: COption::Some(safe_token_pubkey(&wallet2_pubkey)),
                 supply: 200,
                 decimals: 3,
                 is_initialized: true,
-                freeze_authority: COption::Some(spl_token_pubkey(&wallet2_pubkey)),
+                freeze_authority: COption::Some(safe_token_pubkey(&wallet2_pubkey)),
             };
             Mint::pack(mint2_state, &mut mint2_data).unwrap();
             let mint_account2 = AccountSharedData::from(Account {
                 lamports: 555,
                 data: mint2_data.to_vec(),
-                owner: inline_spl_token::id(),
+                owner: inline_safe_token::id(),
                 ..Account::default()
             });
             bank.store_account(&mint2_pubkey, &mint_account2);
@@ -972,7 +972,7 @@ mod tests {
                 let sizes: HashMap<RpcAccountIndex, usize> =
                     serde_json::from_value(result["result"].clone()).unwrap();
                 assert_eq!(sizes.len(), 1);
-                assert_eq!(*sizes.get(&RpcAccountIndex::SplTokenOwner).unwrap(), 1);
+                assert_eq!(*sizes.get(&RpcAccountIndex::SafeTokenOwner).unwrap(), 1);
                 // 2) Wallet2 - Owns 2 SPL Tokens
                 let req = format!(
                     r#"{{"jsonrpc":"2.0","id":1,"method":"getSecondaryIndexKeySize","params":["{wallet2_pubkey}"]}}"#,
@@ -983,7 +983,7 @@ mod tests {
                 let sizes: HashMap<RpcAccountIndex, usize> =
                     serde_json::from_value(result["result"].clone()).unwrap();
                 assert_eq!(sizes.len(), 1);
-                assert_eq!(*sizes.get(&RpcAccountIndex::SplTokenOwner).unwrap(), 2);
+                assert_eq!(*sizes.get(&RpcAccountIndex::SafeTokenOwner).unwrap(), 2);
                 // 3) Mint1 - Is in 2 SPL Accounts
                 let req = format!(
                     r#"{{"jsonrpc":"2.0","id":1,"method":"getSecondaryIndexKeySize","params":["{mint1_pubkey}"]}}"#,
@@ -994,7 +994,7 @@ mod tests {
                 let sizes: HashMap<RpcAccountIndex, usize> =
                     serde_json::from_value(result["result"].clone()).unwrap();
                 assert_eq!(sizes.len(), 1);
-                assert_eq!(*sizes.get(&RpcAccountIndex::SplTokenMint).unwrap(), 2);
+                assert_eq!(*sizes.get(&RpcAccountIndex::SafeTokenMint).unwrap(), 2);
                 // 4) Mint2 - Is in 1 SPL Account
                 let req = format!(
                     r#"{{"jsonrpc":"2.0","id":1,"method":"getSecondaryIndexKeySize","params":["{mint2_pubkey}"]}}"#,
@@ -1005,11 +1005,11 @@ mod tests {
                 let sizes: HashMap<RpcAccountIndex, usize> =
                     serde_json::from_value(result["result"].clone()).unwrap();
                 assert_eq!(sizes.len(), 1);
-                assert_eq!(*sizes.get(&RpcAccountIndex::SplTokenMint).unwrap(), 1);
+                assert_eq!(*sizes.get(&RpcAccountIndex::SafeTokenMint).unwrap(), 1);
                 // 5) SPL Token Program Owns 6 Accounts - 1 Default, 5 created above.
                 let req = format!(
                     r#"{{"jsonrpc":"2.0","id":1,"method":"getSecondaryIndexKeySize","params":["{}"]}}"#,
-                    inline_spl_token::id(),
+                    inline_safe_token::id(),
                 );
                 let res = io.handle_request_sync(&req, meta.clone());
                 let result: Value = serde_json::from_str(&res.expect("actual response"))
@@ -1019,7 +1019,7 @@ mod tests {
                 assert_eq!(sizes.len(), 1);
                 assert_eq!(
                     *sizes.get(&RpcAccountIndex::ProgramId).unwrap(),
-                    (num_default_spl_token_program_accounts + 5)
+                    (num_default_safe_token_program_accounts + 5)
                 );
                 // 5) System Program Owns 4 Accounts + 2 Default, 2 created above.
                 let req = format!(
@@ -1064,8 +1064,8 @@ mod tests {
             keys: None,
             indexes: HashSet::from([
                 AccountIndex::ProgramId,
-                AccountIndex::SplTokenMint,
-                AccountIndex::SplTokenOwner,
+                AccountIndex::SafeTokenMint,
+                AccountIndex::SafeTokenOwner,
             ]),
         };
 
@@ -1135,20 +1135,20 @@ mod tests {
                 let account_pubkey = Pubkey::new_unique();
                 // Add a token account
                 let token_state = TokenAccount {
-                    mint: spl_token_pubkey(&mint_pubkey),
-                    owner: spl_token_pubkey(&owner_pubkey),
-                    delegate: COption::Some(spl_token_pubkey(&delagate_pubkey)),
+                    mint: safe_token_pubkey(&mint_pubkey),
+                    owner: safe_token_pubkey(&owner_pubkey),
+                    delegate: COption::Some(safe_token_pubkey(&delagate_pubkey)),
                     amount: 100,
                     state: TokenAccountState::Initialized,
                     is_native: COption::None,
                     delegated_amount: 10,
-                    close_authority: COption::Some(spl_token_pubkey(&owner_pubkey)),
+                    close_authority: COption::Some(safe_token_pubkey(&owner_pubkey)),
                 };
                 TokenAccount::pack(token_state, &mut account_data).unwrap();
                 let token_account = AccountSharedData::from(Account {
                     lamports: 22222222,
                     data: account_data.to_vec(),
-                    owner: inline_spl_token::id(),
+                    owner: inline_safe_token::id(),
                     ..Account::default()
                 });
                 bank.store_account(&account_pubkey, &token_account);
@@ -1159,17 +1159,17 @@ mod tests {
                 .next()
                 .unwrap()];
             let mint_state = Mint {
-                mint_authority: COption::Some(spl_token_pubkey(&mint_authority_pubkey)),
+                mint_authority: COption::Some(safe_token_pubkey(&mint_authority_pubkey)),
                 supply: 100 * (num_token_accounts.unwrap_or(1) as u64),
                 decimals: 2,
                 is_initialized: true,
-                freeze_authority: COption::Some(spl_token_pubkey(&mint_authority_pubkey)),
+                freeze_authority: COption::Some(safe_token_pubkey(&mint_authority_pubkey)),
             };
             Mint::pack(mint_state, &mut mint_data).unwrap();
             let mint_account = AccountSharedData::from(Account {
                 lamports: 33333333,
                 data: mint_data.to_vec(),
-                owner: inline_spl_token::id(),
+                owner: inline_safe_token::id(),
                 ..Account::default()
             });
             bank.store_account(&mint_pubkey, &mint_account);
@@ -1193,7 +1193,7 @@ mod tests {
         let res = io.handle_request_sync(&req, meta.clone());
         let result: Value = serde_json::from_str(&res.expect("actual response"))
             .expect("actual response deserialization");
-        let largest_spl_token_owner_keys: Vec<(String, usize)> =
+        let largest_safe_token_owner_keys: Vec<(String, usize)> =
             serde_json::from_value(result["result"].clone()).unwrap();
         // Collect largest key list for SPLTokenMints
         let req = format!(
@@ -1203,13 +1203,13 @@ mod tests {
         let res = io.handle_request_sync(&req, meta);
         let result: Value = serde_json::from_str(&res.expect("actual response"))
             .expect("actual response deserialization");
-        let largest_spl_token_mint_keys: Vec<(String, usize)> =
+        let largest_safe_token_mint_keys: Vec<(String, usize)> =
             serde_json::from_value(result["result"].clone()).unwrap();
 
         let largest_keys = vec![
             largest_program_id_keys,
-            largest_spl_token_owner_keys,
-            largest_spl_token_mint_keys,
+            largest_safe_token_owner_keys,
+            largest_safe_token_mint_keys,
         ];
 
         // Make sure key lists conform to expected output

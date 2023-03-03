@@ -6,7 +6,7 @@ use {
         blockstore_meta::DuplicateSlotProof,
         shred::{self, Shred, ShredType},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         pubkey::Pubkey,
         sanitize::{Sanitize, SanitizeError},
@@ -259,9 +259,9 @@ pub(crate) mod tests {
     use {
         super::*,
         rand::Rng,
-        solana_entry::entry::Entry,
+        safecoin_entry::entry::Entry,
         solana_ledger::shred::{ProcessShredsStats, ReedSolomonCache, Shredder},
-        solana_sdk::{
+        safecoin_sdk::{
             hash,
             signature::{Keypair, Signer},
             system_transaction,

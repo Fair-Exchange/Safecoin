@@ -8,8 +8,8 @@ use {
     log::*,
     memmap2::MmapMut,
     rayon::prelude::*,
-    solana_measure::measure::Measure,
-    solana_sdk::{
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::{
         hash::{Hash, Hasher},
         pubkey::Pubkey,
         slot_history::Slot,

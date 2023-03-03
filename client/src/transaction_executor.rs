@@ -1,9 +1,9 @@
 #![allow(clippy::integer_arithmetic)]
 use {
     log::*,
-    solana_measure::measure::Measure,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_measure::measure::Measure,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_sdk::{
         commitment_config::CommitmentConfig, signature::Signature, timing::timestamp,
         transaction::Transaction,
     },

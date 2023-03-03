@@ -181,7 +181,7 @@ pub fn keypair_from_seed(seed: &[u8]) -> Result<Keypair, Box<dyn error::Error>> 
 }
 
 /// Generates a Keypair using Bip32 Hierarchical Derivation if derivation-path is provided;
-/// otherwise generates the base Bip44 Solana keypair from the seed
+/// otherwise generates the base Bip44 Safecoin keypair from the seed
 pub fn keypair_from_seed_and_derivation_path(
     seed: &[u8],
     derivation_path: Option<DerivationPath>,

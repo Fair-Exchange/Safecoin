@@ -1,17 +1,17 @@
 [package]
-name = "solana-compute-budget-program"
-description = "Solana Compute Budget program"
+name = "safecoin-compute-budget-program"
+description = "Safecoin Compute Budget program"
 version = "1.15.3"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-compute-budget-program"
-repository = "https://github.com/solana-labs/solana"
-authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-compute-budget-program"
+repository = "https://github.com/fair-exchange/safecoin"
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
-solana-program-runtime = { path = "../../program-runtime", version = "=1.15.3" }
-solana-sdk = { path = "../../sdk", version = "=1.15.3" }
+safecoin-program-runtime = { path = "../../program-runtime", version = "=1.15.3" }
+safecoin-sdk = { path = "../../sdk", version = "=1.15.3" }
 
 [lib]
 crate-type = ["lib"]

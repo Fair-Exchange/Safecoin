@@ -1,7 +1,7 @@
 use {
     super::*,
     crate::declare_syscall,
-    solana_sdk::{
+    safecoin_sdk::{
         feature_set::enable_bpf_loader_set_authority_checked_ix,
         syscalls::{
             MAX_CPI_ACCOUNT_INFOS, MAX_CPI_INSTRUCTION_ACCOUNTS, MAX_CPI_INSTRUCTION_DATA_LEN,
@@ -11,7 +11,7 @@ use {
     std::mem,
 };
 
-/// Host side representation of AccountInfo or SolAccountInfo passed to the CPI syscall.
+/// Host side representation of AccountInfo or SafeAccountInfo passed to the CPI syscall.
 ///
 /// At the start of a CPI, this can be different from the data stored in the
 /// corresponding BorrowedAccount, and needs to be synched.
@@ -121,12 +121,12 @@ impl<'a> CallerAccount<'a> {
         })
     }
 
-    // Create a CallerAccount given a SolAccountInfo.
+    // Create a CallerAccount given a SafeAccountInfo.
     fn from_sol_account_info(
         invoke_context: &InvokeContext,
         memory_mapping: &MemoryMapping,
         vm_addr: u64,
-        account_info: &SolAccountInfo,
+        account_info: &SafeAccountInfo,
         original_data_len: usize,
     ) -> Result<CallerAccount<'a>, EbpfError> {
         // account_info points to host memory. The addresses used internally are
@@ -162,7 +162,7 @@ impl<'a> CallerAccount<'a> {
         // we already have the host addr we want: &mut account_info.data_len.
         // The account info might be read only in the vm though, so we translate
         // to ensure we can write. This is tested by programs/sbf/rust/ro_modify
-        // which puts SolAccountInfo in rodata.
+        // which puts SafeAccountInfo in rodata.
         let data_len_vm_addr = vm_addr
             .saturating_add(&account_info.data_len as *const u64 as u64)
             .saturating_sub(account_info as *const _ as *const u64 as u64);
@@ -387,10 +387,10 @@ impl SyscallInvokeSigned for SyscallInvokeSignedRust {
     }
 }
 
-/// Rust representation of C's SolInstruction
+/// Rust representation of C's SafeInstruction
 #[derive(Debug)]
 #[repr(C)]
-struct SolInstruction {
+struct SafeInstruction {
     program_id_addr: u64,
     accounts_addr: u64,
     accounts_len: u64,
@@ -398,19 +398,19 @@ struct SolInstruction {
     data_len: u64,
 }
 
-/// Rust representation of C's SolAccountMeta
+/// Rust representation of C's SafeAccountMeta
 #[derive(Debug)]
 #[repr(C)]
-struct SolAccountMeta {
+struct SafeAccountMeta {
     pubkey_addr: u64,
     is_writable: bool,
     is_signer: bool,
 }
 
-/// Rust representation of C's SolAccountInfo
+/// Rust representation of C's SafeAccountInfo
 #[derive(Debug)]
 #[repr(C)]
-struct SolAccountInfo {
+struct SafeAccountInfo {
     key_addr: u64,
     lamports_addr: u64,
     data_len: u64,
@@ -424,18 +424,18 @@ struct SolAccountInfo {
     executable: bool,
 }
 
-/// Rust representation of C's SolSignerSeed
+/// Rust representation of C's SafeSignerSeed
 #[derive(Debug)]
 #[repr(C)]
-struct SolSignerSeedC {
+struct SafeSignerSeedC {
     addr: u64,
     len: u64,
 }
 
-/// Rust representation of C's SolSignerSeeds
+/// Rust representation of C's SafeSignerSeeds
 #[derive(Debug)]
 #[repr(C)]
-struct SolSignerSeedsC {
+struct SafeSignerSeedsC {
     addr: u64,
     len: u64,
 }
@@ -470,7 +470,7 @@ impl SyscallInvokeSigned for SyscallInvokeSignedC {
         memory_mapping: &mut MemoryMapping,
         invoke_context: &mut InvokeContext,
     ) -> Result<Instruction, EbpfError> {
-        let ix_c = translate_type::<SolInstruction>(
+        let ix_c = translate_type::<SafeInstruction>(
             memory_mapping,
             addr,
             invoke_context.get_check_aligned(),
@@ -486,7 +486,7 @@ impl SyscallInvokeSigned for SyscallInvokeSignedC {
             ix_c.program_id_addr,
             invoke_context.get_check_aligned(),
         )?;
-        let meta_cs = translate_slice::<SolAccountMeta>(
+        let meta_cs = translate_slice::<SafeAccountMeta>(
             memory_mapping,
             ix_c.accounts_addr,
             ix_c.accounts_len,
@@ -548,7 +548,7 @@ impl SyscallInvokeSigned for SyscallInvokeSignedC {
         let (account_infos, account_info_keys) = translate_account_infos(
             account_infos_addr,
             account_infos_len,
-            |account_info: &SolAccountInfo| account_info.key_addr,
+            |account_info: &SafeAccountInfo| account_info.key_addr,
             memory_mapping,
             invoke_context,
         )?;
@@ -573,7 +573,7 @@ impl SyscallInvokeSigned for SyscallInvokeSignedC {
         invoke_context: &InvokeContext,
     ) -> Result<Vec<Pubkey>, EbpfError> {
         if signers_seeds_len > 0 {
-            let signers_seeds = translate_slice::<SolSignerSeedsC>(
+            let signers_seeds = translate_slice::<SafeSignerSeedsC>(
                 memory_mapping,
                 signers_seeds_addr,
                 signers_seeds_len,
@@ -586,7 +586,7 @@ impl SyscallInvokeSigned for SyscallInvokeSignedC {
             Ok(signers_seeds
                 .iter()
                 .map(|signer_seeds| {
-                    let seeds = translate_slice::<SolSignerSeedC>(
+                    let seeds = translate_slice::<SafeSignerSeedC>(
                         memory_mapping,
                         signer_seeds.addr,
                         signer_seeds.len,
@@ -1125,7 +1125,7 @@ mod tests {
             aligned_memory::AlignedMemory, ebpf::MM_INPUT_START, memory_region::MemoryRegion,
             vm::Config,
         },
-        solana_sdk::{
+        safecoin_sdk::{
             account::{Account, AccountSharedData},
             clock::Epoch,
             rent::Rent,

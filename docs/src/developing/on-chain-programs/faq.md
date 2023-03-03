@@ -2,30 +2,30 @@
 title: "FAQ"
 ---
 
-When writing or interacting with Solana programs, there are common questions or
+When writing or interacting with Safecoin programs, there are common questions or
 challenges that often come up. Below are resources to help answer these
 questions.
 
-If not addressed here, ask on [StackOverflow](https://stackoverflow.com/questions/tagged/solana) with the `solana` tag or check out the Solana [#developer-support](https://discord.gg/RxeGBH)
+If not addressed here, ask on [StackOverflow](https://stackoverflow.com/questions/tagged/solana) with the `solana` tag or check out the Safecoin [#developer-support](https://discord.gg/RxeGBH)
 
 ## Limitations
 
-Developing programs on the Solana blockchain have some inherent limitation associated with them. Below is a list of common limitation that you may run into.
+Developing programs on the Safecoin blockchain have some inherent limitation associated with them. Below is a list of common limitation that you may run into.
 
 See [Limitations of developing programs](./limitations.md) for more details
 
 ## Berkeley Packet Filter (BPF)
 
-Solana on-chain programs are compiled via the [LLVM compiler infrastructure](https://llvm.org/) to an [Executable and Linkable Format (ELF)](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format) containing
+Safecoin on-chain programs are compiled via the [LLVM compiler infrastructure](https://llvm.org/) to an [Executable and Linkable Format (ELF)](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format) containing
 a variation of the [Berkeley Packet Filter (BPF)](https://en.wikipedia.org/wiki/Berkeley_Packet_Filter) bytecode.
 
-Because Solana uses the LLVM compiler infrastructure, a program may be written in any programming language that can target the LLVM's BPF backend.
+Because Safecoin uses the LLVM compiler infrastructure, a program may be written in any programming language that can target the LLVM's BPF backend.
 
 BPF provides an efficient [instruction set](https://github.com/iovisor/bpf-docs/blob/master/eBPF.md) that can be executed in an interpreted virtual machine or as efficient just-in-time compiled native instructions.
 
 ## Memory map
 
-The virtual address memory map used by Solana SBF programs is fixed and laid out
+The virtual address memory map used by Safecoin SBF programs is fixed and laid out
 as follows
 
 - Program code starts at 0x100000000
@@ -58,7 +58,7 @@ padding between fields. If the program implements the Rust `Pack` trait then try
 packing and unpacking the instruction type `T` to determine the exact encoding
 the program expects:
 
-https://github.com/solana-labs/solana/blob/v1.4/sdk/program/src/program_pack.rs
+https://github.com/fair-exchange/safecoin/blob/v1.4/sdk/program/src/program_pack.rs
 
 ## MissingRequiredSignature
 
@@ -131,9 +131,9 @@ specific needs.
 
 Programs are deployed with and executed by runtime loaders, currently there are
 two supported loaders [BPF
-Loader](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader.rs#L17)
+Loader](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader.rs#L17)
 and [BPF loader
-deprecated](https://github.com/solana-labs/solana/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader_deprecated.rs#L14)
+deprecated](https://github.com/fair-exchange/safecoin/blob/7ddf10e602d2ed87a9e3737aa8c32f1db9f909d8/sdk/program/src/bpf_loader_deprecated.rs#L14)
 
 Loaders may support different application binary interfaces so developers must
 write their programs for and deploy them to the same loader. If a program
@@ -156,10 +156,10 @@ loader see:
 SBF program deployment is the process of uploading a BPF shared object into a
 program account's data and marking the account executable. A client breaks the
 SBF shared object into smaller pieces and sends them as the instruction data of
-[`Write`](https://github.com/solana-labs/solana/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/loader_instruction.rs#L13)
+[`Write`](https://github.com/fair-exchange/safecoin/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/loader_instruction.rs#L13)
 instructions to the loader where loader writes that data into the program's
 account data. Once all the pieces are received the client sends a
-[`Finalize`](https://github.com/solana-labs/solana/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/loader_instruction.rs#L30)
+[`Finalize`](https://github.com/fair-exchange/safecoin/blob/bc7133d7526a041d1aaee807b80922baa89b6f90/sdk/program/src/loader_instruction.rs#L30)
 instruction to the loader, the loader then validates that the SBF data is valid
 and marks the program account as _executable_. Once the program account is
 marked executable, subsequent transactions may issue instructions for that

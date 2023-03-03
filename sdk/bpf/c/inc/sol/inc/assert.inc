@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana assert and panic utilities
+ * @brief Safecoin assert and panic utilities
  */
 
 #include <sol/types.h>
@@ -27,7 +27,7 @@ if (!(expr)) {          \
   sol_panic(); \
 }
 
-#ifdef SOL_TEST
+#ifdef SAFE_TEST
 /**
  * Stub functions when building tests
  */

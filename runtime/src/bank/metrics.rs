@@ -1,5 +1,5 @@
 use {
-    solana_sdk::clock::{Epoch, Slot},
+    safecoin_sdk::clock::{Epoch, Slot},
     std::sync::atomic::{AtomicU64, Ordering::Relaxed},
 };
 

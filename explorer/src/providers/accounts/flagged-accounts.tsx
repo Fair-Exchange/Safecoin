@@ -12,11 +12,11 @@ const FLAGGED_ACCOUNTS: Record<string, IncidentId> = {
   // Serum Swap
   "22Y43yTVxuUkoRKdm9thyRhQ3SdgQS7c7kB6UNCiaczD": "ftx-hack-november-2022",
   // Serum Dex V3
-  "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin": "ftx-hack-november-2022",
+  "SRMrEgnzRgGMQ8QzcL8cjWr5xpdVs1KQCQ58Jkkq1qx": "ftx-hack-november-2022",
   // Serum Dex V2
-  EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o: "ftx-hack-november-2022",
+  SRMijGeYEx7F7Wjq8kpwCUx9zuUECye3wyk3oGwqpXu: "ftx-hack-november-2022",
   // Serum Dex V1
-  BJ3jrUzddfuSrZHXSCxMUUQsjKEyLmuuyZebkcaFp2fg: "ftx-hack-november-2022",
+  SRMGrk9ZtEfUfh6vNYGxbNsZULnXSiAHx9SPvMbY2mU: "ftx-hack-november-2022",
 };
 
 const INCIDENTS: Record<IncidentId, IncidentDescription> = {
@@ -24,7 +24,7 @@ const INCIDENTS: Record<IncidentId, IncidentDescription> = {
     <>
       <div className="alert alert-danger alert-scam" role="alert">
         Warning! This account has been flagged by the community as a scam
-        account. Please be cautious sending SOL to this account.
+        account. Please be cautious sending SAFE to this account.
       </div>
     </>
   ),

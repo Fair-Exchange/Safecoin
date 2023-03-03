@@ -142,7 +142,7 @@ export type TransactionCtorFields_DEPRECATED = {
 
 // For backward compatibility; an unfortunate consequence of being
 // forced to over-export types by the documentation generator.
-// See https://github.com/solana-labs/solana/pull/25820
+// See https://github.com/fair-exchange/safecoin/pull/25820
 export type TransactionCtorFields = TransactionCtorFields_DEPRECATED;
 
 /**

@@ -1,8 +1,8 @@
 #[allow(deprecated)]
-use solana_sdk::sysvar::recent_blockhashes;
+use safecoin_sdk::sysvar::recent_blockhashes;
 use {
     serde::{Deserialize, Serialize},
-    solana_sdk::{
+    safecoin_sdk::{
         clock::MAX_RECENT_BLOCKHASHES, fee_calculator::FeeCalculator, hash::Hash, timing::timestamp,
     },
     std::collections::HashMap,
@@ -131,11 +131,11 @@ impl BlockhashQueue {
 #[cfg(test)]
 mod tests {
     #[allow(deprecated)]
-    use solana_sdk::sysvar::recent_blockhashes::IterItem;
+    use safecoin_sdk::sysvar::recent_blockhashes::IterItem;
     use {
         super::*,
         bincode::serialize,
-        solana_sdk::{clock::MAX_RECENT_BLOCKHASHES, hash::hash},
+        safecoin_sdk::{clock::MAX_RECENT_BLOCKHASHES, hash::hash},
     };
 
     #[test]

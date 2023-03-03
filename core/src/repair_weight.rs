@@ -10,9 +10,9 @@ use {
     solana_ledger::{
         ancestor_iterator::AncestorIterator, blockstore::Blockstore, blockstore_meta::SlotMeta,
     },
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_runtime::{contains::Contains, epoch_stakes::EpochStakes},
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         epoch_schedule::{Epoch, EpochSchedule},
         hash::Hash,
@@ -693,7 +693,7 @@ mod test {
             get_tmp_ledger_path,
         },
         solana_runtime::{bank::Bank, bank_utils},
-        solana_sdk::hash::Hash,
+        safecoin_sdk::hash::Hash,
         trees::tr,
     };
 

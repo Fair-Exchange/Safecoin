@@ -1,23 +1,23 @@
 use {
     crate::connection_cache::ConnectionCache,
-    solana_connection_cache::connection_cache::{
+    safecoin_connection_cache::connection_cache::{
         ConnectionCache as BackendConnectionCache, ConnectionManager, ConnectionPool,
         NewConnectionConfig,
     },
-    solana_quic_client::{QuicConfig, QuicConnectionManager, QuicPool},
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_quic_client::{QuicConfig, QuicConnectionManager, QuicPool},
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_sdk::{
         message::Message,
         signers::Signers,
         transaction::{Transaction, TransactionError},
         transport::Result as TransportResult,
     },
-    solana_tpu_client::tpu_client::{Result, TpuClient as BackendTpuClient},
+    safecoin_tpu_client::tpu_client::{Result, TpuClient as BackendTpuClient},
     std::sync::Arc,
 };
 pub use {
     crate::nonblocking::tpu_client::TpuSenderError,
-    solana_tpu_client::tpu_client::{TpuClientConfig, DEFAULT_FANOUT_SLOTS, MAX_FANOUT_SLOTS},
+    safecoin_tpu_client::tpu_client::{TpuClientConfig, DEFAULT_FANOUT_SLOTS, MAX_FANOUT_SLOTS},
 };
 
 /// Client which sends transactions directly to the current leader's TPU port over UDP.

@@ -1,7 +1,7 @@
 //! Example Rust-based SBF program tests loop iteration
 
-extern crate solana_program;
-use solana_program::{
+extern crate safecoin_program;
+use safecoin_program::{
     custom_heap_default, custom_panic_default, entrypoint::SUCCESS, log::sol_log_64,
 };
 

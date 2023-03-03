@@ -1,6 +1,6 @@
 import React from "react";
 
-import { AddressLookupTableAccount, PublicKey } from "@solana/web3.js";
+import { AddressLookupTableAccount, PublicKey } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 import { AddressLookupTableAccountInfo } from "validators/accounts/address-lookup-table";
 

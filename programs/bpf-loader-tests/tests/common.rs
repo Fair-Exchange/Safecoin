@@ -2,8 +2,8 @@
 
 use {
     solana_bpf_loader_program::{process_instruction, upgradeable::id},
-    solana_program_test::*,
-    solana_sdk::{
+    safecoin_program_test::*,
+    safecoin_sdk::{
         account::AccountSharedData,
         account_utils::StateMut,
         bpf_loader_upgradeable::UpgradeableLoaderState,

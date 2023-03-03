@@ -1,7 +1,7 @@
 //! Invokes an instruction and returns an error, the instruction invoked
 //! uses the instruction data provided and all the accounts
 
-use solana_program::{
+use safecoin_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
     instruction::{AccountMeta, Instruction},
@@ -9,7 +9,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-solana_program::entrypoint!(process_instruction);
+safecoin_program::entrypoint!(process_instruction);
 fn process_instruction(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],

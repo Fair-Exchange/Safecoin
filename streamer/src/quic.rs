@@ -8,7 +8,7 @@ use {
     quinn::{Endpoint, IdleTimeout, ServerConfig, VarInt},
     rustls::{server::ClientCertVerified, Certificate, DistinguishedNames},
     solana_perf::packet::PacketBatch,
-    solana_sdk::{
+    safecoin_sdk::{
         packet::PACKET_DATA_SIZE,
         quic::{QUIC_MAX_TIMEOUT_MS, QUIC_MAX_UNSTAKED_CONCURRENT_STREAMS},
         signature::Keypair,

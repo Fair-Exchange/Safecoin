@@ -7,13 +7,13 @@ use {
         tracer_packet_stats::TracerPacketStats,
         unprocessed_transaction_storage::UnprocessedTransactionStorage,
     },
-    solana_client::{connection_cache::ConnectionCache, tpu_connection::TpuConnection},
-    solana_gossip::cluster_info::ClusterInfo,
-    solana_measure::measure::Measure,
+    safecoin_client::{connection_cache::ConnectionCache, tpu_connection::TpuConnection},
+    safecoin_gossip::cluster_info::ClusterInfo,
+    safecoin_measure::measure::Measure,
     solana_perf::{data_budget::DataBudget, packet::Packet},
-    solana_poh::poh_recorder::PohRecorder,
+    safecoin_poh::poh_recorder::PohRecorder,
     solana_runtime::bank_forks::BankForks,
-    solana_sdk::{pubkey::Pubkey, transport::TransportError},
+    safecoin_sdk::{pubkey::Pubkey, transport::TransportError},
     solana_streamer::sendmmsg::batch_send,
     std::{
         iter::repeat,
@@ -174,7 +174,7 @@ impl Forwarder {
             .collect();
 
         let packet_vec_len = packet_vec.len();
-        // TODO: see https://github.com/solana-labs/solana/issues/23819
+        // TODO: see https://github.com/fair-exchange/safecoin/issues/23819
         // fix this so returns the correct number of succeeded packets
         // when there's an error sending the batch. This was left as-is for now
         // in favor of shipping Quic support, which was considered higher-priority
@@ -232,9 +232,9 @@ mod tests {
             get_tmp_ledger_path_auto_delete,
         },
         solana_perf::packet::PacketFlags,
-        solana_poh::poh_recorder::create_test_recorder,
+        safecoin_poh::poh_recorder::create_test_recorder,
         solana_runtime::bank::Bank,
-        solana_sdk::{
+        safecoin_sdk::{
             hash::Hash, poh_config::PohConfig, signature::Keypair, signer::Signer,
             system_transaction, transaction::VersionedTransaction,
         },
@@ -248,7 +248,7 @@ mod tests {
         // Create `PacketBatch` with 1 unprocessed packet
         let tx = system_transaction::transfer(
             &Keypair::new(),
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             1,
             Hash::new_unique(),
         );
@@ -335,7 +335,7 @@ mod tests {
         // packets are deserialized upon receiving, failed packets will not be
         // forwarded; Therefore need to create real packets here.
         let keypair = Keypair::new();
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
 
         let fwd_block_hash = Hash::new_unique();
         let forwarded_packet = {

@@ -1,12 +1,12 @@
 [package]
-name = "solana-rpc-client-api"
+name = "safecoin-rpc-client-api"
 version = "1.15.3"
-description = "Solana Client Common Utilities"
-authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
-repository = "https://github.com/solana-labs/solana"
+description = "Safecoin Client Common Utilities"
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-rpc-client-api"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-rpc-client-api"
 edition = "2021"
 
 [dependencies]
@@ -18,11 +18,11 @@ semver = "1.0.16"
 serde = "1.0.144"
 serde_derive = "1.0.103"
 serde_json = "1.0.83"
-solana-account-decoder = { path = "../account-decoder", version = "=1.15.3" }
-solana-sdk = { path = "../sdk", version = "=1.15.3" }
-solana-transaction-status = { path = "../transaction-status", version = "=1.15.3" }
-solana-version = { path = "../version", version = "=1.15.3" }
-spl-token-2022 = { version = "=0.5.0", features = ["no-entrypoint"] }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.15.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.15.3" }
+safecoin-transaction-status = { path = "../transaction-status", version = "=1.15.3" }
+safecoin-version = { path = "../version", version = "=1.15.3" }
+safe-token-2022 = { version = "=0.5.0", path = "../../safecoin-program-library/token/program-2022", features = ["no-entrypoint"] }
 thiserror = "1.0"
 
 [dev-dependencies]

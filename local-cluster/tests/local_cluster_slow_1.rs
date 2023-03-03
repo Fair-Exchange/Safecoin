@@ -5,7 +5,7 @@ use {
     common::*,
     log::*,
     serial_test::serial,
-    solana_core::{
+    safecoin_core::{
         broadcast_stage::{
             broadcast_duplicates_run::BroadcastDuplicatesConfig, BroadcastStageType,
         },
@@ -13,16 +13,16 @@ use {
         replay_stage::DUPLICATE_THRESHOLD,
         validator::ValidatorConfig,
     },
-    solana_gossip::gossip_service::discover_cluster,
+    safecoin_gossip::gossip_service::discover_cluster,
     solana_ledger::ancestor_iterator::AncestorIterator,
-    solana_local_cluster::{
+    safecoin_local_cluster::{
         cluster::{Cluster, ClusterValidatorInfo},
         cluster_tests::{self},
         local_cluster::{ClusterConfig, LocalCluster},
         validator_configs::*,
     },
     solana_runtime::vote_parser,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, MAX_PROCESSING_AGE},
         hash::Hash,
         pubkey::Pubkey,

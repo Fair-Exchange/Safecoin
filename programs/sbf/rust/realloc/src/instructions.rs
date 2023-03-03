@@ -1,6 +1,6 @@
 //! Example Rust-based SBF realloc test program
 
-use solana_program::{
+use safecoin_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
 };

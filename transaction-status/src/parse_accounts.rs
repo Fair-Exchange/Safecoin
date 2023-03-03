@@ -1,4 +1,4 @@
-use solana_sdk::message::{v0::LoadedMessage, Message};
+use safecoin_sdk::message::{v0::LoadedMessage, Message};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -51,7 +51,7 @@ pub fn parse_v0_message_accounts(message: &LoadedMessage) -> Vec<ParsedAccount> 
 mod test {
     use {
         super::*,
-        solana_sdk::{
+        safecoin_sdk::{
             message::{v0, v0::LoadedAddresses, MessageHeader},
             pubkey::Pubkey,
         },

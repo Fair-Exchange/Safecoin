@@ -6,8 +6,8 @@ use {
     solana_address_lookup_table_program::{
         instruction::freeze_lookup_table, state::AddressLookupTable,
     },
-    solana_program_test::*,
-    solana_sdk::{
+    safecoin_program_test::*,
+    safecoin_sdk::{
         instruction::InstructionError,
         pubkey::Pubkey,
         signature::{Keypair, Signer},

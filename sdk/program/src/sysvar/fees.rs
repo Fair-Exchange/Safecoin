@@ -14,7 +14,7 @@
 //! [`getFeeForMessage`]: https://docs.solana.com/developing/clients/jsonrpc-api#getfeeformessage
 //! [ccf]: https://docs.solana.com/proposals/comprehensive-compute-fees
 //!
-//! See also the Solana [documentation on the fees sysvar][sdoc].
+//! See also the Safecoin [documentation on the fees sysvar][sdoc].
 //!
 //! [sdoc]: https://docs.solana.com/developing/runtime-facilities/sysvars#fees
 
@@ -24,7 +24,7 @@ use {
     crate::{
         fee_calculator::FeeCalculator, impl_sysvar_get, program_error::ProgramError, sysvar::Sysvar,
     },
-    solana_sdk_macro::CloneZeroed,
+    safecoin_sdk_macro::CloneZeroed,
 };
 
 crate::declare_deprecated_sysvar_id!("SysvarFees111111111111111111111111111111111", Fees);

@@ -5,20 +5,20 @@ use {
     log::*,
     reqwest::{self, header::CONTENT_TYPE},
     serde_json::{json, Value},
-    solana_account_decoder::UiAccount,
-    solana_client::{
+    safecoin_account_decoder::UiAccount,
+    safecoin_client::{
         connection_cache::ConnectionCache,
         tpu_client::{TpuClient, TpuClientConfig},
     },
-    solana_pubsub_client::nonblocking::pubsub_client::PubsubClient,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::{
+    safecoin_pubsub_client::nonblocking::pubsub_client::PubsubClient,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::{
         client_error::{ErrorKind as ClientErrorKind, Result as ClientResult},
         config::{RpcAccountInfoConfig, RpcSignatureSubscribeConfig},
         request::RpcError,
         response::{Response as RpcResponse, RpcSignatureResult, SlotUpdate},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         commitment_config::CommitmentConfig,
         hash::Hash,
         pubkey::Pubkey,
@@ -28,9 +28,9 @@ use {
         transaction::Transaction,
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_test_validator::TestValidator,
-    solana_tpu_client::tpu_client::DEFAULT_TPU_CONNECTION_POOL_SIZE,
-    solana_transaction_status::TransactionStatus,
+    safecoin_test_validator::TestValidator,
+    safecoin_tpu_client::tpu_client::DEFAULT_TPU_CONNECTION_POOL_SIZE,
+    safecoin_transaction_status::TransactionStatus,
     std::{
         collections::HashSet,
         net::UdpSocket,
@@ -75,7 +75,7 @@ fn test_rpc_send_tx() {
         TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
     let rpc_url = test_validator.rpc_url();
 
-    let bob_pubkey = solana_sdk::pubkey::new_rand();
+    let bob_pubkey = safecoin_sdk::pubkey::new_rand();
 
     let req = json_req!("getRecentBlockhash", json!([]));
     let json = post_rpc(req, &rpc_url);
@@ -104,7 +104,7 @@ fn test_rpc_send_tx() {
 
     let request = json_req!("getSignatureStatuses", [[signature]]);
 
-    for _ in 0..solana_sdk::clock::DEFAULT_TICKS_PER_SLOT {
+    for _ in 0..safecoin_sdk::clock::DEFAULT_TICKS_PER_SLOT {
         let json = post_rpc(request.clone(), &rpc_url);
 
         let result: Option<TransactionStatus> =
@@ -122,8 +122,8 @@ fn test_rpc_send_tx() {
     assert!(confirmed_tx);
 
     use {
-        solana_account_decoder::UiAccountEncoding,
-        solana_rpc_client_api::config::RpcAccountInfoConfig,
+        safecoin_account_decoder::UiAccountEncoding,
+        safecoin_rpc_client_api::config::RpcAccountInfoConfig,
     };
     let config = RpcAccountInfoConfig {
         encoding: Some(UiAccountEncoding::Base64),
@@ -148,7 +148,7 @@ fn test_rpc_invalid_requests() {
         TestValidator::with_no_fees(alice.pubkey(), None, SocketAddrSpace::Unspecified);
     let rpc_url = test_validator.rpc_url();
 
-    let bob_pubkey = solana_sdk::pubkey::new_rand();
+    let bob_pubkey = safecoin_sdk::pubkey::new_rand();
 
     // test invalid get_balance request
     let req = json_req!("getBalance", json!(["invalid9999"]));
@@ -260,7 +260,7 @@ fn test_rpc_subscriptions() {
         .map(|_| {
             system_transaction::transfer(
                 &alice,
-                &solana_sdk::pubkey::new_rand(),
+                &safecoin_sdk::pubkey::new_rand(),
                 transfer_amount,
                 recent_blockhash,
             )

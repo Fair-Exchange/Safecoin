@@ -3,7 +3,7 @@ use {
     min_max_heap::MinMaxHeap,
     solana_perf::packet::{Packet, PacketBatch},
     solana_runtime::transaction_priority_details::TransactionPriorityDetails,
-    solana_sdk::{hash::Hash, transaction::Transaction},
+    safecoin_sdk::{hash::Hash, transaction::Transaction},
     std::{
         cmp::Ordering,
         collections::{hash_map::Entry, HashMap},
@@ -332,7 +332,7 @@ mod tests {
     use {
         super::*,
         solana_perf::packet::PacketFlags,
-        solana_sdk::{
+        safecoin_sdk::{
             signature::{Keypair, Signer},
             system_transaction,
             transaction::{SimpleAddressLoader, Transaction},
@@ -344,7 +344,7 @@ mod tests {
     fn simple_deserialized_packet() -> DeserializedPacket {
         let tx = system_transaction::transfer(
             &Keypair::new(),
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             1,
             Hash::new_unique(),
         );
@@ -355,7 +355,7 @@ mod tests {
     fn packet_with_priority_details(priority: u64, compute_unit_limit: u64) -> DeserializedPacket {
         let tx = system_transaction::transfer(
             &Keypair::new(),
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             1,
             Hash::new_unique(),
         );
@@ -489,7 +489,7 @@ mod tests {
 
     #[test]
     fn test_transaction_from_deserialized_packet() {
-        use solana_sdk::feature_set::FeatureSet;
+        use safecoin_sdk::feature_set::FeatureSet;
         let keypair = Keypair::new();
         let transfer_tx =
             system_transaction::transfer(&keypair, &keypair.pubkey(), 1, Hash::default());

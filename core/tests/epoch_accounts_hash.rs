@@ -2,11 +2,11 @@
 use {
     crate::snapshot_utils::create_tmp_accounts_dir_for_tests,
     log::*,
-    solana_core::{
+    safecoin_core::{
         accounts_hash_verifier::AccountsHashVerifier,
         snapshot_packager_service::SnapshotPackagerService,
     },
-    solana_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
+    safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
     solana_runtime::{
         accounts_background_service::{
             AbsRequestHandlers, AbsRequestSender, AccountsBackgroundService, DroppedSlotsReceiver,
@@ -25,11 +25,11 @@ use {
         snapshot_package::PendingSnapshotPackage,
         snapshot_utils,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         epoch_schedule::EpochSchedule,
         feature_set,
-        native_token::LAMPORTS_PER_SOL,
+        native_token::LAMPORTS_PER_SAFE,
         pubkey::Pubkey,
         signature::{Keypair, Signer},
         system_transaction,
@@ -93,9 +93,9 @@ impl TestEnvironment {
         let full_snapshot_archives_dir = TempDir::new().unwrap();
         let incremental_snapshot_archives_dir = TempDir::new().unwrap();
         let mut genesis_config_info = genesis_utils::create_genesis_config_with_leader(
-            100_000 * LAMPORTS_PER_SOL, // mint_lamports
+            100_000 * LAMPORTS_PER_SAFE, // mint_lamports
             &Pubkey::new_unique(),      // validator_pubkey
-            100 * LAMPORTS_PER_SOL,     // validator_stake_lamports
+            100 * LAMPORTS_PER_SAFE,     // validator_stake_lamports
         );
         genesis_config_info.genesis_config.epoch_schedule =
             EpochSchedule::custom(Self::SLOTS_PER_EPOCH, Self::SLOTS_PER_EPOCH, false);

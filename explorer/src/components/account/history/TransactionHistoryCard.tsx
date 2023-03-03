@@ -2,7 +2,7 @@ import React from "react";
 import { Signature } from "components/common/Signature";
 import { Slot } from "components/common/Slot";
 import Moment from "react-moment";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 import {
   useAccountHistory,
   useFetchAccountHistory,

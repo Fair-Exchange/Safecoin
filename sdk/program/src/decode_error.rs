@@ -4,7 +4,7 @@ use num_traits::FromPrimitive;
 
 /// Allows custom errors to be decoded back to their original enum.
 ///
-/// Some Solana error enums, like [`ProgramError`], include a `Custom` variant,
+/// Some Safecoin error enums, like [`ProgramError`], include a `Custom` variant,
 /// like [`ProgramError::Custom`], that contains a `u32` error code. This code
 /// may represent any error that is not covered by the error enum's named
 /// variants. It is common for programs to convert their own error enums to an

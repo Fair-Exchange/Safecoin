@@ -26,7 +26,7 @@ cargo_audit_ignores=(
   # tokio: vulnerability affecting named pipes on Windows
   #
   # Exception is a stopgap to unblock CI
-  # https://github.com/solana-labs/solana/issues/29586
+  # https://github.com/fair-exchange/safecoin/issues/29586
   --ignore RUSTSEC-2023-0001
 )
 scripts/cargo-for-all-lock-files.sh audit "${cargo_audit_ignores[@]}" | $dep_tree_filter

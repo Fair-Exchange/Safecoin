@@ -5,7 +5,7 @@ use {
     },
     solana_ledger::{blockstore::Blockstore, blockstore_meta::SlotMeta},
     solana_runtime::contains::Contains,
-    solana_sdk::{clock::Slot, hash::Hash},
+    safecoin_sdk::{clock::Slot, hash::Hash},
     std::collections::{HashMap, HashSet},
 };
 
@@ -146,7 +146,7 @@ pub mod test {
             shred::{Shred, ShredFlags},
         },
         solana_runtime::bank_utils,
-        solana_sdk::hash::Hash,
+        safecoin_sdk::hash::Hash,
         trees::tr,
     };
 

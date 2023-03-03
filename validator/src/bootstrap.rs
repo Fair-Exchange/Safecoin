@@ -2,22 +2,22 @@ use {
     log::*,
     rand::{seq::SliceRandom, thread_rng, Rng},
     rayon::prelude::*,
-    solana_core::validator::{ValidatorConfig, ValidatorStartProgress},
+    safecoin_core::validator::{ValidatorConfig, ValidatorStartProgress},
     solana_download_utils::{download_snapshot_archive, DownloadProgressRecord},
-    solana_genesis_utils::download_then_check_genesis_hash,
-    solana_gossip::{
+    safecoin_genesis_utils::download_then_check_genesis_hash,
+    safecoin_gossip::{
         cluster_info::{ClusterInfo, Node},
         crds_value,
         gossip_service::GossipService,
         legacy_contact_info::LegacyContactInfo as ContactInfo,
     },
-    solana_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client::rpc_client::RpcClient,
     solana_runtime::{
         snapshot_archive_info::SnapshotArchiveInfoGetter,
         snapshot_package::SnapshotType,
         snapshot_utils::{self},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         commitment_config::CommitmentConfig,
         hash::Hash,
@@ -442,7 +442,7 @@ pub fn attempt_download_genesis_and_snapshot(
         )
         .unwrap_or_else(|err| {
             // Consider failures here to be more likely due to user error (eg,
-            // incorrect `solana-validator` command-line arguments) rather than the
+            // incorrect `safecoin-validator` command-line arguments) rather than the
             // RPC node failing.
             //
             // Power users can always use the `--no-check-vote-account` option to
@@ -552,7 +552,7 @@ pub fn rpc_bootstrap(
                 .filter(|(rpc_contact_info, _snapshot_hash, rpc_client)| {
                     match rpc_client.get_version() {
                         Ok(rpc_version) => {
-                            info!("RPC node version: {}", rpc_version.solana_core);
+                            info!("RPC node version: {}", rpc_version.safecoin_core);
                             true
                         }
                         Err(err) => {

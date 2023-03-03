@@ -1,6 +1,6 @@
 import React from "react";
-import { SolBalance } from "components/common/SolBalance";
-import { PublicKey, VersionedBlockResponse } from "@solana/web3.js";
+import { SafeBalance } from "components/common/SafeBalance";
+import { PublicKey, VersionedBlockResponse } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 
 const PAGE_SIZE = 10;
@@ -50,11 +50,11 @@ export function BlockRewardsCard({ block }: { block: VersionedBlockResponse }) {
                   </td>
                   <td>{reward.rewardType}</td>
                   <td>
-                    <SolBalance lamports={reward.lamports} />
+                    <SafeBalance lamports={reward.lamports} />
                   </td>
                   <td>
                     {reward.postBalance ? (
-                      <SolBalance lamports={reward.postBalance} />
+                      <SafeBalance lamports={reward.postBalance} />
                     ) : (
                       "-"
                     )}

@@ -6,7 +6,7 @@ use {
     log::error,
     solana_ledger::{blockstore::Blockstore, leader_schedule_cache::LeaderScheduleCache},
     solana_runtime::bank_forks::BankForks,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Epoch, Slot},
         pubkey::Pubkey,
     },
@@ -217,7 +217,7 @@ mod tests {
             shred::Shredder,
         },
         solana_runtime::bank::Bank,
-        solana_sdk::{
+        safecoin_sdk::{
             signature::{Keypair, Signer},
             timing::timestamp,
         },

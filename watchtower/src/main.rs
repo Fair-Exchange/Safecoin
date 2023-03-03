@@ -4,18 +4,18 @@
 use {
     clap::{crate_description, crate_name, value_t, value_t_or_exit, App, Arg},
     log::*,
-    solana_clap_utils::{
+    safecoin_clap_utils::{
         input_parsers::pubkeys_of,
         input_validators::{is_parsable, is_pubkey_or_keypair, is_url},
     },
-    solana_cli_output::display::format_labeled_address,
+    safecoin_cli_output::display::format_labeled_address,
     solana_metrics::{datapoint_error, datapoint_info},
     solana_notifier::{NotificationType, Notifier},
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::{client_error, response::RpcVoteAccountStatus},
-    solana_sdk::{
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::{client_error, response::RpcVoteAccountStatus},
+    safecoin_sdk::{
         hash::Hash,
-        native_token::{sol_to_lamports, Sol},
+        native_token::{sol_to_lamports, Safe},
         pubkey::Pubkey,
     },
     std::{
@@ -45,7 +45,7 @@ fn get_config() -> Config {
         .version(solana_version::version!())
         .after_help("ADDITIONAL HELP:
         To receive a Slack, Discord, PagerDuty and/or Telegram notification on sanity failure,
-        define environment variables before running `solana-watchtower`:
+        define environment variables before running `safecoin-watchtower`:
 
         export SLACK_WEBHOOK=...
         export DISCORD_WEBHOOK=...
@@ -61,7 +61,7 @@ fn get_config() -> Config {
 
         To receive a Twilio SMS notification on failure, having a Twilio account,
         and a sending number owned by that account,
-        define environment variable before running `solana-watchtower`:
+        define environment variable before running `safecoin-watchtower`:
 
         export TWILIO_CONFIG='ACCOUNT=<account>,TOKEN=<securityToken>,TO=<receivingNumber>,FROM=<sendingNumber>'")
         .arg({
@@ -72,7 +72,7 @@ fn get_config() -> Config {
                 .takes_value(true)
                 .global(true)
                 .help("Configuration file to use");
-            if let Some(ref config_file) = *solana_cli_config::CONFIG_FILE {
+            if let Some(ref config_file) = *safecoin_cli_config::CONFIG_FILE {
                 arg.default_value(config_file)
             } else {
                 arg
@@ -122,11 +122,11 @@ fn get_config() -> Config {
         .arg(
             Arg::with_name("minimum_validator_identity_balance")
                 .long("minimum-validator-identity-balance")
-                .value_name("SOL")
+                .value_name("SAFE")
                 .takes_value(true)
                 .default_value("10")
                 .validator(is_parsable::<f64>)
-                .help("Alert when the validator identity balance is less than this amount of SOL")
+                .help("Alert when the validator identity balance is less than this amount of SAFE")
         )
         .arg(
             // Deprecated parameter, now always enabled
@@ -155,14 +155,14 @@ fn get_config() -> Config {
                 .value_name("SUFFIX")
                 .takes_value(true)
                 .default_value("")
-                .help("Add this string into all notification messages after \"solana-watchtower\"")
+                .help("Add this string into all notification messages after \"safecoin-watchtower\"")
         )
         .get_matches();
 
     let config = if let Some(config_file) = matches.value_of("config_file") {
-        solana_cli_config::Config::load(config_file).unwrap_or_default()
+        safecoin_cli_config::Config::load(config_file).unwrap_or_default()
     } else {
-        solana_cli_config::Config::default()
+        safecoin_cli_config::Config::default()
     };
 
     let interval = Duration::from_secs(value_t_or_exit!(matches, "interval", u64));
@@ -275,9 +275,9 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 info!(
                     "Current stake: {:.2}% | Total stake: {}, current stake: {}, delinquent: {}",
                     current_stake_percent,
-                    Sol(total_stake),
-                    Sol(total_current_stake),
-                    Sol(total_delinquent_stake)
+                    Safe(total_stake),
+                    Safe(total_current_stake),
+                    Safe(total_delinquent_stake)
                 );
 
                 if transaction_count > last_transaction_count {
@@ -331,7 +331,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                         if *balance < config.minimum_validator_identity_balance {
                             failures.push((
                                 "balance",
-                                format!("{} has {}", formatted_validator_identity, Sol(*balance)),
+                                format!("{} has {}", formatted_validator_identity, Safe(*balance)),
                             ));
                         }
                     }
@@ -365,7 +365,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
         if let Some((failure_test_name, failure_error_message)) = &failure {
             let notification_msg = format!(
-                "solana-watchtower{}: Error: {}: {}",
+                "safecoin-watchtower{}: Error: {}: {}",
                 config.name_suffix, failure_test_name, failure_error_message
             );
             num_consecutive_failures += 1;
@@ -399,7 +399,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 );
                 info!("{}", all_clear_msg);
                 notifier.send(
-                    &format!("solana-watchtower{}: {}", config.name_suffix, all_clear_msg),
+                    &format!("safecoin-watchtower{}: {}", config.name_suffix, all_clear_msg),
                     &NotificationType::Resolve { incident },
                 );
             }

@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from "react";
 // @ts-ignore
 import Jazzicon from "@metamask/jazzicon";
 import bs58 from "bs58";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 
 export function Identicon(props: {
   address?: string | PublicKey;

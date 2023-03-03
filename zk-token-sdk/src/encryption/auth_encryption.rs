@@ -11,7 +11,7 @@ use {
 };
 use {
     arrayref::{array_ref, array_refs},
-    solana_sdk::{
+    safecoin_sdk::{
         instruction::Instruction,
         message::Message,
         pubkey::Pubkey,
@@ -143,7 +143,7 @@ impl fmt::Display for AeCiphertext {
 mod tests {
     use {
         super::*,
-        solana_sdk::{signature::Keypair, signer::null_signer::NullSigner},
+        safecoin_sdk::{signature::Keypair, signer::null_signer::NullSigner},
     };
 
     #[test]

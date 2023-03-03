@@ -4,7 +4,7 @@ extern crate log;
 
 use {
     rayon::iter::*,
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::{ClusterInfo, Node},
         crds::Cursor,
         gossip_service::GossipService,
@@ -12,7 +12,7 @@ use {
     },
     solana_perf::packet::Packet,
     solana_runtime::bank_forks::BankForks,
-    solana_sdk::{
+    safecoin_sdk::{
         hash::Hash,
         pubkey::Pubkey,
         signature::{Keypair, Signer},
@@ -287,7 +287,7 @@ pub fn cluster_info_retransmit() {
 #[ignore]
 pub fn cluster_info_scale() {
     use {
-        solana_measure::measure::Measure,
+        safecoin_measure::measure::Measure,
         solana_perf::test_tx::test_tx,
         solana_runtime::{
             bank::Bank,

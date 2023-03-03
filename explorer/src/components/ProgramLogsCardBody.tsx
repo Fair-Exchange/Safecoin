@@ -1,4 +1,4 @@
-import { ParsedMessage, PublicKey, VersionedMessage } from "@solana/web3.js";
+import { ParsedMessage, PublicKey, VersionedMessage } from "@safecoin/web3.js";
 import { Cluster } from "providers/cluster";
 import { TableCardBody } from "components/common/TableCardBody";
 import { InstructionLogs } from "utils/program-logs";

@@ -1,5 +1,5 @@
 import React from "react";
-import { PublicKey, VersionedMessage } from "@solana/web3.js";
+import { PublicKey, VersionedMessage } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 import { useAddressLookupTable } from "providers/accounts";
 import { FetchStatus } from "providers/cache";

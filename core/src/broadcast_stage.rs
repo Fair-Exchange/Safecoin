@@ -14,16 +14,16 @@ use {
     },
     crossbeam_channel::{unbounded, Receiver, RecvError, RecvTimeoutError, Sender},
     itertools::Itertools,
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::{ClusterInfo, ClusterInfoError},
         legacy_contact_info::LegacyContactInfo as ContactInfo,
     },
     solana_ledger::{blockstore::Blockstore, shred::Shred},
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_metrics::{inc_new_counter_error, inc_new_counter_info},
-    solana_poh::poh_recorder::WorkingBankEntry,
+    safecoin_poh::poh_recorder::WorkingBankEntry,
     solana_runtime::bank_forks::BankForks,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         pubkey::Pubkey,
         signature::Keypair,
@@ -438,8 +438,8 @@ pub mod test {
     use {
         super::*,
         crossbeam_channel::unbounded,
-        solana_entry::entry::create_ticks,
-        solana_gossip::cluster_info::{ClusterInfo, Node},
+        safecoin_entry::entry::create_ticks,
+        safecoin_gossip::cluster_info::{ClusterInfo, Node},
         solana_ledger::{
             blockstore::Blockstore,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
@@ -447,7 +447,7 @@ pub mod test {
             shred::{max_ticks_per_n_shreds, ProcessShredsStats, ReedSolomonCache, Shredder},
         },
         solana_runtime::bank::Bank,
-        solana_sdk::{
+        safecoin_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},
         },

@@ -2,7 +2,7 @@
 
 use {
     crate::bank::Bank,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Epoch, Slot},
         vote::state::MAX_LOCKOUT_HISTORY,
     },
@@ -146,7 +146,7 @@ pub struct CalculationInfo {
 mod tests {
     use {
         super::*,
-        solana_sdk::{epoch_schedule::EpochSchedule, genesis_config::GenesisConfig},
+        safecoin_sdk::{epoch_schedule::EpochSchedule, genesis_config::GenesisConfig},
         test_case::test_case,
     };
 

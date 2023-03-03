@@ -5,7 +5,7 @@ EXPOSE 8899/tcp
 # RPC pubsub
 EXPOSE 8900/tcp
 # entrypoint
-EXPOSE 8001/tcp
+EXPOSE 10015/tcp
 # (future) bank service
 EXPOSE 8901/tcp
 # bank service
@@ -15,7 +15,7 @@ EXPOSE 9900/tcp
 # tvu
 EXPOSE 8000/udp
 # gossip
-EXPOSE 8001/udp
+EXPOSE 10015/udp
 # tvu_forwards
 EXPOSE 8002/udp
 # tpu

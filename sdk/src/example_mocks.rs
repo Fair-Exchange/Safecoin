@@ -13,10 +13,10 @@
 #![doc(hidden)]
 #![cfg(feature = "full")]
 
-pub mod solana_rpc_client {
+pub mod safecoin_rpc_client {
     pub mod rpc_client {
         use {
-            super::super::solana_rpc_client_api::client_error::Result as ClientResult,
+            super::super::safecoin_rpc_client_api::client_error::Result as ClientResult,
             crate::{hash::Hash, signature::Signature, transaction::Transaction},
         };
 
@@ -39,7 +39,7 @@ pub mod solana_rpc_client {
     }
 }
 
-pub mod solana_rpc_client_api {
+pub mod safecoin_rpc_client_api {
     pub mod client_error {
         use thiserror::Error;
 

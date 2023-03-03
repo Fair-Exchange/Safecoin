@@ -8,7 +8,7 @@ export interface IAccountStateData {
  * @internal
  */
 export type AccountType<TInputData extends IAccountStateData> = {
-  /** The account type index (from solana upstream program) */
+  /** The account type index (from safecoin upstream program) */
   index: number;
   /** The BufferLayout to use to build data */
   layout: BufferLayout.Layout<TInputData>;

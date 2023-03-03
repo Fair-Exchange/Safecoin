@@ -1,4 +1,4 @@
-//! Declarations of Solana program syscalls.
+//! Declarations of Safecoin program syscalls.
 //!
 //! This module is mostly empty when not compiling for BPF targets.
 

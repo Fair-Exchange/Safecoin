@@ -4,7 +4,7 @@ extern crate log;
 use {
     clap::{crate_description, crate_name, value_t, App, Arg},
     rayon::prelude::*,
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_runtime::{
         accounts::Accounts,
         accounts_db::{
@@ -15,7 +15,7 @@ use {
         ancestors::Ancestors,
         rent_collector::RentCollector,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         genesis_config::ClusterType, pubkey::Pubkey, sysvar::epoch_schedule::EpochSchedule,
     },
     std::{env, fs, path::PathBuf},
@@ -127,7 +127,7 @@ fn main() {
             let results_store = accounts.accounts_db.update_accounts_hash(
                 CalcAccountsHashDataSource::Storages,
                 false,
-                solana_sdk::clock::Slot::default(),
+                safecoin_sdk::clock::Slot::default(),
                 &ancestors,
                 None,
                 &EpochSchedule::default(),

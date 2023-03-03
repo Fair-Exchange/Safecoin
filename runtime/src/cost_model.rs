@@ -8,10 +8,10 @@
 use {
     crate::block_cost_limits::*,
     log::*,
-    solana_program_runtime::compute_budget::{
+    safecoin_program_runtime::compute_budget::{
         ComputeBudget, DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         compute_budget,
         feature_set::{
             remove_deprecated_request_unit_ix, use_default_units_in_fee_calculation, FeatureSet,
@@ -229,9 +229,9 @@ mod tests {
         crate::{
             bank::Bank,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
-            inline_spl_token,
+            inline_safe_token,
         },
-        solana_sdk::{
+        safecoin_sdk::{
             compute_budget::{self, ComputeBudgetInstruction},
             hash::Hash,
             instruction::CompiledInstruction,
@@ -340,11 +340,11 @@ mod tests {
         let tx = Transaction::new_with_compiled_instructions(
             &[&mint_keypair],
             &[
-                solana_sdk::pubkey::new_rand(),
-                solana_sdk::pubkey::new_rand(),
+                safecoin_sdk::pubkey::new_rand(),
+                safecoin_sdk::pubkey::new_rand(),
             ],
             start_hash,
-            vec![inline_spl_token::id()],
+            vec![inline_safe_token::id()],
             instructions,
         );
         let token_transaction = SanitizedTransaction::from_transaction_for_tests(tx);
@@ -378,11 +378,11 @@ mod tests {
         let tx = Transaction::new_with_compiled_instructions(
             &[&mint_keypair],
             &[
-                solana_sdk::pubkey::new_rand(),
-                solana_sdk::pubkey::new_rand(),
+                safecoin_sdk::pubkey::new_rand(),
+                safecoin_sdk::pubkey::new_rand(),
             ],
             start_hash,
-            vec![inline_spl_token::id(), compute_budget::id()],
+            vec![inline_safe_token::id(), compute_budget::id()],
             instructions,
         );
         let token_transaction = SanitizedTransaction::from_transaction_for_tests(tx);
@@ -407,8 +407,8 @@ mod tests {
     fn test_cost_model_transaction_many_transfer_instructions() {
         let (mint_keypair, start_hash) = test_setup();
 
-        let key1 = solana_sdk::pubkey::new_rand();
-        let key2 = solana_sdk::pubkey::new_rand();
+        let key1 = safecoin_sdk::pubkey::new_rand();
+        let key2 = safecoin_sdk::pubkey::new_rand();
         let instructions =
             system_instruction::transfer_many(&mint_keypair.pubkey(), &[(key1, 1), (key2, 1)]);
         let message = Message::new(&instructions, Some(&mint_keypair.pubkey()));
@@ -437,10 +437,10 @@ mod tests {
         let (mint_keypair, start_hash) = test_setup();
 
         // construct a transaction with multiple random instructions
-        let key1 = solana_sdk::pubkey::new_rand();
-        let key2 = solana_sdk::pubkey::new_rand();
-        let prog1 = solana_sdk::pubkey::new_rand();
-        let prog2 = solana_sdk::pubkey::new_rand();
+        let key1 = safecoin_sdk::pubkey::new_rand();
+        let key2 = safecoin_sdk::pubkey::new_rand();
+        let prog1 = safecoin_sdk::pubkey::new_rand();
+        let prog2 = safecoin_sdk::pubkey::new_rand();
         let instructions = vec![
             CompiledInstruction::new(3, &(), vec![0, 1]),
             CompiledInstruction::new(4, &(), vec![0, 2]),

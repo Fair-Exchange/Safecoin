@@ -9,7 +9,7 @@ use {
     log::*,
     memmap2::MmapMut,
     serde::{Deserialize, Serialize},
-    solana_sdk::{
+    safecoin_sdk::{
         account::{Account, AccountSharedData, ReadableAccount},
         clock::{Epoch, Slot},
         hash::Hash,
@@ -705,7 +705,7 @@ pub mod tests {
         assert_matches::assert_matches,
         memoffset::offset_of,
         rand::{thread_rng, Rng},
-        solana_sdk::{
+        safecoin_sdk::{
             account::{accounts_equal, WritableAccount},
             timing::duration_as_ms,
         },
@@ -1104,7 +1104,7 @@ pub mod tests {
             let mut av = AppendVec::new(path, true, 256);
             av.set_no_remove_on_drop();
 
-            let pubkey = solana_sdk::pubkey::new_rand();
+            let pubkey = safecoin_sdk::pubkey::new_rand();
             let owner = Pubkey::default();
             let data_len = 3_u64;
             let mut account = AccountSharedData::new(0, data_len as usize, &owner);

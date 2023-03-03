@@ -4,7 +4,7 @@ import chaiAsPromised from 'chai-as-promised';
 import {
   Keypair,
   Connection,
-  LAMPORTS_PER_SOL,
+  LAMPORTS_PER_SAFE,
   Transaction,
   ComputeBudgetProgram,
   ComputeBudgetInstruction,
@@ -19,7 +19,7 @@ describe('ComputeBudgetProgram', () => {
   it('requestUnits', () => {
     const params = {
       units: 150000,
-      additionalFee: LAMPORTS_PER_SOL,
+      additionalFee: LAMPORTS_PER_SAFE,
     };
     const ix = ComputeBudgetProgram.requestUnits(params);
     const decodedParams = ComputeBudgetInstruction.decodeRequestUnits(ix);
@@ -74,7 +74,7 @@ describe('ComputeBudgetProgram', () => {
   if (process.env.TEST_LIVE) {
     it('send live request heap ix', async () => {
       const connection = new Connection(url, 'confirmed');
-      const STARTING_AMOUNT = 2 * LAMPORTS_PER_SOL;
+      const STARTING_AMOUNT = 2 * LAMPORTS_PER_SAFE;
       const baseAccount = Keypair.generate();
       const basePubkey = baseAccount.publicKey;
       await helpers.airdrop({
@@ -117,8 +117,8 @@ describe('ComputeBudgetProgram', () => {
 
     it('send live compute unit ixs', async () => {
       const connection = new Connection(url, 'confirmed');
-      const FEE_AMOUNT = LAMPORTS_PER_SOL;
-      const STARTING_AMOUNT = 2 * LAMPORTS_PER_SOL;
+      const FEE_AMOUNT = LAMPORTS_PER_SAFE;
+      const STARTING_AMOUNT = 2 * LAMPORTS_PER_SAFE;
       const baseAccount = Keypair.generate();
       const basePubkey = baseAccount.publicKey;
       await helpers.airdrop({
@@ -127,7 +127,7 @@ describe('ComputeBudgetProgram', () => {
         amount: STARTING_AMOUNT,
       });
 
-      // lamport fee = 2B * 1M / 1M = 2 SOL
+      // lamport fee = 2B * 1M / 1M = 2 SAFE
       const prioritizationFeeTooHighTransaction = new Transaction()
         .add(
           ComputeBudgetProgram.setComputeUnitPrice({
@@ -149,7 +149,7 @@ describe('ComputeBudgetProgram', () => {
         ),
       ).to.be.rejected;
 
-      // lamport fee = 1B * 1M / 1M = 1 SOL
+      // lamport fee = 1B * 1M / 1M = 1 SAFE
       const validPrioritizationFeeTransaction = new Transaction()
         .add(
           ComputeBudgetProgram.setComputeUnitPrice({

@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana C-based SBF program types and utility functions
+ * @brief Safecoin C-based SBF program types and utility functions
  */
 
 #include <sol/assert.h>

@@ -1,7 +1,7 @@
 import React from "react";
-import { lamportsToSolString } from "utils";
+import { lamportsToSafeString } from "utils";
 
-export function SolBalance({
+export function SafeBalance({
   lamports,
   maximumFractionDigits = 9,
 }: {
@@ -12,7 +12,7 @@ export function SolBalance({
     <span>
       ◎
       <span className="font-monospace">
-        {lamportsToSolString(lamports, maximumFractionDigits)}
+        {lamportsToSafeString(lamports, maximumFractionDigits)}
       </span>
     </span>
   );

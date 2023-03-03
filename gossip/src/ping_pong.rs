@@ -3,7 +3,7 @@ use {
     lru::LruCache,
     rand::{AsByteSliceMut, CryptoRng, Rng},
     serde::Serialize,
-    solana_sdk::{
+    safecoin_sdk::{
         hash::{self, Hash},
         pubkey::Pubkey,
         sanitize::{Sanitize, SanitizeError},
@@ -16,7 +16,7 @@ use {
     },
 };
 
-const PING_PONG_HASH_PREFIX: &[u8] = "SOLANA_PING_PONG".as_bytes();
+const PING_PONG_HASH_PREFIX: &[u8] = "SAFECOIN_PING_PONG".as_bytes();
 
 #[derive(AbiExample, Debug, Deserialize, Serialize)]
 pub struct Ping<T> {

@@ -6,7 +6,7 @@ use {
         accounts_db::{AccountsDb, LoadHint, INCLUDE_SLOT_IN_HASH_TESTS},
         ancestors::Ancestors,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount, WritableAccount},
         clock::Slot,
         genesis_config::ClusterType,
@@ -49,7 +49,7 @@ fn test_shrink_and_clean() {
         for current_slot in 0..100 {
             while alive_accounts.len() <= 10 {
                 alive_accounts.push((
-                    solana_sdk::pubkey::new_rand(),
+                    safecoin_sdk::pubkey::new_rand(),
                     AccountSharedData::new(thread_rng().gen_range(0, 50), 0, &owner),
                 ));
             }
@@ -94,7 +94,7 @@ fn test_bad_bank_hash() {
     let mut accounts_keys: Vec<_> = (0..max_accounts)
         .into_par_iter()
         .map(|_| {
-            let key = solana_sdk::pubkey::new_rand();
+            let key = safecoin_sdk::pubkey::new_rand();
             let lamports = thread_rng().gen_range(0, 100);
             let some_data_len = thread_rng().gen_range(0, 1000);
             let account = AccountSharedData::new(lamports, some_data_len, &key);

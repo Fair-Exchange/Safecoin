@@ -4,14 +4,14 @@ use {
     },
     borsh::BorshDeserialize,
     serde_json::json,
-    solana_sdk::{instruction::CompiledInstruction, message::AccountKeys, pubkey::Pubkey},
-    spl_associated_token_account::instruction::AssociatedTokenAccountInstruction,
+    safecoin_sdk::{instruction::CompiledInstruction, message::AccountKeys, pubkey::Pubkey},
+    safe_associated_token_account::instruction::AssociatedTokenAccountInstruction,
 };
 
-// A helper function to convert spl_associated_token_account::id() as spl_sdk::pubkey::Pubkey
-// to solana_sdk::pubkey::Pubkey
+// A helper function to convert safe_associated_token_account::id() as spl_sdk::pubkey::Pubkey
+// to safecoin_sdk::pubkey::Pubkey
 pub fn spl_associated_token_id() -> Pubkey {
-    Pubkey::new_from_array(spl_associated_token_account::id().to_bytes())
+    Pubkey::new_from_array(safe_associated_token_account::id().to_bytes())
 }
 
 pub fn parse_associated_token(
@@ -23,7 +23,7 @@ pub fn parse_associated_token(
         _ => {
             // Runtime should prevent this from ever happening
             return Err(ParseInstructionError::InstructionKeyMismatch(
-                ParsableProgram::SplAssociatedTokenAccount,
+                ParsableProgram::SafeAssociatedTokenAccount,
             ));
         }
     }
@@ -31,7 +31,7 @@ pub fn parse_associated_token(
         AssociatedTokenAccountInstruction::Create
     } else {
         AssociatedTokenAccountInstruction::try_from_slice(&instruction.data)
-            .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SplToken))?
+            .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeToken))?
     };
 
     match ata_instruction {
@@ -85,23 +85,23 @@ fn check_num_associated_token_accounts(
     accounts: &[u8],
     num: usize,
 ) -> Result<(), ParseInstructionError> {
-    check_num_accounts(accounts, num, ParsableProgram::SplAssociatedTokenAccount)
+    check_num_accounts(accounts, num, ParsableProgram::SafeAssociatedTokenAccount)
 }
 
 #[cfg(test)]
 mod test {
     #[allow(deprecated)]
-    use spl_associated_token_account::create_associated_token_account as create_associated_token_account_deprecated;
+    use safe_associated_token_account::create_associated_token_account as create_associated_token_account_deprecated;
     use {
         super::*,
-        solana_account_decoder::parse_token::pubkey_from_spl_token,
-        spl_associated_token_account::{
+        safecoin_account_decoder::parse_token::pubkey_from_safe_token,
+        safe_associated_token_account::{
             get_associated_token_address, get_associated_token_address_with_program_id,
             instruction::{
                 create_associated_token_account, create_associated_token_account_idempotent,
                 recover_nested,
             },
-            solana_program::{
+            safecoin_program::{
                 instruction::CompiledInstruction as SplAssociatedTokenCompiledInstruction,
                 message::Message, pubkey::Pubkey as SplAssociatedTokenPubkey, sysvar,
             },
@@ -126,7 +126,7 @@ mod test {
         message
             .account_keys
             .iter()
-            .map(pubkey_from_spl_token)
+            .map(pubkey_from_safe_token)
             .collect()
     }
 
@@ -152,8 +152,8 @@ mod test {
                 "account": associated_account_address.to_string(),
                 "wallet": wallet_address.to_string(),
                 "mint": mint.to_string(),
-                "systemProgram": solana_sdk::system_program::id().to_string(),
-                "tokenProgram": spl_token::id().to_string(),
+                "systemProgram": safecoin_sdk::system_program::id().to_string(),
+                "tokenProgram": safe_token::id().to_string(),
             }),
         };
         assert_eq!(
@@ -222,7 +222,7 @@ mod test {
                     "account": associated_account_address.to_string(),
                     "wallet": wallet_address.to_string(),
                     "mint": mint.to_string(),
-                    "systemProgram": solana_sdk::system_program::id().to_string(),
+                    "systemProgram": safecoin_sdk::system_program::id().to_string(),
                     "tokenProgram": token_program_id.to_string(),
                 })
             }
@@ -267,7 +267,7 @@ mod test {
                     "account": associated_account_address.to_string(),
                     "wallet": wallet_address.to_string(),
                     "mint": mint.to_string(),
-                    "systemProgram": solana_sdk::system_program::id().to_string(),
+                    "systemProgram": safecoin_sdk::system_program::id().to_string(),
                     "tokenProgram": token_program_id.to_string(),
                 })
             }

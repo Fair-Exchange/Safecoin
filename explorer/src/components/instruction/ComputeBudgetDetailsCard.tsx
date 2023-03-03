@@ -3,9 +3,9 @@ import {
   ComputeBudgetInstruction,
   SignatureResult,
   TransactionInstruction,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { InstructionCard } from "./InstructionCard";
-import { SolBalance } from "components/common/SolBalance";
+import { SafeBalance } from "components/common/SafeBalance";
 import { Address } from "components/common/Address";
 import { reportError } from "utils/sentry";
 import { microLamportsToLamportsString } from "utils";
@@ -57,9 +57,9 @@ export function ComputeBudgetDetailsCard({
             </tr>
 
             <tr>
-              <td>Additional Fee (SOL)</td>
+              <td>Additional Fee (SAFE)</td>
               <td className="text-lg-end">
-                <SolBalance lamports={additionalFee} />
+                <SafeBalance lamports={additionalFee} />
               </td>
             </tr>
           </InstructionCard>

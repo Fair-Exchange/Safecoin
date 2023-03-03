@@ -12,8 +12,8 @@ import {
   TransactionSignature,
   SystemProgram,
   SystemInstruction,
-} from "@solana/web3.js";
-import { SolBalance } from "components/common/SolBalance";
+} from "@safecoin/web3.js";
+import { SafeBalance } from "components/common/SafeBalance";
 import { ErrorCard } from "components/common/ErrorCard";
 import { LoadingCard } from "components/common/LoadingCard";
 import { TableCardBody } from "components/common/TableCardBody";
@@ -325,9 +325,9 @@ function StatusCard({
 
         {fee && (
           <tr>
-            <td>Fee (SOL)</td>
+            <td>Fee (SAFE)</td>
             <td className="text-lg-end">
-              <SolBalance lamports={fee} />
+              <SafeBalance lamports={fee} />
             </td>
           </tr>
         )}
@@ -413,10 +413,10 @@ function AccountsCard({ signature }: SignatureProps) {
           <Address pubkey={pubkey} link />
         </td>
         <td>
-          <BalanceDelta delta={delta} isSol />
+          <BalanceDelta delta={delta} isSafe />
         </td>
         <td>
-          <SolBalance lamports={post} />
+          <SafeBalance lamports={post} />
         </td>
         <td>
           {index === 0 && (
@@ -452,8 +452,8 @@ function AccountsCard({ signature }: SignatureProps) {
             <tr>
               <th className="text-muted">#</th>
               <th className="text-muted">Address</th>
-              <th className="text-muted">Change (SOL)</th>
-              <th className="text-muted">Post Balance (SOL)</th>
+              <th className="text-muted">Change (SAFE)</th>
+              <th className="text-muted">Post Balance (SAFE)</th>
               <th className="text-muted">Details</th>
             </tr>
           </thead>

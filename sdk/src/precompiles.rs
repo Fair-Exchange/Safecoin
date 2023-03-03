@@ -1,4 +1,4 @@
-//! Solana precompiled programs.
+//! Safecoin precompiled programs.
 
 #![cfg(feature = "full")]
 

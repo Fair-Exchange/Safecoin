@@ -2,19 +2,19 @@ use {
     clap::{crate_name, value_t, value_t_or_exit, values_t_or_exit},
     crossbeam_channel::unbounded,
     log::*,
-    solana_clap_utils::{
+    safecoin_clap_utils::{
         input_parsers::{pubkey_of, pubkeys_of, value_of},
         input_validators::normalize_to_url_if_moniker,
     },
-    solana_core::tower_storage::FileTowerStorage,
-    solana_faucet::faucet::run_local_faucet_with_port,
-    solana_rpc::{
+    safecoin_core::tower_storage::FileTowerStorage,
+    safecoin_faucet::faucet::run_local_faucet_with_port,
+    safecoin_rpc::{
         rpc::{JsonRpcConfig, RpcBigtableConfig},
         rpc_pubsub_service::PubSubConfig,
     },
-    solana_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client::rpc_client::RpcClient,
     solana_runtime::accounts_index::{AccountIndex, AccountSecondaryIndexes},
-    solana_sdk::{
+    safecoin_sdk::{
         account::AccountSharedData,
         clock::Slot,
         epoch_schedule::EpochSchedule,
@@ -25,8 +25,8 @@ use {
         system_program,
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_test_validator::*,
-    solana_validator::{
+    safecoin_test_validator::*,
+    safecoin_validator::{
         admin_rpc_service, cli, dashboard::Dashboard, ledger_lockfile, lock_ledger,
         println_name_value, redirect_stderr_to_file,
     },
@@ -69,8 +69,8 @@ fn main() {
         .unwrap_or_default()
         .map(|value| match value {
             "program-id" => AccountIndex::ProgramId,
-            "spl-token-mint" => AccountIndex::SplTokenMint,
-            "spl-token-owner" => AccountIndex::SplTokenOwner,
+            "safe-token-mint" => AccountIndex::SafeTokenMint,
+            "safe-token-owner" => AccountIndex::SafeTokenOwner,
             _ => unreachable!(),
         })
         .collect();
@@ -129,14 +129,14 @@ fn main() {
 
     info!("{} {}", crate_name!(), solana_version::version!());
     info!("Starting validator with: {:#?}", std::env::args_os());
-    solana_core::validator::report_target_features();
+    safecoin_core::validator::report_target_features();
 
     // TODO: Ideally test-validator should *only* allow private addresses.
     let socket_addr_space = SocketAddrSpace::new(/*allow_private_addr=*/ true);
     let cli_config = if let Some(config_file) = matches.value_of("config_file") {
-        solana_cli_config::Config::load(config_file).unwrap_or_default()
+        safecoin_cli_config::Config::load(config_file).unwrap_or_default()
     } else {
-        solana_cli_config::Config::default()
+        safecoin_cli_config::Config::default()
     };
 
     let cluster_rpc_client = value_t!(matches, "json_rpc_url", String)
@@ -204,7 +204,7 @@ fn main() {
 
                     programs_to_load.push(ProgramInfo {
                         program_id: address,
-                        loader: solana_sdk::bpf_loader_upgradeable::id(),
+                        loader: safecoin_sdk::bpf_loader_upgradeable::id(),
                         program_path,
                     });
                 }
@@ -335,7 +335,7 @@ fn main() {
     } else if random_mint {
         println_name_value(
             "\nNotice!",
-            "No wallet available. `solana airdrop` localnet SOL after creating one\n",
+            "No wallet available. `safecoin airdrop` localnet SAFE after creating one\n",
         );
     }
 

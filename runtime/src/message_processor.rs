@@ -1,7 +1,7 @@
 use {
     serde::{Deserialize, Serialize},
-    solana_measure::measure::Measure,
-    solana_program_runtime::{
+    safecoin_measure::measure::Measure,
+    safecoin_program_runtime::{
         compute_budget::ComputeBudget,
         executor_cache::TransactionExecutorCache,
         invoke_context::{BuiltinProgram, InvokeContext},
@@ -9,7 +9,7 @@ use {
         sysvar_cache::SysvarCache,
         timings::{ExecuteDetailsTimings, ExecuteTimings},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::WritableAccount,
         feature_set::FeatureSet,
         hash::Hash,
@@ -28,7 +28,7 @@ use {
 pub struct MessageProcessor {}
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-impl ::solana_frozen_abi::abi_example::AbiExample for MessageProcessor {
+impl ::safecoin_frozen_abi::abi_example::AbiExample for MessageProcessor {
     fn example() -> Self {
         // MessageProcessor's fields are #[serde(skip)]-ed and not Serialize
         // so, just rely on Default anyway.
@@ -188,7 +188,7 @@ mod tests {
     use {
         super::*,
         crate::rent_collector::RentCollector,
-        solana_sdk::{
+        safecoin_sdk::{
             account::{AccountSharedData, ReadableAccount},
             instruction::{AccountMeta, Instruction, InstructionError},
             message::{AccountKeys, LegacyMessage, Message},
@@ -490,11 +490,11 @@ mod tests {
 
         let accounts = vec![
             (
-                solana_sdk::pubkey::new_rand(),
+                safecoin_sdk::pubkey::new_rand(),
                 AccountSharedData::new(100, 1, &mock_program_id),
             ),
             (
-                solana_sdk::pubkey::new_rand(),
+                safecoin_sdk::pubkey::new_rand(),
                 AccountSharedData::new(0, 1, &mock_program_id),
             ),
             (

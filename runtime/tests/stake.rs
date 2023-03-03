@@ -6,7 +6,7 @@ use {
         epoch_accounts_hash::EpochAccountsHash,
         genesis_utils::{create_genesis_config_with_leader, GenesisConfigInfo},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::from_account,
         account_utils::StateMut,
         client::SyncClient,
@@ -113,7 +113,7 @@ fn test_stake_create_and_split_single_signature() {
         ..
     } = create_genesis_config_with_leader(
         100_000_000_000,
-        &solana_sdk::pubkey::new_rand(),
+        &safecoin_sdk::pubkey::new_rand(),
         1_000_000,
     );
 
@@ -189,7 +189,7 @@ fn test_stake_create_and_split_to_existing_system_account() {
         ..
     } = create_genesis_config_with_leader(
         100_000_000_000,
-        &solana_sdk::pubkey::new_rand(),
+        &safecoin_sdk::pubkey::new_rand(),
         1_000_000,
     );
 
@@ -277,7 +277,7 @@ fn test_stake_account_lifetime() {
         ..
     } = create_genesis_config_with_leader(
         100_000_000_000,
-        &solana_sdk::pubkey::new_rand(),
+        &safecoin_sdk::pubkey::new_rand(),
         2_000_000_000,
     );
     genesis_config.rent = Rent::default();
@@ -357,7 +357,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &stake_pubkey,
             &stake_pubkey,
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             1,
             None,
         )],
@@ -463,7 +463,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &split_stake_pubkey,
             &stake_pubkey,
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             split_starting_delegation + 1,
             None,
         )],
@@ -486,7 +486,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &split_stake_pubkey,
             &stake_pubkey,
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             split_balance,
             None,
         )],
@@ -503,7 +503,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &split_stake_pubkey,
             &stake_pubkey,
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             split_unstaked,
             None,
         )],
@@ -528,7 +528,7 @@ fn test_stake_account_lifetime() {
         &[stake_instruction::withdraw(
             &split_stake_pubkey,
             &stake_pubkey,
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             split_remaining_balance,
             None,
         )],
@@ -556,7 +556,7 @@ fn test_create_stake_account_from_seed() {
         ..
     } = create_genesis_config_with_leader(
         100_000_000_000,
-        &solana_sdk::pubkey::new_rand(),
+        &safecoin_sdk::pubkey::new_rand(),
         1_000_000,
     );
     let bank = Bank::new_for_tests(&genesis_config);

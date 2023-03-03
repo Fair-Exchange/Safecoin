@@ -2,10 +2,10 @@ import {
   HumanizeDuration,
   HumanizeDurationLanguage,
 } from "humanize-duration-ts";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 
 // Switch to web3 constant when web3 updates superstruct
-export const LAMPORTS_PER_SOL = 1_000_000_000;
+export const LAMPORTS_PER_SAFE = 1_000_000_000;
 export const MICRO_LAMPORTS_PER_LAMPORT = 1_000_000;
 
 export const NUM_TICKS_PER_SECOND = 160;
@@ -54,9 +54,9 @@ export function microLamportsToLamportsString(
   );
 }
 
-export function lamportsToSol(lamports: number | bigint): number {
+export function lamportsToSafe(lamports: number | bigint): number {
   if (typeof lamports === "number") {
-    return lamports / LAMPORTS_PER_SOL;
+    return lamports / LAMPORTS_PER_SAFE;
   }
 
   let signMultiplier = 1;
@@ -74,11 +74,11 @@ export function lamportsToSol(lamports: number | bigint): number {
   return signMultiplier * parseFloat(solString);
 }
 
-export function lamportsToSolString(
+export function lamportsToSafeString(
   lamports: number | bigint,
   maximumFractionDigits: number = 9
 ): string {
-  const sol = lamportsToSol(lamports);
+  const sol = lamportsToSafe(lamports);
   return new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(sol);
 }
 

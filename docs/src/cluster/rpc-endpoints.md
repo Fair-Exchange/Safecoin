@@ -1,8 +1,8 @@
 ---
-title: Solana Cluster RPC Endpoints
+title: Safecoin Cluster RPC Endpoints
 ---
 
-Solana maintains dedicated api nodes to fulfill [JSON-RPC](/api)
+Safecoin maintains dedicated api nodes to fulfill [JSON-RPC](/api)
 requests for each public cluster, and third parties may as well. Here are the
 public RPC endpoints currently available and recommended for each public cluster:
 
@@ -10,7 +10,7 @@ public RPC endpoints currently available and recommended for each public cluster
 
 #### Endpoint
 
-- `https://api.devnet.solana.com` - single Solana-hosted api node; rate-limited
+- `https://api.devnet.safecoin.org` - single Safecoin-hosted api node; rate-limited
 
 #### Rate Limits
 
@@ -24,7 +24,7 @@ public RPC endpoints currently available and recommended for each public cluster
 
 #### Endpoint
 
-- `https://api.testnet.solana.com` - single Solana-hosted api node; rate-limited
+- `https://api.testnet.safecoin.org` - single Safecoin-hosted api node; rate-limited
 
 #### Rate Limits
 
@@ -38,7 +38,7 @@ public RPC endpoints currently available and recommended for each public cluster
 
 #### Endpoints\*
 
-- `https://api.mainnet-beta.solana.com` - Solana-hosted api node cluster, backed by a load balancer; rate-limited
+- `https://api.mainnet-beta.safecoin.org` - Safecoin-hosted api node cluster, backed by a load balancer; rate-limited
 
 #### Rate Limits
 

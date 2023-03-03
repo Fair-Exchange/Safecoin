@@ -5,8 +5,8 @@ use {
         overwrite_slot_hashes_with_slots, setup_test_context,
     },
     solana_address_lookup_table_program::instruction::close_lookup_table,
-    solana_program_test::*,
-    solana_sdk::{
+    safecoin_program_test::*,
+    safecoin_sdk::{
         clock::Clock,
         instruction::InstructionError,
         pubkey::Pubkey,

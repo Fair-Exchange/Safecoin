@@ -1,8 +1,8 @@
-//! Loading and saving the Solana CLI configuration file.
+//! Loading and saving the Safecoin CLI configuration file.
 //!
-//! The configuration file used by the Solana CLI includes information about the
+//! The configuration file used by the Safecoin CLI includes information about the
 //! RPC node to connect to, the path to the user's signing source, and more.
-//! Other software than the Solana CLI may wish to access the same configuration
+//! Other software than the Safecoin CLI may wish to access the same configuration
 //! and signer.
 //!
 //! The default path to the configuration file can be retrieved from
@@ -23,10 +23,10 @@
 //! Two important fields of `Config` are
 //!
 //! - [`json_rpc_url`], the URL to pass to
-//!   `solana_rpc_client::rpc_client::RpcClient`.
+//!   `safecoin_rpc_client::rpc_client::RpcClient`.
 //! - [`keypair_path`], a signing source, which may be a keypair file, but
 //!   may also represent several other types of signers, as described in
-//!   the documentation for `solana_clap_utils::keypair::signer_from_path`.
+//!   the documentation for `safecoin_clap_utils::keypair::signer_from_path`.
 //!
 //! [`json_rpc_url`]: Config::json_rpc_url
 //! [`keypair_path`]: Config::keypair_path
@@ -40,13 +40,13 @@
 //!
 //! ```no_run
 //! use anyhow::anyhow;
-//! use solana_cli_config::{CONFIG_FILE, Config};
+//! use safecoin_cli_config::{CONFIG_FILE, Config};
 //!
-//! let config_file = solana_cli_config::CONFIG_FILE.as_ref()
+//! let config_file = safecoin_cli_config::CONFIG_FILE.as_ref()
 //!     .ok_or_else(|| anyhow!("unable to get config file path"))?;
 //! let mut cli_config = Config::load(&config_file)?;
 //! // Set the RPC URL to devnet
-//! cli_config.json_rpc_url = "https://api.devnet.solana.com".to_string();
+//! cli_config.json_rpc_url = "https://api.devnet.safecoin.org".to_string();
 //! cli_config.save(&config_file)?;
 //! # Ok::<(), anyhow::Error>(())
 //! ```

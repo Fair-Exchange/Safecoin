@@ -3,8 +3,8 @@ import {
   SignatureResult,
   StakeProgram,
   ParsedInstruction,
-} from "@solana/web3.js";
-import { SolBalance } from "components/common/SolBalance";
+} from "@safecoin/web3.js";
+import { SafeBalance } from "components/common/SafeBalance";
 import { InstructionCard } from "../InstructionCard";
 import { Address } from "components/common/Address";
 import { WithdrawInfo } from "./types";
@@ -57,9 +57,9 @@ export function WithdrawDetailsCard(props: {
       </tr>
 
       <tr>
-        <td>Withdraw Amount (SOL)</td>
+        <td>Withdraw Amount (SAFE)</td>
         <td className="text-lg-end">
-          <SolBalance lamports={info.lamports} />
+          <SafeBalance lamports={info.lamports} />
         </td>
       </tr>
     </InstructionCard>

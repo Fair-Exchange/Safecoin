@@ -2,14 +2,14 @@
 
 use {
     serde_json::Value,
-    solana_cli::{
+    safecoin_cli::{
         cli::{process_command, CliCommand, CliConfig},
         program::{ProgramCliCommand, CLOSE_PROGRAM_WARNING},
     },
-    solana_cli_output::OutputFormat,
-    solana_faucet::faucet::run_local_faucet,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_cli_output::OutputFormat,
+    safecoin_faucet::faucet::run_local_faucet,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_sdk::{
         account_utils::StateMut,
         bpf_loader_upgradeable::{self, UpgradeableLoaderState},
         commitment_config::CommitmentConfig,
@@ -17,7 +17,7 @@ use {
         signature::{Keypair, Signer},
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_test_validator::TestValidator,
+    safecoin_test_validator::TestValidator,
     std::{env, fs::File, io::Read, path::PathBuf, str::FromStr},
 };
 

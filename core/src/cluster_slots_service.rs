@@ -1,11 +1,11 @@
 use {
     crate::cluster_slots::ClusterSlots,
     crossbeam_channel::{Receiver, RecvTimeoutError, Sender},
-    solana_gossip::cluster_info::ClusterInfo,
+    safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::blockstore::Blockstore,
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_runtime::bank_forks::BankForks,
-    solana_sdk::clock::Slot,
+    safecoin_sdk::clock::Slot,
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -181,8 +181,8 @@ impl ClusterSlotsService {
 mod test {
     use {
         super::*,
-        solana_gossip::{cluster_info::Node, crds_value::LowestSlot},
-        solana_sdk::signature::{Keypair, Signer},
+        safecoin_gossip::{cluster_info::Node, crds_value::LowestSlot},
+        safecoin_sdk::signature::{Keypair, Signer},
         solana_streamer::socket::SocketAddrSpace,
     };
 

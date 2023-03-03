@@ -5,7 +5,7 @@ use {
     bincode::deserialize,
     serde_json::json,
     solana_address_lookup_table_program::instruction::ProgramInstruction,
-    solana_sdk::{instruction::CompiledInstruction, message::AccountKeys},
+    safecoin_sdk::{instruction::CompiledInstruction, message::AccountKeys},
 };
 
 pub fn parse_address_lookup_table(
@@ -116,7 +116,7 @@ mod test {
     use {
         super::*,
         solana_address_lookup_table_program::instruction,
-        solana_sdk::{message::Message, pubkey::Pubkey, system_program},
+        safecoin_sdk::{message::Message, pubkey::Pubkey, system_program},
         std::str::FromStr,
     };
 

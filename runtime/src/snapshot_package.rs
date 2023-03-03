@@ -14,7 +14,7 @@ use {
         },
     },
     log::*,
-    solana_sdk::{clock::Slot, sysvar::epoch_schedule::EpochSchedule},
+    safecoin_sdk::{clock::Slot, sysvar::epoch_schedule::EpochSchedule},
     std::{
         fs,
         path::{Path, PathBuf},

@@ -1,34 +1,34 @@
 #![allow(clippy::integer_arithmetic, dead_code)]
 use {
     log::*,
-    solana_core::{
+    safecoin_core::{
         broadcast_stage::BroadcastStageType,
         consensus::{Tower, SWITCH_FORK_THRESHOLD},
         tower_storage::{FileTowerStorage, SavedTower, SavedTowerVersions, TowerStorage},
         validator::ValidatorConfig,
     },
-    solana_gossip::gossip_service::discover_cluster,
+    safecoin_gossip::gossip_service::discover_cluster,
     solana_ledger::{
         ancestor_iterator::AncestorIterator,
         blockstore::{Blockstore, PurgeType},
         blockstore_options::{AccessType, BlockstoreOptions},
         leader_schedule::{FixedSchedule, LeaderSchedule},
     },
-    solana_local_cluster::{
+    safecoin_local_cluster::{
         cluster::{Cluster, ClusterValidatorInfo},
         cluster_tests,
         local_cluster::{ClusterConfig, LocalCluster},
         validator_configs::*,
     },
-    solana_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client::rpc_client::RpcClient,
     solana_runtime::{
         snapshot_config::SnapshotConfig, snapshot_utils::create_accounts_run_and_snapshot_dirs,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::AccountSharedData,
         clock::{self, Slot, DEFAULT_MS_PER_SLOT, DEFAULT_TICKS_PER_SLOT},
         hash::Hash,
-        native_token::LAMPORTS_PER_SOL,
+        native_token::LAMPORTS_PER_SAFE,
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     },
@@ -48,10 +48,10 @@ use {
 };
 
 pub const RUST_LOG_FILTER: &str =
-    "error,solana_core::replay_stage=warn,solana_local_cluster=info,local_cluster=info";
+    "error,safecoin_core::replay_stage=warn,safecoin_local_cluster=info,local_cluster=info";
 
-pub const DEFAULT_CLUSTER_LAMPORTS: u64 = 10_000_000 * LAMPORTS_PER_SOL;
-pub const DEFAULT_NODE_STAKE: u64 = 10 * LAMPORTS_PER_SOL;
+pub const DEFAULT_CLUSTER_LAMPORTS: u64 = 10_000_000 * LAMPORTS_PER_SAFE;
+pub const DEFAULT_NODE_STAKE: u64 = 10 * LAMPORTS_PER_SAFE;
 
 pub fn last_vote_in_tower(tower_path: &Path, node_pubkey: &Pubkey) -> Option<(Slot, Hash)> {
     restore_tower(tower_path, node_pubkey).map(|tower| tower.last_voted_slot_hash().unwrap())
@@ -389,7 +389,7 @@ pub fn test_faulty_node(
     faulty_node_type: BroadcastStageType,
     node_stakes: Vec<u64>,
 ) -> (LocalCluster, Vec<Arc<Keypair>>) {
-    solana_logger::setup_with_default("solana_local_cluster=info");
+    solana_logger::setup_with_default("safecoin_local_cluster=info");
     let num_nodes = node_stakes.len();
 
     let error_validator_config = ValidatorConfig {

@@ -2,25 +2,25 @@
 
 use {
     serial_test::serial,
-    solana_bench_tps::{
+    safecoin_bench_tps::{
         bench::{do_bench_tps, generate_and_fund_keypairs},
         cli::{Config, InstructionPaddingConfig},
         send_batch::generate_durable_nonce_accounts,
-        spl_convert::FromOtherSolana,
+        safe_convert::FromOtherSolana,
     },
-    solana_client::{
+    safecoin_client::{
         thin_client::ThinClient,
         tpu_client::{TpuClient, TpuClientConfig},
     },
-    solana_core::validator::ValidatorConfig,
-    solana_faucet::faucet::run_local_faucet,
-    solana_local_cluster::{
+    safecoin_core::validator::ValidatorConfig,
+    safecoin_faucet::faucet::run_local_faucet,
+    safecoin_local_cluster::{
         local_cluster::{ClusterConfig, LocalCluster},
         validator_configs::make_identical_validator_configs,
     },
-    solana_rpc::rpc::JsonRpcConfig,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_rpc::rpc::JsonRpcConfig,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_sdk::{
         account::{Account, AccountSharedData},
         commitment_config::CommitmentConfig,
         fee_calculator::FeeRateGovernor,
@@ -28,7 +28,7 @@ use {
         signature::{Keypair, Signer},
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_test_validator::TestValidatorGenesis,
+    safecoin_test_validator::TestValidatorGenesis,
     std::{sync::Arc, time::Duration},
 };
 
@@ -36,7 +36,7 @@ fn program_account(program_data: &[u8]) -> AccountSharedData {
     AccountSharedData::from(Account {
         lamports: Rent::default().minimum_balance(program_data.len()).min(1),
         data: program_data.to_vec(),
-        owner: solana_sdk::bpf_loader::id(),
+        owner: safecoin_sdk::bpf_loader::id(),
         executable: true,
         rent_epoch: 0,
     })
@@ -45,8 +45,8 @@ fn program_account(program_data: &[u8]) -> AccountSharedData {
 fn test_bench_tps_local_cluster(config: Config) {
     let native_instruction_processors = vec![];
     let additional_accounts = vec![(
-        FromOtherSolana::from(spl_instruction_padding::ID),
-        program_account(include_bytes!("fixtures/spl_instruction_padding.so")),
+        FromOtherSolana::from(safe_instruction_padding::ID),
+        program_account(include_bytes!("fixtures/safe_instruction_padding.so")),
     )];
 
     solana_logger::setup();
@@ -59,7 +59,7 @@ fn test_bench_tps_local_cluster(config: Config) {
     let cluster = LocalCluster::new(
         &mut ClusterConfig {
             node_stakes: vec![999_990; NUM_NODES],
-            cluster_lamports: 200_000_000,
+            cluster_lamports: 1_000,
             validator_configs: make_identical_validator_configs(
                 &ValidatorConfig {
                     rpc_config: JsonRpcConfig {
@@ -119,8 +119,8 @@ fn test_bench_tps_test_validator(config: Config) {
         })
         .faucet_addr(Some(faucet_addr))
         .add_program(
-            "spl_instruction_padding",
-            FromOtherSolana::from(spl_instruction_padding::ID),
+            "safe_instruction_padding",
+            FromOtherSolana::from(safe_instruction_padding::ID),
         )
         .start_with_mint_address(mint_pubkey, SocketAddrSpace::Unspecified)
         .expect("validator start failed");
@@ -193,7 +193,7 @@ fn test_bench_tps_local_cluster_with_padding() {
         tx_count: 100,
         duration: Duration::from_secs(10),
         instruction_padding_config: Some(InstructionPaddingConfig {
-            program_id: FromOtherSolana::from(spl_instruction_padding::ID),
+            program_id: FromOtherSolana::from(safe_instruction_padding::ID),
             data_size: 0,
         }),
         ..Config::default()
@@ -207,7 +207,7 @@ fn test_bench_tps_tpu_client_with_padding() {
         tx_count: 100,
         duration: Duration::from_secs(10),
         instruction_padding_config: Some(InstructionPaddingConfig {
-            program_id: FromOtherSolana::from(spl_instruction_padding::ID),
+            program_id: FromOtherSolana::from(safe_instruction_padding::ID),
             data_size: 0,
         }),
         ..Config::default()

@@ -1,6 +1,6 @@
 use {
-    solana_measure::measure,
-    solana_sdk::{clock::Slot, pubkey::Pubkey, saturating_add_assign},
+    safecoin_measure::measure,
+    safecoin_sdk::{clock::Slot, pubkey::Pubkey, saturating_add_assign},
     std::collections::HashMap,
 };
 
@@ -248,7 +248,7 @@ impl PrioritizationFee {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_sdk::pubkey::Pubkey};
+    use {super::*, safecoin_sdk::pubkey::Pubkey};
 
     #[test]
     fn test_update_prioritization_fee() {

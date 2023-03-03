@@ -10,21 +10,21 @@
 //! For Entries:
 //! * recorded entry must be >= WorkingBank::min_tick_height && entry must be < WorkingBank::max_tick_height
 //!
-pub use solana_sdk::clock::Slot;
+pub use safecoin_sdk::clock::Slot;
 use {
     crate::poh_service::PohService,
     crossbeam_channel::{unbounded, Receiver, RecvTimeoutError, SendError, Sender, TrySendError},
     log::*,
-    solana_entry::{entry::Entry, poh::Poh},
+    safecoin_entry::{entry::Entry, poh::Poh},
     solana_ledger::{
         blockstore::Blockstore,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
         leader_schedule_cache::LeaderScheduleCache,
     },
-    solana_measure::measure,
+    safecoin_measure::measure,
     solana_metrics::poh_timing_point::{send_poh_timing_point, PohTimingSender, SlotPohTimingInfo},
     solana_runtime::bank::Bank,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::NUM_CONSECUTIVE_LEADER_SLOTS, hash::Hash, poh_config::PohConfig, pubkey::Pubkey,
         transaction::VersionedTransaction,
     },
@@ -495,7 +495,7 @@ impl PohRecorder {
                 SlotPohTimingInfo::new_slot_start_poh_time_point(
                     self.start_slot() + 1,
                     None,
-                    solana_sdk::timing::timestamp(),
+                    safecoin_sdk::timing::timestamp(),
                 ),
             );
         }
@@ -541,7 +541,7 @@ impl PohRecorder {
                     SlotPohTimingInfo::new_slot_start_poh_time_point(
                         slot,
                         None,
-                        solana_sdk::timing::timestamp(),
+                        safecoin_sdk::timing::timestamp(),
                     ),
                 );
             }
@@ -627,7 +627,7 @@ impl PohRecorder {
                         SlotPohTimingInfo::new_slot_end_poh_time_point(
                             self.slot_for_tick_height(self.tick_height),
                             None,
-                            solana_sdk::timing::timestamp(),
+                            safecoin_sdk::timing::timestamp(),
                         ),
                     );
                 }
@@ -640,7 +640,7 @@ impl PohRecorder {
                         SlotPohTimingInfo::new_slot_start_poh_time_point(
                             self.slot_for_tick_height(self.tick_height),
                             None,
-                            solana_sdk::timing::timestamp(),
+                            safecoin_sdk::timing::timestamp(),
                         ),
                     );
                 }
@@ -656,7 +656,7 @@ impl PohRecorder {
                 SlotPohTimingInfo::new_slot_end_poh_time_point(
                     slot,
                     None,
-                    solana_sdk::timing::timestamp(),
+                    safecoin_sdk::timing::timestamp(),
                 ),
             );
         }
@@ -1013,7 +1013,7 @@ mod tests {
         crossbeam_channel::bounded,
         solana_ledger::{blockstore::Blockstore, blockstore_meta::SlotMeta, get_tmp_ledger_path},
         solana_perf::test_tx::test_tx,
-        solana_sdk::{clock::DEFAULT_TICKS_PER_SLOT, hash::hash},
+        safecoin_sdk::{clock::DEFAULT_TICKS_PER_SLOT, hash::hash},
     };
 
     #[test]

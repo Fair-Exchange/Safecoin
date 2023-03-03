@@ -8,7 +8,7 @@ import {
   AddressLookupTableProgram,
   SystemProgram,
   ParsedAccountData,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { useCluster, Cluster } from "../cluster";
 import { HistoryProvider } from "./history";
 import { TokensProvider } from "./tokens";
@@ -59,7 +59,7 @@ export type NFTData = {
 };
 
 export type TokenProgramData = {
-  program: "spl-token";
+  program: "safe-token";
   parsed: TokenAccount;
   nftData?: NFTData;
 };
@@ -391,7 +391,7 @@ async function handleParsedAccountData(
       };
     }
 
-    case "spl-token": {
+    case "safe-token": {
       const parsed = create(info, TokenAccount);
       let nftData;
 
@@ -510,7 +510,7 @@ export function useMintAccountInfo(
       const parsedData = account.data.parsed;
       if (!parsedData) return;
       if (
-        parsedData.program !== "spl-token" ||
+        parsedData.program !== "safe-token" ||
         parsedData.parsed.type !== "mint"
       ) {
         return;
@@ -535,7 +535,7 @@ export function useTokenAccountInfo(
       const parsedData = account.data.parsed;
       if (!parsedData) return;
       if (
-        parsedData.program !== "spl-token" ||
+        parsedData.program !== "safe-token" ||
         parsedData.parsed.type !== "account"
       ) {
         return;

@@ -4,7 +4,7 @@ title: "Transaction Confirmation"
 
 into to transaction confirmation?
 
-Problems relating to [transaction confirmation](./transaction_confirmation.md) are common with many newer developers while building applications. This article aims to boost the overall understanding of the confirmation mechanism used on the Solana blockchain, including some recommended best practices.
+Problems relating to [transaction confirmation](./transaction_confirmation.md) are common with many newer developers while building applications. This article aims to boost the overall understanding of the confirmation mechanism used on the Safecoin blockchain, including some recommended best practices.
 
 ## Brief background on transactions
 
@@ -34,25 +34,25 @@ Below is a high level view of the lifecycle of a transaction. This article will 
 
 ## What is a Blockhash?
 
-A [“blockhash”](./../terminology.md#blockhash) refers to the last Proof of History (PoH) hash for a [“slot”](./../terminology.md#slot) (description below). Since Solana uses PoH as a trusted clock, a transaction’s recent blockhash can be thought of as a **timestamp**.
+A [“blockhash”](./../terminology.md#blockhash) refers to the last Proof of History (PoH) hash for a [“slot”](./../terminology.md#slot) (description below). Since Safecoin uses PoH as a trusted clock, a transaction’s recent blockhash can be thought of as a **timestamp**.
 
 ### Proof of History refresher
 
-Solana’s Proof of History mechanism uses a very long chain of recursive SHA-256 hashes to build a trusted clock. The “history” part of the name comes from the fact that block producers hash transaction id’s into the stream to record which transactions were processed in their block.
+Safecoin’s Proof of History mechanism uses a very long chain of recursive SHA-256 hashes to build a trusted clock. The “history” part of the name comes from the fact that block producers hash transaction id’s into the stream to record which transactions were processed in their block.
 
-[PoH hash calculation](https://github.com/solana-labs/solana/blob/9488a73f5252ad0d7ea830a0b456d9aa4bfbb7c1/entry/src/poh.rs#L82): `next_hash = hash(prev_hash, hash(transaction_ids))`
+[PoH hash calculation](https://github.com/fair-exchange/safecoin/blob/9488a73f5252ad0d7ea830a0b456d9aa4bfbb7c1/entry/src/poh.rs#L82): `next_hash = hash(prev_hash, hash(transaction_ids))`
 
 PoH can be used as a trusted clock because each hash must be produced sequentially. Each produced block contains a blockhash and a list of hash checkpoints called “ticks” so that validators can verify the full chain of hashes in parallel and prove that some amount of time has actually passed. The stream of hashes can be broken up into the following time units:
 
 # Transaction Expiration
 
-By default, all Solana transactions will expire if not committed to a block in a certain amount of time. The **vast majority** of transaction confirmation issues are related to how RPC nodes and validators detect and handle **expired** transactions. A solid understanding of how transaction expiration works should help you diagnose the bulk of your transaction confirmation issues.
+By default, all Safecoin transactions will expire if not committed to a block in a certain amount of time. The **vast majority** of transaction confirmation issues are related to how RPC nodes and validators detect and handle **expired** transactions. A solid understanding of how transaction expiration works should help you diagnose the bulk of your transaction confirmation issues.
 
 ## How does transaction expiration work?
 
-Each transaction includes a “recent blockhash” which is used as a PoH clock timestamp and expires when that blockhash is no longer “recent” enough. More concretely, Solana validators look up the corresponding slot number for each transaction’s blockhash that they wish to process in a block. If the validator [can’t find a slot number for the blockhash](https://github.com/solana-labs/solana/blob/9488a73f5252ad0d7ea830a0b456d9aa4bfbb7c1/runtime/src/bank.rs#L3687) or if the looked up slot number is more than 151 slots lower than the slot number of the block being processed, the transaction will be rejected.
+Each transaction includes a “recent blockhash” which is used as a PoH clock timestamp and expires when that blockhash is no longer “recent” enough. More concretely, Safecoin validators look up the corresponding slot number for each transaction’s blockhash that they wish to process in a block. If the validator [can’t find a slot number for the blockhash](https://github.com/fair-exchange/safecoin/blob/9488a73f5252ad0d7ea830a0b456d9aa4bfbb7c1/runtime/src/bank.rs#L3687) or if the looked up slot number is more than 151 slots lower than the slot number of the block being processed, the transaction will be rejected.
 
-Slots are configured to last about [400ms](https://github.com/solana-labs/solana/blob/47b938e617b77eb3fc171f19aae62222503098d7/sdk/program/src/clock.rs#L12) but often fluctuate between 400ms and 600ms, so a given blockhash can only be used by transactions for about 60 to 90 seconds.
+Slots are configured to last about [400ms](https://github.com/fair-exchange/safecoin/blob/47b938e617b77eb3fc171f19aae62222503098d7/sdk/program/src/clock.rs#L12) but often fluctuate between 400ms and 600ms, so a given blockhash can only be used by transactions for about 60 to 90 seconds.
 
 Transaction has expired pseudocode: `currentBankSlot > slotForTxRecentBlockhash + 151`
 
@@ -77,20 +77,20 @@ A naive brute force approach to prevent double processing could be to check ever
 
 ### Other blockchains
 
-Solana’s approach of prevent double processing is quite different from other blockchains. For example, Ethereum tracks a counter (nonce) for each transaction sender and will only process transactions that use the next valid nonce.
+Safecoin’s approach of prevent double processing is quite different from other blockchains. For example, Ethereum tracks a counter (nonce) for each transaction sender and will only process transactions that use the next valid nonce.
 
 Ethereum’s approach is simple for validators to implement, but it can be problematic for users. Many people have encountered situations when their Ethereum transactions got stuck in a _pending_ state for a long time and all the later transactions, which used higher nonce values, were blocked from processing.
 
-### Advantages on Solana
+### Advantages on Safecoin
 
-There are a few advantages to Solana’s approach:
+There are a few advantages to Safecoin’s approach:
 
 1. A single fee payer can submit multiple transactions at the same time that are allowed to be processed in any order. This might happen if you’re using multiple applications at the same time.
 2. If a transaction doesn’t get committed to a block and expires, users can try again knowing that their previous transaction won’t ever be processed.
 
-By not using counters, the Solana wallet experience may be easier for users to understand because they can get to success, failure, or expiration states quickly and avoid annoying pending states.
+By not using counters, the Safecoin wallet experience may be easier for users to understand because they can get to success, failure, or expiration states quickly and avoid annoying pending states.
 
-### Disadvantages on Solana
+### Disadvantages on Safecoin
 
 Of course there are some disadvantages too:
 
@@ -99,9 +99,9 @@ Of course there are some disadvantages too:
 
 These disadvantages highlight a tradeoff in how transaction expiration is configured. If the expiration time of a transaction is increased, validators need to use more memory to track more transactions. If expiration time is decreased, users don’t have enough time to submit their transaction.
 
-Currently, Solana clusters require that transactions use blockhashes that are no more than [151 slots](https://github.com/solana-labs/solana/blob/9488a73f5252ad0d7ea830a0b456d9aa4bfbb7c1/sdk/program/src/clock.rs#L65) old.
+Currently, Safecoin clusters require that transactions use blockhashes that are no more than [151 slots](https://github.com/fair-exchange/safecoin/blob/9488a73f5252ad0d7ea830a0b456d9aa4bfbb7c1/sdk/program/src/clock.rs#L65) old.
 
-> This [Github issue](https://github.com/solana-labs/solana/issues/23582) contains some calculations that estimate that mainnet-beta validators need about 150MB of memory to track transactions.
+> This [Github issue](https://github.com/fair-exchange/safecoin/issues/23582) contains some calculations that estimate that mainnet-beta validators need about 150MB of memory to track transactions.
 > This could be slimmed down in the future if necessary without decreasing expiration time as I’ve detailed in that issue.
 
 ## Transaction confirmation tips
@@ -122,7 +122,7 @@ The `"confirmed"` commitment level should almost always be used for RPC requests
 
 But feel free to consider the other options:
 
-- Choosing `"processed"` will let you fetch the most recent blockhash compared to other commitment levels and therefore gives you the most time to prepare and process a transaction. But due to the prevalence of forking in the Solana protocol, roughly 5% of blocks don’t end up being finalized by the cluster so there’s a real chance that your transaction uses a blockhash that belongs to a dropped fork. Transactions that use blockhashes for abandoned blocks won’t ever be considered recent by any blocks that are in the finalized blockchain.
+- Choosing `"processed"` will let you fetch the most recent blockhash compared to other commitment levels and therefore gives you the most time to prepare and process a transaction. But due to the prevalence of forking in the Safecoin protocol, roughly 5% of blocks don’t end up being finalized by the cluster so there’s a real chance that your transaction uses a blockhash that belongs to a dropped fork. Transactions that use blockhashes for abandoned blocks won’t ever be considered recent by any blocks that are in the finalized blockchain.
 - Using the default commitment level `"finalized"` will eliminate any risk that the blockhash you choose will belong to a dropped fork. The tradeoff is that there is typically at least a 32 slot difference between the most recent confirmed block and the most recent finalized block. This tradeoff is pretty severe and effectively reduces the expiration of your transactions by about 13 seconds but this could be even more during unstable cluster conditions.
 
 ### Use an appropriate preflight commitment level
@@ -161,7 +161,7 @@ Poll for new recent blockhashes on a frequent basis and replace a transaction’
 
 ### Use healthy RPC nodes when fetching blockhashes
 
-By fetching the latest blockhash with the `"confirmed"` commitment level from an RPC node, it’s going to respond with the blockhash for the latest confirmed block that it’s aware of. Solana’s block propagation protocol prioritizes sending blocks to staked nodes so RPC nodes naturally lag about a block behind the rest of the cluster. They also have to do more work to handle application requests and can lag a lot more under heavy user traffic.
+By fetching the latest blockhash with the `"confirmed"` commitment level from an RPC node, it’s going to respond with the blockhash for the latest confirmed block that it’s aware of. Safecoin’s block propagation protocol prioritizes sending blocks to staked nodes so RPC nodes naturally lag about a block behind the rest of the cluster. They also have to do more work to handle application requests and can lag a lot more under heavy user traffic.
 
 Lagging RPC nodes can therefore respond to blockhash requests with blockhashes that were confirmed by the cluster quite awhile ago. By default, a lagging RPC node detects that it is more than 150 slots behind the cluster will stop responding to requests, but just before hitting that threshold they can still return a blockhash that is just about to expire.
 
@@ -184,16 +184,16 @@ Then, poll the [`getBlockHeight`](/api/http#getblockheight) RPC API with the “
 
 Sometimes transaction expiration issues are really hard to avoid (e.g. offline signing, cluster instability). If the previous tips are still not sufficient for your use-case, you can switch to using durable transactions (they just require a bit of setup).
 
-To start using durable transactions, a user first needs to submit a transaction that [invokes instructions that create a special on-chain “nonce” account](https://docs.rs/solana-program/latest/solana_program/system_instruction/fn.create_nonce_account.html) and stores a “durable blockhash” inside of it. At any point in the future (as long as the nonce account hasn’t been used yet), the user can create a durable transaction by following these 2 rules:
+To start using durable transactions, a user first needs to submit a transaction that [invokes instructions that create a special on-chain “nonce” account](https://docs.rs/safecoin-program/latest/safecoin_program/system_instruction/fn.create_nonce_account.html) and stores a “durable blockhash” inside of it. At any point in the future (as long as the nonce account hasn’t been used yet), the user can create a durable transaction by following these 2 rules:
 
-1. The instruction list must start with an [“advance nonce” system instruction](https://docs.rs/solana-program/latest/solana_program/system_instruction/fn.advance_nonce_account.html) which loads their on-chain nonce account
+1. The instruction list must start with an [“advance nonce” system instruction](https://docs.rs/safecoin-program/latest/safecoin_program/system_instruction/fn.advance_nonce_account.html) which loads their on-chain nonce account
 2. The transaction’s blockhash must be equal to the durable blockhash stored by the on-chain nonce account
 
-Here’s how these transactions are processed by the Solana runtime:
+Here’s how these transactions are processed by the Safecoin runtime:
 
 1. If the transaction’s blockhash is no longer “recent”, the runtime checks if the transaction’s instruction list begins with an “advance nonce” system instruction
 2. If so, it then loads the nonce account specified by the “advance nonce” instruction
 3. Then it checks that the stored durable blockhash matches the transaction’s blockhash
 4. Lastly it makes sure to advance the nonce account’s stored blockhash to the latest recent blockhash to ensure that the same transaction can never be processed again
 
-For more details about how these durable transactions work, you can read the [original proposal](./../implemented-proposals/durable-tx-nonces.md) and [check out an example](./clients/javascript-reference#nonceaccount) in the Solana docs.
+For more details about how these durable transactions work, you can read the [original proposal](./../implemented-proposals/durable-tx-nonces.md) and [check out an example](./clients/javascript-reference#nonceaccount) in the Safecoin docs.

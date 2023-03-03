@@ -1,9 +1,9 @@
 #![cfg(feature = "test-bpf")]
 
 use {
-    solana_program_test::*,
-    solana_sbf_rust_sanity::process_instruction,
-    solana_sdk::{
+    safecoin_program_test::*,
+    safecoin_sbf_rust_sanity::process_instruction,
+    safecoin_sdk::{
         instruction::{AccountMeta, Instruction},
         pubkey::Pubkey,
         signature::{Keypair, Signer},
@@ -15,7 +15,7 @@ use {
 async fn test_sysvars() {
     let program_id = Pubkey::new_unique();
     let program_test = ProgramTest::new(
-        "solana_sbf_rust_sanity",
+        "safecoin_sbf_rust_sanity",
         program_id,
         processor!(process_instruction),
     );

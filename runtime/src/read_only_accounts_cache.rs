@@ -3,7 +3,7 @@
 use {
     dashmap::{mapref::entry::Entry, DashMap},
     index_list::{Index, IndexList},
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount},
         clock::Slot,
         pubkey::Pubkey,
@@ -169,7 +169,7 @@ mod tests {
             Rng, SeedableRng,
         },
         rand_chacha::ChaChaRng,
-        solana_sdk::account::{accounts_equal, Account, WritableAccount},
+        safecoin_sdk::account::{accounts_equal, Account, WritableAccount},
         std::{collections::HashMap, iter::repeat_with, sync::Arc},
     };
     #[test]

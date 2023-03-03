@@ -1,7 +1,7 @@
 use {
     crate::bench_tps_client::BenchTpsClient,
     log::*,
-    solana_sdk::{commitment_config::CommitmentConfig, timing::duration_as_s},
+    safecoin_sdk::{commitment_config::CommitmentConfig, timing::duration_as_s},
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},

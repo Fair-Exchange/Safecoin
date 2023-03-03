@@ -1,6 +1,6 @@
 use {
     crossbeam_channel::Receiver,
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_runtime::bank::Bank,
     std::{
         sync::Arc,

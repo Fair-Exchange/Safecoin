@@ -11,11 +11,11 @@ const INVALID_URLS = [
 ];
 const TEST_CASES = [
   // Non-https => `ws`
-  ['http://api.devnet.solana.com/', 'ws://api.devnet.solana.com/'],
+  ['http://api.devnet.safecoin.org/', 'ws://api.devnet.safecoin.org/'],
   ['gopher://gopher.example.com/', 'ws://gopher.example.com/'],
   ['http://localhost/', 'ws://localhost/'],
   // `https` => `wss`
-  ['https://api.devnet.solana.com/', 'wss://api.devnet.solana.com/'],
+  ['https://api.devnet.safecoin.org/', 'wss://api.devnet.safecoin.org/'],
   // IPv4 address
   ['https://192.168.0.1/', 'wss://192.168.0.1/'],
   // IPv6 address
@@ -23,13 +23,13 @@ const TEST_CASES = [
   ['https://[::]/', 'wss://[::]/'],
   ['https://[::1]/', 'wss://[::1]/'],
   // Increment port if supplied
-  ['https://api.devnet.solana.com:80/', 'wss://api.devnet.solana.com:81/'],
+  ['https://api.devnet.safecoin.org:80/', 'wss://api.devnet.safecoin.org:81/'],
   ['https://192.168.0.1:443/', 'wss://192.168.0.1:444/'],
   ['https://[::]:8080/', 'wss://[::]:8081/'],
   // No trailing slash
-  ['http://api.devnet.solana.com', 'ws://api.devnet.solana.com'],
-  ['https://api.devnet.solana.com', 'wss://api.devnet.solana.com'],
-  ['https://api.devnet.solana.com:80', 'wss://api.devnet.solana.com:81'],
+  ['http://api.devnet.safecoin.org', 'ws://api.devnet.safecoin.org'],
+  ['https://api.devnet.safecoin.org', 'wss://api.devnet.safecoin.org'],
+  ['https://api.devnet.safecoin.org:80', 'wss://api.devnet.safecoin.org:81'],
   // Username
   ['https://alice@private.com', 'wss://alice@private.com'],
   // Username/password

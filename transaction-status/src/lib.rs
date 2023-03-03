@@ -1,14 +1,14 @@
 #![allow(clippy::integer_arithmetic)]
 
-pub use {crate::extract_memos::extract_and_fmt_memos, solana_sdk::reward_type::RewardType};
+pub use {crate::extract_memos::extract_and_fmt_memos, safecoin_sdk::reward_type::RewardType};
 use {
     crate::{
         option_serializer::OptionSerializer,
         parse_accounts::{parse_legacy_message_accounts, parse_v0_message_accounts, ParsedAccount},
         parse_instruction::{parse, ParsedInstruction},
     },
-    solana_account_decoder::parse_token::UiTokenAmount,
-    solana_sdk::{
+    safecoin_account_decoder::parse_token::UiTokenAmount,
+    safecoin_sdk::{
         clock::{Slot, UnixTimestamp},
         commitment_config::CommitmentConfig,
         instruction::CompiledInstruction,
@@ -364,7 +364,7 @@ impl Default for TransactionStatusMeta {
 #[serde(rename_all = "camelCase")]
 pub struct UiTransactionStatusMeta {
     pub err: Option<TransactionError>,
-    pub status: TransactionResult<()>, // This field is deprecated.  See https://github.com/solana-labs/solana/issues/9302
+    pub status: TransactionResult<()>, // This field is deprecated.  See https://github.com/fair-exchange/safecoin/issues/9302
     pub fee: u64,
     pub pre_balances: Vec<u64>,
     pub post_balances: Vec<u64>,

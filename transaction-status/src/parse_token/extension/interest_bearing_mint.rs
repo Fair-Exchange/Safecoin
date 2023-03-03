@@ -1,6 +1,6 @@
 use {
     super::*,
-    spl_token_2022::{
+    safe_token_2022::{
         extension::interest_bearing_mint::{
             instruction::{InitializeInstructionData, InterestBearingMintInstruction},
             BasisPoints,
@@ -15,7 +15,7 @@ pub(in crate::parse_token) fn parse_interest_bearing_mint_instruction(
     account_keys: &AccountKeys,
 ) -> Result<ParsedInstructionEnum, ParseInstructionError> {
     match decode_instruction_type(instruction_data)
-        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SplToken))?
+        .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeToken))?
     {
         InterestBearingMintInstruction::Initialize => {
             check_num_token_accounts(account_indexes, 1)?;
@@ -23,7 +23,7 @@ pub(in crate::parse_token) fn parse_interest_bearing_mint_instruction(
                 rate_authority,
                 rate,
             } = *decode_instruction_data(instruction_data).map_err(|_| {
-                ParseInstructionError::InstructionNotParsable(ParsableProgram::SplToken)
+                ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeToken)
             })?;
             let rate_authority = rate_authority;
             let rate_authority: Option<Pubkey> = rate_authority.into();
@@ -40,7 +40,7 @@ pub(in crate::parse_token) fn parse_interest_bearing_mint_instruction(
             check_num_token_accounts(account_indexes, 2)?;
             let new_rate: BasisPoints =
                 *decode_instruction_data(instruction_data).map_err(|_| {
-                    ParseInstructionError::InstructionNotParsable(ParsableProgram::SplToken)
+                    ParseInstructionError::InstructionNotParsable(ParsableProgram::SafeToken)
                 })?;
             let mut value = json!({
                 "mint": account_keys[account_indexes[0] as usize].to_string(),

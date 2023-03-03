@@ -3,15 +3,15 @@
  * on floating point values.  The test fails if floating point
  * emulation functions were not linked to the module.
  */
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 extern double log2(double arg);
 
 extern uint64_t entrypoint(const uint8_t *input) {
-  SolAccountInfo ka[1];
-  SolParameters params = (SolParameters) { .ka = ka };
+  SafeAccountInfo ka[1];
+  SafeParameters params = (SafeParameters) { .ka = ka };
 
-  if (!sol_deserialize(input, &params, SOL_ARRAY_SIZE(ka))) {
+  if (!sol_deserialize(input, &params, SAFE_ARRAY_SIZE(ka))) {
     return ERROR_INVALID_ARGUMENT;
   }
   /* test float conversion to int compiles and works */

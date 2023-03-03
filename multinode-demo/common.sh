@@ -18,14 +18,14 @@ fi
 if [[ $(uname) != Linux ]]; then
   # Protect against unsupported configurations to prevent non-obvious errors
   # later. Arguably these should be fatal errors but for now prefer tolerance.
-  if [[ -n $SOLANA_CUDA ]]; then
+  if [[ -n $SAFECOIN_CUDA ]]; then
     echo "Warning: CUDA is not supported on $(uname)"
-    SOLANA_CUDA=
+    SAFECOIN_CUDA=
   fi
 fi
 
-if [[ -n $USE_INSTALL || ! -f "$SOLANA_ROOT"/Cargo.toml ]]; then
-  solana_program() {
+if [[ -n $USE_INSTALL || ! -f "$SAFECOIN_ROOT"/Cargo.toml ]]; then
+  safecoin_program() {
     declare program="$1"
     if [[ -z $program ]]; then
       printf "solana"
@@ -34,7 +34,7 @@ if [[ -n $USE_INSTALL || ! -f "$SOLANA_ROOT"/Cargo.toml ]]; then
     fi
   }
 else
-  solana_program() {
+  safecoin_program() {
     declare program="$1"
     declare crate="$program"
     if [[ -z $program ]]; then
@@ -61,15 +61,15 @@ else
   }
 fi
 
-solana_bench_tps=$(solana_program bench-tps)
-solana_faucet=$(solana_program faucet)
-solana_validator=$(solana_program validator)
-solana_validator_cuda="$solana_validator --cuda"
-solana_genesis=$(solana_program genesis)
-solana_gossip=$(solana_program gossip)
-solana_keygen=$(solana_program keygen)
-solana_ledger_tool=$(solana_program ledger-tool)
-solana_cli=$(solana_program)
+safecoin_bench_tps=$(safecoin_program bench-tps)
+safecoin_faucet=$(safecoin_program faucet)
+safecoin_validator=$(safecoin_program validator)
+safecoin_validator_cuda="$safecoin_validator --cuda"
+safecoin_genesis=$(safecoin_program genesis)
+safecoin_gossip=$(safecoin_program gossip)
+solana_keygen=$(safecoin_program keygen)
+safecoin_ledger_tool=$(safecoin_program ledger-tool)
+safecoin_cli=$(safecoin_program)
 
 export RUST_BACKTRACE=1
 

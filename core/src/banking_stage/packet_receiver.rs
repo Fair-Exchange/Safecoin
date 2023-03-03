@@ -8,8 +8,8 @@ use {
         unprocessed_transaction_storage::UnprocessedTransactionStorage,
     },
     crossbeam_channel::RecvTimeoutError,
-    solana_measure::measure::Measure,
-    solana_sdk::{
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::{
         saturating_add_assign,
         timing::{duration_as_ms, timestamp},
     },

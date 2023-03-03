@@ -17,7 +17,7 @@ use {
         snapshot_hash::{FullSnapshotHash, IncrementalSnapshotHash, StartingSnapshotHashes},
         snapshot_utils,
     },
-    solana_sdk::genesis_config::GenesisConfig,
+    safecoin_sdk::genesis_config::GenesisConfig,
     std::{
         fs,
         path::PathBuf,

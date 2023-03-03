@@ -8,12 +8,12 @@ use {
         },
         state::AddressLookupTable,
     },
-    solana_clap_utils::{self, input_parsers::*, input_validators::*, keypair::*},
-    solana_cli_output::{CliAddressLookupTable, CliAddressLookupTableCreated, CliSignature},
-    solana_remote_wallet::remote_wallet::RemoteWalletManager,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::config::RpcSendTransactionConfig,
-    solana_sdk::{
+    safecoin_clap_utils::{self, input_parsers::*, input_validators::*, keypair::*},
+    safecoin_cli_output::{CliAddressLookupTable, CliAddressLookupTableCreated, CliSignature},
+    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::config::RpcSendTransactionConfig,
+    safecoin_sdk::{
         account::from_account, clock::Clock, commitment_config::CommitmentConfig, message::Message,
         pubkey::Pubkey, signer::Signer, sysvar, transaction::Transaction,
     },

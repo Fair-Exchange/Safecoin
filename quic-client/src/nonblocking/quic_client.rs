@@ -11,14 +11,14 @@ use {
         ClientConfig, ConnectError, Connection, ConnectionError, Endpoint, EndpointConfig,
         IdleTimeout, TokioRuntime, TransportConfig, VarInt, WriteError,
     },
-    solana_connection_cache::{
+    safecoin_connection_cache::{
         client_connection::ClientStats, connection_cache_stats::ConnectionCacheStats,
         nonblocking::client_connection::ClientConnection,
     },
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_net_utils::VALIDATOR_PORT_RANGE,
-    solana_rpc_client_api::client_error::ErrorKind as ClientErrorKind,
-    solana_sdk::{
+    safecoin_rpc_client_api::client_error::ErrorKind as ClientErrorKind,
+    safecoin_sdk::{
         quic::{
             QUIC_CONNECTION_HANDSHAKE_TIMEOUT_MS, QUIC_KEEP_ALIVE_MS, QUIC_MAX_TIMEOUT_MS,
             QUIC_MAX_UNSTAKED_CONCURRENT_STREAMS,

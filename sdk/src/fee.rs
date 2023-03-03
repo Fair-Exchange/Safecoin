@@ -62,7 +62,7 @@ impl Default for FeeStructure {
 }
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-impl ::solana_frozen_abi::abi_example::AbiExample for FeeStructure {
+impl ::safecoin_frozen_abi::abi_example::AbiExample for FeeStructure {
     fn example() -> Self {
         FeeStructure::default()
     }

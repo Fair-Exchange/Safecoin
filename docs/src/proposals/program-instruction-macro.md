@@ -210,7 +210,7 @@ impl TestInstructionVerbose {
    if all Instruction enum fields are converted to named types, instead of unnamed
    tuples. This seems worth doing anyway, adding more precision to the variants and
    enabling real documentation (so developers don't have to do
-   [this](https://github.com/solana-labs/solana/blob/3aab13a1679ba2b7846d9ba39b04a52f2017d3e0/sdk/src/system_instruction.rs#L140)
+   [this](https://github.com/fair-exchange/safecoin/blob/3aab13a1679ba2b7846d9ba39b04a52f2017d3e0/sdk/src/system_instruction.rs#L140)
    This will cause a little churn in our current code base, but not a lot.
 2. **Variable account lists** - This approach offers a couple options for
    variable account lists. First, optional accounts may be added and tagged with

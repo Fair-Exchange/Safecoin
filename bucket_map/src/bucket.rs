@@ -8,8 +8,8 @@ use {
         MaxSearch, RefCount,
     },
     rand::{thread_rng, Rng},
-    solana_measure::measure::Measure,
-    solana_sdk::pubkey::Pubkey,
+    safecoin_measure::measure::Measure,
+    safecoin_sdk::pubkey::Pubkey,
     std::{
         collections::hash_map::DefaultHasher,
         hash::{Hash, Hasher},

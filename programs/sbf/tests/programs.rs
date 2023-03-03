@@ -6,11 +6,11 @@ extern crate solana_bpf_loader_program;
 #[cfg(feature = "sbf_rust")]
 use {
     itertools::izip,
-    solana_account_decoder::parse_bpf_loader::{
+    safecoin_account_decoder::parse_bpf_loader::{
         parse_bpf_upgradeable_loader, BpfUpgradeableLoaderAccountType,
     },
     solana_ledger::token_balances::collect_token_balances,
-    solana_program_runtime::{
+    safecoin_program_runtime::{
         compute_budget::ComputeBudget, invoke_context::InvokeContext, timings::ExecuteTimings,
     },
     solana_runtime::{
@@ -24,10 +24,10 @@ use {
             upgrade_program,
         },
     },
-    solana_sbf_rust_invoke::instructions::*,
-    solana_sbf_rust_realloc::instructions::*,
-    solana_sbf_rust_realloc_invoke::instructions::*,
-    solana_sdk::{
+    safecoin_sbf_rust_invoke::instructions::*,
+    safecoin_sbf_rust_realloc::instructions::*,
+    safecoin_sbf_rust_realloc_invoke::instructions::*,
+    safecoin_sdk::{
         account::{ReadableAccount, WritableAccount},
         account_utils::StateMut,
         bpf_loader_upgradeable,
@@ -46,7 +46,7 @@ use {
         sysvar::{self, clock, rent},
         transaction::VersionedTransaction,
     },
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         ConfirmedTransactionWithStatusMeta, InnerInstructions, TransactionStatusMeta,
         TransactionWithStatusMeta, VersionedTransactionWithStatusMeta,
     },
@@ -58,14 +58,14 @@ use {
         serialization::{deserialize_parameters, serialize_parameters},
         syscalls::create_loader,
     },
-    solana_program_runtime::invoke_context::with_mock_invoke_context,
+    safecoin_program_runtime::invoke_context::with_mock_invoke_context,
     solana_rbpf::{elf::Executable, verifier::RequisiteVerifier, vm::VerifiedExecutable},
     solana_runtime::{
         bank::Bank,
         bank_client::BankClient,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::AccountSharedData,
         bpf_loader, bpf_loader_deprecated,
         client::SyncClient,
@@ -325,7 +325,7 @@ fn execute_transactions(
                                 index: index as u8,
                                 instructions: instructions
                                     .into_iter()
-                                    .map(|ix| solana_transaction_status::InnerInstruction {
+                                    .map(|ix| safecoin_transaction_status::InnerInstruction {
                                         instruction: ix.instruction,
                                         stack_height: Some(u32::from(ix.stack_height)),
                                     })
@@ -398,22 +398,22 @@ fn test_program_sbf_sanity() {
     #[cfg(feature = "sbf_rust")]
     {
         programs.extend_from_slice(&[
-            ("solana_sbf_rust_128bit", true),
-            ("solana_sbf_rust_alloc", true),
-            ("solana_sbf_rust_curve25519", true),
-            ("solana_sbf_rust_custom_heap", true),
-            ("solana_sbf_rust_dep_crate", true),
-            ("solana_sbf_rust_external_spend", false),
-            ("solana_sbf_rust_iter", true),
-            ("solana_sbf_rust_many_args", true),
-            ("solana_sbf_rust_membuiltins", true),
-            ("solana_sbf_rust_noop", true),
-            ("solana_sbf_rust_panic", false),
-            ("solana_sbf_rust_param_passing", true),
-            ("solana_sbf_rust_rand", true),
-            ("solana_sbf_rust_sanity", true),
-            ("solana_sbf_rust_secp256k1_recover", true),
-            ("solana_sbf_rust_sha", true),
+            ("safecoin_sbf_rust_128bit", true),
+            ("safecoin_sbf_rust_alloc", true),
+            ("safecoin_sbf_rust_curve25519", true),
+            ("safecoin_sbf_rust_custom_heap", true),
+            ("safecoin_sbf_rust_dep_crate", true),
+            ("safecoin_sbf_rust_external_spend", false),
+            ("safecoin_sbf_rust_iter", true),
+            ("safecoin_sbf_rust_many_args", true),
+            ("safecoin_sbf_rust_membuiltins", true),
+            ("safecoin_sbf_rust_noop", true),
+            ("safecoin_sbf_rust_panic", false),
+            ("safecoin_sbf_rust_param_passing", true),
+            ("safecoin_sbf_rust_rand", true),
+            ("safecoin_sbf_rust_sanity", true),
+            ("safecoin_sbf_rust_secp256k1_recover", true),
+            ("safecoin_sbf_rust_sha", true),
         ]);
     }
 
@@ -459,7 +459,7 @@ fn test_program_sbf_loader_deprecated() {
     }
     #[cfg(feature = "sbf_rust")]
     {
-        programs.extend_from_slice(&[("solana_sbf_rust_deprecated_loader")]);
+        programs.extend_from_slice(&[("safecoin_sbf_rust_deprecated_loader")]);
     }
 
     for program in programs.iter() {
@@ -472,7 +472,7 @@ fn test_program_sbf_loader_deprecated() {
         } = create_genesis_config(50);
         genesis_config
             .accounts
-            .remove(&solana_sdk::feature_set::disable_deploy_of_alloc_free_syscall::id())
+            .remove(&safecoin_sdk::feature_set::disable_deploy_of_alloc_free_syscall::id())
             .unwrap();
         let mut bank = Bank::new_for_tests(&genesis_config);
         let (name, id, entrypoint) = solana_bpf_loader_deprecated_program!();
@@ -506,7 +506,7 @@ fn test_sol_alloc_free_no_longer_deployable() {
     bank.add_builtin(&name, &id, entrypoint);
 
     // Populate loader account with elf that depends on _sol_alloc_free syscall
-    let elf = load_program_from_file("solana_sbf_rust_deprecated_loader");
+    let elf = load_program_from_file("safecoin_sbf_rust_deprecated_loader");
     let mut program_account = AccountSharedData::new(1, elf.len(), &bpf_loader::id());
     program_account
         .data_as_mut_slice()
@@ -547,7 +547,7 @@ fn test_sol_alloc_free_no_longer_deployable() {
     );
 
     // Enable _sol_alloc_free syscall
-    bank.deactivate_feature(&solana_sdk::feature_set::disable_deploy_of_alloc_free_syscall::id());
+    bank.deactivate_feature(&safecoin_sdk::feature_set::disable_deploy_of_alloc_free_syscall::id());
     bank.clear_signatures();
     bank.clear_executors();
 
@@ -558,7 +558,7 @@ fn test_sol_alloc_free_no_longer_deployable() {
     assert!(bank.process_transaction(&invoke_tx).is_ok());
 
     // disable _sol_alloc_free
-    bank.activate_feature(&solana_sdk::feature_set::disable_deploy_of_alloc_free_syscall::id());
+    bank.activate_feature(&safecoin_sdk::feature_set::disable_deploy_of_alloc_free_syscall::id());
     bank.clear_signatures();
 
     // invoke should still succeed because cached
@@ -583,7 +583,7 @@ fn test_program_sbf_duplicate_accounts() {
     }
     #[cfg(feature = "sbf_rust")]
     {
-        programs.extend_from_slice(&[("solana_sbf_rust_dup_accounts")]);
+        programs.extend_from_slice(&[("safecoin_sbf_rust_dup_accounts")]);
     }
 
     for program in programs.iter() {
@@ -684,7 +684,7 @@ fn test_program_sbf_error_handling() {
     }
     #[cfg(feature = "sbf_rust")]
     {
-        programs.extend_from_slice(&[("solana_sbf_rust_error_handling")]);
+        programs.extend_from_slice(&[("safecoin_sbf_rust_error_handling")]);
     }
 
     for program in programs.iter() {
@@ -788,7 +788,7 @@ fn test_return_data_and_log_data_syscall() {
     }
     #[cfg(feature = "sbf_rust")]
     {
-        programs.extend_from_slice(&[("solana_sbf_rust_log_data")]);
+        programs.extend_from_slice(&[("safecoin_sbf_rust_log_data")]);
     }
 
     for program in programs.iter() {
@@ -849,9 +849,9 @@ fn test_program_sbf_invoke_sanity() {
     {
         programs.push((
             Languages::Rust,
-            "solana_sbf_rust_invoke",
-            "solana_sbf_rust_invoked",
-            "solana_sbf_rust_noop",
+            "safecoin_sbf_rust_invoke",
+            "safecoin_sbf_rust_invoked",
+            "safecoin_sbf_rust_noop",
         ));
     }
     for program in programs.iter() {
@@ -907,7 +907,7 @@ fn test_program_sbf_invoke_sanity() {
             AccountMeta::new_readonly(derived_key3, false),
             AccountMeta::new_readonly(system_program::id(), false),
             AccountMeta::new(from_keypair.pubkey(), true),
-            AccountMeta::new_readonly(solana_sdk::ed25519_program::id(), false),
+            AccountMeta::new_readonly(safecoin_sdk::ed25519_program::id(), false),
             AccountMeta::new_readonly(invoke_program_id, false),
         ];
 
@@ -1269,13 +1269,13 @@ fn test_program_sbf_program_id_spoofing() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_spoof1",
+        "safecoin_sbf_rust_spoof1",
     );
     let malicious_system_pubkey = load_program(
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_spoof1_system",
+        "safecoin_sbf_rust_spoof1_system",
     );
 
     let from_pubkey = Pubkey::new_unique();
@@ -1322,13 +1322,13 @@ fn test_program_sbf_caller_has_access_to_cpi_program() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_caller_access",
+        "safecoin_sbf_rust_caller_access",
     );
     let caller2_pubkey = load_program(
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_caller_access",
+        "safecoin_sbf_rust_caller_access",
     );
     let account_metas = vec![
         AccountMeta::new_readonly(caller_pubkey, false),
@@ -1362,7 +1362,7 @@ fn test_program_sbf_ro_modify() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_ro_modify",
+        "safecoin_sbf_rust_ro_modify",
     );
 
     let test_keypair = Keypair::new();
@@ -1417,7 +1417,7 @@ fn test_program_sbf_call_depth() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_call_depth",
+        "safecoin_sbf_rust_call_depth",
     );
 
     let instruction = Instruction::new_with_bincode(
@@ -1452,7 +1452,7 @@ fn test_program_sbf_compute_budget() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_noop",
+        "safecoin_sbf_rust_noop",
     );
     let message = Message::new(
         &[
@@ -1494,21 +1494,21 @@ fn assert_instruction_count() {
     #[cfg(feature = "sbf_rust")]
     {
         programs.extend_from_slice(&[
-            ("solana_sbf_rust_128bit", 580),
-            ("solana_sbf_rust_alloc", 5038),
-            ("solana_sbf_rust_custom_heap", 513),
-            ("solana_sbf_rust_dep_crate", 2),
-            ("solana_sbf_rust_external_spend", 378),
-            ("solana_sbf_rust_iter", 108),
-            ("solana_sbf_rust_many_args", 1289),
-            ("solana_sbf_rust_mem", 2158),
-            ("solana_sbf_rust_membuiltins", 1541),
-            ("solana_sbf_rust_noop", 366),
-            ("solana_sbf_rust_param_passing", 146),
-            ("solana_sbf_rust_rand", 469),
-            ("solana_sbf_rust_sanity", 52228),
-            ("solana_sbf_rust_secp256k1_recover", 91195),
-            ("solana_sbf_rust_sha", 24081),
+            ("safecoin_sbf_rust_128bit", 580),
+            ("safecoin_sbf_rust_alloc", 5038),
+            ("safecoin_sbf_rust_custom_heap", 513),
+            ("safecoin_sbf_rust_dep_crate", 2),
+            ("safecoin_sbf_rust_external_spend", 378),
+            ("safecoin_sbf_rust_iter", 108),
+            ("safecoin_sbf_rust_many_args", 1289),
+            ("safecoin_sbf_rust_mem", 2158),
+            ("safecoin_sbf_rust_membuiltins", 1541),
+            ("safecoin_sbf_rust_noop", 366),
+            ("safecoin_sbf_rust_param_passing", 146),
+            ("safecoin_sbf_rust_rand", 469),
+            ("safecoin_sbf_rust_sanity", 52228),
+            ("safecoin_sbf_rust_secp256k1_recover", 91195),
+            ("safecoin_sbf_rust_sha", 24081),
         ]);
     }
 
@@ -1553,7 +1553,7 @@ fn test_program_sbf_instruction_introspection() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_instruction_introspection",
+        "safecoin_sbf_rust_instruction_introspection",
     );
 
     // Passing transaction
@@ -1611,7 +1611,7 @@ fn test_program_sbf_test_use_latest_executor() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_panic",
+        "safecoin_sbf_rust_panic",
     );
 
     // Write the panic program into the program account
@@ -1620,7 +1620,7 @@ fn test_program_sbf_test_use_latest_executor() {
         &bpf_loader::id(),
         None,
         &mint_keypair,
-        "solana_sbf_rust_panic",
+        "safecoin_sbf_rust_panic",
     );
 
     // Finalize the panic program, but fail the tx
@@ -1641,7 +1641,7 @@ fn test_program_sbf_test_use_latest_executor() {
         &bpf_loader::id(),
         Some(program_keypair),
         &mint_keypair,
-        "solana_sbf_rust_noop",
+        "safecoin_sbf_rust_noop",
     );
     let message = Message::new(&[instruction], Some(&mint_keypair.pubkey()));
     bank_client
@@ -1688,7 +1688,7 @@ fn test_program_sbf_upgrade() {
         &buffer_keypair,
         &program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_upgradeable",
+        "safecoin_sbf_rust_upgradeable",
     );
 
     let mut instruction =
@@ -1709,7 +1709,7 @@ fn test_program_sbf_upgrade() {
         &buffer_keypair,
         &program_id,
         &authority_keypair,
-        "solana_sbf_rust_upgraded",
+        "safecoin_sbf_rust_upgraded",
     );
     bank_client.set_sysvar_for_tests(&clock::Clock {
         slot: 2,
@@ -1742,7 +1742,7 @@ fn test_program_sbf_upgrade() {
         &buffer_keypair,
         &program_id,
         &new_authority_keypair,
-        "solana_sbf_rust_upgradeable",
+        "safecoin_sbf_rust_upgradeable",
     );
 
     // Call original program
@@ -1784,7 +1784,7 @@ fn test_program_sbf_invoke_in_same_tx_as_deployment() {
         &buffer_keypair,
         &indirect_program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_invoke_and_return",
+        "safecoin_sbf_rust_invoke_and_return",
     );
 
     let invoke_instruction =
@@ -1804,7 +1804,7 @@ fn test_program_sbf_invoke_in_same_tx_as_deployment() {
         &mint_keypair,
         &buffer_keypair,
         &authority_keypair,
-        "solana_sbf_rust_noop",
+        "safecoin_sbf_rust_noop",
     );
     let deployment_instructions = bpf_loader_upgradeable::deploy_with_max_program_len(
         &mint_keypair.pubkey(),
@@ -1873,7 +1873,7 @@ fn test_program_sbf_invoke_in_same_tx_as_redeployment() {
         &buffer_keypair,
         &program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_noop",
+        "safecoin_sbf_rust_noop",
     );
 
     // Deploy indirect invocation program
@@ -1884,7 +1884,7 @@ fn test_program_sbf_invoke_in_same_tx_as_redeployment() {
         &buffer_keypair,
         &indirect_program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_invoke_and_return",
+        "safecoin_sbf_rust_invoke_and_return",
     );
 
     let invoke_instruction =
@@ -1904,7 +1904,7 @@ fn test_program_sbf_invoke_in_same_tx_as_redeployment() {
         &mint_keypair,
         &buffer_keypair,
         &authority_keypair,
-        "solana_sbf_rust_panic",
+        "safecoin_sbf_rust_panic",
     );
     let redeployment_instruction = bpf_loader_upgradeable::upgrade(
         &program_id,
@@ -1965,7 +1965,7 @@ fn test_program_sbf_invoke_in_same_tx_as_undeployment() {
         &buffer_keypair,
         &program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_noop",
+        "safecoin_sbf_rust_noop",
     );
 
     // Deploy indirect invocation program
@@ -1976,7 +1976,7 @@ fn test_program_sbf_invoke_in_same_tx_as_undeployment() {
         &buffer_keypair,
         &indirect_program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_invoke_and_return",
+        "safecoin_sbf_rust_invoke_and_return",
     );
 
     // Deploy panic program
@@ -1987,7 +1987,7 @@ fn test_program_sbf_invoke_in_same_tx_as_undeployment() {
         &buffer_keypair,
         &panic_program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_panic",
+        "safecoin_sbf_rust_panic",
     );
 
     let invoke_instruction =
@@ -2064,7 +2064,7 @@ fn test_program_sbf_invoke_upgradeable_via_cpi() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_invoke_and_return",
+        "safecoin_sbf_rust_invoke_and_return",
     );
 
     // Deploy upgradeable program
@@ -2078,7 +2078,7 @@ fn test_program_sbf_invoke_upgradeable_via_cpi() {
         &buffer_keypair,
         &program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_upgradeable",
+        "safecoin_sbf_rust_upgradeable",
     );
 
     let mut instruction = Instruction::new_with_bytes(
@@ -2106,7 +2106,7 @@ fn test_program_sbf_invoke_upgradeable_via_cpi() {
         &buffer_keypair,
         &program_id,
         &authority_keypair,
-        "solana_sbf_rust_upgraded",
+        "safecoin_sbf_rust_upgraded",
     );
     bank_client.set_sysvar_for_tests(&clock::Clock {
         slot: 2,
@@ -2139,7 +2139,7 @@ fn test_program_sbf_invoke_upgradeable_via_cpi() {
         &buffer_keypair,
         &program_id,
         &new_authority_keypair,
-        "solana_sbf_rust_upgradeable",
+        "safecoin_sbf_rust_upgradeable",
     );
 
     // Call original program
@@ -2163,7 +2163,7 @@ fn test_program_sbf_disguised_as_sbf_loader() {
     }
     #[cfg(feature = "sbf_rust")]
     {
-        programs.extend_from_slice(&[("solana_sbf_rust_noop")]);
+        programs.extend_from_slice(&[("safecoin_sbf_rust_noop")]);
     }
 
     for program in programs.iter() {
@@ -2239,7 +2239,7 @@ fn test_program_sbf_upgrade_via_cpi() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_invoke_and_return",
+        "safecoin_sbf_rust_invoke_and_return",
     );
 
     // Deploy upgradeable program
@@ -2253,7 +2253,7 @@ fn test_program_sbf_upgrade_via_cpi() {
         &buffer_keypair,
         &program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_upgradeable",
+        "safecoin_sbf_rust_upgradeable",
     );
     let program_account = bank_client.get_account(&program_id).unwrap().unwrap();
     let programdata_address = match program_account.state() {
@@ -2291,7 +2291,7 @@ fn test_program_sbf_upgrade_via_cpi() {
         &mint_keypair,
         &buffer_keypair,
         &authority_keypair,
-        "solana_sbf_rust_upgraded",
+        "safecoin_sbf_rust_upgraded",
     );
 
     // Upgrade program via CPI
@@ -2348,7 +2348,7 @@ fn test_program_sbf_set_upgrade_authority_via_cpi() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_invoke_and_return",
+        "safecoin_sbf_rust_invoke_and_return",
     );
 
     // Deploy upgradeable program
@@ -2362,7 +2362,7 @@ fn test_program_sbf_set_upgrade_authority_via_cpi() {
         &buffer_keypair,
         &program_keypair,
         &authority_keypair,
-        "solana_sbf_rust_upgradeable",
+        "safecoin_sbf_rust_upgradeable",
     );
 
     // Set program upgrade authority instruction to invoke via CPI
@@ -2441,7 +2441,7 @@ fn test_program_upgradeable_locks() {
             buffer_keypair,
             program_keypair,
             payer_keypair,
-            "solana_sbf_rust_panic",
+            "safecoin_sbf_rust_panic",
         );
 
         // Load the buffer account
@@ -2450,7 +2450,7 @@ fn test_program_upgradeable_locks() {
             &mint_keypair,
             buffer_keypair,
             &payer_keypair,
-            "solana_sbf_rust_noop",
+            "safecoin_sbf_rust_noop",
         );
 
         bank_client
@@ -2560,7 +2560,7 @@ fn test_program_sbf_finalize() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_finalize",
+        "safecoin_sbf_rust_finalize",
     );
 
     // Write the noop program into the same program account
@@ -2569,7 +2569,7 @@ fn test_program_sbf_finalize() {
         &bpf_loader::id(),
         None,
         &mint_keypair,
-        "solana_sbf_rust_noop",
+        "safecoin_sbf_rust_noop",
     );
 
     let account_metas = vec![
@@ -2606,7 +2606,7 @@ fn test_program_sbf_ro_account_modify() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_ro_account_modify",
+        "safecoin_sbf_rust_ro_account_modify",
     );
 
     let argument_keypair = Keypair::new();
@@ -2673,7 +2673,7 @@ fn test_program_sbf_realloc() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_realloc",
+        "safecoin_sbf_rust_realloc",
     );
 
     let mut bump = 0;
@@ -2852,7 +2852,7 @@ fn test_program_sbf_realloc() {
         )
         .unwrap();
     let account = bank.get_account(&pubkey).unwrap();
-    assert_eq!(&solana_sdk::system_program::id(), account.owner());
+    assert_eq!(&safecoin_sdk::system_program::id(), account.owner());
     let data = bank_client.get_account_data(&pubkey).unwrap().unwrap();
     assert_eq!(MAX_PERMITTED_DATA_INCREASE, data.len());
 
@@ -2882,7 +2882,7 @@ fn test_program_sbf_realloc() {
                         &[REALLOC_AND_ASSIGN_TO_SELF_VIA_SYSTEM_PROGRAM],
                         vec![
                             AccountMeta::new(pubkey, true),
-                            AccountMeta::new(solana_sdk::system_program::id(), false),
+                            AccountMeta::new(safecoin_sdk::system_program::id(), false),
                         ],
                     )],
                     Some(&mint_pubkey),
@@ -2903,7 +2903,7 @@ fn test_program_sbf_realloc() {
                     &[ASSIGN_TO_SELF_VIA_SYSTEM_PROGRAM_AND_REALLOC],
                     vec![
                         AccountMeta::new(pubkey, true),
-                        AccountMeta::new(solana_sdk::system_program::id(), false),
+                        AccountMeta::new(safecoin_sdk::system_program::id(), false),
                     ],
                 )],
                 Some(&mint_pubkey),
@@ -2970,14 +2970,14 @@ fn test_program_sbf_realloc_invoke() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_realloc",
+        "safecoin_sbf_rust_realloc",
     );
 
     let realloc_invoke_program_id = load_program(
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_realloc_invoke",
+        "safecoin_sbf_rust_realloc_invoke",
     );
 
     let mut bump = 0;
@@ -3104,7 +3104,7 @@ fn test_program_sbf_realloc_invoke() {
         )
         .unwrap();
     let account = bank.get_account(&pubkey).unwrap();
-    assert_eq!(&solana_sdk::system_program::id(), account.owner());
+    assert_eq!(&safecoin_sdk::system_program::id(), account.owner());
     let data = bank_client.get_account_data(&pubkey).unwrap().unwrap();
     assert_eq!(MAX_PERMITTED_DATA_INCREASE, data.len());
 
@@ -3135,7 +3135,7 @@ fn test_program_sbf_realloc_invoke() {
                         vec![
                             AccountMeta::new(pubkey, true),
                             AccountMeta::new_readonly(realloc_program_id, false),
-                            AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
+                            AccountMeta::new_readonly(safecoin_sdk::system_program::id(), false),
                         ],
                     )],
                     Some(&mint_pubkey),
@@ -3157,7 +3157,7 @@ fn test_program_sbf_realloc_invoke() {
                     vec![
                         AccountMeta::new(pubkey, true),
                         AccountMeta::new_readonly(realloc_program_id, false),
-                        AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
+                        AccountMeta::new_readonly(safecoin_sdk::system_program::id(), false),
                     ],
                 )],
                 Some(&mint_pubkey),
@@ -3229,7 +3229,7 @@ fn test_program_sbf_realloc_invoke() {
                     vec![
                         AccountMeta::new(mint_pubkey, true),
                         AccountMeta::new(new_pubkey, true),
-                        AccountMeta::new(solana_sdk::system_program::id(), false),
+                        AccountMeta::new(safecoin_sdk::system_program::id(), false),
                         AccountMeta::new_readonly(realloc_invoke_program_id, false),
                     ],
                 )],
@@ -3488,25 +3488,25 @@ fn test_program_sbf_processed_inner_instruction() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_sibling_instructions",
+        "safecoin_sbf_rust_sibling_instructions",
     );
     let sibling_inner_program_id = load_program(
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_sibling_inner_instructions",
+        "safecoin_sbf_rust_sibling_inner_instructions",
     );
     let noop_program_id = load_program(
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_noop",
+        "safecoin_sbf_rust_noop",
     );
     let invoke_and_return_program_id = load_program(
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_invoke_and_return",
+        "safecoin_sbf_rust_invoke_and_return",
     );
 
     let instruction2 = Instruction::new_with_bytes(
@@ -3555,7 +3555,7 @@ fn test_program_fees() {
         mut genesis_config,
         mint_keypair,
         ..
-    } = create_genesis_config(500_000_000);
+    } = create_genesis_config(33_370_166);
     genesis_config.fee_rate_governor = FeeRateGovernor::new(congestion_multiplier, 0);
     let mut bank = Bank::new_for_tests(&genesis_config);
     let fee_structure =
@@ -3571,7 +3571,7 @@ fn test_program_fees() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_noop",
+        "safecoin_sbf_rust_noop",
     );
 
     let pre_balance = bank_client.get_balance(&mint_keypair.pubkey()).unwrap();
@@ -3641,7 +3641,7 @@ fn test_get_minimum_delegation() {
         &bank_client,
         &bpf_loader::id(),
         &mint_keypair,
-        "solana_sbf_rust_get_minimum_delegation",
+        "safecoin_sbf_rust_get_minimum_delegation",
     );
 
     let account_metas = vec![AccountMeta::new_readonly(stake::program::id(), false)];
@@ -3665,11 +3665,11 @@ fn test_program_sbf_inner_instruction_alignment_checks() {
     bank.add_builtin(&name, &id, entrypoint);
     let (name, id, entrypoint) = solana_bpf_loader_deprecated_program!();
     bank.add_builtin(&name, &id, entrypoint);
-    let noop = create_program(&bank, &bpf_loader_deprecated::id(), "solana_sbf_rust_noop");
+    let noop = create_program(&bank, &bpf_loader_deprecated::id(), "safecoin_sbf_rust_noop");
     let inner_instruction_alignment_check = create_program(
         &bank,
         &bpf_loader_deprecated::id(),
-        "solana_sbf_rust_inner_instruction_alignment_check",
+        "safecoin_sbf_rust_inner_instruction_alignment_check",
     );
 
     // invoke unaligned program, which will call aligned program twice,

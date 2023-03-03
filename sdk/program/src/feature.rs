@@ -59,7 +59,7 @@ pub fn activate_with_lamports(
 
 #[cfg(test)]
 mod test {
-    use {super::*, solana_program::clock::Slot};
+    use {super::*, safecoin_program::clock::Slot};
 
     #[test]
     fn test_feature_size_of() {

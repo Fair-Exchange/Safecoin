@@ -8,9 +8,9 @@ pub mod vote_transaction;
 extern crate solana_metrics;
 
 #[macro_use]
-extern crate solana_frozen_abi_macro;
+extern crate safecoin_frozen_abi_macro;
 
-pub use solana_sdk::vote::{
+pub use safecoin_sdk::vote::{
     authorized_voters, error as vote_error, instruction as vote_instruction,
     program::{check_id, id},
 };

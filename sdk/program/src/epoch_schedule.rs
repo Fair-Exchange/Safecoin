@@ -12,7 +12,7 @@
 //! epochs increasing in slots until they last for [`DEFAULT_SLOTS_PER_EPOCH`].
 
 pub use crate::clock::{Epoch, Slot, DEFAULT_SLOTS_PER_EPOCH};
-use solana_sdk_macro::CloneZeroed;
+use safecoin_sdk_macro::CloneZeroed;
 
 /// The default number of slots before an epoch starts to calculate the leader schedule.
 pub const DEFAULT_LEADER_SCHEDULE_SLOT_OFFSET: u64 = DEFAULT_SLOTS_PER_EPOCH;

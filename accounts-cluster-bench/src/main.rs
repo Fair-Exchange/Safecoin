@@ -4,14 +4,14 @@ use {
     log::*,
     rand::{thread_rng, Rng},
     rayon::prelude::*,
-    solana_account_decoder::parse_token::spl_token_pubkey,
-    solana_clap_utils::input_parsers::pubkey_of,
-    solana_client::transaction_executor::TransactionExecutor,
-    solana_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT},
-    solana_gossip::gossip_service::discover,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_runtime::inline_spl_token,
-    solana_sdk::{
+    safecoin_account_decoder::parse_token::safe_token_pubkey,
+    safecoin_clap_utils::input_parsers::pubkey_of,
+    safecoin_client::transaction_executor::TransactionExecutor,
+    safecoin_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT},
+    safecoin_gossip::gossip_service::discover,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    solana_runtime::inline_safe_token,
+    safecoin_sdk::{
         commitment_config::CommitmentConfig,
         hash::Hash,
         instruction::{AccountMeta, Instruction},
@@ -23,7 +23,7 @@ use {
         transaction::Transaction,
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_transaction_status::parse_token::spl_token_instruction,
+    safecoin_transaction_status::parse_token::safe_token_instruction,
     std::{
         cmp::min,
         net::{Ipv4Addr, SocketAddr},
@@ -168,7 +168,7 @@ fn make_create_message(
     let instructions: Vec<_> = (0..num_instructions)
         .flat_map(|_| {
             let program_id = if mint.is_some() {
-                inline_spl_token::id()
+                inline_safe_token::id()
             } else {
                 system_program::id()
             };
@@ -185,12 +185,12 @@ fn make_create_message(
                 &program_id,
             )];
             if let Some(mint_address) = mint {
-                instructions.push(spl_token_instruction(
-                    spl_token::instruction::initialize_account(
-                        &spl_token::id(),
-                        &spl_token_pubkey(&to_pubkey),
-                        &spl_token_pubkey(&mint_address),
-                        &spl_token_pubkey(&base_keypair.pubkey()),
+                instructions.push(safe_token_instruction(
+                    safe_token::instruction::initialize_account(
+                        &safe_token::id(),
+                        &safe_token_pubkey(&to_pubkey),
+                        &safe_token_pubkey(&mint_address),
+                        &safe_token_pubkey(&base_keypair.pubkey()),
                     )
                     .unwrap(),
                 ));
@@ -210,12 +210,12 @@ fn make_close_message(
     max_closed: Arc<AtomicU64>,
     num_instructions: usize,
     balance: u64,
-    spl_token: bool,
+    safe_token: bool,
 ) -> Message {
     let instructions: Vec<_> = (0..num_instructions)
         .filter_map(|_| {
-            let program_id = if spl_token {
-                inline_spl_token::id()
+            let program_id = if safe_token {
+                inline_safe_token::id()
             } else {
                 system_program::id()
             };
@@ -227,13 +227,13 @@ fn make_close_message(
             let seed = max_closed.fetch_add(1, Ordering::Relaxed).to_string();
             let address =
                 Pubkey::create_with_seed(&base_keypair.pubkey(), &seed, &program_id).unwrap();
-            if spl_token {
-                Some(spl_token_instruction(
-                    spl_token::instruction::close_account(
-                        &spl_token::id(),
-                        &spl_token_pubkey(&address),
-                        &spl_token_pubkey(&keypair.pubkey()),
-                        &spl_token_pubkey(&base_keypair.pubkey()),
+            if safe_token {
+                Some(safe_token_instruction(
+                    safe_token::instruction::close_account(
+                        &safe_token::id(),
+                        &safe_token_pubkey(&address),
+                        &safe_token_pubkey(&keypair.pubkey()),
+                        &safe_token_pubkey(&base_keypair.pubkey()),
                         &[],
                     )
                     .unwrap(),
@@ -617,7 +617,7 @@ fn main() {
 
     let skip_gossip = !matches.is_present("check_gossip");
 
-    let port = if skip_gossip { DEFAULT_RPC_PORT } else { 8001 };
+    let port = if skip_gossip { DEFAULT_RPC_PORT } else { 10015 };
     let mut entrypoint_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
     if let Some(addr) = matches.value_of("entrypoint") {
         entrypoint_addr = solana_net_utils::parse_host_port(addr).unwrap_or_else(|e| {
@@ -702,17 +702,17 @@ fn main() {
 pub mod test {
     use {
         super::*,
-        solana_core::validator::ValidatorConfig,
-        solana_faucet::faucet::run_local_faucet,
-        solana_local_cluster::{
+        safecoin_core::validator::ValidatorConfig,
+        safecoin_faucet::faucet::run_local_faucet,
+        safecoin_local_cluster::{
             local_cluster::{ClusterConfig, LocalCluster},
             validator_configs::make_identical_validator_configs,
         },
-        solana_measure::measure::Measure,
-        solana_sdk::{native_token::sol_to_lamports, poh_config::PohConfig},
-        solana_test_validator::TestValidator,
-        spl_token::{
-            solana_program::program_pack::Pack,
+        safecoin_measure::measure::Measure,
+        safecoin_sdk::{native_token::sol_to_lamports, poh_config::PohConfig},
+        safecoin_test_validator::TestValidator,
+        safe_token::{
+            safecoin_program::program_pack::Pack,
             state::{Account, Mint},
         },
     };
@@ -757,7 +757,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_create_then_reclaim_spl_token_accounts() {
+    fn test_create_then_reclaim_safe_token_accounts() {
         solana_logger::setup();
         let mint_keypair = Keypair::new();
         let mint_pubkey = mint_keypair.pubkey();
@@ -802,13 +802,13 @@ pub mod test {
                     &spl_mint_keypair.pubkey(),
                     spl_mint_rent,
                     spl_mint_len as u64,
-                    &inline_spl_token::id(),
+                    &inline_safe_token::id(),
                 ),
-                spl_token_instruction(
-                    spl_token::instruction::initialize_mint(
-                        &spl_token::id(),
-                        &spl_token_pubkey(&spl_mint_keypair.pubkey()),
-                        &spl_token_pubkey(&spl_mint_keypair.pubkey()),
+                safe_token_instruction(
+                    safe_token::instruction::initialize_mint(
+                        &safe_token::id(),
+                        &safe_token_pubkey(&spl_mint_keypair.pubkey()),
+                        &safe_token_pubkey(&spl_mint_keypair.pubkey()),
                         None,
                         2,
                     )

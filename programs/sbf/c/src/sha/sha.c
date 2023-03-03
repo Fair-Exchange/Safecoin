@@ -20,10 +20,10 @@ extern uint64_t entrypoint(const uint8_t *input) {
     uint8_t bytes1[] = {'G', 'a', 'g', 'g', 'a', 'b', 'l', 'a',
                         'g', 'h', 'b', 'l', 'a', 'g', 'h', '!'};
     uint8_t bytes2[] = {'f', 'l', 'u', 'r', 'b', 'o', 's'};
-    const SolBytes bytes[] = {{bytes1, SOL_ARRAY_SIZE(bytes1)},
-                              {bytes2, SOL_ARRAY_SIZE(bytes2)}};
+    const SafeBytes bytes[] = {{bytes1, SAFE_ARRAY_SIZE(bytes1)},
+                              {bytes2, SAFE_ARRAY_SIZE(bytes2)}};
 
-    sol_sha256(bytes, SOL_ARRAY_SIZE(bytes), result);
+    sol_sha256(bytes, SAFE_ARRAY_SIZE(bytes), result);
 
     sol_assert(0 == sol_memcmp(result, expected, SHA256_RESULT_LENGTH));
   }
@@ -39,10 +39,10 @@ extern uint64_t entrypoint(const uint8_t *input) {
     uint8_t bytes1[] = {'G', 'a', 'g', 'g', 'a', 'b', 'l', 'a',
                         'g', 'h', 'b', 'l', 'a', 'g', 'h', '!'};
     uint8_t bytes2[] = {'f', 'l', 'u', 'r', 'b', 'o', 's'};
-    const SolBytes bytes[] = {{bytes1, SOL_ARRAY_SIZE(bytes1)},
-                              {bytes2, SOL_ARRAY_SIZE(bytes2)}};
+    const SafeBytes bytes[] = {{bytes1, SAFE_ARRAY_SIZE(bytes1)},
+                              {bytes2, SAFE_ARRAY_SIZE(bytes2)}};
 
-    sol_keccak256(bytes, SOL_ARRAY_SIZE(bytes), result);
+    sol_keccak256(bytes, SAFE_ARRAY_SIZE(bytes), result);
 
     sol_assert(0 == sol_memcmp(result, expected, KECCAK_RESULT_LENGTH));
   }
@@ -58,10 +58,10 @@ extern uint64_t entrypoint(const uint8_t *input) {
     uint8_t bytes1[] = {'G', 'a', 'g', 'g', 'a', 'b', 'l', 'a',
                         'g', 'h', 'b', 'l', 'a', 'g', 'h', '!'};
     uint8_t bytes2[] = {'f', 'l', 'u', 'r', 'b', 'o', 's'};
-    const SolBytes bytes[] = {{bytes1, SOL_ARRAY_SIZE(bytes1)},
-                              {bytes2, SOL_ARRAY_SIZE(bytes2)}};
+    const SafeBytes bytes[] = {{bytes1, SAFE_ARRAY_SIZE(bytes1)},
+                              {bytes2, SAFE_ARRAY_SIZE(bytes2)}};
 
-    sol_blake3(bytes, SOL_ARRAY_SIZE(bytes), result);
+    sol_blake3(bytes, SAFE_ARRAY_SIZE(bytes), result);
 
     sol_assert(0 == sol_memcmp(result, expected, BLAKE3_RESULT_LENGTH));
   }

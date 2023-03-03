@@ -3,7 +3,7 @@ title: Stake Programming
 ---
 
 To maximize stake distribution, decentralization, and censorship resistance on
-the Solana network, staking can be performed programmatically. The team
+the Safecoin network, staking can be performed programmatically. The team
 and community have developed several on-chain and off-chain programs to make
 stakes easier to manage.
 
@@ -16,12 +16,12 @@ stake to "non-delinquent" validators that meet specified performance requirement
 
 #### Stake Pools
 
-This on-chain program pools together SOL to be staked by a manager, allowing SOL
+This on-chain program pools together SAFE to be staked by a manager, allowing SAFE
 holders to stake and earn rewards without managing stakes.
-Users deposit SOL in exchange for SPL tokens (staking derivatives) that represent their ownership in the stake pool. The pool
-manager stakes deposited SOL according to their strategy, perhaps using a variant
+Users deposit SAFE in exchange for SPL tokens (staking derivatives) that represent their ownership in the stake pool. The pool
+manager stakes deposited SAFE according to their strategy, perhaps using a variant
 of an auto-delegation bot as described above. As stakes earn rewards, the pool and pool tokens
 grow proportionally in value. Finally, pool token holders can send SPL tokens
-back to the stake pool to redeem SOL, thereby participating in decentralization with much
+back to the stake pool to redeem SAFE, thereby participating in decentralization with much
 less work required. More information can be found at the
 [SPL stake pool documentation](https://spl.solana.com/stake-pool).

@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @brief Solana keccak system call
+ * @brief Safecoin keccak system call
 **/
 
 #include <sol/types.h>
@@ -21,7 +21,7 @@ extern "C" {
  * @param bytes_len Number of byte arrays
  * @param result 32 byte array to hold the result
  */
-@SYSCALL uint64_t sol_keccak256(const SolBytes *, int, uint8_t *);
+@SYSCALL uint64_t sol_keccak256(const SafeBytes *, int, uint8_t *);
 
 #ifdef __cplusplus
 }

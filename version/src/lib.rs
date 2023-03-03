@@ -4,17 +4,17 @@ extern crate serde_derive;
 pub use self::legacy::{LegacyVersion1, LegacyVersion2};
 use {
     serde_derive::{Deserialize, Serialize},
-    solana_sdk::{sanitize::Sanitize, serde_varint},
+    safecoin_sdk::{sanitize::Sanitize, serde_varint},
     std::{convert::TryInto, fmt},
 };
 #[macro_use]
-extern crate solana_frozen_abi_macro;
+extern crate safecoin_frozen_abi_macro;
 
 mod legacy;
 
 #[derive(Debug, Eq, PartialEq)]
 enum ClientId {
-    SolanaLabs,
+    SafecoinLabs,
     JitoLabs,
     Firedancer,
     // If new variants are added, update From<u16> and TryFrom<ClientId>.
@@ -52,7 +52,7 @@ fn compute_commit(sha1: Option<&'static str>) -> Option<u32> {
 impl Default for Version {
     fn default() -> Self {
         let feature_set = u32::from_le_bytes(
-            solana_sdk::feature_set::ID.as_ref()[..4]
+            safecoin_sdk::feature_set::ID.as_ref()[..4]
                 .try_into()
                 .unwrap(),
         );
@@ -63,7 +63,7 @@ impl Default for Version {
             commit: compute_commit(option_env!("CI_COMMIT")).unwrap_or_default(),
             feature_set,
             // Other client implementations need to modify this line.
-            client: u16::try_from(ClientId::SolanaLabs).unwrap(),
+            client: u16::try_from(ClientId::SafecoinLabs).unwrap(),
         }
     }
 }
@@ -94,7 +94,7 @@ impl Sanitize for Version {}
 impl From<u16> for ClientId {
     fn from(client: u16) -> Self {
         match client {
-            0u16 => Self::SolanaLabs,
+            0u16 => Self::SafecoinLabs,
             1u16 => Self::JitoLabs,
             2u16 => Self::Firedancer,
             _ => Self::Unknown(client),
@@ -107,7 +107,7 @@ impl TryFrom<ClientId> for u16 {
 
     fn try_from(client: ClientId) -> Result<Self, Self::Error> {
         match client {
-            ClientId::SolanaLabs => Ok(0u16),
+            ClientId::SafecoinLabs => Ok(0u16),
             ClientId::JitoLabs => Ok(1u16),
             ClientId::Firedancer => Ok(2u16),
             ClientId::Unknown(client @ 0u16..=2u16) => Err(format!("Invalid client: {client}")),
@@ -144,13 +144,13 @@ mod test {
 
     #[test]
     fn test_client_id() {
-        assert_eq!(ClientId::from(0u16), ClientId::SolanaLabs);
+        assert_eq!(ClientId::from(0u16), ClientId::SafecoinLabs);
         assert_eq!(ClientId::from(1u16), ClientId::JitoLabs);
         assert_eq!(ClientId::from(2u16), ClientId::Firedancer);
         for client in 3u16..=u16::MAX {
             assert_eq!(ClientId::from(client), ClientId::Unknown(client));
         }
-        assert_eq!(u16::try_from(ClientId::SolanaLabs), Ok(0u16));
+        assert_eq!(u16::try_from(ClientId::SafecoinLabs), Ok(0u16));
         assert_eq!(u16::try_from(ClientId::JitoLabs), Ok(1u16));
         assert_eq!(u16::try_from(ClientId::Firedancer), Ok(2u16));
         for client in 0..=2u16 {

@@ -40,9 +40,9 @@ pub mod epoch_stakes;
 pub mod genesis_utils;
 pub mod hardened_unpack;
 pub mod in_mem_accounts_index;
-pub mod inline_spl_associated_token_account;
-pub mod inline_spl_token;
-pub mod inline_spl_token_2022;
+pub mod inline_safe_associated_token_account;
+pub mod inline_safe_token;
+pub mod inline_safe_token_2022;
 pub mod loader_utils;
 pub mod message_processor;
 pub mod non_circulating_supply;
@@ -90,4 +90,4 @@ extern crate solana_metrics;
 extern crate serde_derive;
 
 #[macro_use]
-extern crate solana_frozen_abi_macro;
+extern crate safecoin_frozen_abi_macro;

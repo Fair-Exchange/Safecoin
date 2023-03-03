@@ -3,8 +3,8 @@
 
 use {
     async_trait::async_trait, core::iter::repeat,
-    solana_connection_cache::nonblocking::client_connection::ClientConnection,
-    solana_sdk::transport::Result as TransportResult,
+    safecoin_connection_cache::nonblocking::client_connection::ClientConnection,
+    safecoin_sdk::transport::Result as TransportResult,
     solana_streamer::nonblocking::sendmmsg::batch_send, std::net::SocketAddr,
     tokio::net::UdpSocket,
 };
@@ -47,7 +47,7 @@ impl ClientConnection for UdpClientConnection {
 mod tests {
     use {
         super::*,
-        solana_sdk::packet::{Packet, PACKET_DATA_SIZE},
+        safecoin_sdk::packet::{Packet, PACKET_DATA_SIZE},
         solana_streamer::nonblocking::recvmmsg::recv_mmsg,
         std::net::{IpAddr, Ipv4Addr},
         tokio::net::UdpSocket,

@@ -25,7 +25,7 @@ use {
         traits::Identity,
     },
     serde::{Deserialize, Serialize},
-    solana_sdk::{
+    safecoin_sdk::{
         instruction::Instruction,
         message::Message,
         pubkey::Pubkey,
@@ -151,19 +151,19 @@ pub struct ElGamalKeypair {
 }
 
 impl ElGamalKeypair {
-    /// Deterministically derives an ElGamal keypair from an Ed25519 signing key and a Solana
+    /// Deterministically derives an ElGamal keypair from an Ed25519 signing key and a Safecoin
     /// address.
     ///
-    /// This function exists for applications where a user may not wish to maintin a Solana
+    /// This function exists for applications where a user may not wish to maintin a Safecoin
     /// (Ed25519) keypair and an ElGamal keypair separately. A user may wish to solely maintain the
-    /// Solana keypair and then derive the ElGamal keypair on-the-fly whenever
+    /// Safecoin keypair and then derive the ElGamal keypair on-the-fly whenever
     /// encryption/decryption is needed.
     ///
     /// For the spl token-2022 confidential extension application, the ElGamal encryption public
     /// key is specified in a token account address. A natural way to derive an ElGamal keypair is
-    /// then to define it from the hash of a Solana keypair and a Solana address. However, for
+    /// then to define it from the hash of a Safecoin keypair and a Safecoin address. However, for
     /// general hardware wallets, the signing key is not exposed in the API. Therefore, this
-    /// function uses a signer to sign a pre-specified message with respect to a Solana address.
+    /// function uses a signer to sign a pre-specified message with respect to a Safecoin address.
     /// The resulting signature is then hashed to derive an ElGamal keypair.
     #[cfg(not(target_os = "solana"))]
     #[allow(non_snake_case)]
@@ -324,7 +324,7 @@ impl fmt::Display for ElGamalPubkey {
 #[zeroize(drop)]
 pub struct ElGamalSecretKey(Scalar);
 impl ElGamalSecretKey {
-    /// Deterministically derives an ElGamal keypair from an Ed25519 signing key and a Solana
+    /// Deterministically derives an ElGamal keypair from an Ed25519 signing key and a Safecoin
     /// address.
     ///
     /// See `ElGamalKeypair::new` for more context on the key derivation.
@@ -622,7 +622,7 @@ mod tests {
     use {
         super::*,
         crate::encryption::pedersen::Pedersen,
-        solana_sdk::{signature::Keypair, signer::null_signer::NullSigner},
+        safecoin_sdk::{signature::Keypair, signer::null_signer::NullSigner},
     };
 
     #[test]

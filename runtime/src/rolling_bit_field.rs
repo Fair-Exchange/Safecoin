@@ -2,7 +2,7 @@
 //! Relies on there being a sliding window of key values. The key values continue to increase.
 //! Old key values are removed from the lesser values and do not accumulate.
 
-use {bv::BitVec, solana_sdk::clock::Slot, std::collections::HashSet};
+use {bv::BitVec, safecoin_sdk::clock::Slot, std::collections::HashSet};
 
 #[derive(Debug, Default, AbiExample, Clone)]
 pub struct RollingBitField {
@@ -290,7 +290,7 @@ impl RollingBitField {
 
 #[cfg(test)]
 pub mod tests {
-    use {super::*, log::*, solana_measure::measure::Measure};
+    use {super::*, log::*, safecoin_measure::measure::Measure};
 
     impl RollingBitField {
         pub fn clear(&mut self) {

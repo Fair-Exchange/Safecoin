@@ -3,8 +3,8 @@
 /// In addition, the dynamic library must export a "C" function _create_plugin which
 /// creates the implementation of the plugin.
 use {
-    solana_sdk::{clock::UnixTimestamp, signature::Signature, transaction::SanitizedTransaction},
-    solana_transaction_status::{Reward, TransactionStatusMeta},
+    safecoin_sdk::{clock::UnixTimestamp, signature::Signature, transaction::SanitizedTransaction},
+    safecoin_transaction_status::{Reward, TransactionStatusMeta},
     std::{any::Any, error, io},
     thiserror::Error,
 };

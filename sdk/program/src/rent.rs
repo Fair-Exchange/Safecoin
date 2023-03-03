@@ -4,7 +4,7 @@
 
 #![allow(clippy::integer_arithmetic)]
 
-use {crate::clock::DEFAULT_SLOTS_PER_EPOCH, solana_sdk_macro::CloneZeroed};
+use {crate::clock::DEFAULT_SLOTS_PER_EPOCH, safecoin_sdk_macro::CloneZeroed};
 
 /// Configuration of network rent.
 #[repr(C)]
@@ -27,8 +27,8 @@ pub struct Rent {
 /// Default rental rate in lamports/byte-year.
 ///
 /// This calculation is based on:
-/// - 10^9 lamports per SOL
-/// - $1 per SOL
+/// - 10^9 lamports per SAFE
+/// - $1 per SAFE
 /// - $0.01 per megabyte day
 /// - $3.65 per megabyte year
 pub const DEFAULT_LAMPORTS_PER_BYTE_YEAR: u64 = 1_000_000_000 / 100 * 365 / (1024 * 1024);

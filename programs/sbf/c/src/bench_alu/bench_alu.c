@@ -3,7 +3,7 @@
  *
  * Counts Armstrong Numbers between 1 and x
  */
-#include <solana_sdk.h>
+#include <safecoin_sdk.h>
 
 extern uint64_t entrypoint(const uint8_t *input) {
   uint64_t x = *(uint64_t *) input;

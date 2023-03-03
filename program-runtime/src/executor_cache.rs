@@ -2,7 +2,7 @@ use {
     crate::executor::Executor,
     log::*,
     rand::Rng,
-    solana_sdk::{pubkey::Pubkey, saturating_add_assign, slot_history::Slot, stake_history::Epoch},
+    safecoin_sdk::{pubkey::Pubkey, saturating_add_assign, slot_history::Slot, stake_history::Epoch},
     std::{
         collections::HashMap,
         fmt::Debug,
@@ -136,7 +136,7 @@ impl Default for BankExecutorCache {
 }
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-impl solana_frozen_abi::abi_example::AbiExample for BankExecutorCache {
+impl safecoin_frozen_abi::abi_example::AbiExample for BankExecutorCache {
     fn example() -> Self {
         // Delegate AbiExample impl to Default before going deep and stuck with
         // not easily impl-able Arc<dyn Executor> due to rust's coherence issue
@@ -365,7 +365,7 @@ impl Stats {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::invoke_context::InvokeContext, solana_sdk::instruction::InstructionError,
+        super::*, crate::invoke_context::InvokeContext, safecoin_sdk::instruction::InstructionError,
     };
 
     #[derive(Debug)]
@@ -381,10 +381,10 @@ mod tests {
 
     #[test]
     fn test_executor_cache() {
-        let key1 = solana_sdk::pubkey::new_rand();
-        let key2 = solana_sdk::pubkey::new_rand();
-        let key3 = solana_sdk::pubkey::new_rand();
-        let key4 = solana_sdk::pubkey::new_rand();
+        let key1 = safecoin_sdk::pubkey::new_rand();
+        let key2 = safecoin_sdk::pubkey::new_rand();
+        let key3 = safecoin_sdk::pubkey::new_rand();
+        let key4 = safecoin_sdk::pubkey::new_rand();
         let executor: Arc<dyn Executor> = Arc::new(TestExecutor {});
         let mut cache = BankExecutorCache::new(3, 0);
 
@@ -420,10 +420,10 @@ mod tests {
 
     #[test]
     fn test_cached_executor_eviction() {
-        let key1 = solana_sdk::pubkey::new_rand();
-        let key2 = solana_sdk::pubkey::new_rand();
-        let key3 = solana_sdk::pubkey::new_rand();
-        let key4 = solana_sdk::pubkey::new_rand();
+        let key1 = safecoin_sdk::pubkey::new_rand();
+        let key2 = safecoin_sdk::pubkey::new_rand();
+        let key3 = safecoin_sdk::pubkey::new_rand();
+        let key4 = safecoin_sdk::pubkey::new_rand();
         let executor: Arc<dyn Executor> = Arc::new(TestExecutor {});
         let mut cache = BankExecutorCache::new(3, 0);
         assert!(cache.current_epoch == 0);
@@ -469,9 +469,9 @@ mod tests {
 
     #[test]
     fn test_executor_cache_evicts_smallest() {
-        let key1 = solana_sdk::pubkey::new_rand();
-        let key2 = solana_sdk::pubkey::new_rand();
-        let key3 = solana_sdk::pubkey::new_rand();
+        let key1 = safecoin_sdk::pubkey::new_rand();
+        let key2 = safecoin_sdk::pubkey::new_rand();
+        let key3 = safecoin_sdk::pubkey::new_rand();
         let executor: Arc<dyn Executor> = Arc::new(TestExecutor {});
         let mut cache = BankExecutorCache::new(2, 0);
 

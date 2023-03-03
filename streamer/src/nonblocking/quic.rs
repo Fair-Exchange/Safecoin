@@ -11,7 +11,7 @@ use {
     quinn_proto::VarIntBoundsExceeded,
     rand::{thread_rng, Rng},
     solana_perf::packet::PacketBatch,
-    solana_sdk::{
+    safecoin_sdk::{
         packet::{Packet, PACKET_DATA_SIZE},
         pubkey::Pubkey,
         quic::{
@@ -953,7 +953,7 @@ pub mod test {
         },
         crossbeam_channel::{unbounded, Receiver},
         quinn::{ClientConfig, IdleTimeout, TransportConfig, VarInt},
-        solana_sdk::{
+        safecoin_sdk::{
             quic::{QUIC_KEEP_ALIVE_MS, QUIC_MAX_TIMEOUT_MS},
             signature::Keypair,
             signer::Signer,

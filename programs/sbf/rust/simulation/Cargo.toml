@@ -1,25 +1,25 @@
 [package]
-name = "solana-sbf-rust-simulation"
+name = "safecoin-sbf-rust-simulation"
 version = "1.15.3"
-description = "Solana SBF Program Simulation Differences"
-authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
-repository = "https://github.com/solana-labs/solana"
+description = "Safecoin SBF Program Simulation Differences"
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-sbf-rust-simulation"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-sbf-rust-simulation"
 edition = "2021"
 
 [features]
 test-bpf = []
 
 [dependencies]
-solana-program = { path = "../../../../sdk/program", version = "=1.15.3" }
+safecoin-program = { path = "../../../../sdk/program", version = "=1.15.3" }
 
 [dev-dependencies]
-solana-logger = { path = "../../../../logger", version = "=1.15.3" }
-solana-program-test = { path = "../../../../program-test", version = "=1.15.3" }
-solana-sdk = { path = "../../../../sdk", version = "=1.15.3" }
-solana-validator = { path = "../../../../validator", version = "=1.15.3" }
+safecoin-logger = { path = "../../../../logger", version = "=1.15.3" }
+safecoin-program-test = { path = "../../../../program-test", version = "=1.15.3" }
+safecoin-sdk = { path = "../../../../sdk", version = "=1.15.3" }
+safecoin-validator = { path = "../../../../validator", version = "=1.15.3" }
 
 [lib]
 crate-type = ["cdylib", "lib"]

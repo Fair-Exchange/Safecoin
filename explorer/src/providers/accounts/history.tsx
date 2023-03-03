@@ -5,7 +5,7 @@ import {
   TransactionSignature,
   Connection,
   ParsedTransactionWithMeta,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { useCluster, Cluster } from "../cluster";
 import * as Cache from "providers/cache";
 import { ActionType, FetchStatus } from "providers/cache";

@@ -12,16 +12,16 @@ use {
     },
     crossbeam_channel::{unbounded, Receiver, RecvTimeoutError, Select, Sender},
     log::*,
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::{ClusterInfo, GOSSIP_SLEEP_MILLIS},
         crds::Cursor,
     },
     solana_ledger::blockstore::Blockstore,
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_metrics::inc_new_counter_debug,
     solana_perf::packet,
-    solana_poh::poh_recorder::PohRecorder,
-    solana_rpc::{
+    safecoin_poh::poh_recorder::PohRecorder,
+    safecoin_rpc::{
         optimistically_confirmed_bank_tracker::{BankNotification, BankNotificationSender},
         rpc_subscriptions::RpcSubscriptions,
     },
@@ -34,7 +34,7 @@ use {
         vote_sender_types::ReplayVoteReceiver,
         vote_transaction::VoteTransaction,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, DEFAULT_MS_PER_SLOT, DEFAULT_TICKS_PER_SLOT},
         hash::Hash,
         pubkey::Pubkey,
@@ -874,7 +874,7 @@ mod tests {
         super::*,
         crate::banking_trace::BankingTracer,
         solana_perf::packet,
-        solana_rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
+        safecoin_rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
         solana_runtime::{
             bank::Bank,
             commitment::BlockCommitmentCache,
@@ -883,7 +883,7 @@ mod tests {
             },
             vote_sender_types::ReplayVoteSender,
         },
-        solana_sdk::{
+        safecoin_sdk::{
             hash::Hash,
             pubkey::Pubkey,
             signature::{Keypair, Signature, Signer},
@@ -926,7 +926,7 @@ mod tests {
         let (vote_tracker, bank, _, _) = setup();
 
         // Check outdated slots are purged with new root
-        let new_voter = solana_sdk::pubkey::new_rand();
+        let new_voter = safecoin_sdk::pubkey::new_rand();
         // Make separate copy so the original doesn't count toward
         // the ref count, which would prevent cleanup
         let new_voter_ = new_voter;

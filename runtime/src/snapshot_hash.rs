@@ -1,7 +1,7 @@
 //! Helper types and functions for handling and dealing with snapshot hashes.
 use {
     crate::{accounts_hash::AccountsHash, epoch_accounts_hash::EpochAccountsHash},
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         hash::{Hash, Hasher},
     },

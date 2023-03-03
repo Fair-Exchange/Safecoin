@@ -5,10 +5,10 @@
 
 use {
     crate::connection_cache::ConnectionCache,
-    solana_quic_client::{QuicConfig, QuicConnectionManager, QuicPool},
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::config::RpcProgramAccountsConfig,
-    solana_sdk::{
+    safecoin_quic_client::{QuicConfig, QuicConnectionManager, QuicPool},
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::config::RpcProgramAccountsConfig,
+    safecoin_sdk::{
         account::Account,
         client::{AsyncClient, Client, SyncClient},
         clock::Slot,
@@ -24,8 +24,8 @@ use {
         transaction::{self, Transaction, VersionedTransaction},
         transport::Result as TransportResult,
     },
-    solana_thin_client::thin_client::ThinClient as BackendThinClient,
-    solana_udp_client::{UdpConfig, UdpConnectionManager, UdpPool},
+    safecoin_thin_client::thin_client::ThinClient as BackendThinClient,
+    safecoin_udp_client::{UdpConfig, UdpConnectionManager, UdpPool},
     std::{net::SocketAddr, sync::Arc, time::Duration},
 };
 

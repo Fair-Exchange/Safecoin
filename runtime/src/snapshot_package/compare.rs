@@ -62,7 +62,7 @@ pub fn cmp_snapshot_types_by_priority(a: &SnapshotType, b: &SnapshotType) -> Ord
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_sdk::clock::Slot};
+    use {super::*, safecoin_sdk::clock::Slot};
 
     #[test]
     fn test_cmp_accounts_packages_by_priority() {

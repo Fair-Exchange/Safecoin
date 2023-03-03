@@ -6,8 +6,8 @@ use {
             LOOKUP_TABLE_MAX_ADDRESSES, LOOKUP_TABLE_META_SIZE,
         },
     },
-    solana_program_runtime::{ic_msg, invoke_context::InvokeContext},
-    solana_sdk::{
+    safecoin_program_runtime::{ic_msg, invoke_context::InvokeContext},
+    safecoin_sdk::{
         clock::Slot,
         feature_set,
         instruction::InstructionError,

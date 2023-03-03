@@ -3,7 +3,7 @@ use {
     crate::crds_value::MAX_WALLCLOCK,
     matches::{assert_matches, debug_assert_matches},
     serde::{Deserialize, Deserializer, Serialize},
-    solana_sdk::{
+    safecoin_sdk::{
         pubkey::Pubkey,
         quic::QUIC_PORT_OFFSET,
         rpc_port::{DEFAULT_RPC_PORT, DEFAULT_RPC_PUBSUB_PORT},
@@ -339,7 +339,7 @@ impl ContactInfo {
     pub fn new_localhost(pubkey: &Pubkey, wallclock: u64) -> Self {
         let mut node = Self::new(*pubkey, wallclock, /*shred_version:*/ 0u16);
         node.set_gossip((Ipv4Addr::LOCALHOST, 8000)).unwrap();
-        node.set_tvu((Ipv4Addr::LOCALHOST, 8001)).unwrap();
+        node.set_tvu((Ipv4Addr::LOCALHOST, 10015)).unwrap();
         node.set_tvu_forwards((Ipv4Addr::LOCALHOST, 8002)).unwrap();
         node.set_repair((Ipv4Addr::LOCALHOST, 8007)).unwrap();
         node.set_tpu((Ipv4Addr::LOCALHOST, 8003)).unwrap(); // quic: 8009
@@ -358,7 +358,7 @@ impl ContactInfo {
         assert_matches!(sanitize_socket(socket), Ok(()));
         let mut node = Self::new(
             *pubkey,
-            solana_sdk::timing::timestamp(), // wallclock,
+            safecoin_sdk::timing::timestamp(), // wallclock,
             0u16,                            // shred_version
         );
         let (addr, port) = (socket.ip(), socket.port());
@@ -565,7 +565,7 @@ mod tests {
     use {
         super::*,
         rand::{seq::SliceRandom, Rng},
-        solana_sdk::signature::{Keypair, Signer},
+        safecoin_sdk::signature::{Keypair, Signer},
         std::{
             collections::{HashMap, HashSet},
             iter::repeat_with,
@@ -829,7 +829,7 @@ mod tests {
     fn test_new_localhost() {
         let node = ContactInfo::new_localhost(
             &Keypair::new().pubkey(),
-            solana_sdk::timing::timestamp(), // wallclock
+            safecoin_sdk::timing::timestamp(), // wallclock
         );
         cross_verify_with_legacy(&node);
     }

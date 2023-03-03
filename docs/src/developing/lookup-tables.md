@@ -5,7 +5,7 @@ description: ""
 
 Address Lookup Tables, commonly referred to as "_lookup tables_" or "_ALTs_" for short, allow developers to create a collection of related addresses to efficiently load more addresses in a single transaction.
 
-Since each transaction on the Solana blockchain requires a listing of every address that is interacted with as part of the transaction, this listing would be effectively be capped at 32 address per transaction. With the help of [Address Lookup Tables](./lookup-tables.md), a transaction would be now be able to raise that limit to 256 addresses per transaction.
+Since each transaction on the Safecoin blockchain requires a listing of every address that is interacted with as part of the transaction, this listing would be effectively be capped at 32 address per transaction. With the help of [Address Lookup Tables](./lookup-tables.md), a transaction would be now be able to raise that limit to 256 addresses per transaction.
 
 ## Compressing on chain addresses
 
@@ -19,19 +19,19 @@ To utilize an Address Lookup Table inside a transaction, developers must use v0 
 
 ## How to create an address lookup table
 
-Creating a new lookup table with the `@solana/web3.js` library is similar to the older `legacy` transactions, but with some differences.
+Creating a new lookup table with the `@safecoin/web3.js` library is similar to the older `legacy` transactions, but with some differences.
 
-Using the `@solana/web3.js` library, you can use the [`createLookupTable`](https://solana-labs.github.io/solana-web3.js/classes/AddressLookupTableProgram.html#createLookupTable) function to construct the instruction needed to create a new lookup table, as well as determine its address:
+Using the `@safecoin/web3.js` library, you can use the [`createLookupTable`](https://solana-labs.github.io/solana-web3.js/classes/AddressLookupTableProgram.html#createLookupTable) function to construct the instruction needed to create a new lookup table, as well as determine its address:
 
 ```js
-const web3 = require("@solana/web3.js");
+const web3 = require("@safecoin/web3.js");
 
 // connect to a cluster and get the current `slot`
 const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
 const slot = await connection.getSlot();
 
 // Assumption:
-// `payer` is a valid `Keypair` with enough SOL to pay for the execution
+// `payer` is a valid `Keypair` with enough SAFE to pay for the execution
 
 const [lookupTableInst, lookupTableAddress] =
   web3.AddressLookupTableProgram.createLookupTable({
@@ -47,11 +47,11 @@ console.log("lookup table address:", lookupTableAddress.toBase58());
 ```
 
 > NOTE:
-> Address lookup tables can be **created** with either a `v0` transaction or a `legacy` transaction. But the Solana runtime can only retrieve and handle the additional addresses within a lookup table while using [v0 Versioned Transactions](./versioned-transactions.md#current-transaction-versions).
+> Address lookup tables can be **created** with either a `v0` transaction or a `legacy` transaction. But the Safecoin runtime can only retrieve and handle the additional addresses within a lookup table while using [v0 Versioned Transactions](./versioned-transactions.md#current-transaction-versions).
 
 ## Add addresses to a lookup table
 
-Adding addresses to a lookup table is known as "_extending_". Using the the `@solana/web3.js` library, you can create a new _extend_ instruction using the [`extendLookupTable`](https://solana-labs.github.io/solana-web3.js/classes/AddressLookupTableProgram.html#extendLookupTable) method:
+Adding addresses to a lookup table is known as "_extending_". Using the the `@safecoin/web3.js` library, you can create a new _extend_ instruction using the [`extendLookupTable`](https://solana-labs.github.io/solana-web3.js/classes/AddressLookupTableProgram.html#extendLookupTable) method:
 
 ```js
 // add addresses to the `lookupTableAddress` table via an `extend` instruction

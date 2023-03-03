@@ -1,7 +1,7 @@
 pub use reqwest;
 use {
     crate::{request, response},
-    solana_sdk::{
+    safecoin_sdk::{
         signature::SignerError, transaction::TransactionError, transport::TransportError,
     },
     std::io,

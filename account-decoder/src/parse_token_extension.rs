@@ -1,9 +1,9 @@
 use {
     crate::parse_token::UiAccountState,
-    solana_sdk::clock::UnixTimestamp,
-    spl_token_2022::{
+    safecoin_sdk::clock::UnixTimestamp,
+    safe_token_2022::{
         extension::{self, BaseState, BaseStateWithExtensions, ExtensionType, StateWithExtensions},
-        solana_program::pubkey::Pubkey,
+        safecoin_program::pubkey::Pubkey,
     },
 };
 
@@ -74,6 +74,7 @@ pub fn parse_extension<S: BaseState>(
             .get_extension::<extension::permanent_delegate::PermanentDelegate>()
             .map(|&extension| UiExtension::PermanentDelegate(extension.into()))
             .unwrap_or(UiExtension::UnparseableExtension),
+	 &&ExtensionType::NonTransferableAccount => todo!(),
     }
 }
 
@@ -162,7 +163,7 @@ pub struct UiDefaultAccountState {
 impl From<extension::default_account_state::DefaultAccountState> for UiDefaultAccountState {
     fn from(default_account_state: extension::default_account_state::DefaultAccountState) -> Self {
         let account_state =
-            spl_token_2022::state::AccountState::try_from(default_account_state.state)
+            safe_token_2022::state::AccountState::try_from(default_account_state.state)
                 .unwrap_or_default();
         Self {
             account_state: account_state.into(),

@@ -1,7 +1,7 @@
 #![allow(clippy::integer_arithmetic)]
 
 use {
-    solana_program_runtime::invoke_context::{Alloc, AllocErr},
+    safecoin_program_runtime::invoke_context::{Alloc, AllocErr},
     solana_rbpf::{aligned_memory::AlignedMemory, ebpf::HOST_ALIGN},
     std::alloc::Layout,
 };

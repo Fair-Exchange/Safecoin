@@ -1,19 +1,19 @@
-pub use solana_tpu_client::nonblocking::tpu_client::{LeaderTpuService, TpuSenderError};
+pub use safecoin_tpu_client::nonblocking::tpu_client::{LeaderTpuService, TpuSenderError};
 use {
     crate::{connection_cache::ConnectionCache, tpu_client::TpuClientConfig},
-    solana_connection_cache::connection_cache::{
+    safecoin_connection_cache::connection_cache::{
         ConnectionCache as BackendConnectionCache, ConnectionManager, ConnectionPool,
         NewConnectionConfig,
     },
-    solana_quic_client::{QuicConfig, QuicConnectionManager, QuicPool},
-    solana_rpc_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_quic_client::{QuicConfig, QuicConnectionManager, QuicPool},
+    safecoin_rpc_client::nonblocking::rpc_client::RpcClient,
+    safecoin_sdk::{
         message::Message,
         signers::Signers,
         transaction::{Transaction, TransactionError},
         transport::Result as TransportResult,
     },
-    solana_tpu_client::nonblocking::tpu_client::{Result, TpuClient as BackendTpuClient},
+    safecoin_tpu_client::nonblocking::tpu_client::{Result, TpuClient as BackendTpuClient},
     std::sync::Arc,
 };
 

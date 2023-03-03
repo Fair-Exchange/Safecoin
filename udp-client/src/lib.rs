@@ -8,7 +8,7 @@ use {
         nonblocking::udp_client::UdpClientConnection as NonblockingUdpConnection,
         udp_client::UdpClientConnection as BlockingUdpConnection,
     },
-    solana_connection_cache::{
+    safecoin_connection_cache::{
         connection_cache::{
             BaseClientConnection, ClientError, ConnectionManager, ConnectionPool,
             ConnectionPoolError, NewConnectionConfig,

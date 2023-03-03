@@ -6,12 +6,12 @@ use {
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     console::style,
     serde::{Deserialize, Serialize},
-    solana_clap_utils::{fee_payer::*, input_parsers::*, input_validators::*, keypair::*},
-    solana_cli_output::{cli_version::CliVersion, QuietDisplay, VerboseDisplay},
-    solana_remote_wallet::remote_wallet::RemoteWalletManager,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::{client_error::Error as ClientError, request::MAX_MULTIPLE_ACCOUNTS},
-    solana_sdk::{
+    safecoin_clap_utils::{fee_payer::*, input_parsers::*, input_validators::*, keypair::*},
+    safecoin_cli_output::{cli_version::CliVersion, QuietDisplay, VerboseDisplay},
+    safecoin_remote_wallet::remote_wallet::RemoteWalletManager,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::{client_error::Error as ClientError, request::MAX_MULTIPLE_ACCOUNTS},
+    safecoin_sdk::{
         account::Account,
         clock::Slot,
         epoch_schedule::EpochSchedule,

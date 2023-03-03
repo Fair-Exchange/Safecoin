@@ -1,6 +1,6 @@
 #![cfg(test)]
 #[allow(deprecated)]
-use solana_sdk::sysvar::fees::Fees;
+use safecoin_sdk::sysvar::fees::Fees;
 use {
     super::{
         test_utils::{goto_end_of_slot, update_vote_account_timestamp},
@@ -20,7 +20,7 @@ use {
             create_genesis_config_with_leader, create_genesis_config_with_vote_accounts,
             genesis_sysvar_and_builtin_program_lamports, GenesisConfigInfo, ValidatorVoteKeypairs,
         },
-        inline_spl_token,
+        inline_safe_token,
         rent_collector::RENT_EXEMPT_RENT_EPOCH,
         rent_paying_accounts_by_partition::RentPayingAccountsByPartition,
         status_cache::MAX_CACHE_ENTRIES,
@@ -31,7 +31,7 @@ use {
     rayon::ThreadPoolBuilder,
     serde::{Deserialize, Serialize},
     solana_logger,
-    solana_program_runtime::{
+    safecoin_program_runtime::{
         compute_budget::{self, ComputeBudget, MAX_COMPUTE_UNIT_LIMIT},
         executor::Executor,
         executor_cache::TransactionExecutorCache,
@@ -39,7 +39,7 @@ use {
         prioritization_fee::{PrioritizationFeeDetails, PrioritizationFeeType},
         timings::ExecuteTimings,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::{
             create_account_shared_data_with_fields as create_account, from_account, Account,
             AccountSharedData, ReadableAccount, WritableAccount,
@@ -66,7 +66,7 @@ use {
         loader_upgradeable_instruction::UpgradeableLoaderInstruction,
         message::{Message, MessageHeader, SanitizedMessage},
         native_loader,
-        native_token::{sol_to_lamports, LAMPORTS_PER_SOL},
+        native_token::{sol_to_lamports, LAMPORTS_PER_SAFE},
         nonce::{self, state::DurableNonce},
         packet::PACKET_DATA_SIZE,
         poh_config::PohConfig,
@@ -305,7 +305,7 @@ fn test_bank_unix_timestamp_from_genesis() {
 #[test]
 #[allow(clippy::float_cmp)]
 fn test_bank_new() {
-    let dummy_leader_pubkey = solana_sdk::pubkey::new_rand();
+    let dummy_leader_pubkey = safecoin_sdk::pubkey::new_rand();
     let dummy_leader_stake_lamports = bootstrap_validator_stake_lamports();
     let mint_lamports = 10_000;
     let GenesisConfigInfo {
@@ -434,7 +434,7 @@ fn test_bank_capitalization() {
         accounts: (0..42)
             .map(|_| {
                 (
-                    solana_sdk::pubkey::new_rand(),
+                    safecoin_sdk::pubkey::new_rand(),
                     Account::new(42, 0, &Pubkey::default()),
                 )
             })
@@ -719,7 +719,7 @@ fn assert_capitalization_diff(
 #[test]
 fn test_store_account_and_update_capitalization_missing() {
     let bank = create_simple_test_bank(0);
-    let pubkey = solana_sdk::pubkey::new_rand();
+    let pubkey = safecoin_sdk::pubkey::new_rand();
 
     let some_lamports = 400;
     let account = AccountSharedData::new(some_lamports, 0, &system_program::id());
@@ -802,7 +802,7 @@ fn test_store_account_and_update_capitalization_unchanged() {
 fn test_rent_distribution() {
     solana_logger::setup();
 
-    let bootstrap_validator_pubkey = solana_sdk::pubkey::new_rand();
+    let bootstrap_validator_pubkey = safecoin_sdk::pubkey::new_rand();
     let bootstrap_validator_stake_lamports = 30;
     let mut genesis_config = create_genesis_config_with_leader(
         10,
@@ -827,7 +827,7 @@ fn test_rent_distribution() {
 
     let rent = Rent::free();
 
-    let validator_1_pubkey = solana_sdk::pubkey::new_rand();
+    let validator_1_pubkey = safecoin_sdk::pubkey::new_rand();
     let validator_1_stake_lamports = 20;
     let validator_1_staking_keypair = Keypair::new();
     let validator_1_voting_keypair = Keypair::new();
@@ -860,7 +860,7 @@ fn test_rent_distribution() {
         Account::from(validator_1_vote_account),
     );
 
-    let validator_2_pubkey = solana_sdk::pubkey::new_rand();
+    let validator_2_pubkey = safecoin_sdk::pubkey::new_rand();
     let validator_2_stake_lamports = 20;
     let validator_2_staking_keypair = Keypair::new();
     let validator_2_voting_keypair = Keypair::new();
@@ -893,7 +893,7 @@ fn test_rent_distribution() {
         Account::from(validator_2_vote_account),
     );
 
-    let validator_3_pubkey = solana_sdk::pubkey::new_rand();
+    let validator_3_pubkey = safecoin_sdk::pubkey::new_rand();
     let validator_3_stake_lamports = 30;
     let validator_3_staking_keypair = Keypair::new();
     let validator_3_voting_keypair = Keypair::new();
@@ -1045,7 +1045,7 @@ fn test_distribute_rent_to_validators_overflow() {
     const RENT_TO_BE_DISTRIBUTED: u64 = 120_525;
     const VALIDATOR_STAKE: u64 = 374_999_998_287_840;
 
-    let validator_pubkey = solana_sdk::pubkey::new_rand();
+    let validator_pubkey = safecoin_sdk::pubkey::new_rand();
     let mut genesis_config =
         create_genesis_config_with_leader(10, &validator_pubkey, VALIDATOR_STAKE).genesis_config;
 
@@ -1271,9 +1271,9 @@ fn test_rent_exempt_executable_account() {
     let root_bank = Arc::new(Bank::new_for_tests(&genesis_config));
     let bank = create_child_bank_for_rent_test(&root_bank, &genesis_config);
 
-    let account_pubkey = solana_sdk::pubkey::new_rand();
+    let account_pubkey = safecoin_sdk::pubkey::new_rand();
     let account_balance = 1;
-    let mut account = AccountSharedData::new(account_balance, 0, &solana_sdk::pubkey::new_rand());
+    let mut account = AccountSharedData::new(account_balance, 0, &safecoin_sdk::pubkey::new_rand());
     account.set_executable(true);
     bank.store_account(&account_pubkey, &account);
 
@@ -1604,7 +1604,7 @@ fn test_rent_eager_across_epoch_with_half_gap() {
 #[test]
 #[allow(clippy::cognitive_complexity)]
 fn test_rent_eager_across_epoch_without_gap_under_multi_epoch_cycle() {
-    let leader_pubkey = solana_sdk::pubkey::new_rand();
+    let leader_pubkey = safecoin_sdk::pubkey::new_rand();
     let leader_lamports = 3;
     let mut genesis_config =
         create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
@@ -1674,7 +1674,7 @@ fn test_rent_eager_across_epoch_without_gap_under_multi_epoch_cycle() {
 
 #[test]
 fn test_rent_eager_across_epoch_with_gap_under_multi_epoch_cycle() {
-    let leader_pubkey = solana_sdk::pubkey::new_rand();
+    let leader_pubkey = safecoin_sdk::pubkey::new_rand();
     let leader_lamports = 3;
     let mut genesis_config =
         create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
@@ -1732,7 +1732,7 @@ fn test_rent_eager_across_epoch_with_gap_under_multi_epoch_cycle() {
 
 #[test]
 fn test_rent_eager_with_warmup_epochs_under_multi_epoch_cycle() {
-    let leader_pubkey = solana_sdk::pubkey::new_rand();
+    let leader_pubkey = safecoin_sdk::pubkey::new_rand();
     let leader_lamports = 3;
     let mut genesis_config =
         create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
@@ -1789,7 +1789,7 @@ fn test_rent_eager_with_warmup_epochs_under_multi_epoch_cycle() {
 #[test]
 fn test_rent_eager_under_fixed_cycle_for_development() {
     solana_logger::setup();
-    let leader_pubkey = solana_sdk::pubkey::new_rand();
+    let leader_pubkey = safecoin_sdk::pubkey::new_rand();
     let leader_lamports = 3;
     let mut genesis_config =
         create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
@@ -1943,7 +1943,7 @@ fn test_rent_eager_pubkey_range_maximum() {
 fn map_to_test_bad_range() -> std::collections::BTreeMap<Pubkey, i8> {
     let mut map = std::collections::BTreeMap::new();
     // when empty, std::collections::BTreeMap doesn't sanitize given range...
-    map.insert(solana_sdk::pubkey::new_rand(), 1);
+    map.insert(safecoin_sdk::pubkey::new_rand(), 1);
     map
 }
 
@@ -2157,14 +2157,14 @@ fn test_rent_eager_collect_rent_in_partition() {
 
     let (mut genesis_config, _mint_keypair) = create_genesis_config(1_000_000);
     for feature_id in FeatureSet::default().inactive {
-        if feature_id != solana_sdk::feature_set::set_exempt_rent_epoch_max::id() {
+        if feature_id != safecoin_sdk::feature_set::set_exempt_rent_epoch_max::id() {
             activate_feature(&mut genesis_config, feature_id);
         }
     }
 
-    let zero_lamport_pubkey = solana_sdk::pubkey::new_rand();
-    let rent_due_pubkey = solana_sdk::pubkey::new_rand();
-    let rent_exempt_pubkey = solana_sdk::pubkey::new_rand();
+    let zero_lamport_pubkey = safecoin_sdk::pubkey::new_rand();
+    let rent_due_pubkey = safecoin_sdk::pubkey::new_rand();
+    let rent_exempt_pubkey = safecoin_sdk::pubkey::new_rand();
     let mut bank = Arc::new(Bank::new_for_tests(&genesis_config));
     let zero_lamports = 0;
     let little_lamports = 1234;
@@ -2315,7 +2315,7 @@ fn test_rent_eager_collect_rent_zero_lamport_deterministic() {
 
     let (genesis_config, _mint_keypair) = create_genesis_config(1);
 
-    let zero_lamport_pubkey = solana_sdk::pubkey::new_rand();
+    let zero_lamport_pubkey = safecoin_sdk::pubkey::new_rand();
 
     let genesis_bank1 = Arc::new(Bank::new_for_tests(&genesis_config));
     let genesis_bank2 = Arc::new(Bank::new_for_tests(&genesis_config));
@@ -2393,7 +2393,7 @@ where
         accounts: (0..42)
             .map(|_| {
                 (
-                    solana_sdk::pubkey::new_rand(),
+                    safecoin_sdk::pubkey::new_rand(),
                     Account::new(1_000_000_000, 0, &Pubkey::default()),
                 )
             })
@@ -2522,7 +2522,7 @@ fn do_test_bank_update_rewards_determinism() -> u64 {
         accounts: (0..42)
             .map(|_| {
                 (
-                    solana_sdk::pubkey::new_rand(),
+                    safecoin_sdk::pubkey::new_rand(),
                     Account::new(1_000_000_000, 0, &Pubkey::default()),
                 )
             })
@@ -2549,12 +2549,12 @@ fn do_test_bank_update_rewards_determinism() -> u64 {
         42 * 1_000_000_000 + genesis_sysvar_and_builtin_program_lamports()
     );
 
-    let vote_id = solana_sdk::pubkey::new_rand();
+    let vote_id = safecoin_sdk::pubkey::new_rand();
     let mut vote_account =
-        vote_state::create_account(&vote_id, &solana_sdk::pubkey::new_rand(), 0, 100);
-    let stake_id1 = solana_sdk::pubkey::new_rand();
+        vote_state::create_account(&vote_id, &safecoin_sdk::pubkey::new_rand(), 0, 100);
+    let stake_id1 = safecoin_sdk::pubkey::new_rand();
     let stake_account1 = crate::stakes::tests::create_stake_account(123, &vote_id, &stake_id1);
-    let stake_id2 = solana_sdk::pubkey::new_rand();
+    let stake_id2 = safecoin_sdk::pubkey::new_rand();
     let stake_account2 = crate::stakes::tests::create_stake_account(456, &vote_id, &stake_id2);
 
     // set up accounts
@@ -2649,7 +2649,7 @@ fn test_purge_empty_accounts() {
         let mut bank = parent;
         for _ in 0..10 {
             let blockhash = bank.last_blockhash();
-            let pubkey = solana_sdk::pubkey::new_rand();
+            let pubkey = safecoin_sdk::pubkey::new_rand();
             let tx = system_transaction::transfer(&mint_keypair, &pubkey, 0, blockhash);
             bank.process_transaction(&tx).unwrap();
             bank.freeze();
@@ -2671,7 +2671,7 @@ fn test_purge_empty_accounts() {
         bank0.process_transaction(&tx).unwrap();
 
         let bank1 = Arc::new(new_from_parent(&bank0));
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         let blockhash = bank.last_blockhash();
         let tx = system_transaction::transfer(&keypair, &pubkey, amount, blockhash);
         bank1.process_transaction(&tx).unwrap();
@@ -2736,7 +2736,7 @@ fn test_purge_empty_accounts() {
 #[test]
 fn test_two_payments_to_one_party() {
     let (genesis_config, mint_keypair) = create_genesis_config(sol_to_lamports(1.));
-    let pubkey = solana_sdk::pubkey::new_rand();
+    let pubkey = safecoin_sdk::pubkey::new_rand();
     let bank = Bank::new_for_tests(&genesis_config);
     let amount = genesis_config.rent.minimum_balance(0);
     assert_eq!(bank.last_blockhash(), genesis_config.hash());
@@ -2753,8 +2753,8 @@ fn test_two_payments_to_one_party() {
 #[test]
 fn test_one_source_two_tx_one_batch() {
     let (genesis_config, mint_keypair) = create_genesis_config(sol_to_lamports(1.));
-    let key1 = solana_sdk::pubkey::new_rand();
-    let key2 = solana_sdk::pubkey::new_rand();
+    let key1 = safecoin_sdk::pubkey::new_rand();
+    let key2 = safecoin_sdk::pubkey::new_rand();
     let bank = Bank::new_for_tests(&genesis_config);
     let amount = genesis_config.rent.minimum_balance(0);
     assert_eq!(bank.last_blockhash(), genesis_config.hash());
@@ -2783,8 +2783,8 @@ fn test_one_source_two_tx_one_batch() {
 fn test_one_tx_two_out_atomic_fail() {
     let amount = sol_to_lamports(1.);
     let (genesis_config, mint_keypair) = create_genesis_config(amount);
-    let key1 = solana_sdk::pubkey::new_rand();
-    let key2 = solana_sdk::pubkey::new_rand();
+    let key1 = safecoin_sdk::pubkey::new_rand();
+    let key2 = safecoin_sdk::pubkey::new_rand();
     let bank = Bank::new_for_tests(&genesis_config);
     let instructions = system_instruction::transfer_many(
         &mint_keypair.pubkey(),
@@ -2804,8 +2804,8 @@ fn test_one_tx_two_out_atomic_fail() {
 #[test]
 fn test_one_tx_two_out_atomic_pass() {
     let (genesis_config, mint_keypair) = create_genesis_config(sol_to_lamports(1.));
-    let key1 = solana_sdk::pubkey::new_rand();
-    let key2 = solana_sdk::pubkey::new_rand();
+    let key1 = safecoin_sdk::pubkey::new_rand();
+    let key2 = safecoin_sdk::pubkey::new_rand();
     let bank = Bank::new_for_tests(&genesis_config);
     let amount = genesis_config.rent.minimum_balance(0);
     let instructions = system_instruction::transfer_many(
@@ -2876,7 +2876,7 @@ fn test_insufficient_funds() {
     let mint_amount = sol_to_lamports(1.);
     let (genesis_config, mint_keypair) = create_genesis_config(mint_amount);
     let bank = Bank::new_for_tests(&genesis_config);
-    let pubkey = solana_sdk::pubkey::new_rand();
+    let pubkey = safecoin_sdk::pubkey::new_rand();
     let amount = genesis_config.rent.minimum_balance(0);
     bank.transfer(amount, &mint_keypair, &pubkey).unwrap();
     assert_eq!(bank.transaction_count(), 1);
@@ -2905,7 +2905,7 @@ fn test_executed_transaction_count_post_bank_transaction_count_fix() {
     let (genesis_config, mint_keypair) = create_genesis_config(mint_amount);
     let mut bank = Bank::new_for_tests(&genesis_config);
     bank.activate_feature(&feature_set::bank_transaction_count_fix::id());
-    let pubkey = solana_sdk::pubkey::new_rand();
+    let pubkey = safecoin_sdk::pubkey::new_rand();
     let amount = genesis_config.rent.minimum_balance(0);
     bank.transfer(amount, &mint_keypair, &pubkey).unwrap();
     assert_eq!(
@@ -2949,7 +2949,7 @@ fn test_transfer_to_newb() {
     let (genesis_config, mint_keypair) = create_genesis_config(sol_to_lamports(1.));
     let bank = Bank::new_for_tests(&genesis_config);
     let amount = genesis_config.rent.minimum_balance(0);
-    let pubkey = solana_sdk::pubkey::new_rand();
+    let pubkey = safecoin_sdk::pubkey::new_rand();
     bank.transfer(amount, &mint_keypair, &pubkey).unwrap();
     assert_eq!(bank.get_balance(&pubkey), amount);
 }
@@ -2961,7 +2961,7 @@ fn test_transfer_to_sysvar() {
     let bank = Arc::new(Bank::new_for_tests(&genesis_config));
     let amount = genesis_config.rent.minimum_balance(0);
 
-    let normal_pubkey = solana_sdk::pubkey::new_rand();
+    let normal_pubkey = safecoin_sdk::pubkey::new_rand();
     let sysvar_pubkey = sysvar::clock::id();
     assert_eq!(bank.get_balance(&normal_pubkey), 0);
     assert_eq!(bank.get_balance(&sysvar_pubkey), 1_169_280);
@@ -2983,7 +2983,7 @@ fn test_bank_deposit() {
     let bank = create_simple_test_bank(100);
 
     // Test new account
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     let new_balance = bank.deposit(&key, 10).unwrap();
     assert_eq!(new_balance, 10);
     assert_eq!(bank.get_balance(&key), 10);
@@ -2999,7 +2999,7 @@ fn test_bank_withdraw() {
     let bank = create_simple_test_bank(100);
 
     // Test no account
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     assert_eq!(
         bank.withdraw(&key, 10),
         Err(TransactionError::AccountNotFound)
@@ -3060,7 +3060,7 @@ fn test_bank_tx_fee() {
 
     let arbitrary_transfer_amount = 42_000;
     let mint = arbitrary_transfer_amount * 100;
-    let leader = solana_sdk::pubkey::new_rand();
+    let leader = safecoin_sdk::pubkey::new_rand();
     let GenesisConfigInfo {
         mut genesis_config,
         mint_keypair,
@@ -3079,7 +3079,7 @@ fn test_bank_tx_fee() {
 
     let capitalization = bank.capitalization();
 
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     let tx = system_transaction::transfer(
         &mint_keypair,
         &key,
@@ -3163,10 +3163,10 @@ fn test_bank_tx_fee() {
 fn test_bank_tx_compute_unit_fee() {
     solana_logger::setup();
 
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     let arbitrary_transfer_amount = 42;
     let mint = arbitrary_transfer_amount * 10_000_000;
-    let leader = solana_sdk::pubkey::new_rand();
+    let leader = safecoin_sdk::pubkey::new_rand();
     let GenesisConfigInfo {
         mut genesis_config,
         mint_keypair,
@@ -3276,7 +3276,7 @@ fn test_bank_tx_compute_unit_fee() {
 fn test_bank_blockhash_fee_structure() {
     //solana_logger::setup();
 
-    let leader = solana_sdk::pubkey::new_rand();
+    let leader = safecoin_sdk::pubkey::new_rand();
     let GenesisConfigInfo {
         mut genesis_config,
         mint_keypair,
@@ -3302,7 +3302,7 @@ fn test_bank_blockhash_fee_structure() {
     let bank = Bank::new_from_parent(&Arc::new(bank), &leader, 2);
 
     // Send a transfer using cheap_blockhash
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     let initial_mint_balance = bank.get_balance(&mint_keypair.pubkey());
     let tx = system_transaction::transfer(&mint_keypair, &key, 1, cheap_blockhash);
     assert_eq!(bank.process_transaction(&tx), Ok(()));
@@ -3313,7 +3313,7 @@ fn test_bank_blockhash_fee_structure() {
     );
 
     // Send a transfer using expensive_blockhash
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     let initial_mint_balance = bank.get_balance(&mint_keypair.pubkey());
     let tx = system_transaction::transfer(&mint_keypair, &key, 1, expensive_blockhash);
     assert_eq!(bank.process_transaction(&tx), Ok(()));
@@ -3328,7 +3328,7 @@ fn test_bank_blockhash_fee_structure() {
 fn test_bank_blockhash_compute_unit_fee_structure() {
     //solana_logger::setup();
 
-    let leader = solana_sdk::pubkey::new_rand();
+    let leader = safecoin_sdk::pubkey::new_rand();
     let GenesisConfigInfo {
         mut genesis_config,
         mint_keypair,
@@ -3354,7 +3354,7 @@ fn test_bank_blockhash_compute_unit_fee_structure() {
     let bank = Bank::new_from_parent(&Arc::new(bank), &leader, 2);
 
     // Send a transfer using cheap_blockhash
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     let initial_mint_balance = bank.get_balance(&mint_keypair.pubkey());
     let tx = system_transaction::transfer(&mint_keypair, &key, 1, cheap_blockhash);
     assert_eq!(bank.process_transaction(&tx), Ok(()));
@@ -3373,7 +3373,7 @@ fn test_bank_blockhash_compute_unit_fee_structure() {
     );
 
     // Send a transfer using expensive_blockhash
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     let initial_mint_balance = bank.get_balance(&mint_keypair.pubkey());
     let tx = system_transaction::transfer(&mint_keypair, &key, 1, expensive_blockhash);
     assert_eq!(bank.process_transaction(&tx), Ok(()));
@@ -3394,7 +3394,7 @@ fn test_bank_blockhash_compute_unit_fee_structure() {
 
 #[test]
 fn test_filter_program_errors_and_collect_fee() {
-    let leader = solana_sdk::pubkey::new_rand();
+    let leader = safecoin_sdk::pubkey::new_rand();
     let GenesisConfigInfo {
         mut genesis_config,
         mint_keypair,
@@ -3403,7 +3403,7 @@ fn test_filter_program_errors_and_collect_fee() {
     genesis_config.fee_rate_governor = FeeRateGovernor::new(5000, 0);
     let bank = Bank::new_for_tests(&genesis_config);
 
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     let tx1 = SanitizedTransaction::from_transaction_for_tests(system_transaction::transfer(
         &mint_keypair,
         &key,
@@ -3445,7 +3445,7 @@ fn test_filter_program_errors_and_collect_fee() {
 
 #[test]
 fn test_filter_program_errors_and_collect_compute_unit_fee() {
-    let leader = solana_sdk::pubkey::new_rand();
+    let leader = safecoin_sdk::pubkey::new_rand();
     let GenesisConfigInfo {
         mut genesis_config,
         mint_keypair,
@@ -3454,7 +3454,7 @@ fn test_filter_program_errors_and_collect_compute_unit_fee() {
     genesis_config.fee_rate_governor = FeeRateGovernor::new(2, 0);
     let bank = Bank::new_for_tests(&genesis_config);
 
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
     let tx1 = SanitizedTransaction::from_transaction_for_tests(system_transaction::transfer(
         &mint_keypair,
         &key,
@@ -3539,12 +3539,12 @@ fn test_readonly_accounts() {
         genesis_config,
         mint_keypair,
         ..
-    } = create_genesis_config_with_leader(500, &solana_sdk::pubkey::new_rand(), 0);
+    } = create_genesis_config_with_leader(500, &safecoin_sdk::pubkey::new_rand(), 0);
     let bank = Bank::new_for_tests(&genesis_config);
 
-    let vote_pubkey0 = solana_sdk::pubkey::new_rand();
-    let vote_pubkey1 = solana_sdk::pubkey::new_rand();
-    let vote_pubkey2 = solana_sdk::pubkey::new_rand();
+    let vote_pubkey0 = safecoin_sdk::pubkey::new_rand();
+    let vote_pubkey1 = safecoin_sdk::pubkey::new_rand();
+    let vote_pubkey2 = safecoin_sdk::pubkey::new_rand();
     let authorized_voter = Keypair::new();
     let payer0 = Keypair::new();
     let payer1 = Keypair::new();
@@ -3598,7 +3598,7 @@ fn test_readonly_accounts() {
     );
     let tx1 = system_transaction::transfer(
         &authorized_voter,
-        &solana_sdk::pubkey::new_rand(),
+        &safecoin_sdk::pubkey::new_rand(),
         1,
         bank.last_blockhash(),
     );
@@ -3667,7 +3667,7 @@ fn test_readonly_relaxed_locks() {
     let key0 = Keypair::new();
     let key1 = Keypair::new();
     let key2 = Keypair::new();
-    let key3 = solana_sdk::pubkey::new_rand();
+    let key3 = safecoin_sdk::pubkey::new_rand();
 
     let message = Message {
         header: MessageHeader {
@@ -3857,7 +3857,7 @@ fn test_bank_hash_internal_state() {
     let initial_state = bank0.hash_internal_state();
     assert_eq!(bank1.hash_internal_state(), initial_state);
 
-    let pubkey = solana_sdk::pubkey::new_rand();
+    let pubkey = safecoin_sdk::pubkey::new_rand();
     bank0.transfer(amount, &mint_keypair, &pubkey).unwrap();
     assert_ne!(bank0.hash_internal_state(), initial_state);
     bank1.transfer(amount, &mint_keypair, &pubkey).unwrap();
@@ -3868,7 +3868,7 @@ fn test_bank_hash_internal_state() {
     let bank2 = new_from_parent(&bank1);
     assert_ne!(bank0.hash_internal_state(), bank2.hash_internal_state());
 
-    let pubkey2 = solana_sdk::pubkey::new_rand();
+    let pubkey2 = safecoin_sdk::pubkey::new_rand();
     info!("transfer 2 {}", pubkey2);
     bank2.transfer(amount, &mint_keypair, &pubkey2).unwrap();
     add_root_and_flush_write_cache(&bank0);
@@ -3886,14 +3886,14 @@ fn test_bank_hash_internal_state_verify() {
         let bank0 = Bank::new_for_tests(&genesis_config);
         let amount = genesis_config.rent.minimum_balance(0);
 
-        let pubkey = solana_sdk::pubkey::new_rand();
+        let pubkey = safecoin_sdk::pubkey::new_rand();
         info!("transfer 0 {} mint: {}", pubkey, mint_keypair.pubkey());
         bank0.transfer(amount, &mint_keypair, &pubkey).unwrap();
 
         let bank0_state = bank0.hash_internal_state();
         let bank0 = Arc::new(bank0);
         // Checkpointing should result in a new state while freezing the parent
-        let bank2 = Bank::new_from_parent(&bank0, &solana_sdk::pubkey::new_rand(), 1);
+        let bank2 = Bank::new_from_parent(&bank0, &safecoin_sdk::pubkey::new_rand(), 1);
         assert_ne!(bank0_state, bank2.hash_internal_state());
         // Checkpointing should modify the checkpoint's state when freezed
         assert_ne!(bank0_state, bank0.hash_internal_state());
@@ -3907,7 +3907,7 @@ fn test_bank_hash_internal_state_verify() {
             bank2.update_accounts_hash_for_tests();
             assert!(bank2.verify_bank_hash(VerifyBankHash::default_for_test()));
         }
-        let bank3 = Bank::new_from_parent(&bank0, &solana_sdk::pubkey::new_rand(), 2);
+        let bank3 = Bank::new_from_parent(&bank0, &safecoin_sdk::pubkey::new_rand(), 2);
         assert_eq!(bank0_state, bank0.hash_internal_state());
         if pass == 0 {
             // this relies on us having set the bank hash in the pass==0 if above
@@ -3924,7 +3924,7 @@ fn test_bank_hash_internal_state_verify() {
             continue;
         }
 
-        let pubkey2 = solana_sdk::pubkey::new_rand();
+        let pubkey2 = safecoin_sdk::pubkey::new_rand();
         info!("transfer 2 {}", pubkey2);
         bank2.transfer(amount, &mint_keypair, &pubkey2).unwrap();
         add_root_and_flush_write_cache(&bank2);
@@ -3946,7 +3946,7 @@ fn test_verify_hash_unfrozen() {
 #[test]
 fn test_verify_snapshot_bank() {
     solana_logger::setup();
-    let pubkey = solana_sdk::pubkey::new_rand();
+    let pubkey = safecoin_sdk::pubkey::new_rand();
     let (genesis_config, mint_keypair) = create_genesis_config(sol_to_lamports(1.));
     let bank = Bank::new_for_tests(&genesis_config);
     bank.transfer(
@@ -3977,7 +3977,7 @@ fn test_bank_hash_internal_state_same_account_different_fork() {
     assert_ne!(bank1.hash_internal_state(), initial_state);
 
     info!("transfer bank1");
-    let pubkey = solana_sdk::pubkey::new_rand();
+    let pubkey = safecoin_sdk::pubkey::new_rand();
     bank1.transfer(amount, &mint_keypair, &pubkey).unwrap();
     assert_ne!(bank1.hash_internal_state(), initial_state);
 
@@ -4005,8 +4005,8 @@ fn test_hash_internal_state_order() {
     let bank0 = Bank::new_for_tests(&genesis_config);
     let bank1 = Bank::new_for_tests(&genesis_config);
     assert_eq!(bank0.hash_internal_state(), bank1.hash_internal_state());
-    let key0 = solana_sdk::pubkey::new_rand();
-    let key1 = solana_sdk::pubkey::new_rand();
+    let key0 = safecoin_sdk::pubkey::new_rand();
+    let key1 = safecoin_sdk::pubkey::new_rand();
     bank0.transfer(amount, &mint_keypair, &key0).unwrap();
     bank0.transfer(amount * 2, &mint_keypair, &key1).unwrap();
 
@@ -4022,7 +4022,7 @@ fn test_hash_internal_state_error() {
     let (genesis_config, mint_keypair) = create_genesis_config(sol_to_lamports(1.));
     let amount = genesis_config.rent.minimum_balance(0);
     let bank = Bank::new_for_tests(&genesis_config);
-    let key0 = solana_sdk::pubkey::new_rand();
+    let key0 = safecoin_sdk::pubkey::new_rand();
     bank.transfer(amount, &mint_keypair, &key0).unwrap();
     let orig = bank.hash_internal_state();
 
@@ -4203,7 +4203,7 @@ fn test_bank_get_account_in_parent_after_squash2() {
 
 #[test]
 fn test_bank_get_account_modified_since_parent_with_fixed_root() {
-    let pubkey = solana_sdk::pubkey::new_rand();
+    let pubkey = safecoin_sdk::pubkey::new_rand();
 
     let (genesis_config, mint_keypair) = create_genesis_config(sol_to_lamports(1.));
     let amount = genesis_config.rent.minimum_balance(0);
@@ -4247,7 +4247,7 @@ fn test_bank_update_sysvar_account() {
     for pass in 0..5 {
         use sysvar::clock::Clock;
 
-        let dummy_clock_id = solana_sdk::pubkey::new_rand();
+        let dummy_clock_id = safecoin_sdk::pubkey::new_rand();
         let dummy_rent_epoch = 44;
         let (mut genesis_config, _mint_keypair) = create_genesis_config(500);
 
@@ -4402,7 +4402,7 @@ fn test_bank_update_sysvar_account() {
 
 #[test]
 fn test_bank_epoch_vote_accounts() {
-    let leader_pubkey = solana_sdk::pubkey::new_rand();
+    let leader_pubkey = safecoin_sdk::pubkey::new_rand();
     let leader_lamports = 3;
     let mut genesis_config =
         create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
@@ -4509,7 +4509,7 @@ fn test_zero_signatures() {
     let (genesis_config, mint_keypair) = create_genesis_config(500);
     let mut bank = Bank::new_for_tests(&genesis_config);
     bank.fee_rate_governor.lamports_per_signature = 2;
-    let key = solana_sdk::pubkey::new_rand();
+    let key = safecoin_sdk::pubkey::new_rand();
 
     let mut transfer_instruction = system_instruction::transfer(&mint_keypair.pubkey(), &key, 0);
     transfer_instruction.accounts[0].is_signer = false;
@@ -4589,11 +4589,11 @@ fn test_bank_inherit_tx_count() {
     // Bank 1
     let bank1 = Arc::new(Bank::new_from_parent(
         &bank0,
-        &solana_sdk::pubkey::new_rand(),
+        &safecoin_sdk::pubkey::new_rand(),
         1,
     ));
     // Bank 2
-    let bank2 = Bank::new_from_parent(&bank0, &solana_sdk::pubkey::new_rand(), 2);
+    let bank2 = Bank::new_from_parent(&bank0, &safecoin_sdk::pubkey::new_rand(), 2);
 
     // transfer a token
     assert_eq!(
@@ -4622,7 +4622,7 @@ fn test_bank_inherit_tx_count() {
     assert_eq!(bank1.transaction_count(), 1);
     assert_eq!(bank1.non_vote_transaction_count_since_restart(), 1);
 
-    let bank6 = Bank::new_from_parent(&bank1, &solana_sdk::pubkey::new_rand(), 3);
+    let bank6 = Bank::new_from_parent(&bank1, &safecoin_sdk::pubkey::new_rand(), 3);
     assert_eq!(bank1.transaction_count(), 1);
     assert_eq!(bank1.non_vote_transaction_count_since_restart(), 1);
     assert_eq!(bank6.transaction_count(), 1);
@@ -4657,7 +4657,7 @@ fn test_bank_vote_accounts() {
         genesis_config,
         mint_keypair,
         ..
-    } = create_genesis_config_with_leader(500, &solana_sdk::pubkey::new_rand(), 1);
+    } = create_genesis_config_with_leader(500, &safecoin_sdk::pubkey::new_rand(), 1);
     let bank = Arc::new(Bank::new_for_tests(&genesis_config));
 
     let vote_accounts = bank.vote_accounts();
@@ -4707,7 +4707,7 @@ fn test_bank_cloned_stake_delegations() {
         ..
     } = create_genesis_config_with_leader(
         123_456_000_000_000,
-        &solana_sdk::pubkey::new_rand(),
+        &safecoin_sdk::pubkey::new_rand(),
         123_000_000_000,
     );
     genesis_config.rent = Rent::default();
@@ -4806,7 +4806,7 @@ fn test_is_delta_with_no_committables() {
     // Should fail with InstructionError, but InstructionErrors are committable,
     // so is_delta should be true
     assert_eq!(
-        bank.transfer(10_001, &mint_keypair, &solana_sdk::pubkey::new_rand()),
+        bank.transfer(10_001, &mint_keypair, &safecoin_sdk::pubkey::new_rand()),
         Err(TransactionError::InstructionError(
             0,
             SystemError::ResultWithNegativeLamports.into(),
@@ -4832,12 +4832,12 @@ fn test_bank_get_program_accounts() {
     assert!(
         genesis_accounts
             .iter()
-            .any(|(pubkey, _, _)| solana_sdk::sysvar::is_sysvar_id(pubkey)),
+            .any(|(pubkey, _, _)| safecoin_sdk::sysvar::is_sysvar_id(pubkey)),
         "no sysvars found"
     );
 
     let bank0 = Arc::new(new_from_parent(&parent));
-    let pubkey0 = solana_sdk::pubkey::new_rand();
+    let pubkey0 = safecoin_sdk::pubkey::new_rand();
     let program_id = Pubkey::from([2; 32]);
     let account0 = AccountSharedData::new(1, 0, &program_id);
     bank0.store_account(&pubkey0, &account0);
@@ -4867,11 +4867,11 @@ fn test_bank_get_program_accounts() {
     );
 
     let bank2 = Arc::new(new_from_parent(&bank1));
-    let pubkey1 = solana_sdk::pubkey::new_rand();
+    let pubkey1 = safecoin_sdk::pubkey::new_rand();
     let account1 = AccountSharedData::new(3, 0, &program_id);
     bank2.store_account(&pubkey1, &account1);
     // Accounts with 0 lamports should be filtered out by Accounts::load_by_program()
-    let pubkey2 = solana_sdk::pubkey::new_rand();
+    let pubkey2 = safecoin_sdk::pubkey::new_rand();
     let account2 = AccountSharedData::new(0, 0, &program_id);
     bank2.store_account(&pubkey2, &account2);
 
@@ -5079,7 +5079,7 @@ fn test_add_duplicate_static_program() {
         genesis_config,
         mint_keypair,
         ..
-    } = create_genesis_config_with_leader(500, &solana_sdk::pubkey::new_rand(), 0);
+    } = create_genesis_config_with_leader(500, &safecoin_sdk::pubkey::new_rand(), 0);
     let mut bank = Bank::new_for_tests(&genesis_config);
 
     fn mock_vote_processor(
@@ -5281,7 +5281,7 @@ fn test_banks_leak() {
         const LOTSA: usize = 4_096;
 
         (0..LOTSA).for_each(|_| {
-            let pubkey = solana_sdk::pubkey::new_rand();
+            let pubkey = safecoin_sdk::pubkey::new_rand();
             genesis_config.add_account(
                 pubkey,
                 stake_state::create_lockup_stake_account(
@@ -6128,7 +6128,7 @@ fn test_nonce_fee_calculator_updates() {
             system_instruction::advance_nonce_account(&nonce_pubkey, &nonce_pubkey),
             system_instruction::transfer(
                 &custodian_pubkey,
-                &solana_sdk::pubkey::new_rand(),
+                &safecoin_sdk::pubkey::new_rand(),
                 100_000,
             ),
         ],
@@ -6196,7 +6196,7 @@ fn test_nonce_fee_calculator_updates_tx_wide_cap() {
             system_instruction::advance_nonce_account(&nonce_pubkey, &nonce_pubkey),
             system_instruction::transfer(
                 &custodian_pubkey,
-                &solana_sdk::pubkey::new_rand(),
+                &safecoin_sdk::pubkey::new_rand(),
                 100_000,
             ),
         ],
@@ -6289,8 +6289,8 @@ fn test_collect_balances() {
     let bank0 = Arc::new(new_from_parent(&parent));
 
     let keypair = Keypair::new();
-    let pubkey0 = solana_sdk::pubkey::new_rand();
-    let pubkey1 = solana_sdk::pubkey::new_rand();
+    let pubkey0 = safecoin_sdk::pubkey::new_rand();
+    let pubkey1 = safecoin_sdk::pubkey::new_rand();
     let program_id = Pubkey::from([2; 32]);
     let keypair_account = AccountSharedData::new(8, 0, &program_id);
     let account0 = AccountSharedData::new(11, 0, &program_id);
@@ -6340,9 +6340,9 @@ fn test_pre_post_transaction_balances() {
 
     let keypair0 = Keypair::new();
     let keypair1 = Keypair::new();
-    let pubkey0 = solana_sdk::pubkey::new_rand();
-    let pubkey1 = solana_sdk::pubkey::new_rand();
-    let pubkey2 = solana_sdk::pubkey::new_rand();
+    let pubkey0 = safecoin_sdk::pubkey::new_rand();
+    let pubkey1 = safecoin_sdk::pubkey::new_rand();
+    let pubkey2 = safecoin_sdk::pubkey::new_rand();
     let keypair0_account = AccountSharedData::new(908_000, 0, &Pubkey::default());
     let keypair1_account = AccountSharedData::new(909_000, 0, &Pubkey::default());
     let account0 = AccountSharedData::new(911_000, 0, &Pubkey::default());
@@ -6448,8 +6448,8 @@ fn test_transaction_with_duplicate_accounts_in_instruction() {
     let mock_program_id = Pubkey::from([2u8; 32]);
     bank.add_builtin("mock_program", &mock_program_id, mock_process_instruction);
 
-    let from_pubkey = solana_sdk::pubkey::new_rand();
-    let to_pubkey = solana_sdk::pubkey::new_rand();
+    let from_pubkey = safecoin_sdk::pubkey::new_rand();
+    let to_pubkey = safecoin_sdk::pubkey::new_rand();
     let dup_pubkey = from_pubkey;
     let from_account = AccountSharedData::new(sol_to_lamports(100.), 1, &mock_program_id);
     let to_account = AccountSharedData::new(0, 1, &mock_program_id);
@@ -6492,8 +6492,8 @@ fn test_transaction_with_program_ids_passed_to_programs() {
     let mock_program_id = Pubkey::from([2u8; 32]);
     bank.add_builtin("mock_program", &mock_program_id, mock_process_instruction);
 
-    let from_pubkey = solana_sdk::pubkey::new_rand();
-    let to_pubkey = solana_sdk::pubkey::new_rand();
+    let from_pubkey = safecoin_sdk::pubkey::new_rand();
+    let to_pubkey = safecoin_sdk::pubkey::new_rand();
     let dup_pubkey = from_pubkey;
     let from_account = AccountSharedData::new(100, 1, &mock_program_id);
     let to_account = AccountSharedData::new(0, 1, &mock_program_id);
@@ -6524,8 +6524,8 @@ fn test_account_ids_after_program_ids() {
     let (genesis_config, mint_keypair) = create_genesis_config(500);
     let mut bank = Bank::new_for_tests(&genesis_config);
 
-    let from_pubkey = solana_sdk::pubkey::new_rand();
-    let to_pubkey = solana_sdk::pubkey::new_rand();
+    let from_pubkey = safecoin_sdk::pubkey::new_rand();
+    let to_pubkey = safecoin_sdk::pubkey::new_rand();
 
     let account_metas = vec![
         AccountMeta::new(from_pubkey, false),
@@ -6540,7 +6540,7 @@ fn test_account_ids_after_program_ids() {
         bank.last_blockhash(),
     );
 
-    tx.message.account_keys.push(solana_sdk::pubkey::new_rand());
+    tx.message.account_keys.push(safecoin_sdk::pubkey::new_rand());
 
     bank.add_builtin(
         "mock_vote",
@@ -6588,8 +6588,8 @@ fn test_duplicate_account_key() {
     let (genesis_config, mint_keypair) = create_genesis_config(500);
     let mut bank = Bank::new_for_tests(&genesis_config);
 
-    let from_pubkey = solana_sdk::pubkey::new_rand();
-    let to_pubkey = solana_sdk::pubkey::new_rand();
+    let from_pubkey = safecoin_sdk::pubkey::new_rand();
+    let to_pubkey = safecoin_sdk::pubkey::new_rand();
 
     let account_metas = vec![
         AccountMeta::new(from_pubkey, false),
@@ -6621,8 +6621,8 @@ fn test_process_transaction_with_too_many_account_locks() {
     let (genesis_config, mint_keypair) = create_genesis_config(500);
     let mut bank = Bank::new_for_tests(&genesis_config);
 
-    let from_pubkey = solana_sdk::pubkey::new_rand();
-    let to_pubkey = solana_sdk::pubkey::new_rand();
+    let from_pubkey = safecoin_sdk::pubkey::new_rand();
+    let to_pubkey = safecoin_sdk::pubkey::new_rand();
 
     let account_metas = vec![
         AccountMeta::new(from_pubkey, false),
@@ -6645,7 +6645,7 @@ fn test_process_transaction_with_too_many_account_locks() {
 
     let transaction_account_lock_limit = bank.get_transaction_account_lock_limit();
     while tx.message.account_keys.len() <= transaction_account_lock_limit {
-        tx.message.account_keys.push(solana_sdk::pubkey::new_rand());
+        tx.message.account_keys.push(safecoin_sdk::pubkey::new_rand());
     }
 
     let result = bank.process_transaction(&tx);
@@ -6658,8 +6658,8 @@ fn test_program_id_as_payer() {
     let (genesis_config, mint_keypair) = create_genesis_config(500);
     let mut bank = Bank::new_for_tests(&genesis_config);
 
-    let from_pubkey = solana_sdk::pubkey::new_rand();
-    let to_pubkey = solana_sdk::pubkey::new_rand();
+    let from_pubkey = safecoin_sdk::pubkey::new_rand();
+    let to_pubkey = safecoin_sdk::pubkey::new_rand();
 
     let account_metas = vec![
         AccountMeta::new(from_pubkey, false),
@@ -6713,8 +6713,8 @@ fn test_ref_account_key_after_program_id() {
     let (genesis_config, mint_keypair) = create_genesis_config(500);
     let mut bank = Bank::new_for_tests(&genesis_config);
 
-    let from_pubkey = solana_sdk::pubkey::new_rand();
-    let to_pubkey = solana_sdk::pubkey::new_rand();
+    let from_pubkey = safecoin_sdk::pubkey::new_rand();
+    let to_pubkey = safecoin_sdk::pubkey::new_rand();
 
     let account_metas = vec![
         AccountMeta::new(from_pubkey, false),
@@ -6735,7 +6735,7 @@ fn test_ref_account_key_after_program_id() {
         bank.last_blockhash(),
     );
 
-    tx.message.account_keys.push(solana_sdk::pubkey::new_rand());
+    tx.message.account_keys.push(safecoin_sdk::pubkey::new_rand());
     assert_eq!(tx.message.account_keys.len(), 5);
     tx.message.instructions[0].accounts.remove(0);
     tx.message.instructions[0].accounts.push(4);
@@ -6754,7 +6754,7 @@ fn test_fuzz_instructions() {
     let program_keys: Vec<_> = (0..max_programs)
         .enumerate()
         .map(|i| {
-            let key = solana_sdk::pubkey::new_rand();
+            let key = safecoin_sdk::pubkey::new_rand();
             let name = format!("program{i:?}");
             bank.add_builtin(&name, &key, mock_ok_vote_processor);
             (key, name.as_bytes().to_vec())
@@ -6764,7 +6764,7 @@ fn test_fuzz_instructions() {
     let keys: Vec<_> = (0..max_keys)
         .enumerate()
         .map(|_| {
-            let key = solana_sdk::pubkey::new_rand();
+            let key = safecoin_sdk::pubkey::new_rand();
             let balance = if thread_rng().gen_ratio(9, 10) {
                 let lamports = if thread_rng().gen_ratio(1, 5) {
                     thread_rng().gen_range(0, 10)
@@ -6964,11 +6964,11 @@ fn test_same_program_id_uses_unqiue_executable_accounts() {
     let mut bank = Bank::new_for_tests(&genesis_config);
 
     // Add a new program
-    let program1_pubkey = solana_sdk::pubkey::new_rand();
+    let program1_pubkey = safecoin_sdk::pubkey::new_rand();
     bank.add_builtin("program", &program1_pubkey, nested_processor);
 
     // Add a new program owned by the first
-    let program2_pubkey = solana_sdk::pubkey::new_rand();
+    let program2_pubkey = safecoin_sdk::pubkey::new_rand();
     let mut program2_account = AccountSharedData::new(42, 1, &program1_pubkey);
     program2_account.set_executable(true);
     bank.store_account(&program2_pubkey, &program2_account);
@@ -7099,9 +7099,9 @@ fn test_shrink_candidate_slots_cached() {
     solana_logger::setup();
 
     let (genesis_config, _mint_keypair) = create_genesis_config(1_000_000_000);
-    let pubkey0 = solana_sdk::pubkey::new_rand();
-    let pubkey1 = solana_sdk::pubkey::new_rand();
-    let pubkey2 = solana_sdk::pubkey::new_rand();
+    let pubkey0 = safecoin_sdk::pubkey::new_rand();
+    let pubkey1 = safecoin_sdk::pubkey::new_rand();
+    let pubkey2 = safecoin_sdk::pubkey::new_rand();
 
     // Set root for bank 0, with caching enabled
     let mut bank0 = Arc::new(Bank::new_with_config_for_tests(
@@ -7179,7 +7179,7 @@ fn test_add_builtin_no_overwrite() {
     }
 
     let slot = 123;
-    let program_id = solana_sdk::pubkey::new_rand();
+    let program_id = safecoin_sdk::pubkey::new_rand();
 
     let mut bank = Arc::new(Bank::new_from_parent(
         &create_simple_test_arc_bank(100_000),
@@ -7211,7 +7211,7 @@ fn test_add_builtin_loader_no_overwrite() {
     }
 
     let slot = 123;
-    let loader_id = solana_sdk::pubkey::new_rand();
+    let loader_id = safecoin_sdk::pubkey::new_rand();
 
     let mut bank = Arc::new(Bank::new_from_parent(
         &create_simple_test_arc_bank(100_000),
@@ -7239,7 +7239,7 @@ fn test_add_builtin_account() {
         activate_all_features(&mut genesis_config);
 
         let slot = 123;
-        let program_id = solana_sdk::pubkey::new_rand();
+        let program_id = safecoin_sdk::pubkey::new_rand();
 
         let bank = Arc::new(Bank::new_from_parent(
             &Arc::new(Bank::new_for_tests(&genesis_config)),
@@ -7334,7 +7334,7 @@ fn test_add_builtin_account_inherited_cap_while_replacing() {
     for pass in 0..4 {
         let (genesis_config, mint_keypair) = create_genesis_config(100_000);
         let bank = Bank::new_for_tests(&genesis_config);
-        let program_id = solana_sdk::pubkey::new_rand();
+        let program_id = safecoin_sdk::pubkey::new_rand();
 
         bank.add_builtin_account("mock_program", &program_id, false);
         if pass == 0 {
@@ -7368,7 +7368,7 @@ fn test_add_builtin_account_squatted_while_not_replacing() {
     for pass in 0..3 {
         let (genesis_config, mint_keypair) = create_genesis_config(100_000);
         let bank = Bank::new_for_tests(&genesis_config);
-        let program_id = solana_sdk::pubkey::new_rand();
+        let program_id = safecoin_sdk::pubkey::new_rand();
 
         // someone managed to squat at program_id!
         bank.withdraw(&mint_keypair.pubkey(), 10).unwrap();
@@ -7393,12 +7393,12 @@ fn test_add_builtin_account_squatted_while_not_replacing() {
 #[test]
 #[should_panic(
     expected = "Can't change frozen bank by adding not-existing new builtin \
-               program (mock_program, CiXgo2KHKSDmDnV1F6B69eWFgNAPiSBjjYvfB4cvRNre). \
+               program (mock_program, EJ7BZ5wk1brwAGwnVmsGauQCRS4btvabkrdn1MpDrUHK). \
                Maybe, inconsistent program activation is detected on snapshot restore?"
 )]
 fn test_add_builtin_account_after_frozen() {
     let slot = 123;
-    let program_id = Pubkey::from_str("CiXgo2KHKSDmDnV1F6B69eWFgNAPiSBjjYvfB4cvRNre").unwrap();
+    let program_id = Pubkey::from_str("EJ7BZ5wk1brwAGwnVmsGauQCRS4btvabkrdn1MpDrUHK").unwrap();
 
     let bank = Bank::new_from_parent(
         &create_simple_test_arc_bank(100_000),
@@ -7413,11 +7413,11 @@ fn test_add_builtin_account_after_frozen() {
 #[test]
 #[should_panic(
     expected = "There is no account to replace with builtin program (mock_program, \
-                CiXgo2KHKSDmDnV1F6B69eWFgNAPiSBjjYvfB4cvRNre)."
+                EJ7BZ5wk1brwAGwnVmsGauQCRS4btvabkrdn1MpDrUHK)."
 )]
 fn test_add_builtin_account_replace_none() {
     let slot = 123;
-    let program_id = Pubkey::from_str("CiXgo2KHKSDmDnV1F6B69eWFgNAPiSBjjYvfB4cvRNre").unwrap();
+    let program_id = Pubkey::from_str("EJ7BZ5wk1brwAGwnVmsGauQCRS4btvabkrdn1MpDrUHK").unwrap();
 
     let bank = Bank::new_from_parent(
         &create_simple_test_arc_bank(100_000),
@@ -7435,7 +7435,7 @@ fn test_add_precompiled_account() {
         activate_all_features(&mut genesis_config);
 
         let slot = 123;
-        let program_id = solana_sdk::pubkey::new_rand();
+        let program_id = safecoin_sdk::pubkey::new_rand();
 
         let bank = Arc::new(Bank::new_from_parent(
             &Arc::new(Bank::new_for_tests_with_config(
@@ -7484,7 +7484,7 @@ fn test_add_precompiled_account_inherited_cap_while_replacing() {
     for pass in 0..4 {
         let (genesis_config, mint_keypair) = create_genesis_config(100_000);
         let bank = Bank::new_for_tests_with_config(&genesis_config, BankTestConfig::default());
-        let program_id = solana_sdk::pubkey::new_rand();
+        let program_id = safecoin_sdk::pubkey::new_rand();
 
         bank.add_precompiled_account(&program_id);
         if pass == 0 {
@@ -7518,7 +7518,7 @@ fn test_add_precompiled_account_squatted_while_not_replacing() {
     for pass in 0..3 {
         let (genesis_config, mint_keypair) = create_genesis_config(100_000);
         let bank = Bank::new_for_tests_with_config(&genesis_config, BankTestConfig::default());
-        let program_id = solana_sdk::pubkey::new_rand();
+        let program_id = safecoin_sdk::pubkey::new_rand();
 
         // someone managed to squat at program_id!
         bank.withdraw(&mint_keypair.pubkey(), 10).unwrap();
@@ -7545,12 +7545,12 @@ fn test_add_precompiled_account_squatted_while_not_replacing() {
 #[test]
 #[should_panic(
     expected = "Can't change frozen bank by adding not-existing new precompiled \
-               program (CiXgo2KHKSDmDnV1F6B69eWFgNAPiSBjjYvfB4cvRNre). \
+               program (EJ7BZ5wk1brwAGwnVmsGauQCRS4btvabkrdn1MpDrUHK). \
                Maybe, inconsistent program activation is detected on snapshot restore?"
 )]
 fn test_add_precompiled_account_after_frozen() {
     let slot = 123;
-    let program_id = Pubkey::from_str("CiXgo2KHKSDmDnV1F6B69eWFgNAPiSBjjYvfB4cvRNre").unwrap();
+    let program_id = Pubkey::from_str("EJ7BZ5wk1brwAGwnVmsGauQCRS4btvabkrdn1MpDrUHK").unwrap();
 
     let bank = Bank::new_from_parent(
         &create_simple_test_arc_bank(100_000),
@@ -7567,21 +7567,21 @@ fn test_reconfigure_token2_native_mint() {
     solana_logger::setup();
 
     let mut genesis_config =
-        create_genesis_config_with_leader(5, &solana_sdk::pubkey::new_rand(), 0).genesis_config;
+        create_genesis_config_with_leader(5, &safecoin_sdk::pubkey::new_rand(), 0).genesis_config;
 
     // ClusterType::Development - Native mint exists immediately
     assert_eq!(genesis_config.cluster_type, ClusterType::Development);
     let bank = Arc::new(Bank::new_for_tests(&genesis_config));
     assert_eq!(
-        bank.get_balance(&inline_spl_token::native_mint::id()),
+        bank.get_balance(&inline_safe_token::native_mint::id()),
         1000000000
     );
 
     // Testnet - Native mint blinks into existence at epoch 93
     genesis_config.cluster_type = ClusterType::Testnet;
     let bank = Arc::new(Bank::new_for_tests(&genesis_config));
-    assert_eq!(bank.get_balance(&inline_spl_token::native_mint::id()), 0);
-    bank.deposit(&inline_spl_token::native_mint::id(), 4200000000)
+    assert_eq!(bank.get_balance(&inline_safe_token::native_mint::id()), 0);
+    bank.deposit(&inline_safe_token::native_mint::id(), 4200000000)
         .unwrap();
 
     let bank = Bank::new_from_parent(
@@ -7591,20 +7591,20 @@ fn test_reconfigure_token2_native_mint() {
     );
 
     let native_mint_account = bank
-        .get_account(&inline_spl_token::native_mint::id())
+        .get_account(&inline_safe_token::native_mint::id())
         .unwrap();
     assert_eq!(native_mint_account.data().len(), 82);
     assert_eq!(
-        bank.get_balance(&inline_spl_token::native_mint::id()),
+        bank.get_balance(&inline_safe_token::native_mint::id()),
         4200000000
     );
-    assert_eq!(native_mint_account.owner(), &inline_spl_token::id());
+    assert_eq!(native_mint_account.owner(), &inline_safe_token::id());
 
     // MainnetBeta - Native mint blinks into existence at epoch 75
     genesis_config.cluster_type = ClusterType::MainnetBeta;
     let bank = Arc::new(Bank::new_for_tests(&genesis_config));
-    assert_eq!(bank.get_balance(&inline_spl_token::native_mint::id()), 0);
-    bank.deposit(&inline_spl_token::native_mint::id(), 4200000000)
+    assert_eq!(bank.get_balance(&inline_safe_token::native_mint::id()), 0);
+    bank.deposit(&inline_safe_token::native_mint::id(), 4200000000)
         .unwrap();
 
     let bank = Bank::new_from_parent(
@@ -7614,14 +7614,14 @@ fn test_reconfigure_token2_native_mint() {
     );
 
     let native_mint_account = bank
-        .get_account(&inline_spl_token::native_mint::id())
+        .get_account(&inline_safe_token::native_mint::id())
         .unwrap();
     assert_eq!(native_mint_account.data().len(), 82);
     assert_eq!(
-        bank.get_balance(&inline_spl_token::native_mint::id()),
+        bank.get_balance(&inline_safe_token::native_mint::id()),
         4200000000
     );
-    assert_eq!(native_mint_account.owner(), &inline_spl_token::id());
+    assert_eq!(native_mint_account.owner(), &inline_safe_token::id());
 }
 
 #[derive(Debug)]
@@ -7642,11 +7642,11 @@ fn test_bank_executor_cache() {
     let (genesis_config, _) = create_genesis_config(1);
     let bank = Bank::new_for_tests(&genesis_config);
 
-    let key1 = solana_sdk::pubkey::new_rand();
-    let key2 = solana_sdk::pubkey::new_rand();
-    let key3 = solana_sdk::pubkey::new_rand();
-    let key4 = solana_sdk::pubkey::new_rand();
-    let key5 = solana_sdk::pubkey::new_rand();
+    let key1 = safecoin_sdk::pubkey::new_rand();
+    let key2 = safecoin_sdk::pubkey::new_rand();
+    let key3 = safecoin_sdk::pubkey::new_rand();
+    let key4 = safecoin_sdk::pubkey::new_rand();
+    let key5 = safecoin_sdk::pubkey::new_rand();
     let executor: Arc<dyn Executor> = Arc::new(TestExecutor {});
 
     fn new_executable_account(owner: Pubkey) -> AccountSharedData {
@@ -7699,7 +7699,7 @@ fn test_bank_executor_cache() {
     assert!(stored_executors.borrow().executors.contains_key(&key3));
 
     // Check inheritance
-    let bank = Bank::new_from_parent(&Arc::new(bank), &solana_sdk::pubkey::new_rand(), 1);
+    let bank = Bank::new_from_parent(&Arc::new(bank), &safecoin_sdk::pubkey::new_rand(), 1);
     let stored_executors = bank.get_tx_executor_cache(accounts);
     assert_eq!(stored_executors.borrow().executors.len(), 3);
     assert!(stored_executors.borrow().executors.contains_key(&key1));
@@ -7710,7 +7710,7 @@ fn test_bank_executor_cache() {
     let mut file = File::open("../programs/bpf_loader/test_elfs/out/noop_aligned.so").unwrap();
     let mut elf = Vec::new();
     file.read_to_end(&mut elf).unwrap();
-    let programdata_key = solana_sdk::pubkey::new_rand();
+    let programdata_key = safecoin_sdk::pubkey::new_rand();
     let mut program_account = AccountSharedData::new_data(
         40,
         &UpgradeableLoaderState::Program {
@@ -7755,8 +7755,8 @@ fn test_bank_executor_cow() {
     let (genesis_config, _) = create_genesis_config(1);
     let root = Arc::new(Bank::new_for_tests(&genesis_config));
 
-    let key1 = solana_sdk::pubkey::new_rand();
-    let key2 = solana_sdk::pubkey::new_rand();
+    let key1 = safecoin_sdk::pubkey::new_rand();
+    let key2 = safecoin_sdk::pubkey::new_rand();
     let executor: Arc<dyn Executor> = Arc::new(TestExecutor {});
     let executable_account = AccountSharedData::from(Account {
         owner: bpf_loader_upgradeable::id(),
@@ -7874,7 +7874,7 @@ fn test_bpf_loader_upgradeable_deploy_with_max_len() {
     );
 
     // Test successful deploy
-    let payer_base_balance = LAMPORTS_PER_SOL;
+    let payer_base_balance = LAMPORTS_PER_SAFE;
     let deploy_fees = {
         let fee_calculator = genesis_config.fee_rate_governor.create_fee_calculator();
         3 * fee_calculator.lamports_per_signature
@@ -8650,7 +8650,7 @@ fn test_adjust_sysvar_balance_for_rent() {
 
 #[test]
 fn test_update_clock_timestamp() {
-    let leader_pubkey = solana_sdk::pubkey::new_rand();
+    let leader_pubkey = safecoin_sdk::pubkey::new_rand();
     let GenesisConfigInfo {
         genesis_config,
         voting_keypair,
@@ -8749,7 +8749,7 @@ fn test_timestamp_slow() {
             + (poh_estimate_offset * max_allowable_drift / 100).as_secs()) as i64
     }
 
-    let leader_pubkey = solana_sdk::pubkey::new_rand();
+    let leader_pubkey = safecoin_sdk::pubkey::new_rand();
     let GenesisConfigInfo {
         mut genesis_config,
         voting_keypair,
@@ -8793,7 +8793,7 @@ fn test_timestamp_fast() {
             - (poh_estimate_offset * max_allowable_drift / 100).as_secs()) as i64
     }
 
-    let leader_pubkey = solana_sdk::pubkey::new_rand();
+    let leader_pubkey = safecoin_sdk::pubkey::new_rand();
     let GenesisConfigInfo {
         mut genesis_config,
         voting_keypair,
@@ -8884,7 +8884,7 @@ fn test_store_scan_consistency<F: 'static>(
     solana_logger::setup();
     // Set up initial bank
     let mut genesis_config =
-        create_genesis_config_with_leader(10, &solana_sdk::pubkey::new_rand(), 374_999_998_287_840)
+        create_genesis_config_with_leader(10, &safecoin_sdk::pubkey::new_rand(), 374_999_998_287_840)
             .genesis_config;
     genesis_config.rent = Rent::free();
     let bank0 = Arc::new(Bank::new_with_config_for_tests(
@@ -8897,7 +8897,7 @@ fn test_store_scan_consistency<F: 'static>(
     // Set up pubkeys to write to
     let total_pubkeys = ITER_BATCH_SIZE * 10;
     let total_pubkeys_to_modify = 10;
-    let all_pubkeys: Vec<Pubkey> = std::iter::repeat_with(solana_sdk::pubkey::new_rand)
+    let all_pubkeys: Vec<Pubkey> = std::iter::repeat_with(safecoin_sdk::pubkey::new_rand)
         .take(total_pubkeys)
         .collect();
     let program_id = system_program::id();
@@ -9064,7 +9064,7 @@ fn test_store_scan_consistency_unrooted() {
                 {
                     current_minor_fork_bank = Arc::new(Bank::new_from_parent(
                         &current_minor_fork_bank,
-                        &solana_sdk::pubkey::new_rand(),
+                        &safecoin_sdk::pubkey::new_rand(),
                         current_minor_fork_bank.slot() + 2,
                     ));
                     let account = AccountSharedData::new(lamports, 0, &program_id);
@@ -9089,7 +9089,7 @@ fn test_store_scan_consistency_unrooted() {
                 // *partial* clean of the banks < `next_major_bank`.
                 current_major_fork_bank = Arc::new(Bank::new_from_parent(
                     &current_major_fork_bank,
-                    &solana_sdk::pubkey::new_rand(),
+                    &safecoin_sdk::pubkey::new_rand(),
                     current_minor_fork_bank.slot() - 1,
                 ));
                 let lamports = current_major_fork_bank.slot() + starting_lamports + 1;
@@ -9170,7 +9170,7 @@ fn test_store_scan_consistency_root() {
                 prev_bank = current_bank.clone();
                 current_bank = Arc::new(Bank::new_from_parent(
                     &current_bank,
-                    &solana_sdk::pubkey::new_rand(),
+                    &safecoin_sdk::pubkey::new_rand(),
                     current_bank.slot() + 1,
                 ));
             }
@@ -9211,7 +9211,7 @@ fn setup_banks_on_fork_to_remove(
         for i in 0..step_size {
             bank_at_fork_tip = Arc::new(Bank::new_from_parent(
                 &bank_at_fork_tip,
-                &solana_sdk::pubkey::new_rand(),
+                &safecoin_sdk::pubkey::new_rand(),
                 bank_at_fork_tip.slot() + 1,
             ));
             if lamports_this_round == 0 {
@@ -9407,7 +9407,7 @@ fn test_remove_unrooted_scan_interleaved_with_remove_unrooted_slots() {
 fn test_get_inflation_start_slot_devnet_testnet() {
     let GenesisConfigInfo {
         mut genesis_config, ..
-    } = create_genesis_config_with_leader(42, &solana_sdk::pubkey::new_rand(), 42);
+    } = create_genesis_config_with_leader(42, &safecoin_sdk::pubkey::new_rand(), 42);
     genesis_config
         .accounts
         .remove(&feature_set::pico_inflation::id())
@@ -9488,7 +9488,7 @@ fn test_get_inflation_start_slot_devnet_testnet() {
 fn test_get_inflation_start_slot_mainnet() {
     let GenesisConfigInfo {
         mut genesis_config, ..
-    } = create_genesis_config_with_leader(42, &solana_sdk::pubkey::new_rand(), 42);
+    } = create_genesis_config_with_leader(42, &safecoin_sdk::pubkey::new_rand(), 42);
     genesis_config
         .accounts
         .remove(&feature_set::pico_inflation::id())
@@ -9573,7 +9573,7 @@ fn test_get_inflation_start_slot_mainnet() {
 fn test_get_inflation_num_slots_with_activations() {
     let GenesisConfigInfo {
         mut genesis_config, ..
-    } = create_genesis_config_with_leader(42, &solana_sdk::pubkey::new_rand(), 42);
+    } = create_genesis_config_with_leader(42, &safecoin_sdk::pubkey::new_rand(), 42);
     let slots_per_epoch = 32;
     genesis_config.epoch_schedule = EpochSchedule::new(slots_per_epoch);
     genesis_config
@@ -9637,7 +9637,7 @@ fn test_get_inflation_num_slots_with_activations() {
 fn test_get_inflation_num_slots_already_activated() {
     let GenesisConfigInfo {
         mut genesis_config, ..
-    } = create_genesis_config_with_leader(42, &solana_sdk::pubkey::new_rand(), 42);
+    } = create_genesis_config_with_leader(42, &safecoin_sdk::pubkey::new_rand(), 42);
     let slots_per_epoch = 32;
     genesis_config.epoch_schedule = EpochSchedule::new(slots_per_epoch);
     let mut bank = Bank::new_for_tests(&genesis_config);
@@ -9663,7 +9663,7 @@ fn test_stake_vote_account_validity() {
     );
     // TODO: stakes cache should be hardened for the case when the account
     // owner is changed from vote/stake program to something else. see:
-    // https://github.com/solana-labs/solana/pull/24200#discussion_r849935444
+    // https://github.com/fair-exchange/safecoin/pull/24200#discussion_r849935444
     check_stake_vote_account_validity(
         false, // check owner change
         |bank: &Bank| bank.load_vote_and_stake_accounts(&thread_pool, null_tracer()),
@@ -9680,7 +9680,7 @@ where
     let GenesisConfigInfo { genesis_config, .. } = create_genesis_config_with_vote_accounts(
         1_000_000_000,
         &validator_keypairs,
-        vec![LAMPORTS_PER_SOL; 2],
+        vec![LAMPORTS_PER_SAFE; 2],
     );
     let bank = Arc::new(Bank::new_with_paths(
         &genesis_config,
@@ -9991,7 +9991,7 @@ fn test_tx_return_data() {
 #[test]
 fn test_get_largest_accounts() {
     let GenesisConfigInfo { genesis_config, .. } =
-        create_genesis_config_with_leader(42, &solana_sdk::pubkey::new_rand(), 42);
+        create_genesis_config_with_leader(42, &safecoin_sdk::pubkey::new_rand(), 42);
     let bank = Bank::new_for_tests(&genesis_config);
 
     let pubkeys: Vec<_> = (0..5).map(|_| Pubkey::new_unique()).collect();
@@ -10009,7 +10009,7 @@ fn test_get_largest_accounts() {
         ])
         .collect();
 
-    // Initialize accounts; all have larger SOL balances than current Bank built-ins
+    // Initialize accounts; all have larger SAFE balances than current Bank built-ins
     let account0 = AccountSharedData::new(pubkeys_balances[0].1, 0, &Pubkey::default());
     bank.store_account(&pubkeys_balances[0].0, &account0);
     let account1 = AccountSharedData::new(pubkeys_balances[1].1, 0, &Pubkey::default());
@@ -10126,7 +10126,7 @@ fn test_transfer_sysvar() {
         Ok(())
     }
 
-    let program_id = solana_sdk::pubkey::new_rand();
+    let program_id = safecoin_sdk::pubkey::new_rand();
     bank.add_builtin("mock_program1", &program_id, mock_ix_processor);
 
     let blockhash = bank.last_blockhash();
@@ -10341,7 +10341,7 @@ fn test_compute_budget_program_noop() {
         );
         Ok(())
     }
-    let program_id = solana_sdk::pubkey::new_rand();
+    let program_id = safecoin_sdk::pubkey::new_rand();
     bank.add_builtin("mock_program", &program_id, mock_ix_processor);
 
     let message = Message::new(
@@ -10385,7 +10385,7 @@ fn test_compute_request_instruction() {
         );
         Ok(())
     }
-    let program_id = solana_sdk::pubkey::new_rand();
+    let program_id = safecoin_sdk::pubkey::new_rand();
     bank.add_builtin("mock_program", &program_id, mock_ix_processor);
 
     let message = Message::new(
@@ -10436,7 +10436,7 @@ fn test_failed_compute_request_instruction() {
         );
         Ok(())
     }
-    let program_id = solana_sdk::pubkey::new_rand();
+    let program_id = safecoin_sdk::pubkey::new_rand();
     bank.add_builtin("mock_program", &program_id, mock_ix_processor);
 
     // This message will not be executed because the compute budget request is invalid
@@ -10478,7 +10478,7 @@ fn test_failed_compute_request_instruction() {
 fn test_verify_and_hash_transaction_sig_len() {
     let GenesisConfigInfo {
         mut genesis_config, ..
-    } = create_genesis_config_with_leader(42, &solana_sdk::pubkey::new_rand(), 42);
+    } = create_genesis_config_with_leader(42, &safecoin_sdk::pubkey::new_rand(), 42);
 
     // activate all features but verify_tx_signatures_len
     activate_all_features(&mut genesis_config);
@@ -10541,7 +10541,7 @@ fn test_verify_and_hash_transaction_sig_len() {
 #[test]
 fn test_verify_transactions_packet_data_size() {
     let GenesisConfigInfo { genesis_config, .. } =
-        create_genesis_config_with_leader(42, &solana_sdk::pubkey::new_rand(), 42);
+        create_genesis_config_with_leader(42, &safecoin_sdk::pubkey::new_rand(), 42);
     let bank = Bank::new_for_tests(&genesis_config);
 
     let mut rng = rand::thread_rng();
@@ -10601,7 +10601,7 @@ fn test_call_precomiled_program() {
     let secp_privkey = libsecp256k1::SecretKey::random(&mut rand::thread_rng());
     let message_arr = b"hello";
     let instruction =
-        solana_sdk::secp256k1_instruction::new_secp256k1_instruction(&secp_privkey, message_arr);
+        safecoin_sdk::secp256k1_instruction::new_secp256k1_instruction(&secp_privkey, message_arr);
     let tx = Transaction::new_signed_with_payer(
         &[instruction],
         Some(&mint_keypair.pubkey()),
@@ -10616,7 +10616,7 @@ fn test_call_precomiled_program() {
     let privkey = ed25519_dalek::Keypair::generate(&mut rand::thread_rng());
     let message_arr = b"hello";
     let instruction =
-        solana_sdk::ed25519_instruction::new_ed25519_instruction(&privkey, message_arr);
+        safecoin_sdk::ed25519_instruction::new_ed25519_instruction(&privkey, message_arr);
     let tx = Transaction::new_signed_with_payer(
         &[instruction],
         Some(&mint_keypair.pubkey()),
@@ -10803,7 +10803,7 @@ fn test_calculate_fee_secp256k1() {
 #[test]
 fn test_an_empty_instruction_without_program() {
     let (genesis_config, mint_keypair) = create_genesis_config(1);
-    let destination = solana_sdk::pubkey::new_rand();
+    let destination = safecoin_sdk::pubkey::new_rand();
     let mut ix = system_instruction::transfer(&mint_keypair.pubkey(), &destination, 0);
     ix.program_id = native_loader::id(); // Empty executable account chain
     let message = Message::new(&[ix], Some(&mint_keypair.pubkey()));
@@ -10846,7 +10846,7 @@ fn test_accounts_data_size_with_good_transaction() {
             .rent
             .minimum_balance(ACCOUNT_SIZE.try_into().unwrap()),
         ACCOUNT_SIZE,
-        &solana_sdk::system_program::id(),
+        &safecoin_sdk::system_program::id(),
     );
 
     let accounts_data_size_before = bank.load_accounts_data_size();
@@ -10882,9 +10882,9 @@ fn test_accounts_data_size_with_bad_transaction() {
         &Keypair::new(),
         &Keypair::new(),
         bank.last_blockhash(),
-        LAMPORTS_PER_SOL,
+        LAMPORTS_PER_SAFE,
         ACCOUNT_SIZE,
-        &solana_sdk::system_program::id(),
+        &safecoin_sdk::system_program::id(),
     );
 
     let accounts_data_size_before = bank.load_accounts_data_size();
@@ -11226,7 +11226,7 @@ fn test_rent_state_changes_sysvars() {
     } = create_genesis_config_with_leader(sol_to_lamports(100.), &Pubkey::new_unique(), 42);
     genesis_config.rent = Rent::default();
 
-    let validator_pubkey = solana_sdk::pubkey::new_rand();
+    let validator_pubkey = safecoin_sdk::pubkey::new_rand();
     let validator_stake_lamports = sol_to_lamports(1.);
     let validator_staking_keypair = Keypair::new();
     let validator_voting_keypair = Keypair::new();
@@ -11288,8 +11288,8 @@ fn test_invalid_rent_state_changes_fee_payer() {
     } = create_genesis_config_with_leader(sol_to_lamports(100.), &Pubkey::new_unique(), 42);
     genesis_config.rent = Rent::default();
     genesis_config.fee_rate_governor = FeeRateGovernor::new(
-        solana_sdk::fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
-        solana_sdk::fee_calculator::DEFAULT_TARGET_SIGNATURES_PER_SLOT,
+        safecoin_sdk::fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
+        safecoin_sdk::fee_calculator::DEFAULT_TARGET_SIGNATURES_PER_SLOT,
     );
     let rent_exempt_minimum = genesis_config.rent.minimum_balance(0);
 
@@ -11539,7 +11539,7 @@ fn test_rent_state_incinerator() {
     let bank = Bank::new_for_tests(&genesis_config);
 
     for amount in [rent_exempt_minimum - 1, rent_exempt_minimum] {
-        bank.transfer(amount, &mint_keypair, &solana_sdk::incinerator::id())
+        bank.transfer(amount, &mint_keypair, &safecoin_sdk::incinerator::id())
             .unwrap();
     }
 }
@@ -11822,7 +11822,7 @@ fn test_resize_and_rent() {
         &AccountSharedData::new(1_000_000_000, 0, &mock_program_id),
     );
 
-    let rent_paying_pubkey = solana_sdk::pubkey::new_rand();
+    let rent_paying_pubkey = safecoin_sdk::pubkey::new_rand();
     let mut rent_paying_account = AccountSharedData::new(
         rent_exempt_minimum_small - 1,
         account_data_size_small,
@@ -12076,7 +12076,7 @@ fn test_accounts_data_size_and_resize_transactions() {
         genesis_config,
         mint_keypair,
         ..
-    } = genesis_utils::create_genesis_config(100 * LAMPORTS_PER_SOL);
+    } = genesis_utils::create_genesis_config(100 * LAMPORTS_PER_SAFE);
     let mut bank = Bank::new_for_tests(&genesis_config);
     let mock_program_id = Pubkey::new_unique();
     bank.add_builtin(
@@ -12090,7 +12090,7 @@ fn test_accounts_data_size_and_resize_transactions() {
     let funding_keypair = Keypair::new();
     bank.store_account(
         &funding_keypair.pubkey(),
-        &AccountSharedData::new(10 * LAMPORTS_PER_SOL, 0, &mock_program_id),
+        &AccountSharedData::new(10 * LAMPORTS_PER_SAFE, 0, &mock_program_id),
     );
 
     let mut rng = rand::thread_rng();
@@ -12098,7 +12098,7 @@ fn test_accounts_data_size_and_resize_transactions() {
     // Test case: Grow account
     {
         let account_pubkey = Pubkey::new_unique();
-        let account_balance = LAMPORTS_PER_SOL;
+        let account_balance = LAMPORTS_PER_SAFE;
         let account_size = rng.gen_range(
             1,
             MAX_PERMITTED_DATA_LENGTH as usize - MAX_PERMITTED_DATA_INCREASE,
@@ -12129,7 +12129,7 @@ fn test_accounts_data_size_and_resize_transactions() {
     // Test case: Shrink account
     {
         let account_pubkey = Pubkey::new_unique();
-        let account_balance = LAMPORTS_PER_SOL;
+        let account_balance = LAMPORTS_PER_SAFE;
         let account_size =
             rng.gen_range(MAX_PERMITTED_DATA_LENGTH / 2, MAX_PERMITTED_DATA_LENGTH) as usize;
         let account_data = AccountSharedData::new(account_balance, account_size, &mock_program_id);
@@ -12230,7 +12230,7 @@ fn test_accounts_data_size_and_rent_collection() {
     for set_exempt_rent_epoch_max in [false, true] {
         let GenesisConfigInfo {
             mut genesis_config, ..
-        } = genesis_utils::create_genesis_config(100 * LAMPORTS_PER_SOL);
+        } = genesis_utils::create_genesis_config(100 * LAMPORTS_PER_SAFE);
         genesis_config.rent = Rent::default();
         activate_all_features(&mut genesis_config);
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
@@ -12296,9 +12296,9 @@ fn test_accounts_data_size_from_genesis() {
         mint_keypair,
         ..
     } = genesis_utils::create_genesis_config_with_leader(
-        1_000_000 * LAMPORTS_PER_SOL,
+        1_000_000 * LAMPORTS_PER_SAFE,
         &Pubkey::new_unique(),
-        100 * LAMPORTS_PER_SOL,
+        100 * LAMPORTS_PER_SAFE,
     );
     genesis_config.rent = Rent::default();
     genesis_config.ticks_per_slot = 3;
@@ -12325,7 +12325,7 @@ fn test_accounts_data_size_from_genesis() {
             bank.last_blockhash(),
             genesis_config.rent.minimum_balance(data_size),
             data_size as u64,
-            &solana_sdk::system_program::id(),
+            &safecoin_sdk::system_program::id(),
         );
         bank.process_transaction(&transaction).unwrap();
         bank.fill_bank_with_ticks_for_tests();
@@ -12346,7 +12346,7 @@ fn test_cap_accounts_data_allocations_per_transaction() {
         MAX_PERMITTED_ACCOUNTS_DATA_ALLOCATIONS_PER_TRANSACTION as usize
             / MAX_PERMITTED_DATA_LENGTH as usize;
 
-    let (genesis_config, mint_keypair) = create_genesis_config(1_000_000 * LAMPORTS_PER_SOL);
+    let (genesis_config, mint_keypair) = create_genesis_config(1_000_000 * LAMPORTS_PER_SAFE);
     let mut bank = Bank::new_for_tests(&genesis_config);
     bank.activate_feature(&feature_set::enable_early_verification_of_account_modifications::id());
     bank.activate_feature(&feature_set::cap_accounts_data_allocations_per_transaction::id());
@@ -12362,7 +12362,7 @@ fn test_cap_accounts_data_allocations_per_transaction() {
                 .rent
                 .minimum_balance(MAX_PERMITTED_DATA_LENGTH as usize),
             MAX_PERMITTED_DATA_LENGTH,
-            &solana_sdk::system_program::id(),
+            &safecoin_sdk::system_program::id(),
         );
         keypairs.push(keypair);
         instructions.push(instruction);
@@ -12380,7 +12380,7 @@ fn test_cap_accounts_data_allocations_per_transaction() {
         result,
         Err(TransactionError::InstructionError(
             NUM_MAX_SIZE_ALLOCATIONS_PER_TRANSACTION as u8,
-            solana_sdk::instruction::InstructionError::MaxAccountsDataAllocationsExceeded,
+            safecoin_sdk::instruction::InstructionError::MaxAccountsDataAllocationsExceeded,
         )),
     );
 }
@@ -12420,11 +12420,11 @@ fn test_stake_account_consistency_with_rent_epoch_max_feature(
 ) {
     // this test can be removed once set_exempt_rent_epoch_max gets activated
     solana_logger::setup();
-    let (mut genesis_config, _mint_keypair) = create_genesis_config(100 * LAMPORTS_PER_SOL);
+    let (mut genesis_config, _mint_keypair) = create_genesis_config(100 * LAMPORTS_PER_SAFE);
     genesis_config.rent = Rent::default();
     let mut bank = Bank::new_for_tests(&genesis_config);
     let expected_initial_rent_epoch = if rent_epoch_max_enabled_initially {
-        bank.activate_feature(&solana_sdk::feature_set::set_exempt_rent_epoch_max::id());
+        bank.activate_feature(&safecoin_sdk::feature_set::set_exempt_rent_epoch_max::id());
         RENT_EXEMPT_RENT_EPOCH
     } else {
         Epoch::default()
@@ -12434,7 +12434,7 @@ fn test_stake_account_consistency_with_rent_epoch_max_feature(
     let mut pubkey_bytes_early = [0u8; 32];
     pubkey_bytes_early[31] = 2;
     let stake_id1 = Pubkey::from(pubkey_bytes_early);
-    let vote_id = solana_sdk::pubkey::new_rand();
+    let vote_id = safecoin_sdk::pubkey::new_rand();
     let stake_account1 = crate::stakes::tests::create_stake_account(12300000, &vote_id, &stake_id1);
 
     // set up accounts
@@ -12452,7 +12452,7 @@ fn test_stake_account_consistency_with_rent_epoch_max_feature(
     let slots_per_epoch = bank.epoch_schedule().get_slots_in_epoch(0);
     let mut bank = Bank::new_from_parent(&Arc::new(bank), &Pubkey::default(), slot);
     if !rent_epoch_max_enabled_initially {
-        bank.activate_feature(&solana_sdk::feature_set::set_exempt_rent_epoch_max::id());
+        bank.activate_feature(&safecoin_sdk::feature_set::set_exempt_rent_epoch_max::id());
     }
     let bank = Arc::new(bank);
 

@@ -1,6 +1,6 @@
 //! Cross-program invocation.
 //!
-//! Solana programs may call other programs, termed [_cross-program
+//! Safecoin programs may call other programs, termed [_cross-program
 //! invocations_][cpi] (CPI), with the [`invoke`] and [`invoke_signed`]
 //! functions.
 //!
@@ -90,7 +90,7 @@ use crate::{
 /// A simple example of transferring lamports via CPI:
 ///
 /// ```
-/// use solana_program::{
+/// use safecoin_program::{
 ///     account_info::{next_account_info, AccountInfo},
 ///     entrypoint,
 ///     entrypoint::ProgramResult,
@@ -183,7 +183,7 @@ pub fn invoke_unchecked(instruction: &Instruction, account_infos: &[AccountInfo]
 /// A simple example of creating an account for a PDA:
 ///
 /// ```
-/// use solana_program::{
+/// use safecoin_program::{
 ///     account_info::{next_account_info, AccountInfo},
 ///     entrypoint,
 ///     entrypoint::ProgramResult,

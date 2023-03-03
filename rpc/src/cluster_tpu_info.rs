@@ -1,8 +1,8 @@
 use {
-    solana_gossip::cluster_info::ClusterInfo,
-    solana_poh::poh_recorder::PohRecorder,
-    solana_sdk::{clock::NUM_CONSECUTIVE_LEADER_SLOTS, pubkey::Pubkey},
-    solana_send_transaction_service::tpu_info::TpuInfo,
+    safecoin_gossip::cluster_info::ClusterInfo,
+    safecoin_poh::poh_recorder::PohRecorder,
+    safecoin_sdk::{clock::NUM_CONSECUTIVE_LEADER_SLOTS, pubkey::Pubkey},
+    safecoin_send_transaction_service::tpu_info::TpuInfo,
     std::{
         collections::HashMap,
         net::SocketAddr,
@@ -59,7 +59,7 @@ impl TpuInfo for ClusterTpuInfo {
 mod test {
     use {
         super::*,
-        solana_gossip::contact_info::ContactInfo,
+        safecoin_gossip::contact_info::ContactInfo,
         solana_ledger::{
             blockstore::Blockstore, get_tmp_ledger_path, leader_schedule_cache::LeaderScheduleCache,
         },
@@ -69,7 +69,7 @@ mod test {
                 create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
             },
         },
-        solana_sdk::{
+        safecoin_sdk::{
             poh_config::PohConfig,
             signature::{Keypair, Signer},
             timing::timestamp,

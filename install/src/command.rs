@@ -10,8 +10,8 @@ use {
     indicatif::{ProgressBar, ProgressStyle},
     serde::{Deserialize, Serialize},
     solana_config_program::{config_instruction, get_config_data, ConfigState},
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_sdk::{
         hash::{Hash, Hasher},
         message::Message,
         pubkey::Pubkey,
@@ -305,7 +305,7 @@ fn check_env_path_for_bin_dir(config: &Config) {
 
     if !found {
         println!(
-            "\nPlease update your PATH environment variable to include the solana programs:\n    PATH=\"{}:$PATH\"\n",
+            "\nPlease update your PATH environment variable to include the safecoin programs:\n    PATH=\"{}:$PATH\"\n",
             config.active_release_bin_dir().to_str().unwrap()
         );
     }
@@ -541,7 +541,7 @@ pub fn init(
     explicit_release: Option<ExplicitRelease>,
 ) -> Result<(), String> {
     let config = {
-        // Write new config file only if different, so that running |solana-install init|
+        // Write new config file only if different, so that running |safecoin-install init|
         // repeatedly doesn't unnecessarily re-download
         let mut current_config = Config::load(config_file).unwrap_or_default();
         current_config.current_update_manifest = None;
@@ -573,7 +573,7 @@ pub fn init(
 
 fn github_release_download_url(release_semver: &str) -> String {
     format!(
-        "https://github.com/solana-labs/solana/releases/download/v{}/solana-release-{}.tar.bz2",
+        "https://github.com/fair-exchange/safecoin/releases/download/v{}/solana-release-{}.tar.bz2",
         release_semver,
         crate::build_env::TARGET
     )
@@ -611,7 +611,7 @@ pub fn info(config_file: &str, local_info_only: bool, eval: bool) -> Result<(), 
 
     if eval {
         println!(
-            "SOLANA_INSTALL_ACTIVE_RELEASE={}",
+            "SAFECOIN_INSTALL_ACTIVE_RELEASE={}",
             &config.active_release_dir().to_str().unwrap_or("")
         );
         config
@@ -621,7 +621,7 @@ pub fn info(config_file: &str, local_info_only: bool, eval: bool) -> Result<(), 
                 ExplicitRelease::Channel(channel) => channel,
             })
             .and_then(|channel| {
-                println!("SOLANA_INSTALL_ACTIVE_CHANNEL={channel}",);
+                println!("SAFECOIN_INSTALL_ACTIVE_CHANNEL={channel}",);
                 Option::<String>::None
             });
         return Ok(());
@@ -871,7 +871,7 @@ fn check_for_newer_github_release(
     prerelease_allowed: bool,
 ) -> Result<Option<String>, String> {
     let client = reqwest::blocking::Client::builder()
-        .user_agent("solana-install")
+        .user_agent("safecoin-install")
         .build()
         .map_err(|err| err.to_string())?;
 
@@ -906,7 +906,7 @@ fn check_for_newer_github_release(
 
     while page == 1 || releases.len() == PER_PAGE {
         let url = reqwest::Url::parse_with_params(
-            "https://api.github.com/repos/solana-labs/solana/releases",
+            "https://api.github.com/repos/fair-exchange/safecoin/releases",
             &[
                 ("per_page", &format!("{PER_PAGE}")),
                 ("page", &format!("{page}")),

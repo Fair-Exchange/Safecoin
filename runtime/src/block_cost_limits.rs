@@ -2,7 +2,7 @@
 //!
 use {
     lazy_static::lazy_static,
-    solana_sdk::{
+    safecoin_sdk::{
         bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, compute_budget, ed25519_program,
         feature, incinerator, native_loader, pubkey::Pubkey, secp256k1_program, system_program,
     },
@@ -17,8 +17,8 @@ pub const MAX_BLOCK_REPLAY_TIME_US: u64 = 400_000;
 /// number of concurrent processes,
 pub const MAX_CONCURRENCY: u64 = 4;
 
-// Cluster data, method of collecting at https://github.com/solana-labs/solana/issues/19627
-// Dashboard: https://metrics.solana.com:8889/sources/0/dashboards/10?refresh=Paused&lower=now%28%29%20-%2012h
+// Cluster data, method of collecting at https://github.com/fair-exchange/safecoin/issues/19627
+// Dashboard: https://metrics.safecoin.org:8889/sources/0/dashboards/10?refresh=Paused&lower=now%28%29%20-%2012h
 
 /// Cluster averaged compute unit to micro-sec conversion rate
 pub const COMPUTE_UNIT_TO_US_RATIO: u64 = 30;
@@ -35,8 +35,8 @@ lazy_static! {
         (feature::id(), COMPUTE_UNIT_TO_US_RATIO * 2),
         (incinerator::id(), COMPUTE_UNIT_TO_US_RATIO * 2),
         (native_loader::id(), COMPUTE_UNIT_TO_US_RATIO * 2),
-        (solana_sdk::stake::config::id(), COMPUTE_UNIT_TO_US_RATIO * 2),
-        (solana_sdk::stake::program::id(), COMPUTE_UNIT_TO_US_RATIO * 25),
+        (safecoin_sdk::stake::config::id(), COMPUTE_UNIT_TO_US_RATIO * 2),
+        (safecoin_sdk::stake::program::id(), COMPUTE_UNIT_TO_US_RATIO * 25),
         (solana_config_program::id(), COMPUTE_UNIT_TO_US_RATIO * 15),
         (solana_vote_program::id(), COMPUTE_UNIT_TO_US_RATIO * 70),
         (secp256k1_program::id(), COMPUTE_UNIT_TO_US_RATIO * 24),

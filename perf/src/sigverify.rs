@@ -12,8 +12,8 @@ use {
     },
     rayon::{prelude::*, ThreadPool},
     solana_metrics::inc_new_counter_debug,
-    solana_rayon_threadlimit::get_thread_count,
-    solana_sdk::{
+    safecoin_rayon_threadlimit::get_thread_count,
+    safecoin_sdk::{
         hash::Hash,
         message::{MESSAGE_HEADER_LENGTH, MESSAGE_VERSION_PREFIX},
         pubkey::Pubkey,
@@ -423,7 +423,7 @@ fn check_for_simple_vote_transaction(
     if packet
         .data(instruction_program_id_start..instruction_program_id_end)
         .ok_or(PacketError::InvalidLen)?
-        == solana_sdk::vote::program::id().as_ref()
+        == safecoin_sdk::vote::program::id().as_ref()
     {
         packet.meta_mut().flags |= PacketFlags::SIMPLE_VOTE_TX;
     }
@@ -718,7 +718,7 @@ mod tests {
         bincode::{deserialize, serialize},
         curve25519_dalek::{edwards::CompressedEdwardsY, scalar::Scalar},
         rand::{thread_rng, Rng},
-        solana_sdk::{
+        safecoin_sdk::{
             instruction::CompiledInstruction,
             message::{Message, MessageHeader},
             signature::{Keypair, Signature, Signer},

@@ -64,7 +64,7 @@ case "$clientType" in
 esac
 
 case $clientToRun in
-solana-bench-tps)
+safecoin-bench-tps)
   net/scripts/rsync-retry.sh -vPrc \
     "$entrypointIp":~/solana/config/bench-tps"$clientIndex".yml ./client-accounts.yml
 
@@ -77,11 +77,11 @@ solana-bench-tps)
     args+=(--use-rpc-client)
     args+=(--url "$entrypointIp:8899")
   else
-    args+=(--entrypoint "$entrypointIp:8001")
+    args+=(--entrypoint "$entrypointIp:10015")
   fi
 
   clientCommand="\
-    solana-bench-tps \
+    safecoin-bench-tps \
       --duration 7500 \
       --sustained \
       --threads $threadCount \
@@ -112,7 +112,7 @@ export USE_INSTALL=1
 echo "$(date) | $0 $*" >> client.log
 
 (
-  sudo SOLANA_METRICS_CONFIG="$SOLANA_METRICS_CONFIG" scripts/oom-monitor.sh
+  sudo SAFECOIN_METRICS_CONFIG="$SAFECOIN_METRICS_CONFIG" scripts/oom-monitor.sh
 ) > oom-monitor.log 2>&1 &
 echo \$! > oom-monitor.pid
 scripts/fd-monitor.sh > fd-monitor.log 2>&1 &

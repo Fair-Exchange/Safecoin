@@ -5,7 +5,7 @@ use {
         vote_parser,
         vote_sender_types::ReplayVoteSender,
     },
-    solana_sdk::{pubkey::Pubkey, signature::Signer, transaction::SanitizedTransaction},
+    safecoin_sdk::{pubkey::Pubkey, signature::Signer, transaction::SanitizedTransaction},
 };
 
 pub fn setup_bank_and_vote_pubkeys_for_tests(

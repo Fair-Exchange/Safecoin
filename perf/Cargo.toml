@@ -1,12 +1,12 @@
 [package]
-name = "solana-perf"
+name = "safecoin-perf"
 version = "1.15.3"
-description = "Solana Performance APIs"
-authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
-repository = "https://github.com/solana-labs/solana"
+description = "Safecoin Performance APIs"
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-perf"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-perf"
 edition = "2021"
 
 [dependencies]
@@ -22,10 +22,10 @@ log = "0.4.17"
 rand = "0.7.0"
 rayon = "1.5.3"
 serde = "1.0.144"
-solana-metrics = { path = "../metrics", version = "=1.15.3" }
-solana-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.15.3" }
-solana-sdk = { path = "../sdk", version = "=1.15.3" }
-solana-vote-program = { path = "../programs/vote", version = "=1.15.3" }
+safecoin-metrics = { path = "../metrics", version = "=1.15.3" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.15.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.15.3" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.15.3" }
 
 [target."cfg(target_os = \"linux\")".dependencies]
 caps = "0.5.4"
@@ -37,7 +37,7 @@ name = "solana_perf"
 
 [dev-dependencies]
 matches = "0.1.9"
-solana-logger = { path = "../logger", version = "=1.15.3" }
+safecoin-logger = { path = "../logger", version = "=1.15.3" }
 
 [[bench]]
 name = "sigverify"

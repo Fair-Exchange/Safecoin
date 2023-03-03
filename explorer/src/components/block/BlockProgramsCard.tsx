@@ -1,5 +1,5 @@
 import React from "react";
-import { PublicKey, VersionedBlockResponse } from "@solana/web3.js";
+import { PublicKey, VersionedBlockResponse } from "@safecoin/web3.js";
 import { Address } from "components/common/Address";
 import { TableCardBody } from "components/common/TableCardBody";
 

@@ -1,20 +1,20 @@
 use {
-    solana_cli::{
+    safecoin_cli::{
         address_lookup_table::{
             AddressLookupTableCliCommand, DEACTIVATE_LOOKUP_TABLE_WARNING,
             FREEZE_LOOKUP_TABLE_WARNING,
         },
         cli::{process_command, CliCommand, CliConfig},
     },
-    solana_cli_output::{CliAddressLookupTable, CliAddressLookupTableCreated, OutputFormat},
-    solana_faucet::faucet::run_local_faucet,
-    solana_sdk::{
-        native_token::LAMPORTS_PER_SOL,
+    safecoin_cli_output::{CliAddressLookupTable, CliAddressLookupTableCreated, OutputFormat},
+    safecoin_faucet::faucet::run_local_faucet,
+    safecoin_sdk::{
+        native_token::LAMPORTS_PER_SAFE,
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_test_validator::TestValidator,
+    safecoin_test_validator::TestValidator,
     std::str::FromStr,
 };
 
@@ -32,10 +32,10 @@ fn test_cli_create_extend_and_freeze_address_lookup_table() {
     config.signers = vec![&keypair];
     config.output_format = OutputFormat::JsonCompact;
 
-    // Airdrop SOL for transaction fees
+    // Airdrop SAFE for transaction fees
     config.command = CliCommand::Airdrop {
         pubkey: None,
-        lamports: 10 * LAMPORTS_PER_SOL,
+        lamports: 10 * LAMPORTS_PER_SAFE,
     };
     process_command(&config).unwrap();
 
@@ -147,10 +147,10 @@ fn test_cli_create_and_deactivate_address_lookup_table() {
     config.signers = vec![&keypair];
     config.output_format = OutputFormat::JsonCompact;
 
-    // Airdrop SOL for transaction fees
+    // Airdrop SAFE for transaction fees
     config.command = CliCommand::Airdrop {
         pubkey: None,
-        lamports: 10 * LAMPORTS_PER_SOL,
+        lamports: 10 * LAMPORTS_PER_SAFE,
     };
     process_command(&config).unwrap();
 

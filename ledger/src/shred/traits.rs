@@ -1,6 +1,6 @@
 use {
     crate::shred::{CodingShredHeader, DataShredHeader, Error, ShredCommonHeader},
-    solana_sdk::{clock::Slot, signature::Signature},
+    safecoin_sdk::{clock::Slot, signature::Signature},
 };
 
 pub(super) trait Shred<'a>: Sized {

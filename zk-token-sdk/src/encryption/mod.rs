@@ -1,4 +1,4 @@
-//! Collection of encryption-related data structures and algorithms used in the Solana zk-token
+//! Collection of encryption-related data structures and algorithms used in the Safecoin zk-token
 //! protocol.
 //!
 //! The module contains implementations of the following cryptographic objects:

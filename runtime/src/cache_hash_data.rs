@@ -4,7 +4,7 @@ use crate::pubkey_bins::PubkeyBinCalculator24;
 use {
     crate::{accounts_hash::CalculateHashIntermediate, cache_hash_data_stats::CacheHashDataStats},
     memmap2::MmapMut,
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     std::{
         collections::HashSet,
         fs::{self, remove_file, OpenOptions},
@@ -455,14 +455,14 @@ pub mod tests {
                                 let mut pk;
                                 loop {
                                     // expensive, but small numbers and for tests, so ok
-                                    pk = solana_sdk::pubkey::new_rand();
+                                    pk = safecoin_sdk::pubkey::new_rand();
                                     if binner.bin_from_pubkey(&pk) == bin {
                                         break;
                                     }
                                 }
 
                                 CalculateHashIntermediate::new(
-                                    solana_sdk::hash::new_rand(&mut rng),
+                                    safecoin_sdk::hash::new_rand(&mut rng),
                                     ct as u64,
                                     pk,
                                 )

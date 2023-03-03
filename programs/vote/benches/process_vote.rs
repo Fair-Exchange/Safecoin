@@ -3,8 +3,8 @@
 extern crate test;
 
 use {
-    solana_program_runtime::invoke_context::InvokeContext,
-    solana_sdk::{
+    safecoin_program_runtime::invoke_context::InvokeContext,
+    safecoin_sdk::{
         account::{create_account_for_test, Account, AccountSharedData},
         clock::{Clock, Slot},
         hash::Hash,

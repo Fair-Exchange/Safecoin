@@ -60,7 +60,7 @@ mod tests {
             packet::Packet,
             sendmmsg::SendPktsError,
         },
-        solana_sdk::packet::PACKET_DATA_SIZE,
+        safecoin_sdk::packet::PACKET_DATA_SIZE,
         std::{
             io::ErrorKind,
             net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},

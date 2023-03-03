@@ -3,7 +3,7 @@
 use {
     crossbeam_channel::{Receiver, Sender},
     log::*,
-    solana_sdk::clock::Slot,
+    safecoin_sdk::clock::Slot,
     std::fmt,
 };
 

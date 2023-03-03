@@ -1,6 +1,6 @@
 use {
     crate::consensus::{SwitchForkDecision, TowerError},
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         hash::Hash,
         pubkey::Pubkey,

@@ -1,14 +1,14 @@
 [package]
-authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 edition = "2021"
-name = "solana-validator"
-description = "Blockchain, Rebuilt for Scale"
+name = "safecoin-validator"
+description = "Safecoin: Enterprise Security for the Community by the Community"
 version = "1.15.3"
-repository = "https://github.com/solana-labs/solana"
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-validator"
-default-run = "solana-validator"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-validator"
+default-run = "safecoin-validator"
 
 [dependencies]
 chrono = { version = "0.4.22", features = ["serde"] }
@@ -31,37 +31,37 @@ rayon = "1.5.3"
 serde = "1.0.144"
 serde_json = "1.0.83"
 serde_yaml = "0.9.13"
-solana-clap-utils = { path = "../clap-utils", version = "=1.15.3" }
-solana-cli-config = { path = "../cli-config", version = "=1.15.3" }
-solana-core = { path = "../core", version = "=1.15.3" }
-solana-download-utils = { path = "../download-utils", version = "=1.15.3" }
-solana-entry = { path = "../entry", version = "=1.15.3" }
-solana-faucet = { path = "../faucet", version = "=1.15.3" }
-solana-genesis-utils = { path = "../genesis-utils", version = "=1.15.3" }
-solana-gossip = { path = "../gossip", version = "=1.15.3" }
-solana-ledger = { path = "../ledger", version = "=1.15.3" }
-solana-logger = { path = "../logger", version = "=1.15.3" }
-solana-metrics = { path = "../metrics", version = "=1.15.3" }
-solana-net-utils = { path = "../net-utils", version = "=1.15.3" }
-solana-perf = { path = "../perf", version = "=1.15.3" }
-solana-poh = { path = "../poh", version = "=1.15.3" }
-solana-rpc = { path = "../rpc", version = "=1.15.3" }
-solana-rpc-client = { path = "../rpc-client", version = "=1.15.3", default-features = false }
-solana-rpc-client-api = { path = "../rpc-client-api", version = "=1.15.3" }
-solana-runtime = { path = "../runtime", version = "=1.15.3" }
-solana-sdk = { path = "../sdk", version = "=1.15.3" }
-solana-send-transaction-service = { path = "../send-transaction-service", version = "=1.15.3" }
-solana-storage-bigtable = { path = "../storage-bigtable", version = "=1.15.3" }
-solana-streamer = { path = "../streamer", version = "=1.15.3" }
-solana-test-validator = { path = "../test-validator", version = "=1.15.3" }
-solana-tpu-client = { path = "../tpu-client", version = "=1.15.3", default-features = false }
-solana-version = { path = "../version", version = "=1.15.3" }
-solana-vote-program = { path = "../programs/vote", version = "=1.15.3" }
+safecoin-clap-utils = { path = "../clap-utils", version = "=1.15.3" }
+safecoin-cli-config = { path = "../cli-config", version = "=1.15.3" }
+safecoin-core = { path = "../core", version = "=1.15.3" }
+safecoin-download-utils = { path = "../download-utils", version = "=1.15.3" }
+safecoin-entry = { path = "../entry", version = "=1.15.3" }
+safecoin-faucet = { path = "../faucet", version = "=1.15.3" }
+safecoin-genesis-utils = { path = "../genesis-utils", version = "=1.15.3" }
+safecoin-gossip = { path = "../gossip", version = "=1.15.3" }
+safecoin-ledger = { path = "../ledger", version = "=1.15.3" }
+safecoin-logger = { path = "../logger", version = "=1.15.3" }
+safecoin-metrics = { path = "../metrics", version = "=1.15.3" }
+safecoin-net-utils = { path = "../net-utils", version = "=1.15.3" }
+safecoin-perf = { path = "../perf", version = "=1.15.3" }
+safecoin-poh = { path = "../poh", version = "=1.15.3" }
+safecoin-rpc = { path = "../rpc", version = "=1.15.3" }
+safecoin-rpc-client = { path = "../rpc-client", version = "=1.15.3", default-features = false }
+safecoin-rpc-client-api = { path = "../rpc-client-api", version = "=1.15.3" }
+safecoin-runtime = { path = "../runtime", version = "=1.15.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.15.3" }
+safecoin-send-transaction-service = { path = "../send-transaction-service", version = "=1.15.3" }
+safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.15.3" }
+safecoin-streamer = { path = "../streamer", version = "=1.15.3" }
+safecoin-test-validator = { path = "../test-validator", version = "=1.15.3" }
+safecoin-tpu-client = { path = "../tpu-client", version = "=1.15.3", default-features = false }
+safecoin-version = { path = "../version", version = "=1.15.3" }
+safecoin-vote-program = { path = "../programs/vote", version = "=1.15.3" }
 symlink = "0.1.0"
 
 [dev-dependencies]
-solana-account-decoder = { path = "../account-decoder", version = "=1.15.3" }
-spl-token-2022 = { version = "=0.5.0", features = ["no-entrypoint"] }
+safecoin-account-decoder = { path = "../account-decoder", version = "=1.15.3" }
+safe-token-2022 = { version = "=0.5.0", path = "../../safecoin-program-library/token/program-2022", features = ["no-entrypoint"] }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = { package = "tikv-jemallocator", version = "0.4.1", features = ["unprefixed_malloc_on_supported_platforms"] }

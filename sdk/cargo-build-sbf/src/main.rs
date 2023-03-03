@@ -4,7 +4,7 @@ use {
     log::*,
     regex::Regex,
     solana_download_utils::download_file,
-    solana_sdk::signature::{write_keypair_file, Keypair},
+    safecoin_sdk::signature::{write_keypair_file, Keypair},
     std::{
         borrow::Cow,
         collections::{HashMap, HashSet},
@@ -137,13 +137,13 @@ fn find_installed_sbf_tools(arch: &str) -> Vec<String> {
         error!("Can't get home directory path: {}", err);
         exit(1);
     }));
-    let solana = home_dir.join(".cache").join("solana");
+    let safecoin = home_dir.join(".cache").join("solana");
     let package = if arch == "bpf" {
         "bpf-tools"
     } else {
         "sbf-tools"
     };
-    std::fs::read_dir(solana)
+    std::fs::read_dir(safecoin)
         .unwrap()
         .filter_map(|e| match e {
             Err(_) => None,
@@ -568,7 +568,7 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
         }
     };
 
-    let legacy_program_feature_present = package.name == "solana-sdk";
+    let legacy_program_feature_present = package.name == "safecoin-sdk";
     let root_package_dir = &package.manifest_path.parent().unwrap_or_else(|| {
         error!("Unable to get directory of {}", package.manifest_path);
         exit(1);
@@ -681,7 +681,7 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
     let cargo_target = if config.arch == "bpf" {
         "CARGO_TARGET_BPFEL_UNKNOWN_UNKNOWN_RUSTFLAGS"
     } else {
-        "CARGO_TARGET_SBF_SOLANA_SOLANA_RUSTFLAGS"
+        "CARGO_TARGET_SBF_SAFECOIN_SAFECOIN_RUSTFLAGS"
     };
     let rustflags = env::var("RUSTFLAGS").ok().unwrap_or_default();
     if env::var("RUSTFLAGS").is_ok() {
@@ -871,7 +871,7 @@ fn build_sbf_package(config: &Config, target_directory: &Path, package: &cargo_m
         check_undefined_symbols(config, &program_so);
 
         info!("To deploy this program:");
-        info!("  $ solana program deploy {}", program_so.display());
+        info!("  $ safecoin program deploy {}", program_so.display());
         info!("The program address will default to this keypair (override with --program-id):");
         info!("  {}", program_keypair.display());
     } else if config.dump {
@@ -956,7 +956,7 @@ fn main() {
                 .value_name("PATH")
                 .takes_value(true)
                 .default_value(&default_sbf_sdk)
-                .help("Path to the Solana SBF SDK"),
+                .help("Path to the Safecoin SBF SDK"),
         )
         .arg(
             Arg::new("cargo_args")

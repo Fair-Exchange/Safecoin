@@ -1,7 +1,7 @@
 {
-    "name": "@solana/web3.js-experimental",
+    "name": "@safecoin/web3.js-experimental",
     "version": "0.0.0-development",
-    "description": "Solana Javascript API",
+    "description": "Safecoin Javascript API",
     "exports": {
         "browser": {
             "import": "./dist/index.browser.js",
@@ -49,14 +49,14 @@
         "test:treeshakability:native": "agadoo dist/index.node.js",
         "test:treeshakability:node": "agadoo dist/index.native.js"
     },
-    "author": "Solana Labs Maintainers <maintainers@solanalabs.com>",
+    "author": "Safecoin Labs Maintainers <maintainers@solanalabs.com>",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/solana-labs/solana-web3.js"
+        "url": "https://github.com/fair-exchange/safecoin-web3.js"
     },
     "bugs": {
-        "url": "http://github.com/solana-labs/solana-web3.js/issues"
+        "url": "http://github.com/fair-exchange/safecoin-web3.js/issues"
     },
     "browserslist": [
         "supports bigint and not dead",

@@ -1,6 +1,6 @@
 //! Information about the network's clock, ticks, slots, etc.
 //!
-//! Time in Solana is marked primarily by _slots_, which occur approximately every
+//! Time in Safecoin is marked primarily by _slots_, which occur approximately every
 //! 400 milliseconds, and are numbered sequentially. For every slot, a leader is
 //! chosen from the validator set, and that leader is expected to produce a new
 //! block, though sometimes leaders may fail to do so. Blocks can be identified
@@ -20,7 +20,7 @@
 //!
 //! [oracle]: https://docs.solana.com/implemented-proposals/validator-timestamp-oracle
 
-use solana_sdk_macro::CloneZeroed;
+use safecoin_sdk_macro::CloneZeroed;
 
 /// The default tick rate that the cluster attempts to achieve (160 per second).
 ///

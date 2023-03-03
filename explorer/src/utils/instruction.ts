@@ -10,7 +10,7 @@ import {
   ParsedTransactionWithMeta,
   ParsedInstruction,
   PartiallyDecodedInstruction,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { intoTransactionInstruction } from "utils/tx";
 import {
   isTokenSwapInstruction,
@@ -101,7 +101,7 @@ export function getTokenInstructionName(
   }
 
   if ("parsed" in ix) {
-    if (ix.program === "spl-token") {
+    if (ix.program === "safe-token") {
       return getTokenProgramInstructionName(ix, signatureInfo);
     } else {
       return undefined;

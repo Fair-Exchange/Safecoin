@@ -1,7 +1,7 @@
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-use solana_frozen_abi::abi_example::AbiExample;
+use safecoin_frozen_abi::abi_example::AbiExample;
 use {
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount},
         account_utils::StateMut,
         instruction::InstructionError,
@@ -123,7 +123,7 @@ impl<S, T> PartialEq<StakeAccount<S>> for StakeAccount<T> {
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 impl AbiExample for StakeAccount<Delegation> {
     fn example() -> Self {
-        use solana_sdk::{
+        use safecoin_sdk::{
             account::Account,
             stake::state::{Meta, Stake},
         };

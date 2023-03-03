@@ -1,12 +1,12 @@
 use {
     crossbeam_channel::{Receiver, RecvTimeoutError, SendError, Sender},
-    solana_gossip::cluster_info::ClusterInfo,
+    safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::{
         leader_schedule_cache::LeaderScheduleCache, shred, sigverify_shreds::verify_shreds_gpu,
     },
     solana_perf::{self, packet::PacketBatch, recycler_cache::RecyclerCache},
     solana_runtime::{bank::Bank, bank_forks::BankForks},
-    solana_sdk::{clock::Slot, pubkey::Pubkey},
+    safecoin_sdk::{clock::Slot, pubkey::Pubkey},
     std::{
         collections::HashMap,
         sync::{
@@ -238,7 +238,7 @@ mod tests {
         },
         solana_perf::packet::Packet,
         solana_runtime::bank::Bank,
-        solana_sdk::signature::{Keypair, Signer},
+        safecoin_sdk::signature::{Keypair, Signer},
     };
 
     #[test]

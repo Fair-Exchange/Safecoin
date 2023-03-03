@@ -4,13 +4,13 @@ extern crate test;
 
 use {
     rand::{thread_rng, Rng},
-    solana_core::{
+    safecoin_core::{
         broadcast_stage::{
             broadcast_metrics::TransmitShredsStats, broadcast_shreds, BroadcastStage,
         },
         cluster_nodes::ClusterNodesCache,
     },
-    solana_gossip::{
+    safecoin_gossip::{
         cluster_info::{ClusterInfo, Node},
         contact_info::ContactInfo,
     },
@@ -19,7 +19,7 @@ use {
         shred::{Shred, ShredFlags},
     },
     solana_runtime::{bank::Bank, bank_forks::BankForks},
-    solana_sdk::{
+    safecoin_sdk::{
         pubkey,
         signature::{Keypair, Signer},
         timing::{timestamp, AtomicInterval},

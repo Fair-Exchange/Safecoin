@@ -4,7 +4,7 @@ use {
     bytemuck::{bytes_of, Pod},
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::{FromPrimitive, ToPrimitive},
-    solana_program::instruction::Instruction,
+    safecoin_program::instruction::Instruction,
 };
 
 #[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq, Eq)]

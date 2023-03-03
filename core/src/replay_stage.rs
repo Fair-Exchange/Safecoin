@@ -32,9 +32,9 @@ use {
     crossbeam_channel::{Receiver, RecvTimeoutError, Sender},
     lazy_static::lazy_static,
     rayon::{prelude::*, ThreadPool},
-    solana_entry::entry::VerifyRecyclers,
-    solana_geyser_plugin_manager::block_metadata_notifier_interface::BlockMetadataNotifierLock,
-    solana_gossip::cluster_info::ClusterInfo,
+    safecoin_entry::entry::VerifyRecyclers,
+    safecoin_geyser_plugin_manager::block_metadata_notifier_interface::BlockMetadataNotifierLock,
+    safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::{
         block_error::BlockError,
         blockstore::Blockstore,
@@ -44,15 +44,15 @@ use {
         leader_schedule_cache::LeaderScheduleCache,
         leader_schedule_utils::first_of_consecutive_leader_slots,
     },
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_metrics::inc_new_counter_info,
-    solana_poh::poh_recorder::{PohLeaderStatus, PohRecorder, GRACE_TICKS_FACTOR, MAX_GRACE_SLOTS},
-    solana_program_runtime::timings::ExecuteTimings,
-    solana_rpc::{
+    safecoin_poh::poh_recorder::{PohLeaderStatus, PohRecorder, GRACE_TICKS_FACTOR, MAX_GRACE_SLOTS},
+    safecoin_program_runtime::timings::ExecuteTimings,
+    safecoin_rpc::{
         optimistically_confirmed_bank_tracker::{BankNotification, BankNotificationSender},
         rpc_subscriptions::RpcSubscriptions,
     },
-    solana_rpc_client_api::response::SlotUpdate,
+    safecoin_rpc_client_api::response::SlotUpdate,
     solana_runtime::{
         accounts_background_service::AbsRequestSender,
         bank::{Bank, NewBankOptions},
@@ -61,7 +61,7 @@ use {
         prioritization_fee_cache::PrioritizationFeeCache,
         vote_sender_types::ReplayVoteSender,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{BankId, Slot, MAX_PROCESSING_AGE, NUM_CONSECUTIVE_LEADER_SLOTS},
         feature_set,
         genesis_config::ClusterType,
@@ -3613,8 +3613,8 @@ pub(crate) mod tests {
         },
         crossbeam_channel::unbounded,
         itertools::Itertools,
-        solana_entry::entry::{self, Entry},
-        solana_gossip::{cluster_info::Node, crds::Cursor},
+        safecoin_entry::entry::{self, Entry},
+        safecoin_gossip::{cluster_info::Node, crds::Cursor},
         solana_ledger::{
             blockstore::{entries_to_test_shreds, make_slot_entries, BlockstoreError},
             create_new_tmp_ledger,
@@ -3622,7 +3622,7 @@ pub(crate) mod tests {
             get_tmp_ledger_path,
             shred::{Shred, ShredFlags, LEGACY_SHRED_DATA_CAPACITY},
         },
-        solana_rpc::{
+        safecoin_rpc::{
             optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
             rpc::{create_test_transaction_entries, populate_blockstore_for_tests},
         },
@@ -3631,7 +3631,7 @@ pub(crate) mod tests {
             commitment::BlockCommitment,
             genesis_utils::{GenesisConfigInfo, ValidatorVoteKeypairs},
         },
-        solana_sdk::{
+        safecoin_sdk::{
             clock::NUM_CONSECUTIVE_LEADER_SLOTS,
             genesis_config,
             hash::{hash, Hash},
@@ -3642,7 +3642,7 @@ pub(crate) mod tests {
             transaction::TransactionError,
         },
         solana_streamer::socket::SocketAddrSpace,
-        solana_transaction_status::VersionedTransactionWithStatusMeta,
+        safecoin_transaction_status::VersionedTransactionWithStatusMeta,
         solana_vote_program::{
             vote_state::{self, VoteStateVersions},
             vote_transaction,
@@ -4376,7 +4376,7 @@ pub(crate) mod tests {
             bank.store_account(pubkey, &leader_vote_account);
         }
 
-        let leader_pubkey = solana_sdk::pubkey::new_rand();
+        let leader_pubkey = safecoin_sdk::pubkey::new_rand();
         let leader_lamports = 3;
         let genesis_config_info =
             create_genesis_config_with_leader(50, &leader_pubkey, leader_lamports);
@@ -4425,7 +4425,7 @@ pub(crate) mod tests {
             let _res = bank.transfer(
                 10,
                 &genesis_config_info.mint_keypair,
-                &solana_sdk::pubkey::new_rand(),
+                &safecoin_sdk::pubkey::new_rand(),
             );
             for _ in 0..genesis_config.ticks_per_slot {
                 bank.register_tick(&Hash::default());
@@ -4494,7 +4494,7 @@ pub(crate) mod tests {
             mut genesis_config,
             mint_keypair,
             ..
-        } = create_genesis_config(solana_sdk::native_token::sol_to_lamports(1000.0));
+        } = create_genesis_config(safecoin_sdk::native_token::sol_to_lamports(1000.0));
         genesis_config.rent.lamports_per_byte_year = 50;
         genesis_config.rent.exemption_threshold = 2.0;
         let (ledger_path, _) = create_new_tmp_ledger!(&genesis_config);

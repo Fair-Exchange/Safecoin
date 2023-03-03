@@ -1,9 +1,9 @@
 const math = require("remark-math");
 const katex = require("rehype-katex");
 module.exports = {
-  title: "Solana Docs",
+  title: "Safecoin Docs",
   tagline:
-    "Solana is an open source project implementing a new, high-performance, permissionless blockchain.",
+    "Safecoin is an open source project implementing a new, high-performance, permissionless blockchain.",
   url: "https://docs.solana.com",
   baseUrl: "/",
   favicon: "img/favicon.ico",
@@ -50,7 +50,7 @@ module.exports = {
     },
     navbar: {
       logo: {
-        alt: "Solana Logo",
+        alt: "Safecoin Logo",
         src: "img/logo-horizontal.svg",
         srcDark: "img/logo-horizontal-dark.svg",
       },
@@ -91,7 +91,7 @@ module.exports = {
             { label: "Proposals", to: "proposals" },
             {
               href: "https://spl.solana.com",
-              label: "Solana Program Library »",
+              label: "Safecoin Program Library »",
             },
           ],
         },
@@ -103,11 +103,11 @@ module.exports = {
           href: "https://discordapp.com/invite/pquxPsq",
           // label: "Discord",
           className: "header-link-icon header-discord-link",
-          "aria-label": "Solana Discord",
+          "aria-label": "Safecoin Discord",
           position: "right",
         },
         {
-          href: "https://github.com/solana-labs/solana",
+          href: "https://github.com/fair-exchange/safecoin",
           // label: "GitHub",
           className: "header-link-icon header-github-link",
           "aria-label": "GitHub repository",
@@ -159,7 +159,7 @@ module.exports = {
             },
             {
               label: "GitHub »",
-              href: "https://github.com/solana-labs/solana",
+              href: "https://github.com/fair-exchange/safecoin",
             },
             {
               label: "Discord »",
@@ -188,7 +188,7 @@ module.exports = {
             },
             {
               href: "https://spl.solana.com",
-              label: "Solana Program Library »",
+              label: "Safecoin Program Library »",
             },
           ],
         },

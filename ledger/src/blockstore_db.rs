@@ -26,7 +26,7 @@ use {
     },
     serde::{de::DeserializeOwned, Serialize},
     solana_runtime::hardened_unpack::UnpackError,
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, UnixTimestamp},
         pubkey::Pubkey,
         signature::Signature,
@@ -391,7 +391,7 @@ impl Rocks {
                     "Opening Rocks with secondary (read only) access at: {:?}",
                     secondary_path
                 );
-                info!("This secondary access could temporarily degrade other accesses, such as by solana-validator");
+                info!("This secondary access could temporarily degrade other accesses, such as by safecoin-validator");
 
                 Rocks {
                     db: DB::open_cf_descriptors_as_secondary(

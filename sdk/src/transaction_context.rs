@@ -222,7 +222,7 @@ impl TransactionContext {
     }
 
     /// Gets instruction stack height, top-level instructions are height
-    /// `solana_sdk::instruction::TRANSACTION_LEVEL_STACK_HEIGHT`
+    /// `safecoin_sdk::instruction::TRANSACTION_LEVEL_STACK_HEIGHT`
     pub fn get_instruction_context_stack_height(&self) -> usize {
         self.instruction_stack.len()
     }

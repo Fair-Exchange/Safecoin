@@ -25,5 +25,5 @@ export const Node14Controller = function () {
   return new AbortControllerPolyfill();
 };
 
-//export const url = 'https://api.devnet.solana.com/';
-//export const url = 'http://api.devnet.solana.com/';
+//export const url = 'https://api.devnet.safecoin.org/';
+//export const url = 'http://api.devnet.safecoin.org/';

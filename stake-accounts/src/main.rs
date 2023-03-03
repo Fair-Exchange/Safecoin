@@ -10,10 +10,10 @@ use {
             resolve_command, AuthorizeArgs, Command, MoveArgs, NewArgs, RebaseArgs, SetLockupArgs,
         },
     },
-    solana_cli_config::Config,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_rpc_client_api::client_error::Error as ClientError,
-    solana_sdk::{
+    safecoin_cli_config::Config,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_rpc_client_api::client_error::Error as ClientError,
+    safecoin_sdk::{
         message::Message,
         native_token::lamports_to_sol,
         pubkey::Pubkey,
@@ -264,7 +264,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let balances = get_balances(&client, addresses)?;
             let lamports: u64 = balances.into_iter().map(|(_, bal)| bal).sum();
             let sol = lamports_to_sol(lamports);
-            println!("{sol} SOL");
+            println!("{sol} SAFE");
         }
         Command::Authorize(args) => {
             process_authorize_stake_accounts(&client, &args)?;

@@ -32,7 +32,7 @@ Fact Sheet
 
 ### How Clients Submit Transactions
 
-In Solana, there is no concept of a mempool. All transactions, whether they are
+In Safecoin, there is no concept of a mempool. All transactions, whether they are
 initiated programmatically or by an end-user, are efficiently routed to leaders
 so that they can be processed into a block. There are two main ways in which a
 transaction can be sent to leaders:
@@ -41,7 +41,7 @@ transaction can be sent to leaders:
    [sendTransaction](../api/http#sendtransaction)
    JSON-RPC method
 2. Directly to leaders via a
-   [TPU Client](https://docs.rs/solana-client/1.7.3/solana_client/tpu_client/index.html)
+   [TPU Client](https://docs.rs/safecoin-client/1.7.3/safecoin_client/tpu_client/index.html)
 
 The vast majority of end-users will submit transactions via an RPC server. When
 a client submits a transaction, the receiving RPC node will in turn attempt to
@@ -64,7 +64,7 @@ forwarding it to the relevant leaders. UDP allows validators to quickly
 communicate with one another, but does not provide any guarantees regarding
 transaction delivery.
 
-Because Solana’s leader schedule is known in advance of every
+Because Safecoin’s leader schedule is known in advance of every
 [epoch](../terminology#epoch) (~2 days), an RPC node will
 broadcast its transaction directly to the current and next leaders. This is in
 contrast to other gossip protocols such as Ethereum that propagate transactions
@@ -73,22 +73,22 @@ to forward transactions to leaders every two seconds until either the
 transaction is finalized or the transaction’s blockhash expires (150 blocks or
 ~1 minute 19 seconds as of the time of this writing). If the outstanding
 rebroadcast queue size is greater than
-[10,000 transactions](https://github.com/solana-labs/solana/blob/bfbbc53dac93b3a5c6be9b4b65f679fdb13e41d9/send-transaction-service/src/send_transaction_service.rs#L20),
+[10,000 transactions](https://github.com/fair-exchange/safecoin/blob/bfbbc53dac93b3a5c6be9b4b65f679fdb13e41d9/send-transaction-service/src/send_transaction_service.rs#L20),
 newly submitted transactions are dropped. There are command-line
-[arguments](https://github.com/solana-labs/solana/blob/bfbbc53dac93b3a5c6be9b4b65f679fdb13e41d9/validator/src/main.rs#L1172)
+[arguments](https://github.com/fair-exchange/safecoin/blob/bfbbc53dac93b3a5c6be9b4b65f679fdb13e41d9/validator/src/main.rs#L1172)
 that RPC operators can adjust to change the default behavior of this retry
 logic.
 
 When an RPC node broadcasts a transaction, it will attempt to forward the
 transaction to a leader’s
-[Transaction Processing Unit (TPU)](https://github.com/solana-labs/solana/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/validator.rs#L867).
+[Transaction Processing Unit (TPU)](https://github.com/fair-exchange/safecoin/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/validator.rs#L867).
 The TPU processes transactions in five distinct phases:
 
-- [Fetch Stage](https://github.com/solana-labs/solana/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/fetch_stage.rs#L21)
-- [SigVerify Stage](https://github.com/solana-labs/solana/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/tpu.rs#L91)
-- [Banking Stage](https://github.com/solana-labs/solana/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/banking_stage.rs#L249)
-- [Proof of History Service](https://github.com/solana-labs/solana/blob/cd6f931223181d5a1d47cba64e857785a175a760/poh/src/poh_service.rs)
-- [Broadcast Stage](https://github.com/solana-labs/solana/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/tpu.rs#L136)
+- [Fetch Stage](https://github.com/fair-exchange/safecoin/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/fetch_stage.rs#L21)
+- [SigVerify Stage](https://github.com/fair-exchange/safecoin/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/tpu.rs#L91)
+- [Banking Stage](https://github.com/fair-exchange/safecoin/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/banking_stage.rs#L249)
+- [Proof of History Service](https://github.com/fair-exchange/safecoin/blob/cd6f931223181d5a1d47cba64e857785a175a760/poh/src/poh_service.rs)
+- [Broadcast Stage](https://github.com/fair-exchange/safecoin/blob/cd6f931223181d5a1d47cba64e857785a175a760/core/src/tpu.rs#L136)
 
 ![TPU Overview](../../static/img/rt-tpu-jito-labs.png)
 
@@ -96,17 +96,17 @@ Of these five phases, the Fetch Stage is responsible for receiving transactions.
 Within the Fetch Stage, validators will categorize incoming transactions
 according to three ports:
 
-- [tpu](https://github.com/solana-labs/solana/blob/cd6f931223181d5a1d47cba64e857785a175a760/gossip/src/contact_info.rs#L27)
+- [tpu](https://github.com/fair-exchange/safecoin/blob/cd6f931223181d5a1d47cba64e857785a175a760/gossip/src/contact_info.rs#L27)
   handles regular transactions such as token transfers, NFT mints, and program
   instructions
-- [tpu_vote](https://github.com/solana-labs/solana/blob/cd6f931223181d5a1d47cba64e857785a175a760/gossip/src/contact_info.rs#L31)
+- [tpu_vote](https://github.com/fair-exchange/safecoin/blob/cd6f931223181d5a1d47cba64e857785a175a760/gossip/src/contact_info.rs#L31)
   focuses exclusively on voting transactions
-- [tpu_forwards](https://github.com/solana-labs/solana/blob/cd6f931223181d5a1d47cba64e857785a175a760/gossip/src/contact_info.rs#L29)
+- [tpu_forwards](https://github.com/fair-exchange/safecoin/blob/cd6f931223181d5a1d47cba64e857785a175a760/gossip/src/contact_info.rs#L29)
   forwards unprocessed packets to the next leader if the current leader is
   unable to process all transactions
 
 For more information on the TPU, please refer to
-[this excellent writeup by Jito Labs](https://jito-labs.medium.com/solana-validator-101-transaction-processing-90bcdc271143).
+[this excellent writeup by Jito Labs](https://jito-labs.medium.com/safecoin-validator-101-transaction-processing-90bcdc271143).
 
 ## How Transactions Get Dropped
 
@@ -123,7 +123,7 @@ for validators to become overwhelmed by the sheer number of transactions
 required for processing. While validators are equipped to forward surplus
 transactions via `tpu_forwards`, there is a limit to the amount of data that can
 be
-[forwarded](https://github.com/solana-labs/solana/blob/master/core/src/banking_stage.rs#L389).
+[forwarded](https://github.com/fair-exchange/safecoin/blob/master/core/src/banking_stage.rs#L389).
 Furthermore, each forward is limited to a single hop between validators. That
 is, transactions received on the `tpu_forwards` port are not forwarded on to
 other validators.
@@ -215,7 +215,7 @@ In order to develop their own rebroadcasting logic, developers should take
 advantage of `sendTransaction`’s `maxRetries` parameter. If provided,
 `maxRetries` will override an RPC node’s default retry logic, allowing
 developers to manually control the retry process
-[within reasonable bounds](https://github.com/solana-labs/solana/blob/98707baec2385a4f7114d2167ef6dfb1406f954f/validator/src/main.rs#L1258-L1274).
+[within reasonable bounds](https://github.com/fair-exchange/safecoin/blob/98707baec2385a4f7114d2167ef6dfb1406f954f/validator/src/main.rs#L1258-L1274).
 
 A common pattern for manually retrying transactions involves temporarily storing
 the `lastValidBlockHeight` that comes from
@@ -234,10 +234,10 @@ transactions at a constant interval until some timeout has occurred.
 import {
   Keypair,
   Connection,
-  LAMPORTS_PER_SOL,
+  LAMPORTS_PER_SAFE,
   SystemProgram,
   Transaction,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import * as nacl from "tweetnacl";
 
 const sleep = async (ms: number) => {
@@ -252,7 +252,7 @@ const sleep = async (ms: number) => {
 
   const airdropSignature = await connection.requestAirdrop(
     payer.publicKey,
-    LAMPORTS_PER_SOL,
+    LAMPORTS_PER_SAFE,
   );
 
   await connection.confirmTransaction({ signature: airdropSignature });
@@ -327,7 +327,7 @@ expired. If the initial blockhash is still valid, it is possible for both
 transactions to be accepted by the network. To an end-user, this would appear as
 if they unintentionally sent the same transaction twice.
 
-In Solana, a dropped transaction can be safely discarded once the blockhash it
+In Safecoin, a dropped transaction can be safely discarded once the blockhash it
 references is older than the `lastValidBlockHeight` received from
 `getLatestBlockhash`. Developers should keep track of this
 `lastValidBlockHeight` by querying

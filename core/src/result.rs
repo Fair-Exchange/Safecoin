@@ -2,7 +2,7 @@
 
 use {
     crate::serve_repair::RepairVerifyError,
-    solana_gossip::{cluster_info, gossip_error::GossipError},
+    safecoin_gossip::{cluster_info, gossip_error::GossipError},
     solana_ledger::blockstore,
     thiserror::Error,
 };

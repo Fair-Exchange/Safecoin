@@ -1,7 +1,7 @@
 use {
     crate::id,
     serde::{Deserialize, Serialize},
-    solana_program::{
+    safecoin_program::{
         clock::Slot,
         instruction::{AccountMeta, Instruction},
         pubkey::Pubkey,

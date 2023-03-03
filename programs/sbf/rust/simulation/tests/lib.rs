@@ -1,9 +1,9 @@
 #![cfg(feature = "test-bpf")]
 
 use {
-    solana_program_test::{processor, tokio, ProgramTest},
-    solana_sbf_rust_simulation::process_instruction,
-    solana_sdk::{
+    safecoin_program_test::{processor, tokio, ProgramTest},
+    safecoin_sbf_rust_simulation::process_instruction,
+    safecoin_sdk::{
         instruction::{AccountMeta, Instruction},
         pubkey::Pubkey,
         signature::Signer,
@@ -16,7 +16,7 @@ use {
 async fn no_panic() {
     let program_id = Pubkey::new_unique();
     let program_test = ProgramTest::new(
-        "solana_sbf_rust_simulation",
+        "safecoin_sbf_rust_simulation",
         program_id,
         processor!(process_instruction),
     );

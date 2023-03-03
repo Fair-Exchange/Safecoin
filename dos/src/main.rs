@@ -18,24 +18,24 @@
 //! 1. Without blockhash or payer:
 //! 1.1 With invalid signatures
 //! ```bash
-//! solana-dos $COMMON --num-signatures 8
+//! safecoin-dos $COMMON --num-signatures 8
 //! ```
 //! 1.2 With valid signatures
 //! ```bash
-//! solana-dos $COMMON --valid-signatures --num-signatures 8
+//! safecoin-dos $COMMON --valid-signatures --num-signatures 8
 //! ```
 //! 2. With blockhash and payer:
 //! 2.1 Single-instruction transaction
 //! ```bash
-//! solana-dos $COMMON --valid-blockhash --transaction-type transfer --num-instructions 1
+//! safecoin-dos $COMMON --valid-blockhash --transaction-type transfer --num-instructions 1
 //! ```
 //! 2.2 Multi-instruction transaction
 //! ```bash
-//! solana-dos $COMMON --valid-blockhash --transaction-type transfer --num-instructions 8
+//! safecoin-dos $COMMON --valid-blockhash --transaction-type transfer --num-instructions 8
 //! ```
 //! 2.3 Account-creation transaction
 //! ```bash
-//! solana-dos $COMMON --valid-blockhash --transaction-type account-creation
+//! safecoin-dos $COMMON --valid-blockhash --transaction-type account-creation
 //! ```
 //!
 #![allow(clippy::integer_arithmetic)]
@@ -44,17 +44,17 @@ use {
     itertools::Itertools,
     log::*,
     rand::{thread_rng, Rng},
-    solana_bench_tps::{bench::generate_and_fund_keypairs, bench_tps_client::BenchTpsClient},
-    solana_client::{connection_cache::ConnectionCache, tpu_connection::TpuConnection},
-    solana_core::serve_repair::{RepairProtocol, RepairRequestHeader, ServeRepair},
-    solana_dos::cli::*,
-    solana_gossip::{
+    safecoin_bench_tps::{bench::generate_and_fund_keypairs, bench_tps_client::BenchTpsClient},
+    safecoin_client::{connection_cache::ConnectionCache, tpu_connection::TpuConnection},
+    safecoin_core::serve_repair::{RepairProtocol, RepairRequestHeader, ServeRepair},
+    safecoin_dos::cli::*,
+    safecoin_gossip::{
         gossip_service::{discover, get_multi_client},
         legacy_contact_info::LegacyContactInfo as ContactInfo,
     },
-    solana_measure::measure::Measure,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
+    safecoin_measure::measure::Measure,
+    safecoin_rpc_client::rpc_client::RpcClient,
+    safecoin_sdk::{
         hash::Hash,
         instruction::CompiledInstruction,
         message::Message,
@@ -67,7 +67,7 @@ use {
         transaction::Transaction,
     },
     solana_streamer::socket::SocketAddrSpace,
-    solana_tpu_client::tpu_client::DEFAULT_TPU_CONNECTION_POOL_SIZE,
+    safecoin_tpu_client::tpu_client::DEFAULT_TPU_CONNECTION_POOL_SIZE,
     std::{
         net::{SocketAddr, UdpSocket},
         process::exit,
@@ -163,7 +163,7 @@ impl TransactionGenerator {
 
     /// Create a transaction which transfers some lamports from payer to several destinations
     fn create_multi_transfer_transaction(&self, payer: &Keypair, to: &[&Keypair]) -> Transaction {
-        let to_transfer: u64 = 500_000_000; // specify amount which will cause error
+        let to_transfer: u64 = 33_370_166; // specify amount which will cause error
         let to: Vec<(Pubkey, u64)> = to.iter().map(|to| (to.pubkey(), to_transfer)).collect();
         let instructions = system_instruction::transfer_many(&payer.pubkey(), to.as_slice());
         let message = Message::new(&instructions, Some(&payer.pubkey()));
@@ -175,7 +175,7 @@ impl TransactionGenerator {
     /// Create a transaction which opens account
     fn create_account_transaction(&self, payer: &Keypair, to: &Keypair) -> Transaction {
         let program_id = system_program::id(); // some valid program id
-        let balance = 500_000_000;
+        let balance = 33_370_166;
         let space = 1024;
         let instructions = vec![system_instruction::create_account(
             &payer.pubkey(),
@@ -418,7 +418,7 @@ fn get_target(
     let mut target = None;
     if nodes.is_empty() {
         // skip-gossip case
-        target = Some((solana_sdk::pubkey::new_rand(), entrypoint_addr));
+        target = Some((safecoin_sdk::pubkey::new_rand(), entrypoint_addr));
     } else {
         info!("************ NODE ***********");
         for node in nodes {
@@ -786,17 +786,17 @@ fn main() {
 pub mod test {
     use {
         super::*,
-        solana_client::thin_client::ThinClient,
-        solana_core::validator::ValidatorConfig,
-        solana_faucet::faucet::run_local_faucet,
-        solana_gossip::contact_info::LegacyContactInfo,
-        solana_local_cluster::{
+        safecoin_client::thin_client::ThinClient,
+        safecoin_core::validator::ValidatorConfig,
+        safecoin_faucet::faucet::run_local_faucet,
+        safecoin_gossip::contact_info::LegacyContactInfo,
+        safecoin_local_cluster::{
             cluster::Cluster,
             local_cluster::{ClusterConfig, LocalCluster},
             validator_configs::make_identical_validator_configs,
         },
-        solana_rpc::rpc::JsonRpcConfig,
-        solana_sdk::timing::timestamp,
+        safecoin_rpc::rpc::JsonRpcConfig,
+        safecoin_sdk::timing::timestamp,
     };
 
     const TEST_SEND_BATCH_SIZE: usize = 1;
@@ -810,7 +810,7 @@ pub mod test {
     #[test]
     fn test_dos() {
         let nodes = [ContactInfo::new_localhost(
-            &solana_sdk::pubkey::new_rand(),
+            &safecoin_sdk::pubkey::new_rand(),
             timestamp(),
         )];
         let entrypoint_addr = nodes[0].gossip;
@@ -1048,7 +1048,7 @@ pub mod test {
         let cluster = LocalCluster::new(
             &mut ClusterConfig {
                 node_stakes: vec![999_990; num_nodes],
-                cluster_lamports: 200_000_000,
+                cluster_lamports: 1_000,
                 validator_configs: make_identical_validator_configs(
                     &ValidatorConfig {
                         rpc_config: JsonRpcConfig {

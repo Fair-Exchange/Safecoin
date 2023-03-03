@@ -3,7 +3,7 @@ import {
   InstructionType,
   PublicKey,
   TransactionInstruction,
-} from "@solana/web3.js";
+} from "@safecoin/web3.js";
 import { Layout, uint8ArrayToBuffer } from "@solana/buffer-layout";
 
 /**

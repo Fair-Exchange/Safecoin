@@ -2,7 +2,7 @@ use {
     clap::{crate_description, crate_name, App, AppSettings, Arg, ArgMatches, SubCommand},
     lazy_static::lazy_static,
     log::warn,
-    solana_clap_utils::{
+    safecoin_clap_utils::{
         input_validators::{
             is_keypair, is_keypair_or_ask_keyword, is_niceness_adjustment_valid, is_parsable,
             is_pow2, is_pubkey, is_pubkey_or_keypair, is_slot, is_url_or_moniker,
@@ -10,11 +10,11 @@ use {
         },
         keypair::SKIP_SEED_PHRASE_VALIDATION_ARG,
     },
-    solana_core::banking_trace::{DirByteLimit, BANKING_TRACE_DIR_DEFAULT_BYTE_LIMIT},
-    solana_faucet::faucet::{self, FAUCET_PORT},
+    safecoin_core::banking_trace::{DirByteLimit, BANKING_TRACE_DIR_DEFAULT_BYTE_LIMIT},
+    safecoin_faucet::faucet::{self, FAUCET_PORT},
     solana_net_utils::{MINIMUM_VALIDATOR_PORT_RANGE_WIDTH, VALIDATOR_PORT_RANGE},
-    solana_rpc::{rpc::MAX_REQUEST_BODY_SIZE, rpc_pubsub_service::PubSubConfig},
-    solana_rpc_client_api::request::MAX_MULTIPLE_ACCOUNTS,
+    safecoin_rpc::{rpc::MAX_REQUEST_BODY_SIZE, rpc_pubsub_service::PubSubConfig},
+    safecoin_rpc_client_api::request::MAX_MULTIPLE_ACCOUNTS,
     solana_runtime::{
         accounts_db::{
             DEFAULT_ACCOUNTS_SHRINK_OPTIMIZE_TOTAL_SPACE, DEFAULT_ACCOUNTS_SHRINK_RATIO,
@@ -28,14 +28,14 @@ use {
             DEFAULT_MAX_INCREMENTAL_SNAPSHOT_ARCHIVES_TO_RETAIN, SUPPORTED_ARCHIVE_COMPRESSION,
         },
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot, epoch_schedule::MINIMUM_SLOTS_PER_EPOCH, hash::Hash, quic::QUIC_PORT_OFFSET,
         rpc_port,
     },
-    solana_send_transaction_service::send_transaction_service::{
+    safecoin_send_transaction_service::send_transaction_service::{
         self, MAX_BATCH_SEND_RATE_MS, MAX_TRANSACTION_BATCH_SIZE,
     },
-    solana_tpu_client::tpu_client::DEFAULT_TPU_CONNECTION_POOL_SIZE,
+    safecoin_tpu_client::tpu_client::DEFAULT_TPU_CONNECTION_POOL_SIZE,
     std::{path::PathBuf, str::FromStr},
 };
 
@@ -789,7 +789,7 @@ pub fn app<'a>(version: &'a str, default_args: &'a DefaultArgs) -> App<'a, 'a> {
                             identities. Overriding the amount of stake this validator considers
                             as valid for other peers in network. The stake amount is used for calculating
                             number of QUIC streams permitted from the peer and vote packet sender stage.
-                            Format of the file: `staked_map_id: {<pubkey>: <SOL stake amount>}"),
+                            Format of the file: `staked_map_id: {<pubkey>: <SAFE stake amount>}"),
         )
         .arg(
             Arg::with_name("bind_address")
@@ -1081,7 +1081,7 @@ pub fn app<'a>(version: &'a str, default_args: &'a DefaultArgs) -> App<'a, 'a> {
         .arg(
             Arg::with_name("snapshot_archive_format")
                 .long("snapshot-archive-format")
-                .alias("snapshot-compression") // Legacy name used by Solana v1.5.x and older
+                .alias("snapshot-compression") // Legacy name used by Safecoin v1.5.x and older
                 .possible_values(SUPPORTED_ARCHIVE_COMPRESSION)
                 .default_value(&default_args.snapshot_archive_format)
                 .value_name("ARCHIVE_TYPE")
@@ -1153,7 +1153,7 @@ pub fn app<'a>(version: &'a str, default_args: &'a DefaultArgs) -> App<'a, 'a> {
                 .long("account-index")
                 .takes_value(true)
                 .multiple(true)
-                .possible_values(&["program-id", "spl-token-owner", "spl-token-mint"])
+                .possible_values(&["program-id", "safe-token-owner", "safe-token-mint"])
                 .value_name("INDEX")
                 .help("Enable an accounts index, indexed by the selected account field"),
         )
@@ -1868,7 +1868,7 @@ lazy_static! {
 /// Test validator
 
 pub fn test_app<'a>(version: &'a str, default_args: &'a DefaultTestArgs) -> App<'a, 'a> {
-    return App::new("solana-test-validator")
+    return App::new("safecoin-test-validator")
         .about("Test Validator")
         .version(version)
         .arg({
@@ -1878,7 +1878,7 @@ pub fn test_app<'a>(version: &'a str, default_args: &'a DefaultTestArgs) -> App<
                 .value_name("PATH")
                 .takes_value(true)
                 .help("Configuration file to use");
-            if let Some(ref config_file) = *solana_cli_config::CONFIG_FILE {
+            if let Some(ref config_file) = *safecoin_cli_config::CONFIG_FILE {
                 arg.default_value(config_file)
             } else {
                 arg
@@ -1892,7 +1892,7 @@ pub fn test_app<'a>(version: &'a str, default_args: &'a DefaultTestArgs) -> App<
                 .takes_value(true)
                 .validator(is_url_or_moniker)
                 .help(
-                    "URL for Solana's JSON RPC or moniker (or their first letter): \
+                    "URL for Safecoin's JSON RPC or moniker (or their first letter): \
                    [mainnet-beta, testnet, devnet, localhost]",
                 ),
         )
@@ -1948,7 +1948,7 @@ pub fn test_app<'a>(version: &'a str, default_args: &'a DefaultTestArgs) -> App<
                 .long("account-index")
                 .takes_value(true)
                 .multiple(true)
-                .possible_values(&["program-id", "spl-token-owner", "spl-token-mint"])
+                .possible_values(&["program-id", "safe-token-owner", "safe-token-mint"])
                 .value_name("INDEX")
                 .help("Enable an accounts index, indexed by the selected account field"),
         )
@@ -1984,7 +1984,7 @@ pub fn test_app<'a>(version: &'a str, default_args: &'a DefaultTestArgs) -> App<
                 .value_name("INSTANCE_NAME")
                 .takes_value(true)
                 .hidden(true)
-                .default_value("solana-ledger")
+                .default_value("safecoin-ledger")
                 .help("Name of BigTable instance to target"),
         )
         .arg(
@@ -2024,7 +2024,7 @@ pub fn test_app<'a>(version: &'a str, default_args: &'a DefaultTestArgs) -> App<
                 .allow_hyphen_values(true)
                 .multiple(true)
                 .help(
-                    "Load an account from the provided JSON file (see `solana account --help` on how to dump \
+                    "Load an account from the provided JSON file (see `safecoin account --help` on how to dump \
                         an account to file). Files are searched for relatively to CWD and tests/fixtures. \
                         If ADDRESS is omitted via the `-` placeholder, the one in the file will be used. \
                         If the ledger already exists then this parameter is silently ignored",
@@ -2185,10 +2185,10 @@ pub fn test_app<'a>(version: &'a str, default_args: &'a DefaultTestArgs) -> App<
             Arg::with_name("faucet_sol")
                 .long("faucet-sol")
                 .takes_value(true)
-                .value_name("SOL")
+                .value_name("SAFE")
                 .default_value(default_args.faucet_sol.as_str())
                 .help(
-                    "Give the faucet address this much SOL in genesis. \
+                    "Give the faucet address this much SAFE in genesis. \
                      If the ledger already exists then this parameter is silently ignored",
                 ),
         )
@@ -2206,22 +2206,22 @@ pub fn test_app<'a>(version: &'a str, default_args: &'a DefaultTestArgs) -> App<
             Arg::with_name("faucet_per_time_sol_cap")
                 .long("faucet-per-time-sol-cap")
                 .takes_value(true)
-                .value_name("SOL")
+                .value_name("SAFE")
                 .min_values(0)
                 .max_values(1)
                 .help(
-                    "Per-time slice limit for faucet requests, in SOL",
+                    "Per-time slice limit for faucet requests, in SAFE",
                 ),
         )
         .arg(
             Arg::with_name("faucet_per_request_sol_cap")
                 .long("faucet-per-request-sol-cap")
                 .takes_value(true)
-                .value_name("SOL")
+                .value_name("SAFE")
                 .min_values(0)
                 .max_values(1)
                 .help(
-                    "Per-request limit for faucet requests, in SOL",
+                    "Per-request limit for faucet requests, in SAFE",
                 ),
         )
         .arg(
@@ -2284,7 +2284,7 @@ impl DefaultTestArgs {
             faucet_port: FAUCET_PORT.to_string(),
             /* 10,000 was derived empirically by watching the size
              * of the rocksdb/ directory self-limit itself to the
-             * 40MB-150MB range when running `solana-test-validator`
+             * 40MB-150MB range when running `safecoin-test-validator`
              */
             limit_ledger_size: 10_000.to_string(),
             faucet_sol: (1_000_000.).to_string(),

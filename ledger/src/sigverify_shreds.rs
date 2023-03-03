@@ -12,8 +12,8 @@ use {
         recycler_cache::RecyclerCache,
         sigverify::{self, count_packets_in_batches, TxOffset},
     },
-    solana_rayon_threadlimit::get_thread_count,
-    solana_sdk::{
+    safecoin_rayon_threadlimit::get_thread_count,
+    safecoin_sdk::{
         clock::Slot,
         hash::Hash,
         pubkey::Pubkey,
@@ -481,8 +481,8 @@ mod tests {
         },
         matches::assert_matches,
         rand::{seq::SliceRandom, Rng},
-        solana_entry::entry::Entry,
-        solana_sdk::{
+        safecoin_entry::entry::Entry,
+        safecoin_sdk::{
             hash,
             hash::Hash,
             signature::{Keypair, Signer},

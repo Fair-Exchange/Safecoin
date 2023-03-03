@@ -1,4 +1,4 @@
-import { TransactionInstruction } from "@solana/web3.js";
+import { TransactionInstruction } from "@safecoin/web3.js";
 
 const PROGRAM_ID: string = "AddressLookupTab1e1111111111111111111111111";
 

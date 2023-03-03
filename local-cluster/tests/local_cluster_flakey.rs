@@ -5,14 +5,14 @@ use {
     common::*,
     log::*,
     serial_test::serial,
-    solana_core::validator::ValidatorConfig,
+    safecoin_core::validator::ValidatorConfig,
     solana_ledger::{ancestor_iterator::AncestorIterator, leader_schedule::FixedSchedule},
-    solana_local_cluster::{
+    safecoin_local_cluster::{
         cluster::Cluster,
         local_cluster::{ClusterConfig, LocalCluster},
         validator_configs::*,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         clock::Slot,
         signature::{Keypair, Signer},
     },

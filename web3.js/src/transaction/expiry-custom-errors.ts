@@ -24,7 +24,7 @@ export class TransactionExpiredTimeoutError extends Error {
         2,
       )} seconds. It is ` +
         'unknown if it succeeded or failed. Check signature ' +
-        `${signature} using the Solana Explorer or CLI tools.`,
+        `${signature} using the Safecoin Explorer or CLI tools.`,
     );
     this.signature = signature;
   }

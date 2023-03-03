@@ -2,7 +2,7 @@
 mod tests {
     use {
         crate::bank::*,
-        solana_sdk::{feature_set::FeatureSet, genesis_config::create_genesis_config},
+        safecoin_sdk::{feature_set::FeatureSet, genesis_config::create_genesis_config},
     };
 
     #[test]
@@ -20,7 +20,7 @@ mod tests {
             if precompile.program_id == ed25519_program::id() {
                 bank.add_precompiled_account_with_owner(
                     &precompile.program_id,
-                    solana_sdk::system_program::id(),
+                    safecoin_sdk::system_program::id(),
                 );
             } else {
                 bank.add_precompiled_account(&precompile.program_id);

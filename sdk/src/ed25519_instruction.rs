@@ -76,7 +76,7 @@ pub fn new_ed25519_instruction(keypair: &ed25519_dalek::Keypair, message: &[u8])
     instruction_data.extend_from_slice(message);
 
     Instruction {
-        program_id: solana_sdk::ed25519_program::id(),
+        program_id: safecoin_sdk::ed25519_program::id(),
         accounts: vec![],
         data: instruction_data,
     }

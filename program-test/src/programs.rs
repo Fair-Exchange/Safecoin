@@ -1,51 +1,51 @@
-use solana_sdk::{
+use safecoin_sdk::{
     account::{Account, AccountSharedData},
     bpf_loader_upgradeable::UpgradeableLoaderState,
     pubkey::Pubkey,
     rent::Rent,
 };
 
-mod spl_token {
-    solana_sdk::declare_id!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+mod safe_token {
+    safecoin_sdk::declare_id!("ToKLx75MGim1d1jRusuVX8xvdvvbSDESVaNXpRA9PHN");
 }
-mod spl_token_2022 {
-    solana_sdk::declare_id!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+mod safe_token_2022 {
+    safecoin_sdk::declare_id!("ZToGWcF1Qh9H7te1MmABiGsFUKvj5zXPQ2QnTqoHpHN");
 }
-mod spl_memo_1_0 {
-    solana_sdk::declare_id!("Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo");
+mod safe_memo_1_0 {
+    safecoin_sdk::declare_id!("MEMDqRW2fYAU19mcFnoDVoqG4Br4t7TdyWjjv38P6Nc");
 }
-mod spl_memo_3_0 {
-    solana_sdk::declare_id!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+mod safe_memo_3_0 {
+    safecoin_sdk::declare_id!("MEMWKbqsjEB8o972BvDHExZFSauzGZKvB4xHDVPFowh");
 }
-mod spl_associated_token_account {
-    solana_sdk::declare_id!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+mod safe_associated_token_account {
+    safecoin_sdk::declare_id!("AToD9iqHSc2fhEP9Jp7UYA6mRjHQ4CTWyzCsw8X3tH7K");
 }
 
 static SPL_PROGRAMS: &[(Pubkey, Pubkey, &[u8])] = &[
     (
-        spl_token::ID,
-        solana_sdk::bpf_loader::ID,
-        include_bytes!("programs/spl_token-3.5.0.so"),
+        safe_token::ID,
+        safecoin_sdk::bpf_loader::ID,
+        include_bytes!("programs/safe_token-3.5.0.so"),
     ),
     (
-        spl_token_2022::ID,
-        solana_sdk::bpf_loader_upgradeable::ID,
-        include_bytes!("programs/spl_token_2022-0.5.0.so"),
+        safe_token_2022::ID,
+        safecoin_sdk::bpf_loader_upgradeable::ID,
+        include_bytes!("programs/safe_token_2022-0.5.0.so"),
     ),
     (
-        spl_memo_1_0::ID,
-        solana_sdk::bpf_loader::ID,
-        include_bytes!("programs/spl_memo-1.0.0.so"),
+        safe_memo_1_0::ID,
+        safecoin_sdk::bpf_loader::ID,
+        include_bytes!("programs/safe_memo-1.0.0.so"),
     ),
     (
-        spl_memo_3_0::ID,
-        solana_sdk::bpf_loader::ID,
-        include_bytes!("programs/spl_memo-3.0.0.so"),
+        safe_memo_3_0::ID,
+        safecoin_sdk::bpf_loader::ID,
+        include_bytes!("programs/safe_memo-3.0.0.so"),
     ),
     (
-        spl_associated_token_account::ID,
-        solana_sdk::bpf_loader::ID,
-        include_bytes!("programs/spl_associated_token_account-1.1.1.so"),
+        safe_associated_token_account::ID,
+        safecoin_sdk::bpf_loader::ID,
+        include_bytes!("programs/safe_associated_token_account-1.1.1.so"),
     ),
 ];
 
@@ -54,7 +54,7 @@ pub fn spl_programs(rent: &Rent) -> Vec<(Pubkey, AccountSharedData)> {
         .iter()
         .flat_map(|(program_id, loader_id, elf)| {
             let mut accounts = vec![];
-            let data = if *loader_id == solana_sdk::bpf_loader_upgradeable::ID {
+            let data = if *loader_id == safecoin_sdk::bpf_loader_upgradeable::ID {
                 let (programdata_address, _) =
                     Pubkey::find_program_address(&[program_id.as_ref()], loader_id);
                 let mut program_data = bincode::serialize(&UpgradeableLoaderState::ProgramData {

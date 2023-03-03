@@ -9,7 +9,7 @@ use {
         },
         shredder::ERASURE_BATCH_SIZE,
     },
-    solana_sdk::{clock::Slot, packet::PACKET_DATA_SIZE, signature::Signature},
+    safecoin_sdk::{clock::Slot, packet::PACKET_DATA_SIZE, signature::Signature},
     static_assertions::const_assert_eq,
 };
 

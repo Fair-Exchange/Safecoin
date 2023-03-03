@@ -2,11 +2,11 @@ use {
     crate::tpu_info::TpuInfo,
     crossbeam_channel::{Receiver, RecvTimeoutError},
     log::*,
-    solana_client::{connection_cache::ConnectionCache, tpu_connection::TpuConnection},
-    solana_measure::measure::Measure,
+    safecoin_client::{connection_cache::ConnectionCache, tpu_connection::TpuConnection},
+    safecoin_measure::measure::Measure,
     solana_metrics::datapoint_warn,
     solana_runtime::{bank::Bank, bank_forks::BankForks},
-    solana_sdk::{
+    safecoin_sdk::{
         hash::Hash, nonce_account, pubkey::Pubkey, saturating_add_assign, signature::Signature,
         timing::AtomicInterval, transport::TransportError,
     },
@@ -777,7 +777,7 @@ mod test {
         super::*,
         crate::tpu_info::NullTpuInfo,
         crossbeam_channel::unbounded,
-        solana_sdk::{
+        safecoin_sdk::{
             account::AccountSharedData,
             genesis_config::create_genesis_config,
             nonce::{self, state::DurableNonce},

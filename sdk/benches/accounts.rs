@@ -1,10 +1,10 @@
 #![feature(test)]
 #![allow(clippy::integer_arithmetic)]
 
-use solana_sdk::{entrypoint::MAX_PERMITTED_DATA_INCREASE, pubkey::Pubkey};
+use safecoin_sdk::{entrypoint::MAX_PERMITTED_DATA_INCREASE, pubkey::Pubkey};
 
 extern crate test;
-use {solana_sdk::account::AccountSharedData, test::Bencher};
+use {safecoin_sdk::account::AccountSharedData, test::Bencher};
 
 fn bench_unchanged(bencher: &mut Bencher, size: usize) {
     let mut account = AccountSharedData::new(42, 0, &Pubkey::new_unique());

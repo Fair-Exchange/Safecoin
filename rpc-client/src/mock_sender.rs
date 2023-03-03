@@ -4,8 +4,8 @@ use {
     crate::rpc_sender::*,
     async_trait::async_trait,
     serde_json::{json, Number, Value},
-    solana_account_decoder::{UiAccount, UiAccountEncoding},
-    solana_rpc_client_api::{
+    safecoin_account_decoder::{UiAccount, UiAccountEncoding},
+    safecoin_rpc_client_api::{
         client_error::Result,
         config::RpcBlockProductionConfig,
         request::RpcRequest,
@@ -18,7 +18,7 @@ use {
             RpcVoteAccountStatus, StakeActivationState,
         },
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::Account,
         clock::{Slot, UnixTimestamp},
         epoch_info::EpochInfo,
@@ -30,7 +30,7 @@ use {
         sysvar::epoch_schedule::EpochSchedule,
         transaction::{self, Transaction, TransactionError, TransactionVersion},
     },
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         option_serializer::OptionSerializer, EncodedConfirmedBlock,
         EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction,
         EncodedTransactionWithStatusMeta, Rewards, TransactionBinaryEncoding,
@@ -355,7 +355,7 @@ impl RpcSender for MockSender {
             "getVersion" => {
                 let version = Version::default();
                 json!(RpcVersionInfo {
-                    solana_core: version.to_string(),
+                    safecoin_core: version.to_string(),
                     feature_set: Some(version.feature_set),
                 })
             }

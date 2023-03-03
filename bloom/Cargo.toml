@@ -1,12 +1,12 @@
 [package]
-name = "solana-bloom"
+name = "safecoin-bloom"
 version = "1.15.3"
-description = "Solana bloom filter"
-authors = ["Solana Labs Maintainers <maintainers@solanalabs.com>"]
-repository = "https://github.com/solana-labs/solana"
+description = "Safecoin bloom filter"
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
+repository = "https://github.com/fair-exchange/safecoin"
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-bloom"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-bloom"
 edition = "2021"
 
 [dependencies]
@@ -17,9 +17,9 @@ rand = "0.7.0"
 rayon = "1.5.3"
 serde = { version = "1.0.144", features = ["rc"] }
 serde_derive = "1.0.103"
-solana-frozen-abi = { path = "../frozen-abi", version = "=1.15.3" }
-solana-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.15.3" }
-solana-sdk = { path = "../sdk", version = "=1.15.3" }
+safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.15.3" }
+safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.15.3" }
+safecoin-sdk = { path = "../sdk", version = "=1.15.3" }
 
 [lib]
 crate-type = ["lib"]

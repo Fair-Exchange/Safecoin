@@ -1,6 +1,6 @@
 import React, { Fragment, ReactNode, useState } from "react";
 import { Cluster } from "providers/cluster";
-import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { PublicKey, TransactionInstruction } from "@safecoin/web3.js";
 import { BorshInstructionCoder, Program, Idl } from "@project-serum/anchor";
 import { useAnchorProgram } from "providers/anchor";
 import { getProgramName } from "utils/tx";

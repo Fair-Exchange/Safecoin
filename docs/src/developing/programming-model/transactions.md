@@ -1,13 +1,13 @@
 ---
 title: "Transactions"
-description: "A Solana transaction consists of one or more instructions, an array of accounts to read and write data from, and one or more signatures."
+description: "A Safecoin transaction consists of one or more instructions, an array of accounts to read and write data from, and one or more signatures."
 ---
 
-On the Solana blockchain, program execution begins with a [transaction](./../../terminology.md#transaction) being submitted to the cluster. With each transaction consisting of one or many [instructions](./../../terminology.md#instruction), the runtime will process each of the instructions contained within the transaction, in order, and atomically. If any part of an instruction fails, then the entire transaction will fail.
+On the Safecoin blockchain, program execution begins with a [transaction](./../../terminology.md#transaction) being submitted to the cluster. With each transaction consisting of one or many [instructions](./../../terminology.md#instruction), the runtime will process each of the instructions contained within the transaction, in order, and atomically. If any part of an instruction fails, then the entire transaction will fail.
 
 ## Overview of a Transaction
 
-On Solana, clients update the runtime (for example, debiting an account) by submitting a transaction to the cluster.
+On Safecoin, clients update the runtime (for example, debiting an account) by submitting a transaction to the cluster.
 
 This transaction consists of three parts:
 
@@ -15,9 +15,9 @@ This transaction consists of three parts:
 - an array of accounts to read or write from
 - one or more signatures
 
-An [instruction](./../../terminology.md#instruction) is the smallest execution logic on Solana. Instructions are basically a call to update the global Solana state. Instructions invoke programs that make calls to the Solana runtime to update the state (for example, calling the token program to transfer tokens from your account to another account).
+An [instruction](./../../terminology.md#instruction) is the smallest execution logic on Safecoin. Instructions are basically a call to update the global Safecoin state. Instructions invoke programs that make calls to the Safecoin runtime to update the state (for example, calling the token program to transfer tokens from your account to another account).
 
-[Programs](./../intro/programs.md) on Solana don’t store data/state; rather, data/state is stored in accounts.
+[Programs](./../intro/programs.md) on Safecoin don’t store data/state; rather, data/state is stored in accounts.
 
 [Signatures](./../../terminology.md#signature) verify that we have the authority to read or write data to the accounts that we list.
 
@@ -29,7 +29,7 @@ This section covers the binary format of a transaction.
 
 A transaction contains a [compact-array](#compact-array-format) of signatures,
 followed by a [message](#message-format). Each item in the signatures array is
-a [digital signature](#signature-format) of the given message. The Solana
+a [digital signature](#signature-format) of the given message. The Safecoin
 runtime verifies that the number of signatures matches the number in the first
 8 bits of the [message header](#message-header-format). It also verifies that
 each signature was signed by the private key corresponding to the public key at
@@ -109,7 +109,7 @@ entire transaction to fail immediately.
 Programs typically provide helper functions to construct instructions they
 support. For example, the system program provides the following Rust helper to
 construct a
-[`SystemInstruction::CreateAccount`](https://github.com/solana-labs/solana/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L63)
+[`SystemInstruction::CreateAccount`](https://github.com/fair-exchange/safecoin/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L63)
 instruction:
 
 ```rust
@@ -138,7 +138,7 @@ pub fn create_account(
 
 Which can be found here:
 
-https://github.com/solana-labs/solana/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L220
+https://github.com/fair-exchange/safecoin/blob/6606590b8132e56dab9e60b3f7d20ba7412a736c/sdk/program/src/system_instruction.rs#L220
 
 ### Program Id
 
@@ -154,7 +154,7 @@ successfully deployed. The runtime will reject transactions that specify program
 that are not executable.
 
 Unlike on-chain programs, [Native Programs](../runtime-facilities/programs.md)
-are handled differently in that they are built directly into the Solana runtime.
+are handled differently in that they are built directly into the Safecoin runtime.
 
 ### Accounts
 
@@ -176,11 +176,11 @@ overhead of decoding, since that step is performed by the program on-chain. It's
 been observed that some common encodings (Rust's bincode for example) are very
 inefficient.
 
-The [Solana Program Library's Token
-program](https://github.com/solana-labs/solana-program-library/tree/master/token)
+The [Safecoin Program Library's Token
+program](https://github.com/fair-exchange/safecoin-program-library/tree/master/token)
 gives one example of how instruction data can be encoded efficiently, but note
 that this method only supports fixed sized types. Token utilizes the
-[Pack](https://github.com/solana-labs/solana/blob/master/sdk/program/src/program_pack.rs)
+[Pack](https://github.com/fair-exchange/safecoin/blob/master/sdk/program/src/program_pack.rs)
 trait to encode/decode instruction data for both token instructions as well as
 token account states.
 

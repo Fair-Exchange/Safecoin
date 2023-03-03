@@ -6,10 +6,10 @@ use log::*;
 use {
     rand::{thread_rng, Rng},
     rayon::prelude::*,
-    solana_client::{connection_cache::ConnectionCache, thin_client::ThinClient},
-    solana_core::consensus::VOTE_THRESHOLD_DEPTH,
-    solana_entry::entry::{Entry, EntrySlice},
-    solana_gossip::{
+    safecoin_client::{connection_cache::ConnectionCache, thin_client::ThinClient},
+    safecoin_core::consensus::VOTE_THRESHOLD_DEPTH,
+    safecoin_entry::entry::{Entry, EntrySlice},
+    safecoin_gossip::{
         cluster_info::{self, ClusterInfo},
         contact_info::{ContactInfo, LegacyContactInfo},
         crds::Cursor,
@@ -19,7 +19,7 @@ use {
     },
     solana_ledger::blockstore::Blockstore,
     solana_runtime::vote_transaction::VoteTransaction,
-    solana_sdk::{
+    safecoin_sdk::{
         client::SyncClient,
         clock::{self, Slot, NUM_CONSECUTIVE_LEADER_SLOTS},
         commitment_config::CommitmentConfig,

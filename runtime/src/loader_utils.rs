@@ -1,7 +1,7 @@
 use {
     crate::{bank::Bank, bank_client::BankClient},
     serde::Serialize,
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, WritableAccount},
         bpf_loader_upgradeable::{self, UpgradeableLoaderState},
         client::{Client, SyncClient},

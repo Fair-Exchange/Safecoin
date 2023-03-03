@@ -1,11 +1,11 @@
 import React from "react";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@safecoin/web3.js";
 import { useFetchRewards, useRewards } from "providers/accounts/rewards";
 import { LoadingCard } from "components/common/LoadingCard";
 import { FetchStatus } from "providers/cache";
 import { ErrorCard } from "components/common/ErrorCard";
 import { Slot } from "components/common/Slot";
-import { lamportsToSolString } from "utils";
+import { lamportsToSafeString } from "utils";
 import { useAccountInfo } from "providers/accounts";
 import { Epoch } from "components/common/Epoch";
 
@@ -64,8 +64,8 @@ export function RewardsCard({ pubkey }: { pubkey: PublicKey }) {
         <td>
           <Slot slot={reward.effectiveSlot} link />
         </td>
-        <td>{lamportsToSolString(reward.amount)}</td>
-        <td>{lamportsToSolString(reward.postBalance)}</td>
+        <td>{lamportsToSafeString(reward.amount)}</td>
+        <td>{lamportsToSafeString(reward.postBalance)}</td>
       </tr>
     );
   });

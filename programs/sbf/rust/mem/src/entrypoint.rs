@@ -2,7 +2,7 @@
 
 use {
     crate::{run_mem_tests, MemOps},
-    solana_program::{
+    safecoin_program::{
         account_info::AccountInfo,
         entrypoint::ProgramResult,
         program_memory::{sol_memcmp, sol_memcpy, sol_memmove, sol_memset},
@@ -10,7 +10,7 @@ use {
     },
 };
 
-solana_program::entrypoint!(process_instruction);
+safecoin_program::entrypoint!(process_instruction);
 #[allow(clippy::unnecessary_wraps)]
 pub fn process_instruction(
     _program_id: &Pubkey,

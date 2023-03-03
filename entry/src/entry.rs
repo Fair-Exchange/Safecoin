@@ -12,7 +12,7 @@ use {
     rand::{thread_rng, Rng},
     rayon::{prelude::*, ThreadPool},
     serde::{Deserialize, Serialize},
-    solana_measure::measure::Measure,
+    safecoin_measure::measure::Measure,
     solana_merkle_tree::MerkleTree,
     solana_metrics::*,
     solana_perf::{
@@ -22,8 +22,8 @@ use {
         recycler::Recycler,
         sigverify,
     },
-    solana_rayon_threadlimit::get_max_thread_count,
-    solana_sdk::{
+    safecoin_rayon_threadlimit::get_max_thread_count,
+    safecoin_sdk::{
         hash::Hash,
         packet::Meta,
         timing,
@@ -43,7 +43,7 @@ use {
 };
 
 // get_max_thread_count to match number of threads in the old code.
-// see: https://github.com/solana-labs/solana/pull/24853
+// see: https://github.com/fair-exchange/safecoin/pull/24853
 lazy_static! {
     static ref PAR_THREAD_POOL: ThreadPool = rayon::ThreadPoolBuilder::new()
         .num_threads(get_max_thread_count())
@@ -629,7 +629,7 @@ impl EntrySlice for [Entry] {
     }
 
     fn verify_cpu_x86_simd(&self, start_hash: &Hash, simd_len: usize) -> EntryVerificationState {
-        use solana_sdk::hash::HASH_BYTES;
+        use safecoin_sdk::hash::HASH_BYTES;
         let now = Instant::now();
         let genesis = [Entry {
             num_hashes: 0,
@@ -900,7 +900,7 @@ mod tests {
     use {
         super::*,
         solana_perf::test_tx::{test_invalid_tx, test_tx},
-        solana_sdk::{
+        safecoin_sdk::{
             hash::{hash, Hash},
             pubkey::Pubkey,
             signature::{Keypair, Signer},
@@ -1054,7 +1054,7 @@ mod tests {
 
     #[test]
     fn test_transaction_signing() {
-        use solana_sdk::signature::Signature;
+        use safecoin_sdk::signature::Signature;
         let zero = Hash::default();
 
         let keypair = Keypair::new();

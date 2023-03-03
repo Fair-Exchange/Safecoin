@@ -1,6 +1,6 @@
 use {
     log::*,
-    solana_sdk::{
+    safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount},
         pubkey::Pubkey,
         rent::Rent,
@@ -106,7 +106,7 @@ pub(crate) fn check_rent_state_with_account(
     account_index: Option<IndexOfAccount>,
 ) -> Result<()> {
     submit_rent_state_metrics(pre_rent_state, post_rent_state);
-    if !solana_sdk::incinerator::check_id(address)
+    if !safecoin_sdk::incinerator::check_id(address)
         && !post_rent_state.transition_allowed_from(pre_rent_state)
     {
         debug!(
@@ -126,7 +126,7 @@ pub(crate) fn check_rent_state_with_account(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_sdk::pubkey::Pubkey};
+    use {super::*, safecoin_sdk::pubkey::Pubkey};
 
     #[test]
     fn test_from_account() {

@@ -2,7 +2,7 @@
 title: "Limitations"
 ---
 
-Developing programs on the Solana blockchain have some inherent limitation associated with them. Below is a list of common limitation that you may run into.
+Developing programs on the Safecoin blockchain have some inherent limitation associated with them. Below is a list of common limitation that you may run into.
 
 ## Rust libraries
 
@@ -18,7 +18,7 @@ See [computational constraints](../programming-model/runtime.md#compute-budget) 
 
 ## Call stack depth - `CallDepthExceeded` error
 
-Solana programs are constrained to run quickly, and to facilitate this, the program's call stack is limited to a max depth of **64 frames**.
+Safecoin programs are constrained to run quickly, and to facilitate this, the program's call stack is limited to a max depth of **64 frames**.
 
 When a program exceeds the allowed call stack depth limit, it will receive the `CallDepthExceeded` error.
 
@@ -39,8 +39,8 @@ built-ins. Due to the software emulated, they consume more compute units than
 integer operations. In general, fixed point operations are recommended where
 possible.
 
-The Solana Program Library math tests will report the performance of some math
-operations: https://github.com/solana-labs/solana-program-library/tree/master/libraries/math
+The Safecoin Program Library math tests will report the performance of some math
+operations: https://github.com/fair-exchange/safecoin-program-library/tree/master/libraries/math
 
 To run the test: sync the repo and run:
 

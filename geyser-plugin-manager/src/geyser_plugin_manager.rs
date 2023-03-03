@@ -2,7 +2,7 @@
 use {
     libloading::{Library, Symbol},
     log::*,
-    solana_geyser_plugin_interface::geyser_plugin_interface::GeyserPlugin,
+    safecoin_geyser_plugin_interface::geyser_plugin_interface::GeyserPlugin,
     std::error::Error,
 };
 

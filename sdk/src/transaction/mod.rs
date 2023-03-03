@@ -1,8 +1,8 @@
 //! Atomically-committed sequences of instructions.
 //!
-//! While [`Instruction`]s are the basic unit of computation in Solana, they are
+//! While [`Instruction`]s are the basic unit of computation in Safecoin, they are
 //! submitted by clients in [`Transaction`]s containing one or more
-//! instructions, and signed by one or more [`Signer`]s. Solana executes the
+//! instructions, and signed by one or more [`Signer`]s. Safecoin executes the
 //! instructions in a transaction in order, and only commits any changes if all
 //! instructions terminate without producing an error or exception.
 //!
@@ -10,7 +10,7 @@
 //! a [`Message`], a precompiled representation of a sequence of instructions.
 //! `Message`'s constructors handle the complex task of reordering the
 //! individual lists of accounts required by each instruction into a single flat
-//! list of deduplicated accounts required by the Solana runtime. The
+//! list of deduplicated accounts required by the Safecoin runtime. The
 //! `Transaction` type has constructors that build the `Message` so that clients
 //! don't need to interact with them directly.
 //!
@@ -18,12 +18,12 @@
 //! more keypairs, and this signing is typically performed by an abstract
 //! [`Signer`], which may be a [`Keypair`] but may also be other types of
 //! signers including remote wallets, such as Ledger devices, as represented by
-//! the [`RemoteKeypair`] type in the [`solana-remote-wallet`] crate.
+//! the [`RemoteKeypair`] type in the [`safecoin-remote-wallet`] crate.
 //!
 //! [`Signer`]: crate::signer::Signer
 //! [`Keypair`]: crate::signer::keypair::Keypair
-//! [`solana-remote-wallet`]: https://docs.rs/solana-remote-wallet/latest/
-//! [`RemoteKeypair`]: https://docs.rs/solana-remote-wallet/latest/solana_remote_wallet/remote_keypair/struct.RemoteKeypair.html
+//! [`safecoin-remote-wallet`]: https://docs.rs/safecoin-remote-wallet/latest/
+//! [`RemoteKeypair`]: https://docs.rs/safecoin-remote-wallet/latest/safecoin_remote_wallet/remote_keypair/struct.RemoteKeypair.html
 //!
 //! Every transaction must be signed by a fee-paying account, the account from
 //! which the cost of executing the transaction is withdrawn. Other required
@@ -42,22 +42,22 @@
 //! transaction nonce]_ mechanism instead of a recent blockhash to ensure unique
 //! transactions.
 //!
-//! [`RpcClient::get_latest_blockhash`]: https://docs.rs/solana-rpc-client/latest/solana_rpc_client/rpc_client/struct.RpcClient.html#method.get_latest_blockhash
+//! [`RpcClient::get_latest_blockhash`]: https://docs.rs/safecoin-rpc-client/latest/safecoin_rpc_client/rpc_client/struct.RpcClient.html#method.get_latest_blockhash
 //! [durable transaction nonce]: https://docs.solana.com/implemented-proposals/durable-tx-nonces
 //!
 //! # Examples
 //!
-//! This example uses the [`solana_rpc_client`] and [`anyhow`] crates.
+//! This example uses the [`safecoin_rpc_client`] and [`anyhow`] crates.
 //!
-//! [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+//! [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
 //! [`anyhow`]: https://docs.rs/anyhow
 //!
 //! ```
-//! # use solana_sdk::example_mocks::solana_rpc_client;
+//! # use safecoin_sdk::example_mocks::safecoin_rpc_client;
 //! use anyhow::Result;
 //! use borsh::{BorshSerialize, BorshDeserialize};
-//! use solana_rpc_client::rpc_client::RpcClient;
-//! use solana_sdk::{
+//! use safecoin_rpc_client::rpc_client::RpcClient;
+//! use safecoin_sdk::{
 //!      instruction::Instruction,
 //!      message::Message,
 //!      pubkey::Pubkey,
@@ -127,8 +127,8 @@ use {
         wasm_bindgen,
     },
     serde::Serialize,
-    solana_program::{system_instruction::SystemInstruction, system_program},
-    solana_sdk::feature_set,
+    safecoin_program::{system_instruction::SystemInstruction, system_program},
+    safecoin_sdk::feature_set,
     std::result,
 };
 
@@ -149,7 +149,7 @@ pub type Result<T> = result::Result<T, TransactionError>;
 
 /// An atomically-commited sequence of instructions.
 ///
-/// While [`Instruction`]s are the basic unit of computation in Solana,
+/// While [`Instruction`]s are the basic unit of computation in Safecoin,
 /// they are submitted by clients in [`Transaction`]s containing one or
 /// more instructions, and signed by one or more [`Signer`]s.
 ///
@@ -206,17 +206,17 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_rpc_client`] and [`anyhow`] crates.
+    /// This example uses the [`safecoin_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use safecoin_sdk::example_mocks::safecoin_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
     ///      pubkey::Pubkey,
@@ -285,17 +285,17 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_rpc_client`] and [`anyhow`] crates.
+    /// This example uses the [`safecoin_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use safecoin_sdk::example_mocks::safecoin_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
     ///      pubkey::Pubkey,
@@ -364,17 +364,17 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_rpc_client`] and [`anyhow`] crates.
+    /// This example uses the [`safecoin_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use safecoin_sdk::example_mocks::safecoin_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
     ///      pubkey::Pubkey,
@@ -440,17 +440,17 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_rpc_client`] and [`anyhow`] crates.
+    /// This example uses the [`safecoin_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use safecoin_sdk::example_mocks::safecoin_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
     ///      pubkey::Pubkey,
@@ -648,17 +648,17 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_rpc_client`] and [`anyhow`] crates.
+    /// This example uses the [`safecoin_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use safecoin_sdk::example_mocks::safecoin_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
     ///      pubkey::Pubkey,
@@ -786,17 +786,17 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_rpc_client`] and [`anyhow`] crates.
+    /// This example uses the [`safecoin_rpc_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
+    /// [`safecoin_rpc_client`]: https://docs.rs/safecoin-rpc-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use safecoin_sdk::example_mocks::safecoin_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
+    /// use safecoin_rpc_client::rpc_client::RpcClient;
+    /// use safecoin_sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
     ///      pubkey::Pubkey,
@@ -896,7 +896,7 @@ impl Transaction {
     ///   - Some device-specific protocol error occurs ([`SignerError::Protocol`]).
     ///   - Some other error occurs ([`SignerError::Custom`]).
     ///
-    /// See the documentation for the [`solana-remote-wallet`] crate for details
+    /// See the documentation for the [`safecoin-remote-wallet`] crate for details
     /// on the operation of [`RemoteKeypair`] signers.
     ///
     /// [`num_required_signatures`]: crate::message::MessageHeader::num_required_signatures
@@ -904,8 +904,8 @@ impl Transaction {
     /// [`Presigner`]: crate::signer::presigner::Presigner
     /// [`PresignerError`]: crate::signer::presigner::PresignerError
     /// [`PresignerError::VerificationFailure`]: crate::signer::presigner::PresignerError::VerificationFailure
-    /// [`solana-remote-wallet`]: https://docs.rs/solana-remote-wallet/latest/
-    /// [`RemoteKeypair`]: https://docs.rs/solana-remote-wallet/latest/solana_remote_wallet/remote_keypair/struct.RemoteKeypair.html
+    /// [`safecoin-remote-wallet`]: https://docs.rs/safecoin-remote-wallet/latest/
+    /// [`RemoteKeypair`]: https://docs.rs/safecoin-remote-wallet/latest/safecoin_remote_wallet/remote_keypair/struct.RemoteKeypair.html
     pub fn try_partial_sign<T: Signers>(
         &mut self,
         keypairs: &T,
@@ -1134,10 +1134,10 @@ mod tests {
     #[test]
     fn test_refs() {
         let key = Keypair::new();
-        let key1 = solana_sdk::pubkey::new_rand();
-        let key2 = solana_sdk::pubkey::new_rand();
-        let prog1 = solana_sdk::pubkey::new_rand();
-        let prog2 = solana_sdk::pubkey::new_rand();
+        let key1 = safecoin_sdk::pubkey::new_rand();
+        let key2 = safecoin_sdk::pubkey::new_rand();
+        let prog1 = safecoin_sdk::pubkey::new_rand();
+        let prog2 = safecoin_sdk::pubkey::new_rand();
         let instructions = vec![
             CompiledInstruction::new(3, &(), vec![0, 1]),
             CompiledInstruction::new(4, &(), vec![0, 2]),
@@ -1205,7 +1205,7 @@ mod tests {
     fn test_sanitize_txs() {
         let key = Keypair::new();
         let id0 = Pubkey::default();
-        let program_id = solana_sdk::pubkey::new_rand();
+        let program_id = safecoin_sdk::pubkey::new_rand();
         let ix = Instruction::new_with_bincode(
             program_id,
             &0,
@@ -1302,7 +1302,7 @@ mod tests {
     fn test_transaction_minimum_serialized_size() {
         let alice_keypair = Keypair::new();
         let alice_pubkey = alice_keypair.pubkey();
-        let bob_pubkey = solana_sdk::pubkey::new_rand();
+        let bob_pubkey = safecoin_sdk::pubkey::new_rand();
         let ix = system_instruction::transfer(&alice_pubkey, &bob_pubkey, 42);
 
         let expected_data_size = size_of::<u32>() + size_of::<u64>();
@@ -1380,7 +1380,7 @@ mod tests {
     #[should_panic]
     fn test_partial_sign_mismatched_key() {
         let keypair = Keypair::new();
-        let fee_payer = solana_sdk::pubkey::new_rand();
+        let fee_payer = safecoin_sdk::pubkey::new_rand();
         let ix = Instruction::new_with_bincode(
             Pubkey::default(),
             &0,
@@ -1463,7 +1463,7 @@ mod tests {
         let program_id = Pubkey::default();
         let keypair0 = Keypair::new();
         let id0 = keypair0.pubkey();
-        let id1 = solana_sdk::pubkey::new_rand();
+        let id1 = safecoin_sdk::pubkey::new_rand();
         let ix = Instruction::new_with_bincode(
             program_id,
             &0,
@@ -1514,7 +1514,7 @@ mod tests {
         assert_eq!(tx.signatures[1], presigner_sig);
 
         // Wrong key should error, not panic
-        let another_pubkey = solana_sdk::pubkey::new_rand();
+        let another_pubkey = safecoin_sdk::pubkey::new_rand();
         let ix = Instruction::new_with_bincode(
             program_id,
             &0,

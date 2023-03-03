@@ -2,7 +2,7 @@ use {
     crate::shred::{Shred, ShredType},
     bitflags::bitflags,
     serde::{Deserialize, Deserializer, Serialize, Serializer},
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, UnixTimestamp},
         hash::Hash,
     },

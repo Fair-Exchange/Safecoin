@@ -17,11 +17,11 @@ use {
         staked_nodes_updater_service::StakedNodesUpdaterService,
     },
     crossbeam_channel::{unbounded, Receiver},
-    solana_client::connection_cache::ConnectionCache,
-    solana_gossip::cluster_info::ClusterInfo,
+    safecoin_client::connection_cache::ConnectionCache,
+    safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::{blockstore::Blockstore, blockstore_processor::TransactionStatusSender},
-    solana_poh::poh_recorder::{PohRecorder, WorkingBankEntry},
-    solana_rpc::{
+    safecoin_poh::poh_recorder::{PohRecorder, WorkingBankEntry},
+    safecoin_rpc::{
         optimistically_confirmed_bank_tracker::BankNotificationSender,
         rpc_subscriptions::RpcSubscriptions,
     },
@@ -29,7 +29,7 @@ use {
         bank_forks::BankForks,
         vote_sender_types::{ReplayVoteReceiver, ReplayVoteSender},
     },
-    solana_sdk::{pubkey::Pubkey, signature::Keypair},
+    safecoin_sdk::{pubkey::Pubkey, signature::Keypair},
     solana_streamer::{
         nonblocking::quic::DEFAULT_WAIT_FOR_CHUNK_TIMEOUT_MS,
         quic::{spawn_server, StreamStats, MAX_STAKED_CONNECTIONS, MAX_UNSTAKED_CONNECTIONS},

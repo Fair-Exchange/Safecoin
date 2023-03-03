@@ -1,4 +1,4 @@
-//! Collection of sigma proofs (more precisely, "arguments") that are used in the Solana zk-token
+//! Collection of sigma proofs (more precisely, "arguments") that are used in the Safecoin zk-token
 //! protocol.
 //!
 //! The module contains implementations of the following proof systems that work on Pedersen

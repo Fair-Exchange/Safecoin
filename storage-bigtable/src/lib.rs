@@ -5,7 +5,7 @@ use {
     log::*,
     serde::{Deserialize, Serialize},
     solana_metrics::{datapoint_info, inc_new_counter_debug},
-    solana_sdk::{
+    safecoin_sdk::{
         clock::{Slot, UnixTimestamp},
         deserialize_utils::default_on_eof,
         message::v0::LoadedAddresses,
@@ -15,7 +15,7 @@ use {
         transaction::{TransactionError, VersionedTransaction},
     },
     solana_storage_proto::convert::{generated, tx_by_addr},
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         extract_and_fmt_memos, ConfirmedBlock, ConfirmedTransactionStatusWithSignature,
         ConfirmedTransactionWithStatusMeta, Reward, TransactionByAddrInfo,
         TransactionConfirmationStatus, TransactionStatus, TransactionStatusMeta,
@@ -369,7 +369,7 @@ impl From<LegacyTransactionByAddrInfo> for TransactionByAddrInfo {
     }
 }
 
-pub const DEFAULT_INSTANCE_NAME: &str = "solana-ledger";
+pub const DEFAULT_INSTANCE_NAME: &str = "safecoin-ledger";
 pub const DEFAULT_APP_PROFILE_ID: &str = "default";
 
 #[derive(Debug)]

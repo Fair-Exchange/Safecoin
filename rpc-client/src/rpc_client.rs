@@ -1,7 +1,7 @@
-//! Communication with a Solana node over RPC.
+//! Communication with a Safecoin node over RPC.
 //!
-//! Software that interacts with the Solana blockchain, whether querying its
-//! state or submitting transactions, communicates with a Solana node over
+//! Software that interacts with the Safecoin blockchain, whether querying its
+//! state or submitting transactions, communicates with a Safecoin node over
 //! [JSON-RPC], using the [`RpcClient`] type.
 //!
 //! [JSON-RPC]: https://www.jsonrpc.org/specification
@@ -11,7 +11,7 @@
 
 pub use crate::mock_sender::Mocks;
 #[allow(deprecated)]
-use solana_rpc_client_api::deprecated_config::{
+use safecoin_rpc_client_api::deprecated_config::{
     RpcConfirmedBlockConfig, RpcConfirmedTransactionConfig,
 };
 use {
@@ -23,17 +23,17 @@ use {
     },
     serde::Serialize,
     serde_json::Value,
-    solana_account_decoder::{
+    safecoin_account_decoder::{
         parse_token::{UiTokenAccount, UiTokenAmount},
         UiAccount, UiAccountEncoding,
     },
-    solana_rpc_client_api::{
+    safecoin_rpc_client_api::{
         client_error::Result as ClientResult,
         config::{RpcAccountInfoConfig, *},
         request::{RpcRequest, TokenAccountsFilter},
         response::*,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::Account,
         clock::{Epoch, Slot, UnixTimestamp},
         commitment_config::CommitmentConfig,
@@ -46,7 +46,7 @@ use {
         signature::Signature,
         transaction::{self, uses_durable_nonce, Transaction, VersionedTransaction},
     },
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         EncodedConfirmedBlock, EncodedConfirmedTransactionWithStatusMeta, TransactionStatus,
         UiConfirmedBlock, UiTransactionEncoding,
     },
@@ -112,10 +112,10 @@ pub struct GetConfirmedSignaturesForAddress2Config {
     pub commitment: Option<CommitmentConfig>,
 }
 
-/// A client of a remote Solana node.
+/// A client of a remote Safecoin node.
 ///
-/// `RpcClient` communicates with a Solana node over [JSON-RPC], with the
-/// [Solana JSON-RPC protocol][jsonprot]. It is the primary Rust interface for
+/// `RpcClient` communicates with a Safecoin node over [JSON-RPC], with the
+/// [Safecoin JSON-RPC protocol][jsonprot]. It is the primary Rust interface for
 /// querying and transacting with the network from external programs.
 ///
 /// This type builds on the underlying RPC protocol, adding extra features such
@@ -148,8 +148,8 @@ pub struct GetConfirmedSignaturesForAddress2Config {
 /// [`Processed`] commitment level. These exceptions are noted in the method
 /// documentation.
 ///
-/// [`Finalized`]: solana_sdk::commitment_config::CommitmentLevel::Finalized
-/// [`Processed`]: solana_sdk::commitment_config::CommitmentLevel::Processed
+/// [`Finalized`]: safecoin_sdk::commitment_config::CommitmentLevel::Finalized
+/// [`Processed`]: safecoin_sdk::commitment_config::CommitmentLevel::Processed
 /// [jsonprot]: https://docs.solana.com/developing/clients/jsonrpc-api
 /// [JSON-RPC]: https://www.jsonrpc.org/specification
 /// [slots]: https://docs.solana.com/terminology#slot
@@ -158,24 +158,24 @@ pub struct GetConfirmedSignaturesForAddress2Config {
 /// # Errors
 ///
 /// Methods on `RpcClient` return
-/// [`client_error::Result`][solana_rpc_client_api::client_error::Result], and many of them
-/// return the [`RpcResult`][solana_rpc_client_api::response::RpcResult] typedef, which
-/// contains [`Response<T>`][solana_rpc_client_api::response::Response] on `Ok`. Both
+/// [`client_error::Result`][safecoin_rpc_client_api::client_error::Result], and many of them
+/// return the [`RpcResult`][safecoin_rpc_client_api::response::RpcResult] typedef, which
+/// contains [`Response<T>`][safecoin_rpc_client_api::response::Response] on `Ok`. Both
 /// `client_error::Result` and [`RpcResult`] contain `ClientError` on error. In
 /// the case of `RpcResult`, the actual return value is in the
-/// [`value`][solana_rpc_client_api::response::Response::value] field, with RPC contextual
-/// information in the [`context`][solana_rpc_client_api::response::Response::context]
+/// [`value`][safecoin_rpc_client_api::response::Response::value] field, with RPC contextual
+/// information in the [`context`][safecoin_rpc_client_api::response::Response::context]
 /// field, so it is common for the value to be accessed with `?.value`, as in
 ///
 /// ```
-/// # use solana_sdk::system_transaction;
-/// # use solana_rpc_client_api::client_error::Error;
-/// # use solana_rpc_client::rpc_client::RpcClient;
-/// # use solana_sdk::signature::{Keypair, Signer};
-/// # use solana_sdk::hash::Hash;
+/// # use safecoin_sdk::system_transaction;
+/// # use safecoin_rpc_client_api::client_error::Error;
+/// # use safecoin_rpc_client::rpc_client::RpcClient;
+/// # use safecoin_sdk::signature::{Keypair, Signer};
+/// # use safecoin_sdk::hash::Hash;
 /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
 /// # let key = Keypair::new();
-/// # let to = solana_sdk::pubkey::new_rand();
+/// # let to = safecoin_sdk::pubkey::new_rand();
 /// # let lamports = 50;
 /// # let latest_blockhash = Hash::default();
 /// # let tx = system_transaction::transfer(&key, &to, lamports, latest_blockhash);
@@ -186,14 +186,14 @@ pub struct GetConfirmedSignaturesForAddress2Config {
 ///
 /// Requests may timeout, in which case they return a [`ClientError`] where the
 /// [`ClientErrorKind`] is [`ClientErrorKind::Reqwest`], and where the interior
-/// [`reqwest::Error`](solana_rpc_client_api::client_error::reqwest::Error)s
-/// [`is_timeout`](solana_rpc_client_api::client_error::reqwest::Error::is_timeout) method
+/// [`reqwest::Error`](safecoin_rpc_client_api::client_error::reqwest::Error)s
+/// [`is_timeout`](safecoin_rpc_client_api::client_error::reqwest::Error::is_timeout) method
 /// returns `true`. The default timeout is 30 seconds, and may be changed by
 /// calling an appropriate constructor with a `timeout` parameter.
 ///
-/// [`ClientError`]: solana_rpc_client_api::client_error::Error
-/// [`ClientErrorKind`]: solana_rpc_client_api::client_error::ErrorKind
-/// [`ClientErrorKind::Reqwest`]: solana_rpc_client_api::client_error::ErrorKind::Reqwest
+/// [`ClientError`]: safecoin_rpc_client_api::client_error::Error
+/// [`ClientErrorKind`]: safecoin_rpc_client_api::client_error::ErrorKind
+/// [`ClientErrorKind::Reqwest`]: safecoin_rpc_client_api::client_error::ErrorKind::Reqwest
 pub struct RpcClient {
     rpc_client: Arc<nonblocking::rpc_client::RpcClient>,
     runtime: Option<tokio::runtime::Runtime>,
@@ -240,12 +240,12 @@ impl RpcClient {
     /// level][cl] of [`Finalized`].
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
-    /// [`Finalized`]: solana_sdk::commitment_config::CommitmentLevel::Finalized
+    /// [`Finalized`]: safecoin_sdk::commitment_config::CommitmentLevel::Finalized
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// let url = "http://localhost:8899".to_string();
     /// let client = RpcClient::new(url);
     /// ```
@@ -263,13 +263,13 @@ impl RpcClient {
     /// The client has a default timeout of 30 seconds, and a user-specified
     /// [`CommitmentLevel`] via [`CommitmentConfig`].
     ///
-    /// [`CommitmentLevel`]: solana_sdk::commitment_config::CommitmentLevel
+    /// [`CommitmentLevel`]: safecoin_sdk::commitment_config::CommitmentLevel
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// let url = "http://localhost:8899".to_string();
     /// let commitment_config = CommitmentConfig::processed();
     /// let client = RpcClient::new_with_commitment(url, commitment_config);
@@ -290,13 +290,13 @@ impl RpcClient {
     /// [`Finalized`].
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
-    /// [`Finalized`]: solana_sdk::commitment_config::CommitmentLevel::Finalized
+    /// [`Finalized`]: safecoin_sdk::commitment_config::CommitmentLevel::Finalized
     ///
     /// # Examples
     ///
     /// ```
     /// # use std::time::Duration;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// let url = "http://localhost::8899".to_string();
     /// let timeout = Duration::from_secs(1);
     /// let client = RpcClient::new_with_timeout(url, timeout);
@@ -319,8 +319,8 @@ impl RpcClient {
     ///
     /// ```
     /// # use std::time::Duration;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// let url = "http://localhost::8899".to_string();
     /// let timeout = Duration::from_secs(1);
     /// let commitment_config = CommitmentConfig::processed();
@@ -360,8 +360,8 @@ impl RpcClient {
     ///
     /// ```
     /// # use std::time::Duration;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// let url = "http://localhost::8899".to_string();
     /// let timeout = Duration::from_secs(1);
     /// let commitment_config = CommitmentConfig::processed();
@@ -395,7 +395,7 @@ impl RpcClient {
     /// tests.
     ///
     /// It is primarily for internal use, with limited customizability, and
-    /// behaviors determined by internal Solana test cases. New users should
+    /// behaviors determined by internal Safecoin test cases. New users should
     /// consider implementing `RpcSender` themselves and constructing
     /// `RpcClient` with [`RpcClient::new_sender`] to get mock behavior.
     ///
@@ -422,14 +422,14 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// // Create an `RpcClient` that always succeeds
     /// let url = "succeeds".to_string();
     /// let successful_client = RpcClient::new_mock(url);
     /// ```
     ///
     /// ```
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// // Create an `RpcClient` that always fails
     /// let url = "fails".to_string();
     /// let successful_client = RpcClient::new_mock(url);
@@ -448,7 +448,7 @@ impl RpcClient {
     /// tests.
     ///
     /// It is primarily for internal use, with limited customizability, and
-    /// behaviors determined by internal Solana test cases. New users should
+    /// behaviors determined by internal Safecoin test cases. New users should
     /// consider implementing `RpcSender` themselves and constructing
     /// `RpcClient` with [`RpcClient::new_sender`] to get mock behavior.
     ///
@@ -484,11 +484,11 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     request::RpcRequest,
     /// #     response::{Response, RpcResponseContext},
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # use std::collections::HashMap;
     /// # use serde_json::json;
     /// // Create a mock with a custom repsonse to the `GetBalance` request
@@ -516,13 +516,13 @@ impl RpcClient {
     /// level][cl] of [`Finalized`].
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
-    /// [`Finalized`]: solana_sdk::commitment_config::CommitmentLevel::Finalized
+    /// [`Finalized`]: safecoin_sdk::commitment_config::CommitmentLevel::Finalized
     ///
     /// # Examples
     ///
     /// ```
     /// # use std::net::{Ipv4Addr, SocketAddr};
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 8899));
     /// let client = RpcClient::new_socket(addr);
     /// ```
@@ -537,14 +537,14 @@ impl RpcClient {
     /// The client has a default timeout of 30 seconds, and a user-specified
     /// [`CommitmentLevel`] via [`CommitmentConfig`].
     ///
-    /// [`CommitmentLevel`]: solana_sdk::commitment_config::CommitmentLevel
+    /// [`CommitmentLevel`]: safecoin_sdk::commitment_config::CommitmentLevel
     ///
     /// # Examples
     ///
     /// ```
     /// # use std::net::{Ipv4Addr, SocketAddr};
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 8899));
     /// let commitment_config = CommitmentConfig::processed();
     /// let client = RpcClient::new_socket_with_commitment(
@@ -564,14 +564,14 @@ impl RpcClient {
     /// The client has a default [commitment level][cl] of [`Finalized`].
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
-    /// [`Finalized`]: solana_sdk::commitment_config::CommitmentLevel::Finalized
+    /// [`Finalized`]: safecoin_sdk::commitment_config::CommitmentLevel::Finalized
     ///
     /// # Examples
     ///
     /// ```
     /// # use std::net::{Ipv4Addr, SocketAddr};
     /// # use std::time::Duration;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 8899));
     /// let timeout = Duration::from_secs(1);
     /// let client = RpcClient::new_socket_with_timeout(addr, timeout);
@@ -596,7 +596,7 @@ impl RpcClient {
     /// specified, the default commitment level is
     /// [`Finalized`].
     ///
-    /// [`Finalized`]: solana_sdk::commitment_config::CommitmentLevel::Finalized
+    /// [`Finalized`]: safecoin_sdk::commitment_config::CommitmentLevel::Finalized
     ///
     /// The default commitment level is overridden when calling methods that
     /// explicitly provide a [`CommitmentConfig`], like
@@ -630,11 +630,11 @@ impl RpcClient {
     /// containing an [`RpcResponseError`] with `code` set to
     /// [`JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY`].
     ///
-    /// [`RpcError`]: solana_rpc_client_api::request::RpcError
-    /// [`RpcResponseError`]: solana_rpc_client_api::request::RpcError::RpcResponseError
-    /// [`JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE`]: solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE
-    /// [`JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE`]: solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE
-    /// [`JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY`]: solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY
+    /// [`RpcError`]: safecoin_rpc_client_api::request::RpcError
+    /// [`RpcResponseError`]: safecoin_rpc_client_api::request::RpcError::RpcResponseError
+    /// [`JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE`]: safecoin_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE
+    /// [`JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE`]: safecoin_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE
+    /// [`JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY`]: safecoin_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY
     ///
     /// # RPC Reference
     ///
@@ -647,9 +647,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -724,8 +724,8 @@ impl RpcClient {
     /// method.
     ///
     /// [`send_transaction_with_config`]: RpcClient::send_transaction_with_config
-    /// [`skip_preflight`]: solana_rpc_client_api::config::RpcSendTransactionConfig::skip_preflight
-    /// [`RpcSendTransactionConfig`]: solana_rpc_client_api::config::RpcSendTransactionConfig
+    /// [`skip_preflight`]: safecoin_rpc_client_api::config::RpcSendTransactionConfig::skip_preflight
+    /// [`RpcSendTransactionConfig`]: safecoin_rpc_client_api::config::RpcSendTransactionConfig
     /// [`send_and_confirm_transaction`]: RpcClient::send_and_confirm_transaction
     ///
     /// # Errors
@@ -743,11 +743,11 @@ impl RpcClient {
     /// containing an [`RpcResponseError`] with `code` set to
     /// [`JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY`].
     ///
-    /// [`RpcError`]: solana_rpc_client_api::request::RpcError
-    /// [`RpcResponseError`]: solana_rpc_client_api::request::RpcError::RpcResponseError
-    /// [`JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE`]: solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE
-    /// [`JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE`]: solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE
-    /// [`JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY`]: solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY
+    /// [`RpcError`]: safecoin_rpc_client_api::request::RpcError
+    /// [`RpcResponseError`]: safecoin_rpc_client_api::request::RpcError::RpcResponseError
+    /// [`JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE`]: safecoin_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE
+    /// [`JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE`]: safecoin_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE
+    /// [`JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY`]: safecoin_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY
     ///
     /// # RPC Reference
     ///
@@ -758,9 +758,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -798,8 +798,8 @@ impl RpcClient {
     /// method.
     ///
     /// [`send_transaction_with_config`]: RpcClient::send_transaction_with_config
-    /// [`skip_preflight`]: solana_rpc_client_api::config::RpcSendTransactionConfig::skip_preflight
-    /// [`RpcSendTransactionConfig`]: solana_rpc_client_api::config::RpcSendTransactionConfig
+    /// [`skip_preflight`]: safecoin_rpc_client_api::config::RpcSendTransactionConfig::skip_preflight
+    /// [`RpcSendTransactionConfig`]: safecoin_rpc_client_api::config::RpcSendTransactionConfig
     /// [`send_and_confirm_transaction`]: RpcClient::send_and_confirm_transaction
     ///
     /// # Errors
@@ -819,11 +819,11 @@ impl RpcClient {
     /// containing an [`RpcResponseError`] with `code` set to
     /// [`JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY`].
     ///
-    /// [`RpcError`]: solana_rpc_client_api::request::RpcError
-    /// [`RpcResponseError`]: solana_rpc_client_api::request::RpcError::RpcResponseError
-    /// [`JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE`]: solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE
-    /// [`JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE`]: solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE
-    /// [`JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY`]: solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY
+    /// [`RpcError`]: safecoin_rpc_client_api::request::RpcError
+    /// [`RpcResponseError`]: safecoin_rpc_client_api::request::RpcError::RpcResponseError
+    /// [`JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE`]: safecoin_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_TRANSACTION_SIGNATURE_VERIFICATION_FAILURE
+    /// [`JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE`]: safecoin_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE
+    /// [`JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY`]: safecoin_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_NODE_UNHEALTHY
     ///
     /// # RPC Reference
     ///
@@ -834,12 +834,12 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     config::RpcSendTransactionConfig,
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -903,9 +903,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -956,9 +956,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     commitment_config::CommitmentConfig,
     /// #     signature::Signer,
     /// #     signature::Signature,
@@ -1015,8 +1015,8 @@ impl RpcClient {
     /// [`RpcSimulateTransactionResult`] will be `Some`. Any logs emitted from
     /// the transaction are returned in the [`logs`] field.
     ///
-    /// [`err`]: solana_rpc_client_api::response::RpcSimulateTransactionResult::err
-    /// [`logs`]: solana_rpc_client_api::response::RpcSimulateTransactionResult::logs
+    /// [`err`]: safecoin_rpc_client_api::response::RpcSimulateTransactionResult::err
+    /// [`logs`]: safecoin_rpc_client_api::response::RpcSimulateTransactionResult::logs
     ///
     /// Simulating a transaction is similar to the ["preflight check"] that is
     /// run by default when sending a transaction.
@@ -1029,7 +1029,7 @@ impl RpcClient {
     /// `true`.
     ///
     /// [`simulate_transaction_with_config`]: RpcClient::simulate_transaction_with_config
-    /// [`sig_verify`]: solana_rpc_client_api::config::RpcSimulateTransactionConfig::sig_verify
+    /// [`sig_verify`]: safecoin_rpc_client_api::config::RpcSimulateTransactionConfig::sig_verify
     ///
     /// # RPC Reference
     ///
@@ -1040,12 +1040,12 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     response::RpcSimulateTransactionResult,
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -1076,8 +1076,8 @@ impl RpcClient {
     /// [`RpcSimulateTransactionResult`] will be `Some`. Any logs emitted from
     /// the transaction are returned in the [`logs`] field.
     ///
-    /// [`err`]: solana_rpc_client_api::response::RpcSimulateTransactionResult::err
-    /// [`logs`]: solana_rpc_client_api::response::RpcSimulateTransactionResult::logs
+    /// [`err`]: safecoin_rpc_client_api::response::RpcSimulateTransactionResult::err
+    /// [`logs`]: safecoin_rpc_client_api::response::RpcSimulateTransactionResult::logs
     ///
     /// Simulating a transaction is similar to the ["preflight check"] that is
     /// run by default when sending a transaction.
@@ -1090,7 +1090,7 @@ impl RpcClient {
     /// `true`.
     ///
     /// [`simulate_transaction_with_config`]: RpcClient::simulate_transaction_with_config
-    /// [`sig_verify`]: solana_rpc_client_api::config::RpcSimulateTransactionConfig::sig_verify
+    /// [`sig_verify`]: safecoin_rpc_client_api::config::RpcSimulateTransactionConfig::sig_verify
     ///
     /// This method can additionally query information about accounts by
     /// including them in the [`accounts`] field of the
@@ -1098,8 +1098,8 @@ impl RpcClient {
     /// are reported in the [`accounts`][accounts2] field of the returned
     /// [`RpcSimulateTransactionResult`].
     ///
-    /// [`accounts`]: solana_rpc_client_api::config::RpcSimulateTransactionConfig::accounts
-    /// [accounts2]: solana_rpc_client_api::response::RpcSimulateTransactionResult::accounts
+    /// [`accounts`]: safecoin_rpc_client_api::config::RpcSimulateTransactionConfig::accounts
+    /// [accounts2]: safecoin_rpc_client_api::response::RpcSimulateTransactionResult::accounts
     ///
     /// # RPC Reference
     ///
@@ -1110,13 +1110,13 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     config::RpcSimulateTransactionConfig,
     /// #     response::RpcSimulateTransactionResult,
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     hash::Hash,
@@ -1164,8 +1164,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let snapshot_slot_info = rpc_client.get_highest_snapshot_slot()?;
     /// # Ok::<(), Error>(())
@@ -1198,11 +1198,11 @@ impl RpcClient {
     /// and the transaction failed, this method returns `Ok(Some(Err(_)))`,
     /// where the interior error is type [`TransactionError`].
     ///
-    /// [`TransactionError`]: solana_sdk::transaction::TransactionError
+    /// [`TransactionError`]: safecoin_sdk::transaction::TransactionError
     ///
     /// This function only searches a node's recent history, including all
     /// recent slots, plus up to
-    /// [`MAX_RECENT_BLOCKHASHES`][solana_sdk::clock::MAX_RECENT_BLOCKHASHES]
+    /// [`MAX_RECENT_BLOCKHASHES`][safecoin_sdk::clock::MAX_RECENT_BLOCKHASHES]
     /// rooted slots. To search the full transaction history use the
     /// [`get_signature_statuse_with_commitment_and_history`][RpcClient::get_signature_status_with_commitment_and_history]
     /// method.
@@ -1216,9 +1216,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -1261,7 +1261,7 @@ impl RpcClient {
     ///
     /// This function only searches a node's recent history, including all
     /// recent slots, plus up to
-    /// [`MAX_RECENT_BLOCKHASHES`][solana_sdk::clock::MAX_RECENT_BLOCKHASHES]
+    /// [`MAX_RECENT_BLOCKHASHES`][safecoin_sdk::clock::MAX_RECENT_BLOCKHASHES]
     /// rooted slots. To search the full transaction history use the
     /// [`get_signature_statuses_with_history`][RpcClient::get_signature_statuses_with_history]
     /// method.
@@ -1281,9 +1281,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -1356,9 +1356,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -1399,11 +1399,11 @@ impl RpcClient {
     /// and the transaction failed, this method returns `Ok(Some(Err(_)))`,
     /// where the interior error is type [`TransactionError`].
     ///
-    /// [`TransactionError`]: solana_sdk::transaction::TransactionError
+    /// [`TransactionError`]: safecoin_sdk::transaction::TransactionError
     ///
     /// This function only searches a node's recent history, including all
     /// recent slots, plus up to
-    /// [`MAX_RECENT_BLOCKHASHES`][solana_sdk::clock::MAX_RECENT_BLOCKHASHES]
+    /// [`MAX_RECENT_BLOCKHASHES`][safecoin_sdk::clock::MAX_RECENT_BLOCKHASHES]
     /// rooted slots. To search the full transaction history use the
     /// [`get_signature_statuse_with_commitment_and_history`][RpcClient::get_signature_status_with_commitment_and_history]
     /// method.
@@ -1417,9 +1417,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     commitment_config::CommitmentConfig,
     /// #     signature::Signer,
     /// #     signature::Signature,
@@ -1466,7 +1466,7 @@ impl RpcClient {
     /// and the transaction failed, this method returns `Ok(Some(Err(_)))`,
     /// where the interior error is type [`TransactionError`].
     ///
-    /// [`TransactionError`]: solana_sdk::transaction::TransactionError
+    /// [`TransactionError`]: safecoin_sdk::transaction::TransactionError
     ///
     /// This method optionally searches a node's full ledger history and (if
     /// implemented) long-term storage.
@@ -1480,9 +1480,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     commitment_config::CommitmentConfig,
     /// #     signature::Signer,
     /// #     signature::Signature,
@@ -1533,8 +1533,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let slot = rpc_client.get_slot()?;
     /// # Ok::<(), Error>(())
@@ -1556,9 +1556,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
     /// let slot = rpc_client.get_slot_with_commitment(commitment_config)?;
@@ -1584,8 +1584,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let block_height = rpc_client.get_block_height()?;
     /// # Ok::<(), Error>(())
@@ -1607,9 +1607,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
     /// let block_height = rpc_client.get_block_height_with_commitment(
@@ -1635,9 +1635,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::slot_history::Slot;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::slot_history::Slot;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let start_slot = 1;
     /// let limit = 3;
@@ -1659,8 +1659,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let production = rpc_client.get_block_production()?;
     /// # Ok::<(), Error>(())
@@ -1680,12 +1680,12 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     config::{RpcBlockProductionConfig, RpcBlockProductionConfigRange},
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
@@ -1731,12 +1731,12 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     response::StakeActivationState,
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signer::keypair::Keypair,
     /// #     signature::Signer,
     /// #     pubkey::Pubkey,
@@ -1810,8 +1810,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let supply = rpc_client.supply()?;
     /// # Ok::<(), Error>(())
@@ -1831,9 +1831,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
     /// let supply = rpc_client.supply_with_commitment(
@@ -1860,12 +1860,12 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     config::{RpcLargestAccountsConfig, RpcLargestAccountsFilter},
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
     /// let config = RpcLargestAccountsConfig {
@@ -1899,8 +1899,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let accounts = rpc_client.get_vote_accounts()?;
     /// # Ok::<(), Error>(())
@@ -1923,9 +1923,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
     /// let accounts = rpc_client.get_vote_accounts_with_commitment(
@@ -1954,12 +1954,12 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     config::RpcGetVoteAccountsConfig,
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signer::keypair::Keypair,
     /// #     signature::Signer,
     /// #     commitment_config::CommitmentConfig,
@@ -2006,8 +2006,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let cluster_nodes = rpc_client.get_cluster_nodes()?;
     /// # Ok::<(), Error>(())
@@ -2035,8 +2035,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let slot = rpc_client.get_slot()?;
     /// let block = rpc_client.get_block(slot)?;
@@ -2057,9 +2057,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_transaction_status::UiTransactionEncoding;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_transaction_status::UiTransactionEncoding;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let slot = rpc_client.get_slot()?;
     /// let encoding = UiTransactionEncoding::Base58;
@@ -2088,12 +2088,12 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     config::RpcBlockConfig,
     /// #     client_error::Error,
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_transaction_status::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_transaction_status::{
     /// #     TransactionDetails,
     /// #     UiTransactionEncoding,
     /// # };
@@ -2166,7 +2166,7 @@ impl RpcClient {
     ///
     /// This method uses the [`Finalized`] [commitment level][cl].
     ///
-    /// [`Finalized`]: solana_sdk::commitment_config::CommitmentLevel::Finalized
+    /// [`Finalized`]: safecoin_sdk::commitment_config::CommitmentLevel::Finalized
     /// [`get_blocks_with_limit`]: RpcClient::get_blocks_with_limit.
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
@@ -2186,8 +2186,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// // Get up to the first 10 blocks
     /// let start_slot = 0;
@@ -2223,7 +2223,7 @@ impl RpcClient {
     /// This method returns an error if the given commitment level is below
     /// [`Confirmed`].
     ///
-    /// [`Confirmed`]: solana_sdk::commitment_config::CommitmentLevel::Confirmed
+    /// [`Confirmed`]: safecoin_sdk::commitment_config::CommitmentLevel::Confirmed
     ///
     /// # RPC Reference
     ///
@@ -2237,9 +2237,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// // Get up to the first 10 blocks
     /// let start_slot = 0;
@@ -2289,8 +2289,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// // Get the first 10 blocks
     /// let start_slot = 0;
@@ -2312,7 +2312,7 @@ impl RpcClient {
     /// [`Confirmed`].
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
-    /// [`Confirmed`]: solana_sdk::commitment_config::CommitmentLevel::Confirmed
+    /// [`Confirmed`]: safecoin_sdk::commitment_config::CommitmentLevel::Confirmed
     ///
     /// # RPC Reference
     ///
@@ -2326,9 +2326,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// // Get the first 10 blocks
     /// let start_slot = 0;
@@ -2440,9 +2440,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     system_transaction,
@@ -2469,7 +2469,7 @@ impl RpcClient {
     /// [`Confirmed`].
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
-    /// [`Confirmed`]: solana_sdk::commitment_config::CommitmentLevel::Confirmed
+    /// [`Confirmed`]: safecoin_sdk::commitment_config::CommitmentLevel::Confirmed
     ///
     /// # RPC Reference
     ///
@@ -2483,9 +2483,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient};
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient};
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     system_transaction,
@@ -2552,7 +2552,7 @@ impl RpcClient {
     ///
     /// This method uses the [`Finalized`] [commitment level][cl].
     ///
-    /// [`Finalized`]: solana_sdk::commitment_config::CommitmentLevel::Finalized
+    /// [`Finalized`]: safecoin_sdk::commitment_config::CommitmentLevel::Finalized
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
@@ -2567,15 +2567,15 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
     /// #     system_transaction,
     /// # };
-    /// # use solana_transaction_status::UiTransactionEncoding;
+    /// # use safecoin_transaction_status::UiTransactionEncoding;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
@@ -2605,7 +2605,7 @@ impl RpcClient {
     /// [`Confirmed`].
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
-    /// [`Confirmed`]: solana_sdk::commitment_config::CommitmentLevel::Confirmed
+    /// [`Confirmed`]: safecoin_sdk::commitment_config::CommitmentLevel::Confirmed
     ///
     /// # RPC Reference
     ///
@@ -2619,19 +2619,19 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     config::RpcTransactionConfig,
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
     /// #     system_transaction,
     /// #     commitment_config::CommitmentConfig,
     /// # };
-    /// # use solana_transaction_status::UiTransactionEncoding;
+    /// # use safecoin_transaction_status::UiTransactionEncoding;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
@@ -2697,8 +2697,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// // Get the time of the most recent finalized block
     /// let slot = rpc_client.get_slot()?;
@@ -2724,8 +2724,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let epoch_info = rpc_client.get_epoch_info()?;
     /// # Ok::<(), Error>(())
@@ -2745,9 +2745,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::confirmed();
     /// let epoch_info = rpc_client.get_epoch_info_with_commitment(
@@ -2777,9 +2777,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let slot = rpc_client.get_slot()?;
     /// let leader_schedule = rpc_client.get_leader_schedule(
@@ -2805,9 +2805,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let slot = rpc_client.get_slot()?;
     /// let commitment_config = CommitmentConfig::processed();
@@ -2838,12 +2838,12 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     config::RpcLeaderScheduleConfig,
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let slot = rpc_client.get_slot()?;
     /// # let validator_pubkey_str = "7AYmEYBBetok8h5L3Eo3vi3bDWnjNnaFbSXfSNYV5ewB".to_string();
@@ -2876,8 +2876,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let epoch_schedule = rpc_client.get_epoch_schedule()?;
     /// # Ok::<(), Error>(())
@@ -2900,8 +2900,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let limit = 10;
     /// let performance_samples = rpc_client.get_recent_performance_samples(
@@ -2932,9 +2932,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::signature::{Keypair, Signer};
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::signature::{Keypair, Signer};
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
@@ -2962,8 +2962,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let identity = rpc_client.get_identity()?;
     /// # Ok::<(), Error>(())
@@ -2976,7 +2976,7 @@ impl RpcClient {
     ///
     /// This method uses the [`Finalized`] [commitment level][cl].
     ///
-    /// [`Finalized`]: solana_sdk::commitment_config::CommitmentLevel::Finalized
+    /// [`Finalized`]: safecoin_sdk::commitment_config::CommitmentLevel::Finalized
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
@@ -2989,8 +2989,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let inflation_governor = rpc_client.get_inflation_governor()?;
     /// # Ok::<(), Error>(())
@@ -3010,8 +3010,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let inflation_rate = rpc_client.get_inflation_rate()?;
     /// # Ok::<(), Error>(())
@@ -3035,9 +3035,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::signature::{Keypair, Signer};
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::signature::{Keypair, Signer};
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let epoch_info = rpc_client.get_epoch_info()?;
     /// # let epoch = epoch_info.epoch;
@@ -3058,7 +3058,7 @@ impl RpcClient {
         self.invoke((self.rpc_client.as_ref()).get_inflation_reward(addresses, epoch))
     }
 
-    /// Returns the current solana version running on the node.
+    /// Returns the current safecoin version running on the node.
     ///
     /// # RPC Reference
     ///
@@ -3069,13 +3069,13 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::signature::{Keypair, Signer};
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::signature::{Keypair, Signer};
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let expected_version = semver::Version::new(1, 7, 0);
     /// let version = rpc_client.get_version()?;
-    /// let version = semver::Version::parse(&version.solana_core)?;
+    /// let version = semver::Version::parse(&version.safecoin_core)?;
     /// assert!(version >= expected_version);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -3098,8 +3098,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let slot = rpc_client.minimum_ledger_slot()?;
     /// # Ok::<(), Error>(())
@@ -3124,7 +3124,7 @@ impl RpcClient {
     /// [`RpcError::ForUser`]. This is unlike [`get_account_with_commitment`],
     /// which returns `Ok(None)` if the account does not exist.
     ///
-    /// [`RpcError::ForUser`]: solana_rpc_client_api::request::RpcError::ForUser
+    /// [`RpcError::ForUser`]: safecoin_rpc_client_api::request::RpcError::ForUser
     /// [`get_account_with_commitment`]: RpcClient::get_account_with_commitment
     ///
     /// # RPC Reference
@@ -3136,9 +3136,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::{self, RpcClient};
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::{self, RpcClient};
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     pubkey::Pubkey,
@@ -3171,9 +3171,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::{self, RpcClient};
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::{self, RpcClient};
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     pubkey::Pubkey,
@@ -3218,18 +3218,18 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     config::RpcAccountInfoConfig,
     /// #     client_error::Error,
     /// # };
-    /// # use solana_rpc_client::rpc_client::{self, RpcClient};
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::{self, RpcClient};
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     pubkey::Pubkey,
     /// #     commitment_config::CommitmentConfig,
     /// # };
-    /// # use solana_account_decoder::UiAccountEncoding;
+    /// # use safecoin_account_decoder::UiAccountEncoding;
     /// # use std::str::FromStr;
     /// # let mocks = rpc_client::create_rpc_client_mocks();
     /// # let rpc_client = RpcClient::new_mock_with_mocks("succeeds".to_string(), mocks);
@@ -3267,8 +3267,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let slot = rpc_client.get_max_retransmit_slot()?;
     /// # Ok::<(), Error>(())
@@ -3288,8 +3288,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let slot = rpc_client.get_max_shred_insert_slot()?;
     /// # Ok::<(), Error>(())
@@ -3312,9 +3312,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// # };
@@ -3340,9 +3340,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
@@ -3380,17 +3380,17 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     config::RpcAccountInfoConfig,
     /// #     client_error::Error,
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
     /// # };
-    /// # use solana_account_decoder::UiAccountEncoding;
+    /// # use safecoin_account_decoder::UiAccountEncoding;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
@@ -3432,9 +3432,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::{self, RpcClient};
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::{self, RpcClient};
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     pubkey::Pubkey,
@@ -3462,8 +3462,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let data_len = 300;
     /// let balance = rpc_client.get_minimum_balance_for_rent_exemption(data_len)?;
@@ -3488,9 +3488,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// # };
@@ -3514,9 +3514,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
@@ -3556,9 +3556,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// # };
@@ -3582,18 +3582,18 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::{
+    /// # use safecoin_rpc_client_api::{
     /// #     client_error::Error,
     /// #     config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     /// #     filter::{MemcmpEncodedBytes, RpcFilterType, Memcmp},
     /// # };
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::{
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
     /// # };
-    /// # use solana_account_decoder::{UiDataSliceConfig, UiAccountEncoding};
+    /// # use safecoin_account_decoder::{UiDataSliceConfig, UiAccountEncoding};
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
     /// # let base64_bytes = "\
@@ -3645,8 +3645,8 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let stake_minimum_delegation = rpc_client.get_stake_minimum_delegation()?;
     /// # Ok::<(), Error>(())
@@ -3666,9 +3666,9 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_rpc_client_api::client_error::Error;
-    /// # use solana_rpc_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use safecoin_rpc_client_api::client_error::Error;
+    /// # use safecoin_rpc_client::rpc_client::RpcClient;
+    /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let stake_minimum_delegation =
     /// rpc_client.get_stake_minimum_delegation_with_commitment(CommitmentConfig::confirmed())?;
@@ -4083,8 +4083,8 @@ mod tests {
         jsonrpc_core::{futures::prelude::*, Error, IoHandler, Params},
         jsonrpc_http_server::{AccessControlAllowOrigin, DomainsValidation, ServerBuilder},
         serde_json::{json, Number},
-        solana_rpc_client_api::client_error::ErrorKind,
-        solana_sdk::{
+        safecoin_rpc_client_api::client_error::ErrorKind,
+        safecoin_sdk::{
             instruction::InstructionError,
             signature::{Keypair, Signer},
             system_transaction,
@@ -4169,7 +4169,7 @@ mod tests {
         let rpc_client = RpcClient::new_mock("succeeds".to_string());
 
         let key = Keypair::new();
-        let to = solana_sdk::pubkey::new_rand();
+        let to = safecoin_sdk::pubkey::new_rand();
         let blockhash = Hash::default();
         let tx = system_transaction::transfer(&key, &to, 50, blockhash);
 
@@ -4239,7 +4239,7 @@ mod tests {
         let rpc_client = RpcClient::new_mock("succeeds".to_string());
 
         let key = Keypair::new();
-        let to = solana_sdk::pubkey::new_rand();
+        let to = safecoin_sdk::pubkey::new_rand();
         let blockhash = Hash::default();
         let tx = system_transaction::transfer(&key, &to, 50, blockhash);
         let result = rpc_client.send_and_confirm_transaction(&tx);

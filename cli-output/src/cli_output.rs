@@ -15,16 +15,16 @@ use {
     inflector::cases::titlecase::to_title_case,
     serde::{Deserialize, Serialize},
     serde_json::{Map, Value},
-    solana_account_decoder::{
+    safecoin_account_decoder::{
         parse_account_data::AccountAdditionalData, parse_token::UiTokenAccount, UiAccount,
         UiAccountEncoding, UiDataSliceConfig,
     },
-    solana_clap_utils::keypair::SignOnly,
-    solana_rpc_client_api::response::{
+    safecoin_clap_utils::keypair::SignOnly,
+    safecoin_rpc_client_api::response::{
         RpcAccountBalance, RpcContactInfo, RpcInflationGovernor, RpcInflationRate, RpcKeyedAccount,
         RpcSupply, RpcVoteAccountInfo,
     },
-    solana_sdk::{
+    safecoin_sdk::{
         account::ReadableAccount,
         clock::{Epoch, Slot, UnixTimestamp},
         epoch_info::EpochInfo,
@@ -36,7 +36,7 @@ use {
         stake_history::StakeHistoryEntry,
         transaction::{Transaction, TransactionError, VersionedTransaction},
     },
-    solana_transaction_status::{
+    safecoin_transaction_status::{
         EncodedConfirmedBlock, EncodedTransaction, TransactionConfirmationStatus,
         UiTransactionStatusMeta,
     },
@@ -1321,7 +1321,7 @@ impl fmt::Display for CliStakeHistory {
                 if self.use_lamports_unit {
                     "lamports"
                 } else {
-                    "SOL"
+                    "SAFE"
                 }
             )?;
         }
@@ -1749,7 +1749,7 @@ impl fmt::Display for CliAccountBalances {
                 f,
                 "{:<44}  {}",
                 account.address,
-                &format!("{} SOL", lamports_to_sol(account.lamports))
+                &format!("{} SAFE", lamports_to_sol(account.lamports))
             )?;
         }
         Ok(())
@@ -1784,16 +1784,16 @@ impl VerboseDisplay for CliSupply {}
 
 impl fmt::Display for CliSupply {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln_name_value(f, "Total:", &format!("{} SOL", lamports_to_sol(self.total)))?;
+        writeln_name_value(f, "Total:", &format!("{} SAFE", lamports_to_sol(self.total)))?;
         writeln_name_value(
             f,
             "Circulating:",
-            &format!("{} SOL", lamports_to_sol(self.circulating)),
+            &format!("{} SAFE", lamports_to_sol(self.circulating)),
         )?;
         writeln_name_value(
             f,
             "Non-Circulating:",
-            &format!("{} SOL", lamports_to_sol(self.non_circulating)),
+            &format!("{} SAFE", lamports_to_sol(self.non_circulating)),
         )?;
         if self.print_accounts {
             writeln!(f)?;
@@ -2890,7 +2890,7 @@ mod tests {
     use {
         super::*,
         clap::{App, Arg},
-        solana_sdk::{
+        safecoin_sdk::{
             message::Message,
             pubkey::Pubkey,
             signature::{keypair_from_seed, NullSigner, Signature, Signer, SignerError},
