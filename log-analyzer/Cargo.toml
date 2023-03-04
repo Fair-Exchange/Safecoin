@@ -1,0 +1,25 @@
+[package]
+authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
+edition = "2021"
+name = "safecoin-log-analyzer"
+description = "The safecoin cluster network analysis tool"
+version = "1.15.3"
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+publish = false
+
+[dependencies]
+byte-unit = "4.0.14"
+clap = { version = "3.1.5", features = ["cargo"] }
+serde = "1.0.144"
+serde_json = "1.0.83"
+safecoin-logger = { path = "../logger", version = "=1.15.3" }
+safecoin-version = { path = "../version", version = "=1.15.3" }
+
+[[bin]]
+name = "safecoin-log-analyzer"
+path = "src/main.rs"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
