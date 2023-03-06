@@ -42,7 +42,7 @@ struct Config {
 fn get_config() -> Config {
     let matches = App::new(crate_name!())
         .about(crate_description!())
-        .version(solana_version::version!())
+        .version(safecoin_version::version!())
         .after_help("ADDITIONAL HELP:
         To receive a Slack, Discord, PagerDuty and/or Telegram notification on sanity failure,
         define environment variables before running `safecoin-watchtower`:

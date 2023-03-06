@@ -1062,7 +1062,7 @@ impl Validator {
         datapoint_info!(
             "validator-new",
             ("id", id.to_string(), String),
-            ("version", solana_version::version!(), String)
+            ("version", safecoin_version::version!(), String)
         );
 
         *start_progress.write().unwrap() = ValidatorStartProgress::Running;

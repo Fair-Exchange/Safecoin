@@ -50,7 +50,7 @@ enum Output {
 
 fn main() {
     let default_args = cli::DefaultTestArgs::new();
-    let version = solana_version::version!();
+    let version = safecoin_version::version!();
     let matches = cli::test_app(version, &default_args).get_matches();
 
     let output = if matches.is_present("quiet") {
@@ -127,7 +127,7 @@ fn main() {
     };
     let _logger_thread = redirect_stderr_to_file(logfile);
 
-    info!("{} {}", crate_name!(), solana_version::version!());
+    info!("{} {}", crate_name!(), safecoin_version::version!());
     info!("Starting validator with: {:#?}", std::env::args_os());
     safecoin_core::validator::report_target_features();
 
