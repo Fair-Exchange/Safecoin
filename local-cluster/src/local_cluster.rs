@@ -17,7 +17,7 @@ use {
         gossip_service::discover_cluster,
     },
     solana_ledger::create_new_tmp_ledger,
-    solana_runtime::{
+    safecoin_runtime::{
         genesis_utils::{
             create_genesis_config_with_vote_accounts_and_cluster_type, GenesisConfigInfo,
             ValidatorVoteKeypairs,

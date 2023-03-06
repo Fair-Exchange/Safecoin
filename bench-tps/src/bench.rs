@@ -1091,7 +1091,7 @@ pub fn fund_keypairs<T: 'static + BenchTpsClient + Send + Sync + ?Sized>(
 mod tests {
     use {
         super::*,
-        solana_runtime::{bank::Bank, bank_client::BankClient},
+        safecoin_runtime::{bank::Bank, bank_client::BankClient},
         safecoin_sdk::{
             commitment_config::CommitmentConfig, fee_calculator::FeeRateGovernor,
             genesis_config::create_genesis_config, native_token::sol_to_lamports, nonce::State,

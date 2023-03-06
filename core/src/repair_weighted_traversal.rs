@@ -4,7 +4,7 @@ use {
         serve_repair::ShredRepairType, tree_diff::TreeDiff,
     },
     solana_ledger::{blockstore::Blockstore, blockstore_meta::SlotMeta},
-    solana_runtime::contains::Contains,
+    safecoin_runtime::contains::Contains,
     safecoin_sdk::{clock::Slot, hash::Hash},
     std::collections::{HashMap, HashSet},
 };
@@ -145,7 +145,7 @@ pub mod test {
             get_tmp_ledger_path,
             shred::{Shred, ShredFlags},
         },
-        solana_runtime::bank_utils,
+        safecoin_runtime::bank_utils,
         safecoin_sdk::hash::Hash,
         trees::tr,
     };

@@ -12,7 +12,7 @@ use {
         legacy_contact_info::LegacyContactInfo as ContactInfo,
     },
     safecoin_rpc_client::rpc_client::RpcClient,
-    solana_runtime::{
+    safecoin_runtime::{
         snapshot_archive_info::SnapshotArchiveInfoGetter,
         snapshot_package::SnapshotType,
         snapshot_utils::{self},
@@ -1261,7 +1261,7 @@ fn download_snapshot(
     };
     let desired_snapshot_hash = (
         desired_snapshot_hash.0,
-        solana_runtime::snapshot_hash::SnapshotHash(desired_snapshot_hash.1),
+        safecoin_runtime::snapshot_hash::SnapshotHash(desired_snapshot_hash.1),
     );
     download_snapshot_archive(
         &rpc_contact_info.rpc,

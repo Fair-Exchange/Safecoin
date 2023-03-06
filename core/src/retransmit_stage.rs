@@ -21,7 +21,7 @@ use {
     safecoin_rayon_threadlimit::get_thread_count,
     safecoin_rpc::{max_slots::MaxSlots, rpc_subscriptions::RpcSubscriptions},
     safecoin_rpc_client_api::response::SlotUpdate,
-    solana_runtime::{bank::Bank, bank_forks::BankForks},
+    safecoin_runtime::{bank::Bank, bank_forks::BankForks},
     safecoin_sdk::{clock::Slot, pubkey::Pubkey, timing::timestamp},
     solana_streamer::{
         sendmmsg::{multi_target_send, SendPktsError},

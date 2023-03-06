@@ -7,7 +7,7 @@ use {
     },
     safecoin_measure::measure::Measure,
     solana_metrics::*,
-    solana_runtime::{
+    safecoin_runtime::{
         accounts_update_notifier_interface::AccountsUpdateNotifierInterface,
         append_vec::StoredAccountMeta,
     },

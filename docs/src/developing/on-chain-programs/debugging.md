@@ -29,7 +29,7 @@ development it is helpful to focus on just the runtime and program logs and not
 the rest of the cluster logs. To focus in on program specific information the
 following log mask is recommended:
 
-`export RUST_LOG=solana_runtime::system_instruction_processor=trace,solana_runtime::message_processor=info,solana_bpf_loader=debug,solana_rbpf=debug`
+`export RUST_LOG=safecoin_runtime::system_instruction_processor=trace,safecoin_runtime::message_processor=info,solana_bpf_loader=debug,solana_rbpf=debug`
 
 Log messages coming directly from the program (not the runtime) will be
 displayed in the form:

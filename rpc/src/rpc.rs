@@ -40,7 +40,7 @@ use {
         },
         response::{Response as RpcResponse, *},
     },
-    solana_runtime::{
+    safecoin_runtime::{
         accounts::AccountAddressFilter,
         accounts_index::{AccountIndex, AccountSecondaryIndexes, IndexKey, ScanConfig},
         bank::{Bank, TransactionSimulationResult},
@@ -4628,7 +4628,7 @@ pub mod tests {
             },
             filter::{Memcmp, MemcmpEncodedBytes},
         },
-        solana_runtime::{
+        safecoin_runtime::{
             accounts_background_service::AbsRequestSender, bank::BankTestConfig,
             commitment::BlockCommitment, inline_safe_token,
             non_circulating_supply::non_circulating_accounts,

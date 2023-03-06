@@ -3,7 +3,7 @@ use {
         ClusterInfo, MAX_INCREMENTAL_SNAPSHOT_HASHES, MAX_SNAPSHOT_HASHES,
     },
     solana_perf::thread::renice_this_thread,
-    solana_runtime::{
+    safecoin_runtime::{
         snapshot_archive_info::SnapshotArchiveInfoGetter,
         snapshot_config::SnapshotConfig,
         snapshot_hash::{
@@ -221,7 +221,7 @@ mod tests {
     use {
         super::*,
         bincode::serialize_into,
-        solana_runtime::{
+        safecoin_runtime::{
             accounts_db::AccountStorageEntry,
             bank::BankSlotDelta,
             snapshot_archive_info::SnapshotArchiveInfo,

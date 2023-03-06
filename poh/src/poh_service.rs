@@ -392,7 +392,7 @@ mod tests {
         },
         safecoin_measure::measure::Measure,
         solana_perf::test_tx::test_tx,
-        solana_runtime::bank::Bank,
+        safecoin_runtime::bank::Bank,
         safecoin_sdk::{
             clock, hash::hash, pubkey::Pubkey, timing, transaction::VersionedTransaction,
         },

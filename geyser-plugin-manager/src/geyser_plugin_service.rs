@@ -12,7 +12,7 @@ use {
         optimistically_confirmed_bank_tracker::BankNotification,
         transaction_notifier_interface::TransactionNotifierLock,
     },
-    solana_runtime::accounts_update_notifier_interface::AccountsUpdateNotifier,
+    safecoin_runtime::accounts_update_notifier_interface::AccountsUpdateNotifier,
     std::{
         fs::File,
         io::Read,

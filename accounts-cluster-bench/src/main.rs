@@ -10,7 +10,7 @@ use {
     safecoin_faucet::faucet::{request_airdrop_transaction, FAUCET_PORT},
     safecoin_gossip::gossip_service::discover,
     safecoin_rpc_client::rpc_client::RpcClient,
-    solana_runtime::inline_safe_token,
+    safecoin_runtime::inline_safe_token,
     safecoin_sdk::{
         commitment_config::CommitmentConfig,
         hash::Hash,

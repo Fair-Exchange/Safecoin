@@ -4,7 +4,7 @@ use {
     safecoin_account_decoder::{UiAccountEncoding, UiDataSliceConfig},
     solana_metrics::{CounterToken, TokenCounter},
     safecoin_rpc_client_api::filter::RpcFilterType,
-    solana_runtime::{
+    safecoin_runtime::{
         bank::{TransactionLogCollectorConfig, TransactionLogCollectorFilter},
         bank_forks::BankForks,
     },
@@ -594,7 +594,7 @@ mod tests {
         super::*,
         crate::rpc_pubsub_service::PubSubConfig,
         solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
-        solana_runtime::bank::Bank,
+        safecoin_runtime::bank::Bank,
         std::str::FromStr,
     };
 

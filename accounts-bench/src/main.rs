@@ -5,7 +5,7 @@ use {
     clap::{crate_description, crate_name, value_t, App, Arg},
     rayon::prelude::*,
     safecoin_measure::measure::Measure,
-    solana_runtime::{
+    safecoin_runtime::{
         accounts::Accounts,
         accounts_db::{
             test_utils::{create_test_accounts, update_accounts_bench},

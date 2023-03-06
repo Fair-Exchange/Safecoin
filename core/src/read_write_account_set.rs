@@ -107,7 +107,7 @@ mod tests {
         super::ReadWriteAccountSet,
         solana_address_lookup_table_program::state::{AddressLookupTable, LookupTableMeta},
         solana_ledger::genesis_utils::GenesisConfigInfo,
-        solana_runtime::{bank::Bank, genesis_utils::create_genesis_config},
+        safecoin_runtime::{bank::Bank, genesis_utils::create_genesis_config},
         safecoin_sdk::{
             account::AccountSharedData,
             hash::Hash,

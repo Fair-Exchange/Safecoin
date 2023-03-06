@@ -12,7 +12,7 @@ use {
         snapshot_packager_service::SnapshotPackagerService,
     },
     safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
-    solana_runtime::{
+    safecoin_runtime::{
         accounts_background_service::{
             AbsRequestHandlers, AbsRequestSender, AccountsBackgroundService,
             PrunedBanksRequestHandler, SnapshotRequestHandler,
@@ -280,7 +280,7 @@ fn run_bank_forks_snapshot_n<F>(
     )
     .unwrap();
     let accounts_hash = last_bank.get_accounts_hash();
-    solana_runtime::serde_snapshot::reserialize_bank_with_new_accounts_hash(
+    safecoin_runtime::serde_snapshot::reserialize_bank_with_new_accounts_hash(
         accounts_package.snapshot_links_dir(),
         accounts_package.slot,
         &accounts_hash,
@@ -531,7 +531,7 @@ fn test_concurrent_snapshot_packaging(
         .name("package-receiver".to_string())
         .spawn(move || {
             let accounts_package = real_accounts_package_receiver.try_recv().unwrap();
-            solana_runtime::serde_snapshot::reserialize_bank_with_new_accounts_hash(
+            safecoin_runtime::serde_snapshot::reserialize_bank_with_new_accounts_hash(
                 accounts_package.snapshot_links_dir(),
                 accounts_package.slot,
                 &AccountsHash::default(),
@@ -575,7 +575,7 @@ fn test_concurrent_snapshot_packaging(
     .unwrap();
 
     // files were saved off before we reserialized the bank in the hacked up accounts_hash_verifier stand-in.
-    solana_runtime::serde_snapshot::reserialize_bank_with_new_accounts_hash(
+    safecoin_runtime::serde_snapshot::reserialize_bank_with_new_accounts_hash(
         saved_snapshots_dir.path(),
         saved_slot,
         &AccountsHash::default(),

@@ -6,7 +6,7 @@ use {
         blockstore::Blockstore,
         blockstore_processor::{TransactionStatusBatch, TransactionStatusMessage},
     },
-    solana_runtime::bank::{DurableNonceFee, TransactionExecutionDetails},
+    safecoin_runtime::bank::{DurableNonceFee, TransactionExecutionDetails},
     safecoin_transaction_status::{
         extract_and_fmt_memos, InnerInstruction, InnerInstructions, Reward, TransactionStatusMeta,
     },
@@ -228,7 +228,7 @@ pub(crate) mod tests {
         dashmap::DashMap,
         safecoin_account_decoder::parse_token::token_amount_to_ui_amount,
         solana_ledger::{genesis_utils::create_genesis_config, get_tmp_ledger_path},
-        solana_runtime::bank::{Bank, NonceFull, NoncePartial, RentDebits, TransactionBalancesSet},
+        safecoin_runtime::bank::{Bank, NonceFull, NoncePartial, RentDebits, TransactionBalancesSet},
         safecoin_sdk::{
             account_utils::StateMut,
             clock::Slot,

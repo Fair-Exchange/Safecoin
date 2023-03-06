@@ -10,7 +10,7 @@ use {
     bincode::{serialize, serialized_size},
     rand::{CryptoRng, Rng},
     serde::de::{Deserialize, Deserializer},
-    solana_runtime::vote_parser,
+    safecoin_runtime::vote_parser,
     safecoin_sdk::{
         clock::Slot,
         hash::Hash,

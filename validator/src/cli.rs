@@ -15,7 +15,7 @@ use {
     solana_net_utils::{MINIMUM_VALIDATOR_PORT_RANGE_WIDTH, VALIDATOR_PORT_RANGE},
     safecoin_rpc::{rpc::MAX_REQUEST_BODY_SIZE, rpc_pubsub_service::PubSubConfig},
     safecoin_rpc_client_api::request::MAX_MULTIPLE_ACCOUNTS,
-    solana_runtime::{
+    safecoin_runtime::{
         accounts_db::{
             DEFAULT_ACCOUNTS_SHRINK_OPTIMIZE_TOTAL_SPACE, DEFAULT_ACCOUNTS_SHRINK_RATIO,
         },

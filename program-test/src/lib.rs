@@ -14,7 +14,7 @@ use {
         compute_budget::ComputeBudget, ic_msg, invoke_context::ProcessInstructionWithContext,
         stable_log, timings::ExecuteTimings,
     },
-    solana_runtime::{
+    safecoin_runtime::{
         accounts_background_service::{AbsRequestSender, SnapshotRequestType},
         bank::Bank,
         bank_forks::BankForks,
@@ -462,8 +462,8 @@ impl Default for ProgramTest {
     fn default() -> Self {
         solana_logger::setup_with_default(
             "solana_rbpf::vm=debug,\
-             solana_runtime::message_processor=debug,\
-             solana_runtime::system_instruction_processor=trace,\
+             safecoin_runtime::message_processor=debug,\
+             safecoin_runtime::system_instruction_processor=trace,\
              safecoin_program_test=info",
         );
         let prefer_bpf =
@@ -1126,7 +1126,7 @@ impl ProgramTestContext {
                 &Pubkey::default(),
                 pre_warp_slot,
                 // some warping tests cannot use the append vecs because of the sequence of adding roots and flushing
-                solana_runtime::accounts_db::CalcAccountsHashDataSource::IndexForTests,
+                safecoin_runtime::accounts_db::CalcAccountsHashDataSource::IndexForTests,
             ))
         };
 

@@ -70,7 +70,7 @@ impl From<LogCollector> for Vec<String> {
 macro_rules! ic_logger_msg {
     ($log_collector:expr, $message:expr) => {
         $crate::log_collector::log::debug!(
-            target: "solana_runtime::message_processor::stable_log",
+            target: "safecoin_runtime::message_processor::stable_log",
             "{}",
             $message
         );
@@ -82,7 +82,7 @@ macro_rules! ic_logger_msg {
     };
     ($log_collector:expr, $fmt:expr, $($arg:tt)*) => {
         $crate::log_collector::log::debug!(
-            target: "solana_runtime::message_processor::stable_log",
+            target: "safecoin_runtime::message_processor::stable_log",
             $fmt,
             $($arg)*
         );

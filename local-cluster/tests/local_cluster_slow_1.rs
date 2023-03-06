@@ -21,7 +21,7 @@ use {
         local_cluster::{ClusterConfig, LocalCluster},
         validator_configs::*,
     },
-    solana_runtime::vote_parser,
+    safecoin_runtime::vote_parser,
     safecoin_sdk::{
         clock::{Slot, MAX_PROCESSING_AGE},
         hash::Hash,

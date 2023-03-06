@@ -17,7 +17,7 @@ use {
         },
         response::SlotInfo,
     },
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank,
         bank_forks::BankForks,
         commitment::{BlockCommitmentCache, CommitmentSlots},

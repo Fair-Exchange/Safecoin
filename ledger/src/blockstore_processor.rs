@@ -17,7 +17,7 @@ use {
     solana_metrics::{datapoint_error, inc_new_counter_debug},
     safecoin_program_runtime::timings::{ExecuteTimingType, ExecuteTimings, ThreadExecuteTimings},
     safecoin_rayon_threadlimit::{get_max_thread_count, get_thread_count},
-    solana_runtime::{
+    safecoin_runtime::{
         accounts_background_service::{AbsRequestSender, SnapshotRequestType},
         accounts_db::{AccountShrinkThreshold, AccountsDbConfig},
         accounts_index::AccountSecondaryIndexes,
@@ -1758,7 +1758,7 @@ pub mod tests {
         matches::assert_matches,
         rand::{thread_rng, Rng},
         safecoin_entry::entry::{create_ticks, next_entry, next_entry_mut},
-        solana_runtime::{
+        safecoin_runtime::{
             genesis_utils::{
                 self, create_genesis_config_with_vote_accounts, ValidatorVoteKeypairs,
             },
@@ -3421,7 +3421,7 @@ pub mod tests {
         .unwrap();
         bank_forks.set_root(
             1,
-            &solana_runtime::accounts_background_service::AbsRequestSender::default(),
+            &safecoin_runtime::accounts_background_service::AbsRequestSender::default(),
             None,
         );
 

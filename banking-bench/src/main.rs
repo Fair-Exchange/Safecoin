@@ -20,7 +20,7 @@ use {
     safecoin_measure::measure::Measure,
     solana_perf::packet::{to_packet_batches, PacketBatch},
     safecoin_poh::poh_recorder::{create_test_recorder, PohRecorder, WorkingBankEntry},
-    solana_runtime::{bank::Bank, bank_forks::BankForks},
+    safecoin_runtime::{bank::Bank, bank_forks::BankForks},
     safecoin_sdk::{
         compute_budget::ComputeBudgetInstruction,
         hash::Hash,

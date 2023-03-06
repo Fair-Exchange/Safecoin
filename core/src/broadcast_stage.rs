@@ -22,7 +22,7 @@ use {
     safecoin_measure::measure::Measure,
     solana_metrics::{inc_new_counter_error, inc_new_counter_info},
     safecoin_poh::poh_recorder::WorkingBankEntry,
-    solana_runtime::bank_forks::BankForks,
+    safecoin_runtime::bank_forks::BankForks,
     safecoin_sdk::{
         clock::Slot,
         pubkey::Pubkey,
@@ -446,7 +446,7 @@ pub mod test {
             get_tmp_ledger_path,
             shred::{max_ticks_per_n_shreds, ProcessShredsStats, ReedSolomonCache, Shredder},
         },
-        solana_runtime::bank::Bank,
+        safecoin_runtime::bank::Bank,
         safecoin_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},

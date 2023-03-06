@@ -1,6 +1,6 @@
 #![allow(clippy::integer_arithmetic)]
 use {
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank,
         bank_client::BankClient,
         epoch_accounts_hash::EpochAccountsHash,

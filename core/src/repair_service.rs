@@ -15,7 +15,7 @@ use {
     safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::blockstore::{Blockstore, SlotMeta},
     safecoin_measure::measure::Measure,
-    solana_runtime::{bank_forks::BankForks, contains::Contains},
+    safecoin_runtime::{bank_forks::BankForks, contains::Contains},
     safecoin_sdk::{
         clock::Slot, epoch_schedule::EpochSchedule, hash::Hash, pubkey::Pubkey,
         signer::keypair::Keypair,
@@ -769,7 +769,7 @@ mod test {
             get_tmp_ledger_path,
             shred::max_ticks_per_n_shreds,
         },
-        solana_runtime::bank::Bank,
+        safecoin_runtime::bank::Bank,
         safecoin_sdk::{
             signature::{Keypair, Signer},
             timing::timestamp,

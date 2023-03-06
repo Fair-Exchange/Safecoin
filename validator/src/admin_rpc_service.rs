@@ -12,7 +12,7 @@ use {
     safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
     safecoin_rpc::rpc::verify_pubkey,
     safecoin_rpc_client_api::{config::RpcAccountIndex, custom_error::RpcCustomError},
-    solana_runtime::{accounts_index::AccountIndex, bank_forks::BankForks},
+    safecoin_runtime::{accounts_index::AccountIndex, bank_forks::BankForks},
     safecoin_sdk::{
         exit::Exit,
         pubkey::Pubkey,
@@ -645,7 +645,7 @@ mod tests {
         safecoin_core::tower_storage::NullTowerStorage,
         solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
         safecoin_rpc::rpc::create_validator_exit,
-        solana_runtime::{
+        safecoin_runtime::{
             accounts_index::AccountSecondaryIndexes,
             bank::{Bank, BankTestConfig},
             inline_safe_token,

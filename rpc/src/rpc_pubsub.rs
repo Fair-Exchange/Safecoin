@@ -613,7 +613,7 @@ mod tests {
         safecoin_rpc_client_api::response::{
             ProcessedSignatureResult, ReceivedSignatureResult, RpcSignatureResult, SlotInfo,
         },
-        solana_runtime::{
+        safecoin_runtime::{
             bank::Bank,
             bank_forks::BankForks,
             commitment::{BlockCommitmentCache, CommitmentSlots},

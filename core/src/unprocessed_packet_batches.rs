@@ -2,7 +2,7 @@ use {
     crate::immutable_deserialized_packet::{DeserializedPacketError, ImmutableDeserializedPacket},
     min_max_heap::MinMaxHeap,
     solana_perf::packet::{Packet, PacketBatch},
-    solana_runtime::transaction_priority_details::TransactionPriorityDetails,
+    safecoin_runtime::transaction_priority_details::TransactionPriorityDetails,
     safecoin_sdk::{hash::Hash, transaction::Transaction},
     std::{
         cmp::Ordering,

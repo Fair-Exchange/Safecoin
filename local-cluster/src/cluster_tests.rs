@@ -18,7 +18,7 @@ use {
         gossip_service::{self, discover_cluster, GossipService},
     },
     solana_ledger::blockstore::Blockstore,
-    solana_runtime::vote_transaction::VoteTransaction,
+    safecoin_runtime::vote_transaction::VoteTransaction,
     safecoin_sdk::{
         client::SyncClient,
         clock::{self, Slot, NUM_CONSECUTIVE_LEADER_SLOTS},

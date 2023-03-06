@@ -27,7 +27,7 @@ use {
     },
     solana_perf::{packet::to_packet_batches, test_tx::test_tx},
     safecoin_poh::poh_recorder::{create_test_recorder, WorkingBankEntry},
-    solana_runtime::{bank::Bank, bank_forks::BankForks},
+    safecoin_runtime::{bank::Bank, bank_forks::BankForks},
     safecoin_sdk::{
         genesis_config::GenesisConfig,
         hash::Hash,

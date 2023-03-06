@@ -36,7 +36,7 @@ use {
         },
         response::RpcSignatureResult,
     },
-    solana_runtime::{
+    safecoin_runtime::{
         commitment::VOTE_THRESHOLD_SIZE,
         hardened_unpack::open_genesis_config,
         snapshot_archive_info::SnapshotArchiveInfoGetter,

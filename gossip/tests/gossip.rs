@@ -11,7 +11,7 @@ use {
         legacy_contact_info::LegacyContactInfo as ContactInfo,
     },
     solana_perf::packet::Packet,
-    solana_runtime::bank_forks::BankForks,
+    safecoin_runtime::bank_forks::BankForks,
     safecoin_sdk::{
         hash::Hash,
         pubkey::Pubkey,
@@ -289,7 +289,7 @@ pub fn cluster_info_scale() {
     use {
         safecoin_measure::measure::Measure,
         solana_perf::test_tx::test_tx,
-        solana_runtime::{
+        safecoin_runtime::{
             bank::Bank,
             genesis_utils::{create_genesis_config_with_vote_accounts, ValidatorVoteKeypairs},
         },

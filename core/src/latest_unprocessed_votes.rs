@@ -6,7 +6,7 @@ use {
     itertools::Itertools,
     rand::{thread_rng, Rng},
     solana_perf::packet::Packet,
-    solana_runtime::bank::Bank,
+    safecoin_runtime::bank::Bank,
     safecoin_sdk::{clock::Slot, program_utils::limited_deserialize, pubkey::Pubkey},
     solana_vote_program::vote_instruction::VoteInstruction,
     std::{
@@ -320,7 +320,7 @@ mod tests {
         itertools::Itertools,
         rand::{thread_rng, Rng},
         solana_perf::packet::{Packet, PacketBatch, PacketFlags},
-        solana_runtime::{
+        safecoin_runtime::{
             bank::Bank,
             genesis_utils::{self, ValidatorVoteKeypairs},
         },

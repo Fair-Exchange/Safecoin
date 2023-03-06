@@ -10,7 +10,7 @@ use {
     safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::shred::{should_discard_shred, ShredFetchStats},
     solana_perf::packet::{Packet, PacketBatch, PacketBatchRecycler, PacketFlags},
-    solana_runtime::{bank::Bank, bank_forks::BankForks},
+    safecoin_runtime::{bank::Bank, bank_forks::BankForks},
     safecoin_sdk::{
         clock::{Slot, DEFAULT_MS_PER_SLOT},
         feature_set,

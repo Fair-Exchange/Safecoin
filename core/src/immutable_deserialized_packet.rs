@@ -1,6 +1,6 @@
 use {
     solana_perf::packet::Packet,
-    solana_runtime::transaction_priority_details::{
+    safecoin_runtime::transaction_priority_details::{
         GetTransactionPriorityDetails, TransactionPriorityDetails,
     },
     safecoin_sdk::{

@@ -20,7 +20,7 @@ use {
         packet::{deserialize_from_with_limit, Packet, PacketBatch},
         recycler::Recycler,
     },
-    solana_runtime::bank::Bank,
+    safecoin_runtime::bank::Bank,
     safecoin_sdk::{
         clock::{Slot, DEFAULT_MS_PER_SLOT},
         pubkey::Pubkey,
@@ -775,7 +775,7 @@ mod test {
             contact_info::ContactInfo,
         },
         solana_ledger::{blockstore::make_many_slot_entries, get_tmp_ledger_path, shred::Nonce},
-        solana_runtime::{accounts_background_service::AbsRequestSender, bank_forks::BankForks},
+        safecoin_runtime::{accounts_background_service::AbsRequestSender, bank_forks::BankForks},
         safecoin_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},

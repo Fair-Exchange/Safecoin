@@ -67,7 +67,7 @@ zstd = "0.11.2"
 
 [lib]
 crate-type = ["lib"]
-name = "solana_runtime"
+name = "safecoin_runtime"
 
 [dev-dependencies]
 assert_matches = "1.5.0"

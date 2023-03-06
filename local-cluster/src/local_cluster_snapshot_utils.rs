@@ -1,7 +1,7 @@
 use {
     crate::{cluster::Cluster, local_cluster::LocalCluster},
     log::*,
-    solana_runtime::{
+    safecoin_runtime::{
         snapshot_archive_info::{
             FullSnapshotArchiveInfo, IncrementalSnapshotArchiveInfo, SnapshotArchiveInfoGetter,
         },

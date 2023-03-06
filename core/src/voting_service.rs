@@ -4,7 +4,7 @@ use {
     safecoin_gossip::cluster_info::ClusterInfo,
     safecoin_measure::measure::Measure,
     safecoin_poh::poh_recorder::PohRecorder,
-    solana_runtime::bank_forks::BankForks,
+    safecoin_runtime::bank_forks::BankForks,
     safecoin_sdk::{clock::Slot, transaction::Transaction},
     std::{
         sync::{Arc, RwLock},

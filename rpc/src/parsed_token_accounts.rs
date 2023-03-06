@@ -8,7 +8,7 @@ use {
         UiAccount, UiAccountData, UiAccountEncoding,
     },
     safecoin_rpc_client_api::response::RpcKeyedAccount,
-    solana_runtime::bank::Bank,
+    safecoin_runtime::bank::Bank,
     safecoin_sdk::{
         account::{AccountSharedData, ReadableAccount},
         pubkey::Pubkey,

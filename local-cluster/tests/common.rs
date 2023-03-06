@@ -21,7 +21,7 @@ use {
         validator_configs::*,
     },
     safecoin_rpc_client::rpc_client::RpcClient,
-    solana_runtime::{
+    safecoin_runtime::{
         snapshot_config::SnapshotConfig, snapshot_utils::create_accounts_run_and_snapshot_dirs,
     },
     safecoin_sdk::{

@@ -4,7 +4,7 @@ use {
     safecoin_gossip::cluster_info::ClusterInfo,
     solana_ledger::blockstore::Blockstore,
     safecoin_measure::measure::Measure,
-    solana_runtime::bank_forks::BankForks,
+    safecoin_runtime::bank_forks::BankForks,
     safecoin_sdk::clock::Slot,
     std::{
         sync::{

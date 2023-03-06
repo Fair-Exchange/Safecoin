@@ -3,7 +3,7 @@ use {
     crossbeam_channel::{Receiver, RecvTimeoutError},
     solana_ledger::blockstore::Blockstore,
     safecoin_measure::measure::Measure,
-    solana_runtime::bank::Bank,
+    safecoin_runtime::bank::Bank,
     std::{
         sync::{
             atomic::{AtomicBool, Ordering},

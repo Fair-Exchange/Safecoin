@@ -14,7 +14,7 @@ use {
     safecoin_entry::poh::compute_hashes_per_tick,
     safecoin_genesis::{genesis_accounts::add_genesis_accounts, Base64Account},
     solana_ledger::{blockstore::create_new_ledger, blockstore_options::LedgerColumnOptions},
-    solana_runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
+    safecoin_runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
     safecoin_sdk::{
         account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
         bpf_loader_upgradeable::UpgradeableLoaderState,
@@ -576,7 +576,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     solana_stake_program::add_genesis_accounts(&mut genesis_config);
     if genesis_config.cluster_type == ClusterType::Development {
-        solana_runtime::genesis_utils::activate_all_features(&mut genesis_config);
+        safecoin_runtime::genesis_utils::activate_all_features(&mut genesis_config);
     }
 
     if let Some(files) = matches.values_of("primordial_accounts_file") {

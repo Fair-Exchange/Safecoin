@@ -25,7 +25,7 @@ use {
         optimistically_confirmed_bank_tracker::BankNotificationSender,
         rpc_subscriptions::RpcSubscriptions,
     },
-    solana_runtime::{
+    safecoin_runtime::{
         bank_forks::BankForks,
         vote_sender_types::{ReplayVoteReceiver, ReplayVoteSender},
     },

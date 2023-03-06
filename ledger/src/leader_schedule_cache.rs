@@ -6,7 +6,7 @@ use {
     },
     itertools::Itertools,
     log::*,
-    solana_runtime::bank::Bank,
+    safecoin_runtime::bank::Bank,
     safecoin_sdk::{
         clock::{Epoch, Slot},
         epoch_schedule::EpochSchedule,
@@ -258,7 +258,7 @@ mod tests {
             staking_utils::tests::setup_vote_and_stake_accounts,
         },
         crossbeam_channel::unbounded,
-        solana_runtime::bank::Bank,
+        safecoin_runtime::bank::Bank,
         safecoin_sdk::{
             clock::NUM_CONSECUTIVE_LEADER_SLOTS,
             epoch_schedule::{

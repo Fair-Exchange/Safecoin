@@ -1,6 +1,6 @@
 use {
     safecoin_gossip::cluster_info::ClusterInfo,
-    solana_runtime::bank_forks::BankForks,
+    safecoin_runtime::bank_forks::BankForks,
     safecoin_sdk::pubkey::Pubkey,
     solana_streamer::streamer::StakedNodes,
     std::{

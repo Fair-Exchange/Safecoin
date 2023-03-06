@@ -7,7 +7,7 @@ use {
     crate::banking_stage::{committer::CommitTransactionDetails, BatchedTransactionDetails},
     crossbeam_channel::{unbounded, Receiver, Sender},
     safecoin_measure::measure::Measure,
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank,
         cost_model::{CostModel, TransactionCost},
         cost_tracker::CostTrackerError,
@@ -656,7 +656,7 @@ mod tests {
     use {
         super::*,
         itertools::Itertools,
-        solana_runtime::genesis_utils::{create_genesis_config, GenesisConfigInfo},
+        safecoin_runtime::genesis_utils::{create_genesis_config, GenesisConfigInfo},
         safecoin_sdk::{
             hash::Hash,
             signature::{Keypair, Signer},

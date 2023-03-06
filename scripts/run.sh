@@ -35,7 +35,7 @@ $ok || {
   exit 1
 }
 
-export RUST_LOG=${RUST_LOG:-solana=info,solana_runtime::message_processor=debug} # if RUST_LOG is unset, default to info
+export RUST_LOG=${RUST_LOG:-solana=info,safecoin_runtime::message_processor=debug} # if RUST_LOG is unset, default to info
 export RUST_BACKTRACE=1
 dataDir=$PWD/config/"$(basename "$0" .sh)"
 ledgerDir=$PWD/config/ledger

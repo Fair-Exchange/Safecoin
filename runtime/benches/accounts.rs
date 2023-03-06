@@ -7,7 +7,7 @@ use {
     dashmap::DashMap,
     rand::Rng,
     rayon::iter::{IntoParallelRefIterator, ParallelIterator},
-    solana_runtime::{
+    safecoin_runtime::{
         accounts::{AccountAddressFilter, Accounts},
         accounts_db::{test_utils::create_test_accounts, AccountShrinkThreshold},
         accounts_index::{AccountSecondaryIndexes, ScanConfig},

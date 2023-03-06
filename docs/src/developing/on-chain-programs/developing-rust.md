@@ -304,13 +304,13 @@ Rust's `panic!`, `assert!`, and internal panic results are printed to the
 [program logs](debugging.md#logging) by default.
 
 ```
-INFO  solana_runtime::message_processor] Finalized account CGLhHSuWsp1gT4B7MY2KACqp9RUwQRhcUFfVSuxpSajZ
-INFO  solana_runtime::message_processor] Call SBF program CGLhHSuWsp1gT4B7MY2KACqp9RUwQRhcUFfVSuxpSajZ
-INFO  solana_runtime::message_processor] Program log: Panicked at: 'assertion failed: `(left == right)`
+INFO  safecoin_runtime::message_processor] Finalized account CGLhHSuWsp1gT4B7MY2KACqp9RUwQRhcUFfVSuxpSajZ
+INFO  safecoin_runtime::message_processor] Call SBF program CGLhHSuWsp1gT4B7MY2KACqp9RUwQRhcUFfVSuxpSajZ
+INFO  safecoin_runtime::message_processor] Program log: Panicked at: 'assertion failed: `(left == right)`
       left: `1`,
      right: `2`', rust/panic/src/lib.rs:22:5
-INFO  solana_runtime::message_processor] SBF program consumed 5453 of 200000 units
-INFO  solana_runtime::message_processor] SBF program CGLhHSuWsp1gT4B7MY2KACqp9RUwQRhcUFfVSuxpSajZ failed: BPF program panicked
+INFO  safecoin_runtime::message_processor] SBF program consumed 5453 of 200000 units
+INFO  safecoin_runtime::message_processor] SBF program CGLhHSuWsp1gT4B7MY2KACqp9RUwQRhcUFfVSuxpSajZ failed: BPF program panicked
 ```
 
 ### Custom Panic Handler

@@ -39,7 +39,7 @@ use {
         poh_timing_point::{send_poh_timing_point, PohTimingSender, SlotPohTimingInfo},
     },
     safecoin_rayon_threadlimit::get_max_thread_count,
-    solana_runtime::hardened_unpack::{unpack_genesis_archive, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE},
+    safecoin_runtime::hardened_unpack::{unpack_genesis_archive, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE},
     safecoin_sdk::{
         clock::{Slot, UnixTimestamp, DEFAULT_TICKS_PER_SECOND, MS_PER_TICK},
         genesis_config::{GenesisConfig, DEFAULT_GENESIS_ARCHIVE, DEFAULT_GENESIS_FILE},
@@ -4403,7 +4403,7 @@ pub mod tests {
         rand::{seq::SliceRandom, thread_rng},
         safecoin_account_decoder::parse_token::UiTokenAmount,
         safecoin_entry::entry::{next_entry, next_entry_mut},
-        solana_runtime::bank::{Bank, RewardType},
+        safecoin_runtime::bank::{Bank, RewardType},
         safecoin_sdk::{
             hash::{self, hash, Hash},
             instruction::CompiledInstruction,

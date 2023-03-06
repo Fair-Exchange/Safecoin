@@ -29,7 +29,7 @@ use {
         data_budget::DataBudget,
         packet::{Packet, PacketBatch, PacketBatchRecycler},
     },
-    solana_runtime::bank_forks::BankForks,
+    safecoin_runtime::bank_forks::BankForks,
     safecoin_sdk::{
         clock::Slot,
         genesis_config::ClusterType,
@@ -1341,7 +1341,7 @@ mod tests {
             shred::{max_ticks_per_n_shreds, Shred, ShredFlags},
         },
         solana_perf::packet::{deserialize_from_with_limit, Packet},
-        solana_runtime::bank::Bank,
+        safecoin_runtime::bank::Bank,
         safecoin_sdk::{
             feature_set::FeatureSet, hash::Hash, pubkey::Pubkey, signature::Keypair,
             timing::timestamp,

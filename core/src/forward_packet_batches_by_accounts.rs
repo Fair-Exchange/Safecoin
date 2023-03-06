@@ -1,7 +1,7 @@
 use {
     crate::immutable_deserialized_packet::ImmutableDeserializedPacket,
     solana_perf::packet::Packet,
-    solana_runtime::{
+    safecoin_runtime::{
         block_cost_limits,
         cost_model::CostModel,
         cost_tracker::{CostTracker, CostTrackerError},
@@ -137,7 +137,7 @@ mod tests {
     use {
         super::*,
         crate::unprocessed_packet_batches::DeserializedPacket,
-        solana_runtime::{
+        safecoin_runtime::{
             bank::Bank,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
             transaction_priority_details::TransactionPriorityDetails,

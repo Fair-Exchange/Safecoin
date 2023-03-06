@@ -25,7 +25,7 @@ use {
         optimistically_confirmed_bank_tracker::{BankNotification, BankNotificationSender},
         rpc_subscriptions::RpcSubscriptions,
     },
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank,
         bank_forks::BankForks,
         commitment::VOTE_THRESHOLD_SIZE,
@@ -875,7 +875,7 @@ mod tests {
         crate::banking_trace::BankingTracer,
         solana_perf::packet,
         safecoin_rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
-        solana_runtime::{
+        safecoin_runtime::{
             bank::Bank,
             commitment::BlockCommitmentCache,
             genesis_utils::{

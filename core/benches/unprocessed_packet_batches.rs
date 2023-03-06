@@ -14,7 +14,7 @@ use {
     },
     safecoin_measure::measure::Measure,
     solana_perf::packet::{Packet, PacketBatch},
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank,
         bank_forks::BankForks,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},

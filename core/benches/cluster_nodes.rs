@@ -13,7 +13,7 @@ use {
         genesis_utils::{create_genesis_config, GenesisConfigInfo},
         shred::{Shred, ShredFlags},
     },
-    solana_runtime::bank::Bank,
+    safecoin_runtime::bank::Bank,
     safecoin_sdk::{clock::Slot, pubkey::Pubkey},
     test::Bencher,
 };

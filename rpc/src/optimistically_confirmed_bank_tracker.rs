@@ -6,7 +6,7 @@ use {
     crate::rpc_subscriptions::RpcSubscriptions,
     crossbeam_channel::{Receiver, RecvTimeoutError, Sender},
     safecoin_rpc_client_api::response::{SlotTransactionStats, SlotUpdate},
-    solana_runtime::{bank::Bank, bank_forks::BankForks},
+    safecoin_runtime::{bank::Bank, bank_forks::BankForks},
     safecoin_sdk::{clock::Slot, timing::timestamp},
     std::{
         collections::HashSet,
@@ -318,7 +318,7 @@ mod tests {
     use {
         super::*,
         solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
-        solana_runtime::{
+        safecoin_runtime::{
             accounts_background_service::AbsRequestSender, commitment::BlockCommitmentCache,
         },
         safecoin_sdk::pubkey::Pubkey,

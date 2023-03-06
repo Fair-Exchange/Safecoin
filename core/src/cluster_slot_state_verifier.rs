@@ -854,7 +854,7 @@ mod test {
         super::*,
         crate::{progress_map::ProgressMap, replay_stage::tests::setup_forks_from_tree},
         crossbeam_channel::unbounded,
-        solana_runtime::bank_forks::BankForks,
+        safecoin_runtime::bank_forks::BankForks,
         std::{
             collections::{HashMap, HashSet},
             sync::{Arc, RwLock},

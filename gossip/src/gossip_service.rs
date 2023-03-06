@@ -6,7 +6,7 @@ use {
     rand::{thread_rng, Rng},
     safecoin_client::{connection_cache::ConnectionCache, thin_client::ThinClient},
     solana_perf::recycler::Recycler,
-    solana_runtime::bank_forks::BankForks,
+    safecoin_runtime::bank_forks::BankForks,
     safecoin_sdk::{
         pubkey::Pubkey,
         signature::{Keypair, Signer},

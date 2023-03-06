@@ -13,7 +13,7 @@ use {
     safecoin_program_runtime::{
         compute_budget::ComputeBudget, invoke_context::InvokeContext, timings::ExecuteTimings,
     },
-    solana_runtime::{
+    safecoin_runtime::{
         bank::{
             DurableNonceFee, InnerInstruction, TransactionBalancesSet, TransactionExecutionDetails,
             TransactionExecutionResult, TransactionResults,
@@ -60,7 +60,7 @@ use {
     },
     safecoin_program_runtime::invoke_context::with_mock_invoke_context,
     solana_rbpf::{elf::Executable, verifier::RequisiteVerifier, vm::VerifiedExecutable},
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank,
         bank_client::BankClient,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},

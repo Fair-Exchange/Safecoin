@@ -6,7 +6,7 @@ extern crate test;
 use {
     log::*,
     safecoin_program_runtime::invoke_context::InvokeContext,
-    solana_runtime::{
+    safecoin_runtime::{
         bank::{test_utils::goto_end_of_slot, *},
         bank_client::BankClient,
         loader_utils::create_invoke_instruction,

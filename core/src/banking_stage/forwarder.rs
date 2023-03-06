@@ -12,7 +12,7 @@ use {
     safecoin_measure::measure::Measure,
     solana_perf::{data_budget::DataBudget, packet::Packet},
     safecoin_poh::poh_recorder::PohRecorder,
-    solana_runtime::bank_forks::BankForks,
+    safecoin_runtime::bank_forks::BankForks,
     safecoin_sdk::{pubkey::Pubkey, transport::TransportError},
     solana_streamer::sendmmsg::batch_send,
     std::{
@@ -233,7 +233,7 @@ mod tests {
         },
         solana_perf::packet::PacketFlags,
         safecoin_poh::poh_recorder::create_test_recorder,
-        solana_runtime::bank::Bank,
+        safecoin_runtime::bank::Bank,
         safecoin_sdk::{
             hash::Hash, poh_config::PohConfig, signature::Keypair, signer::Signer,
             system_transaction, transaction::VersionedTransaction,

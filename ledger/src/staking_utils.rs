@@ -2,7 +2,7 @@
 pub(crate) mod tests {
     use {
         rand::Rng,
-        solana_runtime::{
+        safecoin_runtime::{
             bank::Bank,
             vote_account::{VoteAccount, VoteAccounts},
         },

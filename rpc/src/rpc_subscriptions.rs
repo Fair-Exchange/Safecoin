@@ -25,7 +25,7 @@ use {
         RpcBlockUpdateError, RpcKeyedAccount, RpcLogsResponse, RpcResponseContext,
         RpcSignatureResult, RpcVote, SlotInfo, SlotUpdate,
     },
-    solana_runtime::{
+    safecoin_runtime::{
         bank::{Bank, TransactionLogInfo},
         bank_forks::BankForks,
         commitment::{BlockCommitmentCache, CommitmentSlots},
@@ -1247,7 +1247,7 @@ pub(crate) mod tests {
             RpcProgramAccountsConfig, RpcSignatureSubscribeConfig, RpcTransactionLogsConfig,
             RpcTransactionLogsFilter,
         },
-        solana_runtime::{
+        safecoin_runtime::{
             commitment::BlockCommitment,
             genesis_utils::{create_genesis_config, GenesisConfigInfo},
         },

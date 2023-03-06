@@ -2,7 +2,7 @@ extern crate log;
 use {
     clap::{crate_description, crate_name, value_t, App, Arg},
     safecoin_measure::measure::Measure,
-    solana_runtime::accounts_hash::AccountsHasher,
+    safecoin_runtime::accounts_hash::AccountsHasher,
     safecoin_sdk::{hash::Hash, pubkey::Pubkey},
 };
 

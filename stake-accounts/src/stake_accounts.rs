@@ -283,7 +283,7 @@ pub(crate) fn move_stake_accounts(
 mod tests {
     use {
         super::*,
-        solana_runtime::{bank::Bank, bank_client::BankClient},
+        safecoin_runtime::{bank::Bank, bank_client::BankClient},
         safecoin_sdk::{
             account::{AccountSharedData, ReadableAccount},
             client::SyncClient,

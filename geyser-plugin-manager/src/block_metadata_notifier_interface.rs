@@ -1,5 +1,5 @@
 use {
-    solana_runtime::bank::RewardInfo,
+    safecoin_runtime::bank::RewardInfo,
     safecoin_sdk::{clock::UnixTimestamp, pubkey::Pubkey},
     std::sync::{Arc, RwLock},
 };

@@ -1,7 +1,7 @@
 use {
     crossbeam_channel::Receiver,
     safecoin_measure::measure::Measure,
-    solana_runtime::bank::Bank,
+    safecoin_runtime::bank::Bank,
     std::{
         sync::Arc,
         thread::{self, Builder, JoinHandle},

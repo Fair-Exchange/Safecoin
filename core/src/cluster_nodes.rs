@@ -13,7 +13,7 @@ use {
         weighted_shuffle::WeightedShuffle,
     },
     solana_ledger::shred::ShredId,
-    solana_runtime::bank::Bank,
+    safecoin_runtime::bank::Bank,
     safecoin_sdk::{
         clock::{Epoch, Slot},
         feature_set,

@@ -4,7 +4,7 @@ extern crate test;
 
 use {
     rand::{thread_rng, Rng},
-    solana_runtime::{
+    safecoin_runtime::{
         account_info::AccountInfo,
         accounts_index::{
             AccountSecondaryIndexes, AccountsIndex, UpsertReclaim,

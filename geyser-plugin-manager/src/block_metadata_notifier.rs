@@ -9,7 +9,7 @@ use {
     },
     safecoin_measure::measure::Measure,
     solana_metrics::*,
-    solana_runtime::bank::RewardInfo,
+    safecoin_runtime::bank::RewardInfo,
     safecoin_sdk::{clock::UnixTimestamp, pubkey::Pubkey},
     safecoin_transaction_status::{Reward, Rewards},
     std::sync::{Arc, RwLock},

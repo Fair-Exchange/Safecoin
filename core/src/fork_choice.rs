@@ -5,7 +5,7 @@ use {
         progress_map::ProgressMap,
         replay_stage::HeaviestForkFailures,
     },
-    solana_runtime::{bank::Bank, bank_forks::BankForks},
+    safecoin_runtime::{bank::Bank, bank_forks::BankForks},
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, RwLock},

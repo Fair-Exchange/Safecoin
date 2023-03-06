@@ -22,7 +22,7 @@ use {
         verifier::RequisiteVerifier,
         vm::{ContextObject, VerifiedExecutable},
     },
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank,
         bank_client::BankClient,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},

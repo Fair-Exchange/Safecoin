@@ -9,7 +9,7 @@ use {
         blockstore_db::{columns as cf, LedgerColumn},
         get_tmp_ledger_path,
     },
-    solana_runtime::bank::RewardType,
+    safecoin_runtime::bank::RewardType,
     safecoin_sdk::{clock::Slot, pubkey},
     safecoin_transaction_status::{Reward, Rewards},
     std::path::Path,

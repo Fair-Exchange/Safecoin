@@ -11,7 +11,7 @@ use {
         ancestor_iterator::AncestorIterator, blockstore::Blockstore, blockstore_meta::SlotMeta,
     },
     safecoin_measure::measure::Measure,
-    solana_runtime::{contains::Contains, epoch_stakes::EpochStakes},
+    safecoin_runtime::{contains::Contains, epoch_stakes::EpochStakes},
     safecoin_sdk::{
         clock::Slot,
         epoch_schedule::{Epoch, EpochSchedule},
@@ -692,7 +692,7 @@ mod test {
             blockstore::{make_chaining_slot_entries, Blockstore},
             get_tmp_ledger_path,
         },
-        solana_runtime::{bank::Bank, bank_utils},
+        safecoin_runtime::{bank::Bank, bank_utils},
         safecoin_sdk::hash::Hash,
         trees::tr,
     };

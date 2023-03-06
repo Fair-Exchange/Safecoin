@@ -5,7 +5,7 @@ use {
     safecoin_entry::entry::Entry,
     solana_ledger::shred::ShredData,
     safecoin_poh::poh_recorder::WorkingBankEntry,
-    solana_runtime::bank::Bank,
+    safecoin_runtime::bank::Bank,
     safecoin_sdk::clock::Slot,
     std::{
         sync::Arc,

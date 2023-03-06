@@ -1,4 +1,4 @@
-use solana_runtime::builtins::{Builtin, BuiltinFeatureTransition, Builtins};
+use safecoin_runtime::builtins::{Builtin, BuiltinFeatureTransition, Builtins};
 
 macro_rules! to_builtin {
     ($b:expr) => {

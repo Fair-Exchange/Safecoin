@@ -3,7 +3,7 @@ use {
     console::Emoji,
     indicatif::{ProgressBar, ProgressStyle},
     log::*,
-    solana_runtime::{
+    safecoin_runtime::{
         snapshot_hash::SnapshotHash,
         snapshot_package::SnapshotType,
         snapshot_utils::{self, ArchiveFormat},

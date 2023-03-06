@@ -8,7 +8,7 @@ use {
     crossbeam_channel::{Receiver, Sender},
     safecoin_gossip::cluster_info::{ClusterInfo, MAX_SNAPSHOT_HASHES},
     safecoin_measure::{measure, measure::Measure},
-    solana_runtime::{
+    safecoin_runtime::{
         accounts_hash::{AccountsHash, CalcAccountsHashConfig, HashStats},
         epoch_accounts_hash::EpochAccountsHash,
         snapshot_config::SnapshotConfig,
@@ -296,7 +296,7 @@ impl AccountsHashVerifier {
 
         measure_hash.stop();
         if let Some(snapshot_info) = &accounts_package.snapshot_info {
-            solana_runtime::serde_snapshot::reserialize_bank_with_new_accounts_hash(
+            safecoin_runtime::serde_snapshot::reserialize_bank_with_new_accounts_hash(
                 snapshot_info.snapshot_links.path(),
                 accounts_package.slot,
                 &accounts_hash,

@@ -5,7 +5,7 @@ use {
         leader_schedule_cache::LeaderScheduleCache, shred, sigverify_shreds::verify_shreds_gpu,
     },
     solana_perf::{self, packet::PacketBatch, recycler_cache::RecyclerCache},
-    solana_runtime::{bank::Bank, bank_forks::BankForks},
+    safecoin_runtime::{bank::Bank, bank_forks::BankForks},
     safecoin_sdk::{clock::Slot, pubkey::Pubkey},
     std::{
         collections::HashMap,
@@ -237,7 +237,7 @@ mod tests {
             shred::{Shred, ShredFlags},
         },
         solana_perf::packet::Packet,
-        solana_runtime::bank::Bank,
+        safecoin_runtime::bank::Bank,
         safecoin_sdk::signature::{Keypair, Signer},
     };
 

@@ -7,7 +7,7 @@ use {
         progress_map::ProgressMap, tree_diff::TreeDiff,
     },
     safecoin_measure::measure::Measure,
-    solana_runtime::{bank::Bank, bank_forks::BankForks, epoch_stakes::EpochStakes},
+    safecoin_runtime::{bank::Bank, bank_forks::BankForks, epoch_stakes::EpochStakes},
     safecoin_sdk::{
         clock::{Epoch, Slot},
         epoch_schedule::EpochSchedule,
@@ -1147,7 +1147,7 @@ mod test {
         super::*,
         crate::vote_simulator::VoteSimulator,
         itertools::Itertools,
-        solana_runtime::{bank::Bank, bank_utils},
+        safecoin_runtime::{bank::Bank, bank_utils},
         safecoin_sdk::{hash::Hash, slot_history::SlotHistory},
         std::{collections::HashSet, ops::Range},
         trees::tr,

@@ -2,7 +2,7 @@ use {
     log::*,
     rand::{thread_rng, Rng},
     rayon::prelude::*,
-    solana_runtime::{
+    safecoin_runtime::{
         accounts_db::{AccountsDb, LoadHint, INCLUDE_SLOT_IN_HASH_TESTS},
         ancestors::Ancestors,
     },

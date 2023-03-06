@@ -40,7 +40,7 @@ use {
         shred::Shred,
     },
     safecoin_measure::{measure, measure::Measure},
-    solana_runtime::{
+    safecoin_runtime::{
         accounts::Accounts,
         accounts_background_service::{
             AbsRequestHandlers, AbsRequestSender, AccountsBackgroundService,
@@ -2445,7 +2445,7 @@ fn main() {
                 create_new_ledger(
                     &output_directory,
                     &genesis_config,
-                    solana_runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
+                    safecoin_runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
                     LedgerColumnOptions::default(),
                 )
                 .unwrap_or_else(|err| {

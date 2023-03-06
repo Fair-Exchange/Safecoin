@@ -7,7 +7,7 @@ use {
     },
     solana_ledger::blockstore_processor::{ConfirmationProgress, ConfirmationTiming},
     safecoin_program_runtime::{report_execute_timings, timings::ExecuteTimingType},
-    solana_runtime::{bank::Bank, bank_forks::BankForks, vote_account::VoteAccountsHashMap},
+    safecoin_runtime::{bank::Bank, bank_forks::BankForks, vote_account::VoteAccountsHashMap},
     safecoin_sdk::{clock::Slot, hash::Hash, pubkey::Pubkey},
     std::{
         collections::{BTreeMap, HashMap, HashSet},
@@ -530,7 +530,7 @@ impl ProgressMap {
 mod test {
     use {
         super::*,
-        solana_runtime::vote_account::VoteAccount,
+        safecoin_runtime::vote_account::VoteAccount,
         safecoin_sdk::account::{Account, AccountSharedData},
     };
 

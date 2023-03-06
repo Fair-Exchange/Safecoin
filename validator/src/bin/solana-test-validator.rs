@@ -13,7 +13,7 @@ use {
         rpc_pubsub_service::PubSubConfig,
     },
     safecoin_rpc_client::rpc_client::RpcClient,
-    solana_runtime::accounts_index::{AccountIndex, AccountSecondaryIndexes},
+    safecoin_runtime::accounts_index::{AccountIndex, AccountSecondaryIndexes},
     safecoin_sdk::{
         account::AccountSharedData,
         clock::Slot,
@@ -99,7 +99,7 @@ fn main() {
             exit(1);
         })
     }
-    solana_runtime::snapshot_utils::remove_tmp_snapshot_archives(&ledger_path);
+    safecoin_runtime::snapshot_utils::remove_tmp_snapshot_archives(&ledger_path);
 
     let validator_log_symlink = ledger_path.join("validator.log");
 

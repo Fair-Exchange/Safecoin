@@ -92,7 +92,7 @@ impl DecisionMaker {
 mod tests {
     use {
         super::*,
-        solana_runtime::bank::Bank,
+        safecoin_runtime::bank::Bank,
         std::{sync::Arc, time::Instant},
     };
 

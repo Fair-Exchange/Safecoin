@@ -53,7 +53,7 @@ use {
         rpc_subscriptions::RpcSubscriptions,
     },
     safecoin_rpc_client_api::response::SlotUpdate,
-    solana_runtime::{
+    safecoin_runtime::{
         accounts_background_service::AbsRequestSender,
         bank::{Bank, NewBankOptions},
         bank_forks::{BankForks, MAX_ROOT_DISTANCE_FOR_VOTE_ONLY},
@@ -3626,7 +3626,7 @@ pub(crate) mod tests {
             optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
             rpc::{create_test_transaction_entries, populate_blockstore_for_tests},
         },
-        solana_runtime::{
+        safecoin_runtime::{
             accounts_background_service::AbsRequestSender,
             commitment::BlockCommitment,
             genesis_utils::{GenesisConfigInfo, ValidatorVoteKeypairs},

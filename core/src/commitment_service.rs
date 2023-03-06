@@ -4,7 +4,7 @@ use {
     safecoin_measure::measure::Measure,
     solana_metrics::datapoint_info,
     safecoin_rpc::rpc_subscriptions::RpcSubscriptions,
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank,
         commitment::{BlockCommitment, BlockCommitmentCache, CommitmentSlots, VOTE_THRESHOLD_SIZE},
     },
@@ -251,7 +251,7 @@ mod tests {
     use {
         super::*,
         solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
-        solana_runtime::{
+        safecoin_runtime::{
             accounts_background_service::AbsRequestSender,
             bank_forks::BankForks,
             genesis_utils::{create_genesis_config_with_vote_accounts, ValidatorVoteKeypairs},

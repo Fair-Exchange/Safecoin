@@ -1,7 +1,7 @@
 use {
     crate::{cluster_info_vote_listener::VerifiedLabelVotePacketsReceiver, result::Result},
     solana_perf::packet::PacketBatch,
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank,
         vote_transaction::{VoteTransaction, VoteTransaction::VoteStateUpdate},
     },

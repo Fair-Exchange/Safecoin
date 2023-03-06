@@ -14,7 +14,7 @@ use {
         unfrozen_gossip_verified_vote_hashes::UnfrozenGossipVerifiedVoteHashes,
     },
     crossbeam_channel::unbounded,
-    solana_runtime::{
+    safecoin_runtime::{
         accounts_background_service::AbsRequestSender,
         bank::Bank,
         bank_forks::BankForks,

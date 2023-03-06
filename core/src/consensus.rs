@@ -8,7 +8,7 @@ use {
     },
     chrono::prelude::*,
     solana_ledger::{ancestor_iterator::AncestorIterator, blockstore::Blockstore, blockstore_db},
-    solana_runtime::{
+    safecoin_runtime::{
         bank::Bank, bank_forks::BankForks, commitment::VOTE_THRESHOLD_SIZE,
         vote_account::VoteAccountsHashMap,
     },
@@ -1426,7 +1426,7 @@ pub mod test {
         },
         itertools::Itertools,
         solana_ledger::{blockstore::make_slot_entries, get_tmp_ledger_path},
-        solana_runtime::{bank::Bank, vote_account::VoteAccount},
+        safecoin_runtime::{bank::Bank, vote_account::VoteAccount},
         safecoin_sdk::{
             account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
             clock::Slot,
