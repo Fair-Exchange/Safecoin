@@ -144,7 +144,7 @@ fn main() {
     solana_logger::setup_with_default("solana=info");
     solana_metrics::set_panic_hook("bench-tps", /*version:*/ None);
 
-    let matches = cli::build_args(solana_version::version!()).get_matches();
+    let matches = cli::build_args(safecoin_version::version!()).get_matches();
     let cli_config = cli::extract_args(&matches);
 
     let cli::Config {

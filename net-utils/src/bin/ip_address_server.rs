@@ -6,7 +6,7 @@ use {
 fn main() {
     solana_logger::setup();
     let matches = Command::new("safecoin-ip-address-server")
-        .version(solana_version::version!())
+        .version(safecoin_version::version!())
         .arg(
             Arg::new("port")
                 .index(1)

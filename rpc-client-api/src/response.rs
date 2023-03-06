@@ -58,7 +58,7 @@ impl std::ops::Deref for RpcApiVersion {
 
 impl Default for RpcApiVersion {
     fn default() -> Self {
-        Self(solana_version::Version::default().as_semver_version())
+        Self(safecoin_version::Version::default().as_semver_version())
     }
 }
 

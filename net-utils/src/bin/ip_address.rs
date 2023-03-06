@@ -3,7 +3,7 @@ use clap::{Arg, Command};
 fn main() {
     solana_logger::setup();
     let matches = Command::new("safecoin-ip-address")
-        .version(solana_version::version!())
+        .version(safecoin_version::version!())
         .arg(
             Arg::new("host_port")
                 .index(1)

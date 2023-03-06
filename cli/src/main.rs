@@ -240,7 +240,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let matches = get_clap_app(
         crate_name!(),
         crate_description!(),
-        solana_version::version!(),
+        safecoin_version::version!(),
     )
     .get_matches();
 

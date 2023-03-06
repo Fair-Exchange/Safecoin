@@ -198,7 +198,7 @@ fn main() {
 
     let matches = Command::new(crate_name!())
         .about(crate_description!())
-        .version(solana_version::version!())
+        .version(safecoin_version::version!())
         .subcommand(
             Command::new("iftop")
                 .about("Process iftop log file")

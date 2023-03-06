@@ -37,7 +37,7 @@ use {
         TransactionConfirmationStatus, TransactionStatus, UiCompiledInstruction, UiMessage,
         UiRawMessage, UiTransaction, UiTransactionStatusMeta,
     },
-    solana_version::Version,
+    safecoin_version::Version,
     std::{collections::HashMap, net::SocketAddr, str::FromStr, sync::RwLock},
 };
 

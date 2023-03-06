@@ -62,7 +62,7 @@ fn main() -> Result<()> {
 
     let matches = Command::new(crate_name!())
         .about(crate_description!())
-        .version(solana_version::version!())
+        .version(safecoin_version::version!())
         .arg(
             Arg::new("num-recv-sockets")
                 .long("num-recv-sockets")

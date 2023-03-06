@@ -32,7 +32,7 @@ fn parse_matches() -> ArgMatches<'static> {
 
     App::new(crate_name!())
         .about(crate_description!())
-        .version(solana_version::version!())
+        .version(safecoin_version::version!())
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .arg(
             Arg::with_name("allow_private_addr")
