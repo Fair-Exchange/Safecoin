@@ -454,16 +454,23 @@ pub mod preserve_rent_epoch_for_rent_exempt_accounts {
     safecoin_sdk::declare_id!("8bxNk6MJqCQLeMrL2viWTKiSftGeUoie6KpEQD8dVzAd");
 }
 
+
 pub mod enable_bpf_loader_extend_program_ix {
+=======
+pub mod enable_bpf_loader_extend_program_data_ix {
+>>>>>>> 5787d6c8e... update feature sets
     safecoin_sdk::declare_id!("GPg3fNRkPPTYvtJTEefRPPjtCer2fucW66iS74HUeSM9");
 }
 
 pub mod enable_early_verification_of_account_modifications {
     safecoin_sdk::declare_id!("9LD4rrdYAqUWRb39cWVzYgA9MVsVQAerTTnmbSrjbVSn");
+<<<<<<< HEAD
 }
 
 pub mod skip_rent_rewrites {
     safecoin_sdk::declare_id!("CGB2jM8pwZkeeiXQ66kBMyBR6Np61mggL7XUsmLjVcrw");
+=======
+>>>>>>> 5787d6c8e... update feature sets
 }
 
 pub mod prevent_crediting_accounts_that_end_rent_paying {
@@ -491,6 +498,7 @@ pub mod compact_vote_state_updates {
     safecoin_sdk::declare_id!("3Av7XvYZmZ6RBhQeM4Wt54aKN3iJtW2HsErG7wxwPwqE");
 }
 
+<<<<<<< HEAD
 pub mod incremental_snapshot_only_incremental_hash_calculation {
     safecoin_sdk::declare_id!("EM2qfX7PqW1JhGFThHUeVQ8GFaHBGFmae7G7oP1Jbwbk");
 }
@@ -517,12 +525,29 @@ pub mod relax_authority_signer_check_for_lookup_table_creation {
 
 pub mod stop_sibling_instruction_search_at_parent {
     safecoin_sdk::declare_id!("4RuT8c6RpzcopkhZmM7jRBJb7G2eeMUi4p8op1NidNTp");
+=======
+pub mod sign_repair_requests {
+    safecoin_sdk::declare_id!("FNMUgxPY5kGjGaEp3eft2FJd1aYoqsf3AdQ2s6NhjdhT");
+}
+
+pub mod concurrent_replay_of_forks {
+    safecoin_sdk::declare_id!("8v9fX8s1QR8fbH6T5AyPHBp67SMZNSvcBkMbJzeoktK4");
+}
+
+pub mod check_ping_ancestor_requests {
+    safecoin_sdk::declare_id!("4SJ9zjPBNuhjaSYfwgFr8J86th5KDqqD5U9XW3PN2oFY");
+}
+
+pub mod incremental_snapshot_only_incremental_hash_calculation {
+    safecoin_sdk::declare_id!("EM2qfX7PqW1JhGFThHUeVQ8GFaHBGFmae7G7oP1Jbwbk");
+>>>>>>> 5787d6c8e... update feature sets
 }
 
 pub mod vote_state_update_root_fix {
     safecoin_sdk::declare_id!("F9hCEfctdkoka5Mcjkq2YvusjZymxRfADYf4Vo7tbRmC");
 }
 
+<<<<<<< HEAD
 pub mod cap_accounts_data_allocations_per_transaction {
     safecoin_sdk::declare_id!("HiUNyHBf9T7uKVPAtA5WJCBbJDU4WVdBc5sh1g77Liop");
 }
@@ -537,6 +562,10 @@ pub mod remove_deprecated_request_unit_ix {
 
 pub mod disable_rehash_for_rent_epoch {
     safecoin_sdk::declare_id!("J1fn5rAjqRuSi3fx9iHZbvux1cSdTNDDAzatTvbtXEcF");
+=======
+pub mod return_none_for_zero_lamport_accounts {
+    safecoin_sdk::declare_id!("4uFe1EAUqBRUfXHhHuGc9oAG42yymQMY1WQKuV4iLEpa");
+>>>>>>> 5787d6c8e... update feature sets
 }
 
 pub mod increase_tx_account_lock_limit {

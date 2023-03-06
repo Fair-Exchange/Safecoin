@@ -175,11 +175,11 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
     name: PROGRAM_NAMES.MEMO_2,
     deployments: ALL_CLUSTERS,
   },
-  namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX: {
+  safekD6aFjBDfsKutf8guzqx8uydZMEtzTih8NvhfQ3: {
     name: PROGRAM_NAMES.NAME,
     deployments: LIVE_CLUSTERS,
   },
-  SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy: {
+  spNkUopdHp8YxSdsajeNuSKZm51w9kPt48SDDPSHFvo: {
     name: PROGRAM_NAMES.STAKE_POOL,
     deployments: LIVE_CLUSTERS,
   },
@@ -191,7 +191,7 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
     name: PROGRAM_NAMES.TOKEN,
     deployments: ALL_CLUSTERS,
   },
-  metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s: {
+  metXT2PkoCBucKkvmeQoYDNmncrPXGVCGacwqEHxcM5: {
     name: PROGRAM_NAMES.TOKEN_METADATA,
     deployments: LIVE_CLUSTERS,
   },

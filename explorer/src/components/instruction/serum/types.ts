@@ -11,7 +11,7 @@ import { enums, number, type, Infer, create } from "superstruct";
 import { BigIntFromString } from "validators/number";
 
 export const OPEN_BOOK_PROGRAM_ID =
-  "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX";
+  "safhmRNhffR7skWseXnptkaCm8XNTCZvZu9UCqMDnMD";
 
 const SERUM_PROGRAM_IDS = [
   "4ckmDgGdxQoPDLUkDT3vHgSAkzA3QRdNq5ywwY4sUSJn",
