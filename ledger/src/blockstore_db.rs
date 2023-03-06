@@ -1675,7 +1675,7 @@ fn get_cf_options<C: 'static + Column + ColumnName>(
 ) -> Options {
     let mut cf_options = Options::default();
     // 256 * 8 = 2GB. 6 of these columns should take at most 12GB of RAM
-    cf_options.set_max_write_buffer_number(8);
+    cf_options.set_max_write_buffer_number(30);
     cf_options.set_write_buffer_size(MAX_WRITE_BUFFER_SIZE as usize);
     let file_num_compaction_trigger = 4;
     // Recommend that this be around the size of level 0. Level 0 estimated size in stable state is
@@ -1813,7 +1813,7 @@ fn get_db_options(access_type: &AccessType) -> Options {
     // Per the docs, a good value for this is the number of cores on the machine
     options.increase_parallelism(num_cpus::get() as i32);
 
-    let mut env = rocksdb::Env::default().unwrap();
+    let mut env = rocksdb::Env::new().unwrap();
     // While a compaction is ongoing, all the background threads
     // could be used by the compaction. This can stall writes which
     // need to flush the memtable. Add some high-priority background threads
