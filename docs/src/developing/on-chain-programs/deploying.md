@@ -69,7 +69,7 @@ Unfortunately, deploys fail occasionally and instead of reusing the buffer accou
 Developers can check if they own any abandoned buffer accounts by using the Safecoin CLI:
 
 ```bash
-safecoin program show --buffers --keypair ~/.config/solana/MY_KEYPAIR.json
+safecoin program show --buffers --keypair ~/.config/safecoin/MY_KEYPAIR.json
 
 Buffer Address                               | Authority                                    | Balance
 9vXW2c3qo6DrLHa1Pkya4Mw2BWZSRYs9aoyoP3g85wCA | 2nr1bHFT86W9tGnyvmYW4vcHKsQB3sVQfnddasz4kExM | 3.41076888 SAFE
@@ -78,7 +78,7 @@ Buffer Address                               | Authority                        
 And they can close those buffers to reclaim the SAFE balance with the following command:
 
 ```bash
-safecoin program close --buffers --keypair ~/.config/solana/MY_KEYPAIR.json
+safecoin program close --buffers --keypair ~/.config/safecoin/MY_KEYPAIR.json
 ```
 
 #### Fetch the owners of buffer accounts via RPC API
@@ -126,7 +126,7 @@ To view the programs which are owned by your wallet address, you can run:
 
 ```bash
 safecoin -V # must be 1.7.11 or higher!
-safecoin program show --programs --keypair ~/.config/solana/MY_KEYPAIR.json
+safecoin program show --programs --keypair ~/.config/safecoin/MY_KEYPAIR.json
 
 Program Id                                   | Slot      | Authority                                    | Balance
 CN5x9WEusU6pNH66G22SnspVx4cogWLqMfmb85Z3GW7N | 53796672  | 2nr1bHFT86W9tGnyvmYW4vcHKsQB3sVQfnddasz4kExM | 0.54397272 SAFE
@@ -135,7 +135,7 @@ CN5x9WEusU6pNH66G22SnspVx4cogWLqMfmb85Z3GW7N | 53796672  | 2nr1bHFT86W9tGnyvmYW4
 To close those program data accounts and reclaim their SAFE balance, you can run:
 
 ```bash
-safecoin program close --programs --keypair ~/.config/solana/MY_KEYPAIR.json
+safecoin program close --programs --keypair ~/.config/safecoin/MY_KEYPAIR.json
 ```
 
 You might be concerned about this feature allowing malicious actors to close a program in a way that negatively impacts end users. While this is a valid concern in general, closing program data accounts doesn't make this any more exploitable than was already possible.

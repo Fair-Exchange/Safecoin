@@ -115,7 +115,7 @@ The `safecoin-install` tool is used by the user to install and update their clus
 
 It manages the following files and directories in the user's home directory:
 
-- `~/.config/solana/install/config.yml` - user configuration and information about currently installed software version
+- `~/.config/safecoin/install/config.yml` - user configuration and information about currently installed software version
 - `~/.local/share/solana/install/bin` - a symlink to the current release. eg, `~/.local/share/solana-update/<update-pubkey>-<manifest_signature>/bin`
 - `~/.local/share/solana/install/releases/<download_sha256>/` - contents of a release
 

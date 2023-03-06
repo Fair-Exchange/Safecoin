@@ -12,11 +12,11 @@ declare var process: {
 };
 
 export const url = process.env.TEST_LIVE
-  ? 'http://localhost:8899/'
+  ? 'http://localhost:8328/'
   : 'http://localhost:9999/';
 
 export const wsUrl = process.env.TEST_LIVE
-  ? 'ws://localhost:8900/'
+  ? 'ws://localhost:8329/'
   : 'ws://localhost:9999/';
 
 export const nodeVersion = Number(process.version.split('.')[0]);

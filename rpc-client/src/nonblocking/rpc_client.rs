@@ -83,8 +83,8 @@ use {
 /// the underlying JSON-RPC methods. Thus reading both is necessary for complete
 /// understanding.
 ///
-/// `RpcClient`s generally communicate over HTTP on port 8899, a typical server
-/// URL being "http://localhost:8899".
+/// `RpcClient`s generally communicate over HTTP on port 8328, a typical server
+/// URL being "http://localhost:8328".
 ///
 /// Methods that query information from recent [slots], including those that
 /// confirm transactions, decide the most recent slot to query based on a
@@ -169,8 +169,8 @@ impl RpcClient {
 
     /// Create an HTTP `RpcClient`.
     ///
-    /// The URL is an HTTP URL, usually for port 8899, as in
-    /// "http://localhost:8899".
+    /// The URL is an HTTP URL, usually for port 8328, as in
+    /// "http://localhost:8328".
     ///
     /// The client has a default timeout of 30 seconds, and a default [commitment
     /// level][cl] of [`Finalized`](CommitmentLevel::Finalized).
@@ -181,7 +181,7 @@ impl RpcClient {
     ///
     /// ```
     /// # use safecoin_rpc_client::nonblocking::rpc_client::RpcClient;
-    /// let url = "http://localhost:8899".to_string();
+    /// let url = "http://localhost:8328".to_string();
     /// let client = RpcClient::new(url);
     /// ```
     pub fn new(url: String) -> Self {
@@ -192,8 +192,8 @@ impl RpcClient {
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
-    /// The URL is an HTTP URL, usually for port 8899, as in
-    /// "http://localhost:8899".
+    /// The URL is an HTTP URL, usually for port 8328, as in
+    /// "http://localhost:8328".
     ///
     /// The client has a default timeout of 30 seconds, and a user-specified
     /// [`CommitmentLevel`] via [`CommitmentConfig`].
@@ -203,7 +203,7 @@ impl RpcClient {
     /// ```
     /// # use safecoin_sdk::commitment_config::CommitmentConfig;
     /// # use safecoin_rpc_client::nonblocking::rpc_client::RpcClient;
-    /// let url = "http://localhost:8899".to_string();
+    /// let url = "http://localhost:8328".to_string();
     /// let commitment_config = CommitmentConfig::processed();
     /// let client = RpcClient::new_with_commitment(url, commitment_config);
     /// ```
@@ -216,8 +216,8 @@ impl RpcClient {
 
     /// Create an HTTP `RpcClient` with specified timeout.
     ///
-    /// The URL is an HTTP URL, usually for port 8899, as in
-    /// "http://localhost:8899".
+    /// The URL is an HTTP URL, usually for port 8328, as in
+    /// "http://localhost:8328".
     ///
     /// The client has and a default [commitment level][cl] of
     /// [`Finalized`](CommitmentLevel::Finalized).
@@ -229,7 +229,7 @@ impl RpcClient {
     /// ```
     /// # use std::time::Duration;
     /// # use safecoin_rpc_client::nonblocking::rpc_client::RpcClient;
-    /// let url = "http://localhost::8899".to_string();
+    /// let url = "http://localhost::8328".to_string();
     /// let timeout = Duration::from_secs(1);
     /// let client = RpcClient::new_with_timeout(url, timeout);
     /// ```
@@ -244,8 +244,8 @@ impl RpcClient {
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
-    /// The URL is an HTTP URL, usually for port 8899, as in
-    /// "http://localhost:8899".
+    /// The URL is an HTTP URL, usually for port 8328, as in
+    /// "http://localhost:8328".
     ///
     /// # Examples
     ///
@@ -253,7 +253,7 @@ impl RpcClient {
     /// # use std::time::Duration;
     /// # use safecoin_rpc_client::nonblocking::rpc_client::RpcClient;
     /// # use safecoin_sdk::commitment_config::CommitmentConfig;
-    /// let url = "http://localhost::8899".to_string();
+    /// let url = "http://localhost::8328".to_string();
     /// let timeout = Duration::from_secs(1);
     /// let commitment_config = CommitmentConfig::processed();
     /// let client = RpcClient::new_with_timeout_and_commitment(
@@ -277,8 +277,8 @@ impl RpcClient {
     ///
     /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
-    /// The URL is an HTTP URL, usually for port 8899, as in
-    /// "http://localhost:8899".
+    /// The URL is an HTTP URL, usually for port 8328, as in
+    /// "http://localhost:8328".
     ///
     /// The `confirm_transaction_initial_timeout` argument specifies the amount of
     /// time to allow for the server to initially process a transaction, when
@@ -294,7 +294,7 @@ impl RpcClient {
     /// # use std::time::Duration;
     /// # use safecoin_rpc_client::nonblocking::rpc_client::RpcClient;
     /// # use safecoin_sdk::commitment_config::CommitmentConfig;
-    /// let url = "http://localhost::8899".to_string();
+    /// let url = "http://localhost::8328".to_string();
     /// let timeout = Duration::from_secs(1);
     /// let commitment_config = CommitmentConfig::processed();
     /// let confirm_transaction_initial_timeout = Duration::from_secs(10);
@@ -454,7 +454,7 @@ impl RpcClient {
     /// ```
     /// # use std::net::{Ipv4Addr, SocketAddr};
     /// # use safecoin_rpc_client::nonblocking::rpc_client::RpcClient;
-    /// let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 8899));
+    /// let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 8328));
     /// let client = RpcClient::new_socket(addr);
     /// ```
     pub fn new_socket(addr: SocketAddr) -> Self {
@@ -474,7 +474,7 @@ impl RpcClient {
     /// # use std::net::{Ipv4Addr, SocketAddr};
     /// # use safecoin_rpc_client::nonblocking::rpc_client::RpcClient;
     /// # use safecoin_sdk::commitment_config::CommitmentConfig;
-    /// let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 8899));
+    /// let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 8328));
     /// let commitment_config = CommitmentConfig::processed();
     /// let client = RpcClient::new_socket_with_commitment(
     ///     addr,
@@ -500,7 +500,7 @@ impl RpcClient {
     /// # use std::net::{Ipv4Addr, SocketAddr};
     /// # use std::time::Duration;
     /// # use safecoin_rpc_client::nonblocking::rpc_client::RpcClient;
-    /// let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 8899));
+    /// let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 8328));
     /// let timeout = Duration::from_secs(1);
     /// let client = RpcClient::new_socket_with_timeout(addr, timeout);
     /// ```

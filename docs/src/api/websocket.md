@@ -12,7 +12,7 @@ After connecting to the RPC PubSub websocket at `ws://<ADDRESS>/`:
 
 ## RPC PubSub WebSocket Endpoint
 
-**Default port:** 8900 e.g. ws://localhost:8900, [http://192.168.1.88:8900](http://192.168.1.88:8900)
+**Default port:** 8329 e.g. ws://localhost:8329, [http://192.168.1.88:8329](http://192.168.1.88:8329)
 
 ## Methods
 

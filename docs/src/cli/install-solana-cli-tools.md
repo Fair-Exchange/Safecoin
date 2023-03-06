@@ -32,7 +32,7 @@ sh -c "$(curl -sSfL https://release.solana.com/LATEST_SAFECOIN_RELEASE_VERSION/i
 
 ```text
 downloading LATEST_SAFECOIN_RELEASE_VERSION installer
-Configuration: /home/solana/.config/solana/install/config.yml
+Configuration: /home/solana/.config/safecoin/install/config.yml
 Active release directory: /home/solana/.local/share/solana/install/active_release
 * Release version: LATEST_SAFECOIN_RELEASE_VERSION
 * Release URL: https://github.com/fair-exchange/safecoin/releases/download/LATEST_SAFECOIN_RELEASE_VERSION/solana-release-x86_64-unknown-linux-gnu.tar.bz2

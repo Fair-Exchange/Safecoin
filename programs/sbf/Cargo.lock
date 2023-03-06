@@ -194,7 +194,7 @@ dependencies = [
 name = "ark-serialize"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d6c2b318ee6e10f8c2853e73a83adc0ccb88995aa978d8a3408d492ab2ee671"
+checksum = "1d6c2b318ee6e10f8c2853e73a83adc0ccb83285aa978d8a3408d492ab2ee671"
 dependencies = [
  "ark-std",
  "digest 0.9.0",
@@ -3887,7 +3887,7 @@ checksum = "ed3d612bc64430efeb3f7ee6ef26d590dce0c43249217bddc62112540c7941e1"
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
+checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378329502"
 dependencies = [
  "winapi-util",
 ]

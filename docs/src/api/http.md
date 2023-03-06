@@ -14,7 +14,7 @@ For an PubSub connection to a Safecoin node, use the [Websocket API](./websocket
 
 ## RPC HTTP Endpoint
 
-**Default port:** 8899 e.g. [http://localhost:8899](http://localhost:8899), [http://192.168.1.88:8899](http://192.168.1.88:8899)
+**Default port:** 8328 e.g. [http://localhost:8328](http://localhost:8328), [http://192.168.1.88:8328](http://192.168.1.88:8328)
 
 ## Request Formatting
 
@@ -28,7 +28,7 @@ To make a JSON-RPC request, send an HTTP POST request with a `Content-Type: appl
 Example using curl:
 
 ```bash
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
   {
     "jsonrpc": "2.0",
     "id": 1,
@@ -86,7 +86,7 @@ For total safety, it's recommended to use`"finalized"` commitment.
 The commitment parameter should be included as the last element in the `params` array:
 
 ```bash
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
   {
     "jsonrpc": "2.0",
     "id": 1,

@@ -72,10 +72,10 @@ safecoin-bench-tps)
 
   if ${TPU_CLIENT}; then
     args+=(--use-tpu-client)
-    args+=(--url "$entrypointIp:8899")
+    args+=(--url "$entrypointIp:8328")
   elif ${RPC_CLIENT}; then
     args+=(--use-rpc-client)
-    args+=(--url "$entrypointIp:8899")
+    args+=(--url "$entrypointIp:8328")
   else
     args+=(--entrypoint "$entrypointIp:10015")
   fi

@@ -40,7 +40,7 @@ The result field will be an array of JSON objects, each with the following sub f
 ### Code sample:
 
 ```bash
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d '
   {
     "jsonrpc": "2.0", "id": 1,
     "method": "getClusterNodes"
@@ -57,7 +57,7 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
     {
       "gossip": "10.239.6.48:10015",
       "pubkey": "9QzsJf7LPLj8GkXbYT3LFDKqsj2hHG7TA3xinJHu8epQ",
-      "rpc": "10.239.6.48:8899",
+      "rpc": "10.239.6.48:8328",
       "tpu": "10.239.6.48:8856",
       "version": "1.0.0 c375ce1f"
     }

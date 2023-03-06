@@ -71,7 +71,7 @@ function wait_for_max_stake {
 
   # shellcheck disable=SC2154
   # shellcheck disable=SC2029
-  ssh "${sshOptions[@]}" "${validatorIpList[0]}" "RUST_LOG=info \$HOME/.cargo/bin/safecoin wait-for-max-stake $max_stake --url http://127.0.0.1:8899"
+  ssh "${sshOptions[@]}" "${validatorIpList[0]}" "RUST_LOG=info \$HOME/.cargo/bin/safecoin wait-for-max-stake $max_stake --url http://127.0.0.1:8328"
 }
 
 function wait_for_equal_stake {
@@ -87,7 +87,7 @@ function wait_for_equal_stake {
 function get_slot {
   source "${REPO_ROOT}"/net/common.sh
   loadConfigFile
-  ssh "${sshOptions[@]}" "${validatorIpList[0]}" '$HOME/.cargo/bin/safecoin --url http://127.0.0.1:8899 slot'
+  ssh "${sshOptions[@]}" "${validatorIpList[0]}" '$HOME/.cargo/bin/safecoin --url http://127.0.0.1:8328 slot'
 }
 
 function get_bootstrap_validator_ip_address {
@@ -100,14 +100,14 @@ function get_active_stake {
   source "${REPO_ROOT}"/net/common.sh
   loadConfigFile
   ssh "${sshOptions[@]}" "${validatorIpList[0]}" \
-    '$HOME/.cargo/bin/safecoin --url http://127.0.0.1:8899 validators --output=json | grep -o "totalActiveStake\": [0-9]*" | cut -d: -f2'
+    '$HOME/.cargo/bin/safecoin --url http://127.0.0.1:8328 validators --output=json | grep -o "totalActiveStake\": [0-9]*" | cut -d: -f2'
 }
 
 function get_current_stake {
   source "${REPO_ROOT}"/net/common.sh
   loadConfigFile
   ssh "${sshOptions[@]}" "${validatorIpList[0]}" \
-    '$HOME/.cargo/bin/safecoin --url http://127.0.0.1:8899 validators --output=json | grep -o "totalCurrentStake\": [0-9]*" | cut -d: -f2'
+    '$HOME/.cargo/bin/safecoin --url http://127.0.0.1:8328 validators --output=json | grep -o "totalCurrentStake\": [0-9]*" | cut -d: -f2'
 }
 
 function get_validator_confirmation_time {

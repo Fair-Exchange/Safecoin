@@ -9,7 +9,7 @@
 //! [`CONFIG_FILE`], which is a [lazy_static] of `Option<String>`, the value of
 //! which is
 //!
-//! > `~/.config/solana/cli/config.yml`
+//! > `~/.config/safecoin/cli/config.yml`
 //!
 //! [`CONFIG_FILE`]: struct@CONFIG_FILE
 //! [lazy_static]: https://docs.rs/lazy_static

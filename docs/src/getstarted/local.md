@@ -63,7 +63,7 @@ Let's create a simple file system wallet for testing:
 safecoin-keygen new
 ```
 
-By default, the `safecoin-keygen` command will create a new file system wallet located at `~/.config/solana/id.json`. You can manually specify the output file location using the `--outfile /path` option.
+By default, the `safecoin-keygen` command will create a new file system wallet located at `~/.config/safecoin/id.json`. You can manually specify the output file location using the `--outfile /path` option.
 
 > **NOTE:**
 > If you already have a file system wallet saved at the default location, this command will **NOT** override it (unless you explicitly force override using the `--force` flag).
@@ -73,7 +73,7 @@ By default, the `safecoin-keygen` command will create a new file system wallet l
 With your new file system wallet created, you must tell the Safecoin CLI to use this wallet to deploy and take ownership of your on chain program:
 
 ```bash
-safecoin config set -k ~/.config/solana/id.json
+safecoin config set -k ~/.config/safecoin/id.json
 ```
 
 ## Airdrop SAFE tokens to your wallet

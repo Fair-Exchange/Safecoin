@@ -2021,7 +2021,7 @@ mod tests {
         // Success cases
         let mut config = CliConfig {
             rpc_client: Some(Arc::new(RpcClient::new_mock("succeeds".to_string()))),
-            json_rpc_url: "http://127.0.0.1:8899".to_string(),
+            json_rpc_url: "http://127.0.0.1:8328".to_string(),
             ..CliConfig::default()
         };
 
@@ -2091,7 +2091,7 @@ mod tests {
         let rpc_client = RpcClient::new_mock_with_mocks("".to_string(), mocks);
         let mut vote_config = CliConfig {
             rpc_client: Some(Arc::new(rpc_client)),
-            json_rpc_url: "http://127.0.0.1:8899".to_string(),
+            json_rpc_url: "http://127.0.0.1:8328".to_string(),
             ..CliConfig::default()
         };
         let current_authority = keypair_from_seed(&[5; 32]).unwrap();
