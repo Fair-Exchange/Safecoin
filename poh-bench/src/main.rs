@@ -15,7 +15,7 @@ fn main() {
 
     let matches = Command::new(crate_name!())
         .about(crate_description!())
-        .version(safecoin_version::version!())
+        .version(solana_version::version!())
         .arg(
             Arg::new("max_num_entries")
                 .long("max-num-entries")

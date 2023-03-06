@@ -62,9 +62,9 @@ spl() {
     cp "$solana_dir"/rust-toolchain.toml spl/
     cd spl
 
-    project_used_safecoin_version=$(sed -nE 's/safecoin-sdk = \"[>=<~]*(.*)\"/\1/p' <"token/program/Cargo.toml")
-    echo "used safecoin version: $project_used_safecoin_version"
-    if semverGT "$project_used_safecoin_version" "$solana_ver"; then
+    project_used_solana_version=$(sed -nE 's/safecoin-sdk = \"[>=<~]*(.*)\"/\1/p' <"token/program/Cargo.toml")
+    echo "used safecoin version: $project_used_solana_version"
+    if semverGT "$project_used_solana_version" "$solana_ver"; then
       echo "skip"
       return
     fi

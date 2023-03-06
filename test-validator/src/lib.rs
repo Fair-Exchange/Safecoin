@@ -4,7 +4,7 @@ use {
     log::*,
     safecoin_cli_output::CliAccount,
     safecoin_client::rpc_request::MAX_MULTIPLE_ACCOUNTS,
-    solana_core::{
+    safecoin_core::{
         tower_storage::TowerStorage,
         validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     },
@@ -619,9 +619,9 @@ impl TestValidator {
         let validator_identity = Keypair::new();
         let validator_vote_account = Keypair::new();
         let validator_stake_account = Keypair::new();
-        let validator_identity_lamports = sol_to_lamports(33_406_471.);
-        let validator_stake_lamports = sol_to_lamports(10_000.);
-        let mint_lamports = sol_to_lamports(500.);
+        let validator_identity_lamports = sol_to_lamports(500.);
+        let validator_stake_lamports = sol_to_lamports(1_000_000.);
+        let mint_lamports = sol_to_lamports(33_370_166.);
 
         let mut accounts = config.accounts.clone();
         for (address, account) in safecoin_program_test::programs::spl_programs(&config.rent) {

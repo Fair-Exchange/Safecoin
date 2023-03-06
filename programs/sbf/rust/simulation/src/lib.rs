@@ -11,7 +11,7 @@ use {
     std::convert::TryInto,
 };
 
-declare_id!("sim6xwPJy4EYCcsjxqfUCAuLEq1sGogb9jYShQSnYu6");
+declare_id!("Sim1jD5C35odT8mzctm8BWnjic8xW5xgeb5MbcbErTo");
 
 safecoin_program::entrypoint!(process_instruction);
 

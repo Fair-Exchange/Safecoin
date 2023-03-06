@@ -361,7 +361,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let default_num_threads = num_cpus::get().to_string();
     let matches = Command::new(crate_name!())
         .about(crate_description!())
-        .version(safecoin_version::version!())
+        .version(solana_version::version!())
         .subcommand_required(true)
         .arg_required_else_help(true)
         .arg({

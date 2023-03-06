@@ -525,7 +525,7 @@ fn main() {
     solana_logger::setup_with_default("solana=info");
     let matches = App::new(crate_name!())
         .about(crate_description!())
-        .version(safecoin_version::version!())
+        .version(solana_version::version!())
         .arg(
             Arg::with_name("entrypoint")
                 .long("entrypoint")
@@ -702,7 +702,7 @@ fn main() {
 pub mod test {
     use {
         super::*,
-        solana_core::validator::ValidatorConfig,
+        safecoin_core::validator::ValidatorConfig,
         safecoin_faucet::faucet::run_local_faucet,
         safecoin_local_cluster::{
             local_cluster::{ClusterConfig, LocalCluster},

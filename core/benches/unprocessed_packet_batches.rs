@@ -5,7 +5,7 @@ extern crate test;
 
 use {
     rand::distributions::{Distribution, Uniform},
-    solana_core::{
+    safecoin_core::{
         forward_packet_batches_by_accounts::ForwardPacketBatchesByAccounts,
         unprocessed_packet_batches::*,
         unprocessed_transaction_storage::{

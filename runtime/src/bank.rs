@@ -6946,7 +6946,6 @@ impl Bank {
     /// only called from tests or ledger tool
     pub fn calculate_and_verify_capitalization(&self, debug_verify: bool) -> bool {
         let calculated = self.calculate_capitalization(debug_verify);
-                *self.inflation.write().unwrap() = Inflation::full();
         let expected = self.capitalization();
         if calculated == expected {
             true
@@ -7456,7 +7455,7 @@ impl Bank {
         let new_feature_activations = self.compute_active_feature_set(allow_new_activations);
 
         if new_feature_activations.contains(&feature_set::pico_inflation::id()) {
-            *self.inflation.write().unwrap() = Inflation::full();
+            *self.inflation.write().unwrap() = Inflation::pico();
             self.fee_rate_governor.burn_percent = 50; // 50% fee burn
             self.rent_collector.rent.burn_percent = 50; // 50% rent burn
         }

@@ -591,9 +591,9 @@ impl RpcSafePubSubInternal for RpcSafePubSubImpl {
     }
 
     fn get_version(&self) -> Result<RpcVersionInfo> {
-        let version = safecoin_version::Version::default();
+        let version = solana_version::Version::default();
         Ok(RpcVersionInfo {
-            solana_core: version.to_string(),
+            safecoin_core: version.to_string(),
             feature_set: Some(version.feature_set),
         })
     }
@@ -1394,7 +1394,7 @@ mod tests {
         ));
         let (rpc, _receiver) = rpc_pubsub_service::test_connection(&rpc_subscriptions);
         let version = rpc.get_version().unwrap();
-        let expected_version = safecoin_version::Version::default();
+        let expected_version = solana_version::Version::default();
         assert_eq!(version.to_string(), expected_version.to_string());
         assert_eq!(version.feature_set.unwrap(), expected_version.feature_set);
     }

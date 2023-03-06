@@ -323,7 +323,7 @@ impl PubsubClient {
             .await
             .map_err(|err| PubsubClientError::ConnectionClosed(err.to_string()))??;
         let node_version: RpcVersionInfo = serde_json::from_value(result)?;
-        let node_version = semver::Version::parse(&node_version.solana_core).map_err(|e| {
+        let node_version = semver::Version::parse(&node_version.safecoin_core).map_err(|e| {
             PubsubClientError::RequestFailed {
                 reason: format!("failed to parse cluster version: {e}"),
                 message: "getVersion".to_string(),

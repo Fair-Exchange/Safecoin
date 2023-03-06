@@ -87,7 +87,7 @@ pub fn main() -> Result<(), String> {
 
     let matches = App::new(crate_name!())
         .about(crate_description!())
-        .version(safecoin_version::version!())
+        .version(solana_version::version!())
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .arg({
             let arg = Arg::with_name("config_file")
@@ -281,7 +281,7 @@ pub fn main_init() -> Result<(), String> {
 
     let matches = App::new("safecoin-install-init")
         .about("Initializes a new installation")
-        .version(safecoin_version::version!())
+        .version(solana_version::version!())
         .arg({
             let arg = Arg::with_name("config_file")
                 .short("c")

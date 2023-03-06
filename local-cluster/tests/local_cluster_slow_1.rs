@@ -5,7 +5,7 @@ use {
     common::*,
     log::*,
     serial_test::serial,
-    solana_core::{
+    safecoin_core::{
         broadcast_stage::{
             broadcast_duplicates_run::BroadcastDuplicatesConfig, BroadcastStageType,
         },

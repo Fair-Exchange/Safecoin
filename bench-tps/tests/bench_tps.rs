@@ -12,7 +12,7 @@ use {
         thin_client::ThinClient,
         tpu_client::{TpuClient, TpuClientConfig},
     },
-    solana_core::validator::ValidatorConfig,
+    safecoin_core::validator::ValidatorConfig,
     safecoin_faucet::faucet::run_local_faucet,
     safecoin_local_cluster::{
         local_cluster::{ClusterConfig, LocalCluster},

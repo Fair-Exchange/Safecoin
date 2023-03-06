@@ -18,7 +18,7 @@ lazy_static! {
     /// [lazy_static]: https://docs.rs/lazy_static
     pub static ref CONFIG_FILE: Option<String> = {
         dirs_next::home_dir().map(|mut path| {
-            path.extend([".config", "safecoin", "cli", "config.yml"]);
+            path.extend([".config", "solana", "cli", "config.yml"]);
             path.to_str().unwrap().to_string()
         })
     };

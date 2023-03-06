@@ -69,7 +69,7 @@ fn verify_keybase(
 ) -> Result<(), Box<dyn error::Error>> {
     if let Some(keybase_username) = keybase_username.as_str() {
         let url =
-            format!("https://keybase.pub/{keybase_username}/safecoin/validator-{validator_pubkey:?}");
+            format!("https://keybase.pub/{keybase_username}/solana/validator-{validator_pubkey:?}");
         let client = Client::new();
         if client.head(&url).send()?.status().is_success() {
             Ok(())

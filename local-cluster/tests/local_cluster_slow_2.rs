@@ -5,7 +5,7 @@ use {
     common::*,
     log::*,
     serial_test::serial,
-    solana_core::validator::ValidatorConfig,
+    safecoin_core::validator::ValidatorConfig,
     safecoin_gossip::gossip_service::discover_cluster,
     solana_ledger::{ancestor_iterator::AncestorIterator, blockstore::Blockstore},
     safecoin_local_cluster::{

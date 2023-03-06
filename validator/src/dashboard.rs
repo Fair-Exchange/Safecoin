@@ -4,7 +4,7 @@ use {
         ProgressBar,
     },
     console::style,
-    solana_core::validator::ValidatorStartProgress,
+    safecoin_core::validator::ValidatorStartProgress,
     safecoin_rpc_client::rpc_client::RpcClient,
     safecoin_rpc_client_api::{client_error, request, response::RpcContactInfo},
     safecoin_sdk::{

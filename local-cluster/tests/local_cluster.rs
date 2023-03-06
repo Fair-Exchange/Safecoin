@@ -7,7 +7,7 @@ use {
     log::*,
     serial_test::serial,
     safecoin_client::thin_client::ThinClient,
-    solana_core::{
+    safecoin_core::{
         broadcast_stage::BroadcastStageType,
         consensus::{Tower, SWITCH_FORK_THRESHOLD, VOTE_THRESHOLD_DEPTH},
         optimistic_confirmation_verifier::OptimisticConfirmationVerifier,

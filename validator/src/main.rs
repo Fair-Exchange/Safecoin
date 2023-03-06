@@ -7,7 +7,7 @@ use {
     log::*,
     rand::{seq::SliceRandom, thread_rng},
     safecoin_clap_utils::input_parsers::{keypair_of, keypairs_of, pubkey_of, value_of},
-    solana_core::{
+    safecoin_core::{
         banking_trace::DISABLED_BAKING_TRACE_DIR,
         ledger_cleanup_service::{DEFAULT_MAX_LEDGER_SHREDS, DEFAULT_MIN_MAX_LEDGER_SHREDS},
         system_monitor_service::SystemMonitorService,
@@ -445,8 +445,8 @@ fn configure_banking_trace_dir_byte_limit(
 
 pub fn main() {
     let default_args = DefaultArgs::new();
-    let safecoin_version = safecoin_version::version!();
-    let cli_app = app(safecoin_version, &default_args);
+    let solana_version = solana_version::version!();
+    let cli_app = app(solana_version, &default_args);
     let matches = cli_app.get_matches();
     warn_for_deprecated_arguments(&matches);
 
@@ -781,7 +781,7 @@ pub fn main() {
     let use_progress_bar = logfile.is_none();
     let _logger_thread = redirect_stderr_to_file(logfile);
 
-    info!("{} {}", crate_name!(), safecoin_version);
+    info!("{} {}", crate_name!(), solana_version);
     info!("Starting validator with: {:#?}", std::env::args_os());
 
     let cuda = matches.is_present("cuda");
@@ -790,7 +790,7 @@ pub fn main() {
         enable_recycler_warming();
     }
 
-    solana_core::validator::report_target_features();
+    safecoin_core::validator::report_target_features();
 
     let authorized_voter_keypairs = keypairs_of(&matches, "authorized_voter_keypairs")
         .map(|keypairs| keypairs.into_iter().map(Arc::new).collect())
@@ -953,7 +953,7 @@ pub fn main() {
         .ok()
         .or_else(|| get_cluster_shred_version(&entrypoint_addrs));
 
-    let tower_storage: Arc<dyn solana_core::tower_storage::TowerStorage> =
+    let tower_storage: Arc<dyn safecoin_core::tower_storage::TowerStorage> =
         match value_t_or_exit!(matches, "tower_storage", String).as_str() {
             "file" => {
                 let tower_path = value_t!(matches, "tower", PathBuf)
@@ -1629,7 +1629,7 @@ pub fn main() {
     }
 
     solana_metrics::set_host_id(identity_keypair.pubkey().to_string());
-    solana_metrics::set_panic_hook("validator", Some(String::from(safecoin_version)));
+    solana_metrics::set_panic_hook("validator", Some(String::from(solana_version)));
     safecoin_entry::entry::init_poh();
     snapshot_utils::remove_tmp_snapshot_archives(&full_snapshot_archives_dir);
     snapshot_utils::remove_tmp_snapshot_archives(&incremental_snapshot_archives_dir);

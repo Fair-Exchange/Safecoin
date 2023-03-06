@@ -10,7 +10,7 @@ use {
         },
         keypair::SKIP_SEED_PHRASE_VALIDATION_ARG,
     },
-    solana_core::banking_trace::{DirByteLimit, BANKING_TRACE_DIR_DEFAULT_BYTE_LIMIT},
+    safecoin_core::banking_trace::{DirByteLimit, BANKING_TRACE_DIR_DEFAULT_BYTE_LIMIT},
     safecoin_faucet::faucet::{self, FAUCET_PORT},
     solana_net_utils::{MINIMUM_VALIDATOR_PORT_RANGE_WIDTH, VALIDATOR_PORT_RANGE},
     safecoin_rpc::{rpc::MAX_REQUEST_BODY_SIZE, rpc_pubsub_service::PubSubConfig},

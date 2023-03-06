@@ -7,7 +7,7 @@ use {
     itertools::izip,
     log::*,
     safecoin_client::{connection_cache::ConnectionCache, thin_client::ThinClient},
-    solana_core::{
+    safecoin_core::{
         tower_storage::FileTowerStorage,
         validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     },

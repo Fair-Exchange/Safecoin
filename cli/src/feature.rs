@@ -676,7 +676,7 @@ fn feature_activation_allowed(
     let cluster_info_stats = cluster_info_stats(rpc_client)?;
     let feature_set_stats = cluster_info_stats.aggregate_by_feature_set();
 
-    let tool_version = safecoin_version::Version::default();
+    let tool_version = solana_version::Version::default();
     let tool_feature_set = tool_version.feature_set;
     let tool_software_version = CliVersion::from(semver::Version::new(
         tool_version.major as u64,
@@ -690,7 +690,7 @@ fn feature_activation_allowed(
                  stake_percent,
                  rpc_nodes_percent,
                  ..
-             }| (*stake_percent >= 60., *rpc_nodes_percent >= 60.),
+             }| (*stake_percent >= 95., *rpc_nodes_percent >= 95.),
         )
         .unwrap_or_default();
 

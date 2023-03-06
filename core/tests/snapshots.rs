@@ -7,7 +7,7 @@ use {
     fs_extra::dir::CopyOptions,
     itertools::Itertools,
     log::{info, trace},
-    solana_core::{
+    safecoin_core::{
         accounts_hash_verifier::AccountsHashVerifier,
         snapshot_packager_service::SnapshotPackagerService,
     },

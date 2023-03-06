@@ -6,7 +6,7 @@ use {
     rand::{thread_rng, Rng},
     rayon::prelude::*,
     safecoin_client::connection_cache::ConnectionCache,
-    solana_core::{
+    safecoin_core::{
         banking_stage::BankingStage,
         banking_trace::{BankingPacketBatch, BankingTracer, BANKING_TRACE_DIR_DEFAULT_BYTE_LIMIT},
     },
@@ -231,7 +231,7 @@ fn main() {
 
     let matches = Command::new(crate_name!())
         .about(crate_description!())
-        .version(safecoin_version::version!())
+        .version(solana_version::version!())
         .arg(
             Arg::new("iterations")
                 .long("iterations")

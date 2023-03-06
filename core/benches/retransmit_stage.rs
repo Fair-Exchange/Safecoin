@@ -1,12 +1,12 @@
 #![feature(test)]
 
-extern crate solana_core;
+extern crate safecoin_core;
 extern crate test;
 
 use {
     crossbeam_channel::unbounded,
     log::*,
-    solana_core::retransmit_stage::retransmitter,
+    safecoin_core::retransmit_stage::retransmitter,
     safecoin_entry::entry::Entry,
     safecoin_gossip::{
         cluster_info::{ClusterInfo, Node},

@@ -117,7 +117,7 @@ use {
 };
 
 const MAX_COMPLETED_DATA_SETS_IN_CHANNEL: usize = 100_000;
-const WAIT_FOR_SUPERMAJORITY_THRESHOLD_PERCENT: u64 = 50;
+const WAIT_FOR_SUPERMAJORITY_THRESHOLD_PERCENT: u64 = 80;
 
 pub struct ValidatorConfig {
     pub halt_at_slot: Option<Slot>,
@@ -1062,7 +1062,7 @@ impl Validator {
         datapoint_info!(
             "validator-new",
             ("id", id.to_string(), String),
-            ("version", safecoin_version::version!(), String)
+            ("version", solana_version::version!(), String)
         );
 
         *start_progress.write().unwrap() = ValidatorStartProgress::Running;
