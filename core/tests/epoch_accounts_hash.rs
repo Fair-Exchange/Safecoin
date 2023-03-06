@@ -2,7 +2,7 @@
 use {
     crate::snapshot_utils::create_tmp_accounts_dir_for_tests,
     log::*,
-    safecoin_core::{
+    solana_core::{
         accounts_hash_verifier::AccountsHashVerifier,
         snapshot_packager_service::SnapshotPackagerService,
     },

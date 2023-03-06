@@ -2659,9 +2659,9 @@ pub mod rpc_minimal {
 
         fn get_version(&self, _: Self::Metadata) -> Result<RpcVersionInfo> {
             debug!("get_version rpc request received");
-            let version = solana_version::Version::default();
+            let version = safecoin_version::Version::default();
             Ok(RpcVersionInfo {
-                safecoin_core: version.to_string(),
+                solana_core: version.to_string(),
                 feature_set: Some(version.feature_set),
             })
         }
@@ -6625,7 +6625,7 @@ pub mod tests {
         let request = create_test_request("getVersion", None);
         let result: Value = parse_success_result(rpc.handle_request_sync(request));
         let expected = {
-            let version = solana_version::Version::default();
+            let version = safecoin_version::Version::default();
             json!({
                 "safecoin-core": version.to_string(),
                 "feature-set": version.feature_set,

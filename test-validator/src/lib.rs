@@ -4,7 +4,7 @@ use {
     log::*,
     safecoin_cli_output::CliAccount,
     safecoin_client::rpc_request::MAX_MULTIPLE_ACCOUNTS,
-    safecoin_core::{
+    solana_core::{
         tower_storage::TowerStorage,
         validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     },

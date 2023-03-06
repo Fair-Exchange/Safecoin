@@ -1,5 +1,5 @@
 use {
-    safecoin_core::validator::ValidatorConfig,
+    solana_core::validator::ValidatorConfig,
     safecoin_sdk::exit::Exit,
     std::sync::{Arc, RwLock},
 };

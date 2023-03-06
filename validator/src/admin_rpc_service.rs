@@ -6,7 +6,7 @@ use {
     jsonrpc_server_utils::tokio,
     log::*,
     serde::{de::Deserializer, Deserialize, Serialize},
-    safecoin_core::{
+    solana_core::{
         consensus::Tower, tower_storage::TowerStorage, validator::ValidatorStartProgress,
     },
     safecoin_gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
@@ -642,7 +642,7 @@ mod tests {
         rand::{distributions::Uniform, thread_rng, Rng},
         serde_json::Value,
         safecoin_account_decoder::parse_token::safe_token_pubkey,
-        safecoin_core::tower_storage::NullTowerStorage,
+        solana_core::tower_storage::NullTowerStorage,
         solana_ledger::genesis_utils::{create_genesis_config, GenesisConfigInfo},
         safecoin_rpc::rpc::create_validator_exit,
         solana_runtime::{

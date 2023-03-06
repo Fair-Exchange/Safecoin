@@ -6,7 +6,7 @@ mod tests {
     use {
         crossbeam_channel::unbounded,
         log::*,
-        safecoin_core::ledger_cleanup_service::LedgerCleanupService,
+        solana_core::ledger_cleanup_service::LedgerCleanupService,
         solana_ledger::{
             blockstore::{make_many_slot_shreds, Blockstore},
             blockstore_options::{

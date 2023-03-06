@@ -5,7 +5,7 @@ use {
     common::*,
     log::*,
     serial_test::serial,
-    safecoin_core::validator::ValidatorConfig,
+    solana_core::validator::ValidatorConfig,
     solana_ledger::{ancestor_iterator::AncestorIterator, leader_schedule::FixedSchedule},
     safecoin_local_cluster::{
         cluster::Cluster,

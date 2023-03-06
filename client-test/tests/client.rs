@@ -73,8 +73,8 @@ fn test_rpc_client() {
     let client = RpcClient::new(test_validator.rpc_url());
 
     assert_eq!(
-        client.get_version().unwrap().safecoin_core,
-        solana_version::semver!()
+        client.get_version().unwrap().solana_core,
+        safecoin_version::semver!()
     );
 
     assert!(client.get_account(&bob_pubkey).is_err());

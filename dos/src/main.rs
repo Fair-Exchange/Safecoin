@@ -46,7 +46,7 @@ use {
     rand::{thread_rng, Rng},
     safecoin_bench_tps::{bench::generate_and_fund_keypairs, bench_tps_client::BenchTpsClient},
     safecoin_client::{connection_cache::ConnectionCache, tpu_connection::TpuConnection},
-    safecoin_core::serve_repair::{RepairProtocol, RepairRequestHeader, ServeRepair},
+    solana_core::serve_repair::{RepairProtocol, RepairRequestHeader, ServeRepair},
     safecoin_dos::cli::*,
     safecoin_gossip::{
         gossip_service::{discover, get_multi_client},
@@ -787,7 +787,7 @@ pub mod test {
     use {
         super::*,
         safecoin_client::thin_client::ThinClient,
-        safecoin_core::validator::ValidatorConfig,
+        solana_core::validator::ValidatorConfig,
         safecoin_faucet::faucet::run_local_faucet,
         safecoin_gossip::contact_info::LegacyContactInfo,
         safecoin_local_cluster::{

@@ -70,7 +70,7 @@ pub struct ContactInfo {
     // Identifies duplicate running instances.
     outset: u64,
     shred_version: u16,
-    version: solana_version::Version,
+    version: safecoin_version::Version,
     // All IP addresses are unique and referenced at least once in sockets.
     #[serde(with = "short_vec")]
     addrs: Vec<IpAddr>,
@@ -100,7 +100,7 @@ struct ContactInfoLite {
     wallclock: u64,
     outset: u64,
     shred_version: u16,
-    version: solana_version::Version,
+    version: safecoin_version::Version,
     #[serde(with = "short_vec")]
     addrs: Vec<IpAddr>,
     #[serde(with = "short_vec")]
@@ -164,7 +164,7 @@ impl ContactInfo {
                 u64::try_from(elapsed.as_micros()).unwrap()
             },
             shred_version,
-            version: solana_version::Version::default(),
+            version: safecoin_version::Version::default(),
             addrs: Vec::<IpAddr>::default(),
             sockets: Vec::<SocketEntry>::default(),
             cache: [socket_addr_unspecified(); SOCKET_CACHE_SIZE],
@@ -696,7 +696,7 @@ mod tests {
             wallclock: rng.gen(),
             outset: rng.gen(),
             shred_version: rng.gen(),
-            version: solana_version::Version::default(),
+            version: safecoin_version::Version::default(),
             addrs: Vec::default(),
             sockets: Vec::default(),
             cache: [socket_addr_unspecified(); SOCKET_CACHE_SIZE],

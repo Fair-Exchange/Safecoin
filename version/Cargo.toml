@@ -18,8 +18,6 @@ safecoin-frozen-abi = { path = "../frozen-abi", version = "=1.15.3" }
 safecoin-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.15.3" }
 safecoin-sdk = { path = "../sdk", version = "=1.15.3" }
 
-[lib]
-name = "solana_version"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

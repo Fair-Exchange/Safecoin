@@ -582,7 +582,7 @@ pub fn parse_command(
             get_clap_app(
                 crate_name!(),
                 crate_description!(),
-                solana_version::version!(),
+                safecoin_version::version!(),
             )
             .gen_completions_to("solana", shell_choice, &mut stdout());
             std::process::exit(0);

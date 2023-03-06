@@ -9,7 +9,7 @@ use {
     rand::{thread_rng, Rng},
     rayon::prelude::*,
     safecoin_client::connection_cache::ConnectionCache,
-    safecoin_core::{
+    solana_core::{
         banking_stage::{BankingStage, BankingStageStats},
         banking_trace::{BankingPacketBatch, BankingTracer},
         leader_slot_banking_stage_metrics::LeaderSlotMetricsTracker,

@@ -24,7 +24,7 @@ use {
         },
     },
     safecoin_cli_output::{CliAccount, CliAccountNewConfig, OutputFormat},
-    safecoin_core::system_monitor_service::{SystemMonitorService, SystemMonitorStatsReportConfig},
+    solana_core::system_monitor_service::{SystemMonitorService, SystemMonitorStatsReportConfig},
     safecoin_entry::entry::Entry,
     safecoin_geyser_plugin_manager::geyser_plugin_service::GeyserPluginService,
     solana_ledger::{
@@ -1578,7 +1578,7 @@ fn main() {
 
     let matches = App::new(crate_name!())
         .about(crate_description!())
-        .version(solana_version::version!())
+        .version(safecoin_version::version!())
         .setting(AppSettings::InferSubcommands)
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::VersionlessSubcommands)
@@ -2310,7 +2310,7 @@ fn main() {
         )
         .get_matches();
 
-    info!("{} {}", crate_name!(), solana_version::version!());
+    info!("{} {}", crate_name!(), safecoin_version::version!());
 
     let ledger_path = parse_ledger_path(&matches, "ledger_path");
 

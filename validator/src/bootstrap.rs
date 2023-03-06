@@ -2,7 +2,7 @@ use {
     log::*,
     rand::{seq::SliceRandom, thread_rng, Rng},
     rayon::prelude::*,
-    safecoin_core::validator::{ValidatorConfig, ValidatorStartProgress},
+    solana_core::validator::{ValidatorConfig, ValidatorStartProgress},
     solana_download_utils::{download_snapshot_archive, DownloadProgressRecord},
     safecoin_genesis_utils::download_then_check_genesis_hash,
     safecoin_gossip::{
@@ -552,7 +552,7 @@ pub fn rpc_bootstrap(
                 .filter(|(rpc_contact_info, _snapshot_hash, rpc_client)| {
                     match rpc_client.get_version() {
                         Ok(rpc_version) => {
-                            info!("RPC node version: {}", rpc_version.safecoin_core);
+                            info!("RPC node version: {}", rpc_version.solana_core);
                             true
                         }
                         Err(err) => {

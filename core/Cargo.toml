@@ -10,6 +10,9 @@ authors = ["Safecoin Labs Maintainers <maintainers@solanalabs.com>"]
 license = "Apache-2.0"
 edition = "2021"
 
+[lib]
+name = "solana_core"
+
 [badges]
 codecov = { repository = "fair-exchange/safecoin", branch = "master", service = "github" }
 

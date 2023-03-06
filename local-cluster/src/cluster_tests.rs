@@ -7,7 +7,7 @@ use {
     rand::{thread_rng, Rng},
     rayon::prelude::*,
     safecoin_client::{connection_cache::ConnectionCache, thin_client::ThinClient},
-    safecoin_core::consensus::VOTE_THRESHOLD_DEPTH,
+    solana_core::consensus::VOTE_THRESHOLD_DEPTH,
     safecoin_entry::entry::{Entry, EntrySlice},
     safecoin_gossip::{
         cluster_info::{self, ClusterInfo},
