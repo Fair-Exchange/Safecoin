@@ -1,13 +1,11 @@
 <p align="center">
   <a href="https://solana.com">
-    <img alt="Safecoin" src="https://i.imgur.com/IKyzQ6T.png" width="250" />
+    <img alt="Safecoin" src="https://raw.githubusercontent.com/Fair-Exchange/safecoinwiki/master/Logos/SafeCoin/SafeCoin-Logo-with-text.png"/>
   </a>
 </p>
 
-[![Safecoin crate](https://img.shields.io/crates/v/safecoin-core.svg)](https://crates.io/crates/safecoin-core)
-[![Safecoin documentation](https://docs.rs/safecoin-core/badge.svg)](https://docs.rs/safecoin-core)
-[![Build status](https://badge.buildkite.com/8cc350de251d61483db98bdfc895b9ea0ac8ffa4a32ee850ed.svg?branch=master)](https://buildkite.com/fair-exchange/safecoin/builds?branch=master)
-[![codecov](https://codecov.io/gh/fair-exchange/safecoin/branch/master/graph/badge.svg)](https://codecov.io/gh/fair-exchange/safecoin)
+[![twitter](https://img.shields.io/twitter/follow/safecoins?style=social)](https://twitter.com/safecoins)
+
 
 # Building
 
@@ -19,7 +17,7 @@ $ source $HOME/.cargo/env
 $ rustup component add rustfmt
 ```
 
-When building the master branch, please make sure you are using the latest stable rust version by running:
+Please make sure you are always using the latest stable rust version by running:
 
 ```bash
 $ rustup update
@@ -31,7 +29,8 @@ $ rustup install VERSION
 ```
 Note that if this is not the latest rust version on your machine, cargo commands may require an [override](https://rust-lang.github.io/rustup/overrides.html) in order to use the correct version.
 
-On Linux systems you may need to install libssl-dev, pkg-config, zlib1g-dev, protobuf etc.  On Ubuntu:
+
+On Linux systems you may need to install libssl-dev, pkg-config, zlib1g-dev, etc.  On Ubuntu:
 
 ```bash
 $ sudo apt-get update
@@ -41,14 +40,19 @@ $ sudo apt-get install libssl-dev libudev-dev pkg-config zlib1g-dev llvm clang c
 ## **2. Download the source code.**
 
 ```bash
-$ git clone https://github.com/fair-exchange/safecoin.git
-$ cd solana
+$ git clone https://github.com/Fair-Exchange/Safecoin.git
+$ cd Safecoin
 ```
 
 ## **3. Build.**
 
 ```bash
 $ cargo build
+```
+
+## **4. Run a minimal local cluster.**
+```bash
+$ ./run.sh
 ```
 
 # Testing
@@ -68,7 +72,7 @@ devnet.safecoin.org. Runs 24/7. Learn more about the [public clusters](https://d
 
 # Benchmarking
 
-First, install the nightly build of rustc. `cargo bench` requires the use of the
+First install the nightly build of rustc. `cargo bench` requires use of the
 unstable features only available in the nightly build.
 
 ```bash
@@ -110,17 +114,17 @@ send us that patch!
 
 All claims, content, designs, algorithms, estimates, roadmaps,
 specifications, and performance measurements described in this project
-are done with the Solana Foundation's ("SF") good faith efforts. It is up to
+are done with the Solana Foundation's ("SF") best efforts. It is up to
 the reader to check and validate their accuracy and truthfulness.
-Furthermore, nothing in this project constitutes a solicitation for
+Furthermore nothing in this project constitutes a solicitation for
 investment.
 
-Any content produced by SF or developer resources that SF provides are
-for educational and inspirational purposes only. SF does not encourage,
+Any content produced by SF or developer resources that SF provides, are
+for educational and inspiration purposes only. SF does not encourage,
 induce or sanction the deployment, integration or use of any such
 applications (including the code comprising the Safecoin blockchain
 protocol) in violation of applicable laws or regulations and hereby
-prohibits any such deployment, integration or use. This includes the use of
+prohibits any such deployment, integration or use. This includes use of
 any such applications by the reader (a) in violation of export control
 or sanctions laws of the United States or any other applicable
 jurisdiction, (b) if the reader is located in or ordinarily resident in
@@ -133,7 +137,7 @@ prohibitions.
 The reader should be aware that U.S. export control and sanctions laws
 prohibit U.S. persons (and other persons that are subject to such laws)
 from transacting with persons in certain countries and territories or
-that are on the SDN list. As a project-based primarily on open-source
+that are on the SDN list. As a project based primarily on open-source
 software, it is possible that such sanctioned persons may nevertheless
 bypass prohibitions, obtain the code comprising the Safecoin blockchain
 protocol (or other project code or applications) and deploy, integrate,
