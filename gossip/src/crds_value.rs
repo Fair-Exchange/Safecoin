@@ -362,7 +362,7 @@ impl<'de> Deserialize<'de> for Vote {
 pub struct LegacyVersion {
     pub from: Pubkey,
     pub wallclock: u64,
-    pub version: safecoin_version::LegacyVersion1,
+    pub version: solana_version::LegacyVersion1,
 }
 
 impl Sanitize for LegacyVersion {
@@ -377,7 +377,7 @@ impl Sanitize for LegacyVersion {
 pub struct Version {
     pub from: Pubkey,
     pub wallclock: u64,
-    pub version: safecoin_version::LegacyVersion2,
+    pub version: solana_version::LegacyVersion2,
 }
 
 impl Sanitize for Version {
@@ -393,7 +393,7 @@ impl Version {
         Self {
             from,
             wallclock: timestamp(),
-            version: safecoin_version::LegacyVersion2::default(),
+            version: solana_version::LegacyVersion2::default(),
         }
     }
 
@@ -402,7 +402,7 @@ impl Version {
         Self {
             from: pubkey.unwrap_or_else(pubkey::new_rand),
             wallclock: new_rand_timestamp(rng),
-            version: safecoin_version::LegacyVersion2 {
+            version: solana_version::LegacyVersion2 {
                 major: rng.gen(),
                 minor: rng.gen(),
                 patch: rng.gen(),

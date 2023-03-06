@@ -1,7 +1,7 @@
 #![allow(clippy::integer_arithmetic, dead_code)]
 use {
     log::*,
-    safecoin_core::{
+    solana_core::{
         broadcast_stage::BroadcastStageType,
         consensus::{Tower, SWITCH_FORK_THRESHOLD},
         tower_storage::{FileTowerStorage, SavedTower, SavedTowerVersions, TowerStorage},
@@ -48,7 +48,7 @@ use {
 };
 
 pub const RUST_LOG_FILTER: &str =
-    "error,safecoin_core::replay_stage=warn,safecoin_local_cluster=info,local_cluster=info";
+    "error,solana_core::replay_stage=warn,safecoin_local_cluster=info,local_cluster=info";
 
 pub const DEFAULT_CLUSTER_LAMPORTS: u64 = 10_000_000 * LAMPORTS_PER_SAFE;
 pub const DEFAULT_NODE_STAKE: u64 = 10 * LAMPORTS_PER_SAFE;

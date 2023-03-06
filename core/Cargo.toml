@@ -13,6 +13,10 @@ edition = "2021"
 [badges]
 codecov = { repository = "fair-exchange/safecoin", branch = "master", service = "github" }
 
+[lib]
+name = "solana_core"
+
+
 [dependencies]
 ahash = "0.7.6"
 base64 = "0.13.0"

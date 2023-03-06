@@ -2,7 +2,7 @@ use {
     crate::bench_tps_client::*,
     log::*,
     rayon::prelude::*,
-    safecoin_core::gen_keys::GenKeys,
+    solana_core::gen_keys::GenKeys,
     safecoin_measure::measure::Measure,
     safecoin_sdk::{
         commitment_config::CommitmentConfig,

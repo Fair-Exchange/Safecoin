@@ -37,7 +37,7 @@ use {
         TransactionConfirmationStatus, TransactionStatus, UiCompiledInstruction, UiMessage,
         UiRawMessage, UiTransaction, UiTransactionStatusMeta,
     },
-    safecoin_version::Version,
+    solana_version::Version,
     std::{collections::HashMap, net::SocketAddr, str::FromStr, sync::RwLock},
 };
 
@@ -355,7 +355,7 @@ impl RpcSender for MockSender {
             "getVersion" => {
                 let version = Version::default();
                 json!(RpcVersionInfo {
-                    safecoin_core: version.to_string(),
+                    solana_core: version.to_string(),
                     feature_set: Some(version.feature_set),
                 })
             }

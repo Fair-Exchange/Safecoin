@@ -4,7 +4,7 @@ extern crate test;
 
 use {
     rand::{seq::SliceRandom, Rng},
-    safecoin_core::{
+    solana_core::{
         cluster_nodes::{make_test_cluster, new_cluster_nodes, ClusterNodes},
         retransmit_stage::RetransmitStage,
     },

@@ -4,7 +4,7 @@ use {
     log::*,
     safecoin_cli_output::CliAccount,
     safecoin_client::rpc_request::MAX_MULTIPLE_ACCOUNTS,
-    safecoin_core::{
+    solana_core::{
         tower_storage::TowerStorage,
         validator::{Validator, ValidatorConfig, ValidatorStartProgress},
     },
@@ -17,7 +17,7 @@ use {
         blockstore::create_new_ledger, blockstore_options::LedgerColumnOptions,
         create_new_tmp_ledger,
     },
-    solana_net_utils::PortRange,
+    safecoin_net_utils::PortRange,
     safecoin_program_runtime::compute_budget::ComputeBudget,
     safecoin_rpc::{rpc::JsonRpcConfig, rpc_pubsub_service::PubSubConfig},
     safecoin_rpc_client::{nonblocking, rpc_client::RpcClient},

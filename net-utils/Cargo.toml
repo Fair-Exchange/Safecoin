@@ -26,7 +26,7 @@ tokio = { version = "1", features = ["full"] }
 url = "2.2.2"
 
 [lib]
-name = "solana_net_utils"
+name = "safecoin_net_utils"
 
 [[bin]]
 name = "safecoin-ip-address"

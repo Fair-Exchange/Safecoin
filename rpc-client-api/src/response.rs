@@ -58,7 +58,7 @@ impl std::ops::Deref for RpcApiVersion {
 
 impl Default for RpcApiVersion {
     fn default() -> Self {
-        Self(safecoin_version::Version::default().as_semver_version())
+        Self(solana_version::Version::default().as_semver_version())
     }
 }
 
@@ -330,24 +330,24 @@ pub struct RpcBlockProduction {
 #[serde(rename_all = "kebab-case")]
 pub struct RpcVersionInfo {
     /// The current version of safecoin-core
-    pub safecoin_core: String,
+    pub solana_core: String,
     /// first 4 bytes of the FeatureSet identifier
     pub feature_set: Option<u32>,
 }
 
 impl fmt::Debug for RpcVersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.safecoin_core)
+        write!(f, "{}", self.solana_core)
     }
 }
 
 impl fmt::Display for RpcVersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(version) = self.safecoin_core.split_whitespace().next() {
+        if let Some(version) = self.solana_core.split_whitespace().next() {
             // Display just the semver if possible
             write!(f, "{version}")
         } else {
-            write!(f, "{}", self.safecoin_core)
+            write!(f, "{}", self.solana_core)
         }
     }
 }

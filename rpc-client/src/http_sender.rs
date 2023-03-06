@@ -51,7 +51,7 @@ impl HttpSender {
         default_headers.append(
             header::HeaderName::from_static("safecoin-client"),
             header::HeaderValue::from_str(
-                format!("rust/{}", safecoin_version::Version::default()).as_str(),
+                format!("rust/{}", solana_version::Version::default()).as_str(),
             )
             .unwrap(),
         );

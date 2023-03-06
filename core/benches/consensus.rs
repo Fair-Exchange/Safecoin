@@ -1,10 +1,10 @@
 #![feature(test)]
 
-extern crate safecoin_core;
+extern crate solana_core;
 extern crate test;
 
 use {
-    safecoin_core::{
+    solana_core::{
         consensus::Tower, tower_storage::FileTowerStorage, vote_simulator::VoteSimulator,
     },
     safecoin_runtime::{bank::Bank, bank_forks::BankForks},

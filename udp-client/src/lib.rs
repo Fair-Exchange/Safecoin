@@ -59,7 +59,7 @@ pub struct UdpConfig {
 
 impl NewConnectionConfig for UdpConfig {
     fn new() -> Result<Self, ClientError> {
-        let socket = solana_net_utils::bind_with_any_port(IpAddr::V4(Ipv4Addr::UNSPECIFIED))
+        let socket = safecoin_net_utils::bind_with_any_port(IpAddr::V4(Ipv4Addr::UNSPECIFIED))
             .map_err(Into::<ClientError>::into)?;
         Ok(Self {
             udp_socket: Arc::new(socket),

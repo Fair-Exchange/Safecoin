@@ -16,7 +16,7 @@ use {
         nonblocking::client_connection::ClientConnection,
     },
     safecoin_measure::measure::Measure,
-    solana_net_utils::VALIDATOR_PORT_RANGE,
+    safecoin_net_utils::VALIDATOR_PORT_RANGE,
     safecoin_rpc_client_api::client_error::ErrorKind as ClientErrorKind,
     safecoin_sdk::{
         quic::{
@@ -105,7 +105,7 @@ impl QuicLazyInitializedEndpoint {
         let mut endpoint = if let Some(endpoint) = &self.client_endpoint {
             endpoint.clone()
         } else {
-            let client_socket = solana_net_utils::bind_in_range(
+            let client_socket = safecoin_net_utils::bind_in_range(
                 IpAddr::V4(Ipv4Addr::UNSPECIFIED),
                 VALIDATOR_PORT_RANGE,
             )

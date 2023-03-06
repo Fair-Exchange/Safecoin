@@ -62,7 +62,7 @@ fn main() -> Result<()> {
 
     let matches = Command::new(crate_name!())
         .about(crate_description!())
-        .version(safecoin_version::version!())
+        .version(solana_version::version!())
         .arg(
             Arg::new("num-recv-sockets")
                 .long("num-recv-sockets")
@@ -94,7 +94,7 @@ fn main() -> Result<()> {
     let mut read_channels = Vec::new();
     let mut read_threads = Vec::new();
     let recycler = PacketBatchRecycler::default();
-    let (_port, read_sockets) = solana_net_utils::multi_bind_in_range(
+    let (_port, read_sockets) = safecoin_net_utils::multi_bind_in_range(
         ip_addr,
         (port, port + num_sockets as u16),
         num_sockets,

@@ -1,7 +1,7 @@
 #![feature(test)]
 #![allow(clippy::integer_arithmetic)]
 
-extern crate safecoin_core;
+extern crate solana_core;
 extern crate test;
 
 use {
@@ -11,7 +11,7 @@ use {
         distributions::{Distribution, Uniform},
         thread_rng, Rng,
     },
-    safecoin_core::{
+    solana_core::{
         banking_trace::BankingTracer,
         sigverify::TransactionSigVerifier,
         sigverify_stage::{SigVerifier, SigVerifyStage},

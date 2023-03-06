@@ -143,7 +143,7 @@ pub enum TransactionType {
 }
 
 fn addr_parser(addr: &str) -> Result<SocketAddr, &'static str> {
-    match solana_net_utils::parse_host_port(addr) {
+    match safecoin_net_utils::parse_host_port(addr) {
         Ok(v) => Ok(v),
         Err(_) => Err("failed to parse address"),
     }
