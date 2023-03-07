@@ -1,0 +1,25 @@
+[package]
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+edition = "2021"
+name = "safecoin-poh-bench"
+version = "1.14.17"
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-poh-bench"
+publish = false
+
+[dependencies]
+clap = { version = "3.1.5", features = ["cargo"] }
+log = "0.4.17"
+rand = "0.7.0"
+rayon = "1.5.3"
+safecoin-entry = { path = "../entry", version = "=1.14.17" }
+safecoin-logger = { path = "../logger", version = "=1.14.17" }
+safecoin-measure = { path = "../measure", version = "=1.14.17" }
+safecoin-perf = { path = "../perf", version = "=1.14.17" }
+safecoin-sdk = { path = "../sdk", version = "=1.14.17" }
+safecoin-version = { path = "../version", version = "=1.14.17" }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

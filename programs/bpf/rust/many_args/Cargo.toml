@@ -1,0 +1,20 @@
+[package]
+name = "safecoin-bpf-rust-many-args"
+version = "1.14.17"
+description = "Safecoin BPF test program written in Rust"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-bpf-rust-many-args"
+edition = "2021"
+
+[dependencies]
+safecoin-bpf-rust-many-args-dep = { path = "../many_args_dep", version = "=1.14.17" }
+safecoin-program = { path = "../../../../sdk/program", version = "=1.14.17" }
+
+[lib]
+crate-type = ["cdylib"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

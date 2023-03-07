@@ -1,0 +1,28 @@
+[package]
+name = "safecoin-merkle-tree"
+version = "1.14.17"
+description = "Safecoin Merkle Tree"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-merkle-tree"
+edition = "2021"
+
+[dependencies]
+fast-math = "0.1"
+safecoin-program = { path = "../sdk/program", version = "=1.14.17" }
+
+# This can go once the BPF toolchain target Rust 1.42.0+
+[target.bpfel-unknown-unknown.dependencies]
+matches = "0.1.9"
+
+[dev-dependencies]
+hex = "0.4.3"
+
+[lib]
+crate-type = ["lib"]
+name = "solana_merkle_tree"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

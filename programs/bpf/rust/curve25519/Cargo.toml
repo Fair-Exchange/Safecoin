@@ -1,0 +1,20 @@
+[package]
+name = "safecoin-bpf-rust-curve25519"
+version = "1.14.17"
+description = "Safecoin BPF test program written in Rust"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-bpf-rust-zktoken_crypto"
+edition = "2021"
+
+[dependencies]
+safecoin-program = { path = "../../../../sdk/program", version = "=1.14.17" }
+safe-zk-token-sdk = { path = "../../../../zk-token-sdk", version = "=1.14.17" }
+
+[lib]
+crate-type = ["cdylib"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

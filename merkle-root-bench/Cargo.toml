@@ -1,0 +1,21 @@
+[package]
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+edition = "2021"
+name = "safecoin-merkle-root-bench"
+version = "1.14.17"
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+publish = false
+
+[dependencies]
+clap = "2.33.1"
+log = "0.4.17"
+safecoin-logger = { path = "../logger", version = "=1.14.17" }
+safecoin-measure = { path = "../measure", version = "=1.14.17" }
+safecoin-runtime = { path = "../runtime", version = "=1.14.17" }
+safecoin-sdk = { path = "../sdk", version = "=1.14.17" }
+safecoin-version = { path = "../version", version = "=1.14.17" }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

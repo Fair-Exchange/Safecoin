@@ -1,0 +1,21 @@
+[package]
+name = "safecoin-frozen-abi-macro"
+version = "1.14.17"
+description = "Safecoin Frozen ABI Macro"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-frozen-abi-macro"
+license = "Apache-2.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "1.0", features = ["full", "extra-traits", "visit-mut"] }
+
+[build-dependencies]
+rustc_version = "0.4"

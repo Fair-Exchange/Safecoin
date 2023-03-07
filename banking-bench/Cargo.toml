@@ -1,0 +1,31 @@
+[package]
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+edition = "2021"
+name = "safecoin-banking-bench"
+version = "1.14.17"
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+publish = false
+
+[dependencies]
+clap = { version = "3.1.8", features = ["derive"] }
+crossbeam-channel = "0.5"
+log = "0.4.17"
+rand = "0.7.0"
+rayon = "1.5.3"
+safecoin-client = { path = "../client", version = "=1.14.17" }
+safecoin-core = { path = "../core", version = "=1.14.17" }
+safecoin-gossip = { path = "../gossip", version = "=1.14.17" }
+safecoin-ledger = { path = "../ledger", version = "=1.14.17" }
+safecoin-logger = { path = "../logger", version = "=1.14.17" }
+safecoin-measure = { path = "../measure", version = "=1.14.17" }
+safecoin-perf = { path = "../perf", version = "=1.14.17" }
+safecoin-poh = { path = "../poh", version = "=1.14.17" }
+safecoin-runtime = { path = "../runtime", version = "=1.14.17" }
+safecoin-sdk = { path = "../sdk", version = "=1.14.17" }
+safecoin-streamer = { path = "../streamer", version = "=1.14.17" }
+safecoin-version = { path = "../version", version = "=1.14.17" }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

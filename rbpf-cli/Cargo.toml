@@ -1,0 +1,20 @@
+[package]
+name = "rbpf-cli"
+version = "1.14.17"
+description = "CLI to test and analyze eBPF programs"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/solana-labs/rbpf"
+homepage = "https://safecoin.org/"
+keywords = ["BPF", "eBPF", "interpreter", "JIT"]
+edition = "2021"
+publish = false
+
+[dependencies]
+clap = { version = "3.1.5", features = ["cargo"] }
+serde = "1.0.138"
+serde_json = "1.0.81"
+safecoin-bpf-loader-program = { path = "../programs/bpf_loader", version = "=1.14.17" }
+safecoin-logger = { path = "../logger", version = "=1.14.17" }
+safecoin-program-runtime = { path = "../program-runtime", version = "=1.14.17" }
+safecoin-sdk = { path = "../sdk", version = "=1.14.17" }
+solana_rbpf = "=0.2.31"

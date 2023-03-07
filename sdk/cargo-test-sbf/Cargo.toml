@@ -1,0 +1,18 @@
+[package]
+name = "safecoin-cargo-test-sbf"
+version = "1.14.17"
+description = "Execute all unit and integration tests after building with the Safecoin SBF SDK"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+homepage = "https://safecoin.org/"
+license = "Apache-2.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+cargo_metadata = "0.15.0"
+clap = { version = "3.1.5", features = ["cargo"] }
+
+[[bin]]
+name = "cargo-test-sbf"
+path = "src/main.rs"

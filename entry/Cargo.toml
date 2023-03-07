@@ -1,0 +1,41 @@
+[package]
+name = "safecoin-entry"
+version = "1.14.17"
+description = "Safecoin Entry"
+authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+repository = "https://github.com/fair-exchange/safecoin"
+license = "Apache-2.0"
+homepage = "https://safecoin.org/"
+documentation = "https://docs.rs/safecoin-poh"
+edition = "2021"
+
+[dependencies]
+bincode = "1.3.3"
+crossbeam-channel = "0.5"
+dlopen = "0.1.8"
+dlopen_derive = "0.1.4"
+lazy_static = "1.4.0"
+log = "0.4.17"
+rand = "0.7.0"
+rayon = "1.5.3"
+serde = "1.0.138"
+safecoin-measure = { path = "../measure", version = "=1.14.17" }
+safecoin-merkle-tree = { path = "../merkle-tree", version = "=1.14.17" }
+safecoin-metrics = { path = "../metrics", version = "=1.14.17" }
+safecoin-perf = { path = "../perf", version = "=1.14.17" }
+safecoin-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.14.17" }
+safecoin-sdk = { path = "../sdk", version = "=1.14.17" }
+
+[dev-dependencies]
+matches = "0.1.9"
+safecoin-logger = { path = "../logger", version = "=1.14.17" }
+
+[lib]
+crate-type = ["lib"]
+name = "safecoin_entry"
+
+[[bench]]
+name = "entry_sigverify"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
