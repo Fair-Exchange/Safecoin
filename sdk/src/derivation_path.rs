@@ -345,7 +345,7 @@ mod tests {
         assert_eq!(
             DerivationPath::from_absolute_path_str(s).unwrap(),
             DerivationPath::new(vec![
-                ChildIndex::Hardened(501),
+                ChildIndex::Hardened(19165),
                 ChildIndex::Hardened(0),
                 ChildIndex::Hardened(0),
                 ChildIndex::Hardened(0),
@@ -355,7 +355,7 @@ mod tests {
         assert_eq!(
             DerivationPath::from_absolute_path_str(s).unwrap(),
             DerivationPath::new(vec![
-                ChildIndex::Hardened(501),
+                ChildIndex::Hardened(19165),
                 ChildIndex::Hardened(0),
                 ChildIndex::Hardened(0),
                 ChildIndex::Hardened(0),
