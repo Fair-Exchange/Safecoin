@@ -49,7 +49,7 @@ safecoin-streamer = { path = "../streamer", version = "=1.14.17" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.14.17" }
 safecoin-version = { path = "../version", version = "=1.14.17" }
 safecoin-vote-program = { path = "../programs/vote", version = "=1.14.17" }
-safe-token = { version = "=3.5.0", path = "../../safecoin-program-library/token/program", features = ["no-entrypoint"] }
+safe-token = { version = "=3.5.1", path = "../../safecoin-program-library/token/program", features = ["no-entrypoint"] }
 safe-token-2022 = { version = "=0.5.0", path = "../../safecoin-program-library/token/program-2022", features = ["no-entrypoint"] }
 stream-cancel = "0.8.1"
 thiserror = "1.0"

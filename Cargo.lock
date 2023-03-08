@@ -4133,14 +4133,14 @@ dependencies = [
 
 [[package]]
 name = "safe-memo"
-version = "3.0.7"
+version = "3.0.8"
 dependencies = [
  "safecoin-program",
 ]
 
 [[package]]
 name = "safe-token"
-version = "3.5.0"
+version = "3.5.1"
 dependencies = [
  "arrayref",
  "bytemuck",
