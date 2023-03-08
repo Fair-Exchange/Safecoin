@@ -28,7 +28,7 @@ safecoin-client = { path = "../client", version = "=1.14.17" }
 safecoin-sdk = { path = "../sdk", version = "=1.14.17" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.14.17" }
 safecoin-vote-program = { path = "../programs/vote", version = "=1.14.17" }
-safe-memo = { path = "../../safecoin-program-library/memo/program", version = "=3.0.9", features = ["no-entrypoint"] }
+safe-memo = {  version = "=3.0.9", features = ["no-entrypoint"] }
 
 [dev-dependencies]
 ed25519-dalek = "=1.0.1"

@@ -52,8 +52,8 @@ safecoin-storage-bigtable = { path = "../storage-bigtable", version = "=1.14.17"
 safecoin-storage-proto = { path = "../storage-proto", version = "=1.14.17" }
 safecoin-transaction-status = { path = "../transaction-status", version = "=1.14.17" }
 safecoin-vote-program = { path = "../programs/vote", version = "=1.14.17" }
-safe-token = { version = "=3.5.1", path = "../../safecoin-program-library/token/program", features = ["no-entrypoint"] }
-safe-token-2022 = { version = "=0.5.0", path = "../../safecoin-program-library/token/program-2022", features = ["no-entrypoint"] }
+safe-token = { version = "=3.5.1",  features = ["no-entrypoint"] }
+safe-token-2022 = { version = "=0.5.0",  features = ["no-entrypoint"] }
 static_assertions = "1.1.0"
 tempfile = "3.3.0"
 thiserror = "1.0"
