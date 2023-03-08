@@ -1590,8 +1590,8 @@ pub fn process_vote<S: std::hash::BuildHasher>(
 let authorized_voter = vote_state.get_and_update_authorized_voter(clock.epoch)?;
 // Filter consensus for a randomly chosen subset of validators
 // Generate random integers from slot hash and pubkeys
-let mut slot_hash_int = ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize;
-let mut mixed_int = ( ( ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize
+let slot_hash_int = ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 10 ) as usize;
+let mixed_int = ( ( ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as usize ) % 9 + 1 ) as usize
        	 * ( authorized_voter.to_string().chars().last().unwrap() as usize
        	   + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) / 10 ) as usize
 	   + authorized_voter.to_string().chars().last().unwrap() as usize
