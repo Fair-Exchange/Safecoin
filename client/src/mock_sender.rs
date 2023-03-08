@@ -371,9 +371,9 @@ impl RpcSender for MockSender {
             })?,
             "getClusterNodes" => serde_json::to_value(vec![RpcContactInfo {
                 pubkey: PUBKEY.to_string(),
-                gossip: Some(SocketAddr::from(([10, 239, 6, 48], 8899))),
+                gossip: Some(SocketAddr::from(([10, 239, 6, 48], 8328))),
                 tpu: Some(SocketAddr::from(([10, 239, 6, 48], 8856))),
-                rpc: Some(SocketAddr::from(([10, 239, 6, 48], 8899))),
+                rpc: Some(SocketAddr::from(([10, 239, 6, 48], 8328))),
                 version: Some("1.0.0 c375ce1f".to_string()),
                 feature_set: None,
                 shred_version: None,

@@ -33,7 +33,7 @@ safecoin-validator \
   --identity <VALIDATOR_IDENTITY_KEYPAIR> \
   --entrypoint <CLUSTER_ENTRYPOINT> \
   --expected-genesis-hash <EXPECTED_GENESIS_HASH> \
-  --rpc-port 8899 \
+  --rpc-port 8328 \
   --no-voting \
   --enable-rpc-transaction-history \
   --limit-ledger-size \
@@ -159,7 +159,7 @@ the minimum rent-exempt balance for your deposit accounts, query the
 [`getMinimumBalanceForRentExemption` endpoint](developing/clients/jsonrpc-api.md#getminimumbalanceforrentexemption):
 
 ```bash
-curl localhost:8899 -X POST -H "Content-Type: application/json" -d '{
+curl localhost:8328 -X POST -H "Content-Type: application/json" -d '{
   "jsonrpc": "2.0",
   "id": 1,
   "method": "getMinimumBalanceForRentExemption",
@@ -356,7 +356,7 @@ time.
   request to the api node:
 
 ```bash
-curl localhost:8899 -X POST -H "Content-Type: application/json" -d '{
+curl localhost:8328 -X POST -H "Content-Type: application/json" -d '{
   "jsonrpc": "2.0",
   "id": 1,
   "method": "getSignaturesForAddress",
@@ -523,7 +523,7 @@ will wait and track progress on stderr until the transaction has been finalized
 by the cluster. If the transaction fails, it will report any transaction errors.
 
 ```bash
-safecoin transfer <USER_ADDRESS> <AMOUNT> --allow-unfunded-recipient --keypair <KEYPAIR> --url http://localhost:8899
+safecoin transfer <USER_ADDRESS> <AMOUNT> --allow-unfunded-recipient --keypair <KEYPAIR> --url http://localhost:8328
 ```
 
 The [Safecoin Javascript SDK](https://github.com/fair-exchange/safecoin-web3.js)
@@ -548,14 +548,14 @@ First, get a recent blockhash using the [`getFees` endpoint](developing/clients/
 or the CLI command:
 
 ```bash
-safecoin fees --url http://localhost:8899
+safecoin fees --url http://localhost:8328
 ```
 
 In the command-line tool, pass the `--no-wait` argument to send a transfer
 asynchronously, and include your recent blockhash with the `--blockhash` argument:
 
 ```bash
-safecoin transfer <USER_ADDRESS> <AMOUNT> --no-wait --allow-unfunded-recipient --blockhash <RECENT_BLOCKHASH> --keypair <KEYPAIR> --url http://localhost:8899
+safecoin transfer <USER_ADDRESS> <AMOUNT> --no-wait --allow-unfunded-recipient --blockhash <RECENT_BLOCKHASH> --keypair <KEYPAIR> --url http://localhost:8328
 ```
 
 You can also build, sign, and serialize the transaction manually, and fire it off to
@@ -570,7 +570,7 @@ The `confirmations` field reports how many
 transaction was processed. If `confirmations: null`, it is [finalized](../terminology.md#finality).
 
 ```bash
-curl localhost:8899 -X POST -H "Content-Type: application/json" -d '{
+curl localhost:8328 -X POST -H "Content-Type: application/json" -d '{
   "jsonrpc":"2.0",
   "id":1,
   "method":"getSignatureStatuses",
@@ -721,7 +721,7 @@ holding no data), currently: 0.000890880 SAFE
 Similarly, every deposit account must contain at least this balance.
 
 ```bash
-curl localhost:8899 -X POST -H "Content-Type: application/json" -d '{
+curl localhost:8328 -X POST -H "Content-Type: application/json" -d '{
   "jsonrpc": "2.0",
   "id": 1,
   "method": "getMinimumBalanceForRentExemption",

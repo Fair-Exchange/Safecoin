@@ -49,7 +49,7 @@ stable)
   URL=http://api.devnet.safecoin.org
   ;;
 localhost)
-  URL=http://localhost:8899
+  URL=http://localhost:8328
   ;;
 *)
   ;;

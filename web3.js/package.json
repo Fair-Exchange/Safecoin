@@ -54,7 +54,7 @@
     "test": "cross-env TS_NODE_COMPILER_OPTIONS='{ \"module\": \"commonjs\", \"target\": \"es2019\" }' ts-mocha --require esm './test/**/*.test.ts'",
     "test:cover": "nyc --reporter=lcov npm run test",
     "test:live": "TEST_LIVE=1 npm run test",
-    "test:live-with-test-validator": "start-server-and-test 'safecoin-test-validator --reset --quiet' http://localhost:8899/health test:live"
+    "test:live-with-test-validator": "start-server-and-test 'safecoin-test-validator --reset --quiet' http://localhost:8328/health test:live"
   },
   "dependencies": {
     "@babel/runtime": "^7.12.5",

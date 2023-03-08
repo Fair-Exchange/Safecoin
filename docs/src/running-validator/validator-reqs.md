@@ -105,8 +105,8 @@ be limited to any free 13 port range with `--dynamic-port-range`
 #### Optional
 For security purposes, it is not suggested that the following ports be open to
 the internet on staked, mainnet-beta validators.
-- 8899 TCP - JSONRPC over HTTP. Change with `--rpc-port RPC_PORT``
-- 8900 TCP - JSONRPC over Websockets. Derived. Uses `RPC_PORT + 1`
+- 8328 TCP - JSONRPC over HTTP. Change with `--rpc-port RPC_PORT``
+- 8329 TCP - JSONRPC over Websockets. Derived. Uses `RPC_PORT + 1`
 
 ## GPU Requirements
 

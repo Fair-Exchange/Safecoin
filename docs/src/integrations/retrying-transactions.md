@@ -248,7 +248,7 @@ const sleep = async (ms: number) => {
   const payer = Keypair.generate();
   const toAccount = Keypair.generate().publicKey;
 
-  const connection = new Connection("http://127.0.0.1:8899", "confirmed");
+  const connection = new Connection("http://127.0.0.1:8328", "confirmed");
 
   const airdropSignature = await connection.requestAirdrop(
     payer.publicKey,

@@ -28,7 +28,7 @@ latest_slot=0
 while [[ $latest_slot -le $((snapshot_slot + 1)) ]]; do
   sleep 1
   echo "Checking slot"
-  latest_slot=$($safecoin_cli --url http://localhost:8899 slot --commitment processed)
+  latest_slot=$($safecoin_cli --url http://localhost:8328 slot --commitment processed)
 done
 
 $safecoin_validator --ledger config/ledger exit --force || true

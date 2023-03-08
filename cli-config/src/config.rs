@@ -32,7 +32,7 @@ pub struct Config {
     /// Typical values for mainnet, devnet, and testnet are [described in the
     /// Safecoin documentation][rpcdocs].
     ///
-    /// For local testing, the typical value is `http://localhost:8899`.
+    /// For local testing, the typical value is `http://localhost:8328`.
     ///
     /// [rpcdocs]: https://docs.solana.com/cluster/rpc-endpoints
     pub json_rpc_url: String,
@@ -187,8 +187,8 @@ mod test {
         );
 
         assert_eq!(
-            Config::compute_websocket_url("http://example.com:8899"),
-            "ws://example.com:8900/".to_string()
+            Config::compute_websocket_url("http://example.com:8328"),
+            "ws://example.com:8329/".to_string()
         );
         assert_eq!(
             Config::compute_websocket_url("https://example.com:1234"),

@@ -429,7 +429,7 @@ fn main() {
                 .long("entrypoint")
                 .takes_value(true)
                 .value_name("HOST:PORT")
-                .help("RPC entrypoint address. Usually <ip>:8899"),
+                .help("RPC entrypoint address. Usually <ip>:8328"),
         )
         .arg(
             Arg::with_name("faucet_addr")

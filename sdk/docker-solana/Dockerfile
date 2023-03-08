@@ -1,9 +1,9 @@
 FROM debian:bullseye
 
 # RPC JSON
-EXPOSE 8899/tcp
+EXPOSE 8328/tcp
 # RPC pubsub
-EXPOSE 8900/tcp
+EXPOSE 8329/tcp
 # entrypoint
 EXPOSE 10015/tcp
 # (future) bank service

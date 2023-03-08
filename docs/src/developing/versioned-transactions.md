@@ -55,7 +55,7 @@ const getTx = await connection.getTransaction(
 Using a standard JSON formatted POST request, you can set the `maxSupportedTransactionVersion` when retrieving a specific block:
 
 ```bash
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d \
+curl http://localhost:8328 -X POST -H "Content-Type: application/json" -d \
 '{"jsonrpc": "2.0", "id":1, "method": "getBlock", "params": [430, {
   "encoding":"json",
   "maxSupportedTransactionVersion":0,
