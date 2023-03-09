@@ -1,6 +1,6 @@
 {
   "name": "@safecoin/web3.js",
-  "version": "0.0.0-development",
+  "version": "1.50.1",
   "description": "Safecoin Javascript API",
   "keywords": [
     "api",
@@ -59,7 +59,7 @@
   "dependencies": {
     "@babel/runtime": "^7.12.5",
     "@ethersproject/sha2": "^5.5.0",
-    "@solana/buffer-layout": "^4.0.0",
+    "@safecoin/buffer-layout": "^4.0.4",
     "bigint-buffer": "^1.1.5",
     "bn.js": "^5.0.0",
     "borsh": "^0.7.0",
@@ -91,7 +91,7 @@
     "@rollup/plugin-multi-entry": "^4.0.0",
     "@rollup/plugin-node-resolve": "^13.0.0",
     "@rollup/plugin-replace": "^4.0.0",
-    "@safecoin/safe-token": "^0.2.0",
+    "@safecoin/safe-token": "^0.3.4",
     "@types/bn.js": "^5.1.0",
     "@types/bs58": "^4.0.1",
     "@types/chai": "^4.2.15",
