@@ -40,8 +40,8 @@ import { VoteDetailsCard } from "components/instruction/vote/VoteDetailsCard";
 import { isWormholeInstruction } from "components/instruction/wormhole/types";
 import { AssociatedTokenDetailsCard } from "components/instruction/AssociatedTokenDetailsCard";
 import { MangoDetailsCard } from "components/instruction/MangoDetails";
-import { isPythInstruction } from "components/instruction/pyth/types";
-import { PythDetailsCard } from "components/instruction/pyth/PythDetailsCard";
+//import { isPythInstruction } from "components/instruction/pyth/types";
+//import { PythDetailsCard } from "components/instruction/pyth/PythDetailsCard";
 import AnchorDetailsCard from "../instruction/AnchorDetailsCard";
 import { isMangoInstruction } from "../instruction/mango/types";
 import { useAnchorProgram } from "providers/anchor";
@@ -236,8 +236,8 @@ function InstructionCard({
     return <TokenLendingDetailsCard key={key} {...props} />;
   } else if (isWormholeInstruction(transactionIx)) {
     return <WormholeDetailsCard key={key} {...props} />;
-  } else if (isPythInstruction(transactionIx)) {
-    return <PythDetailsCard key={key} {...props} />;
+//  } else if (isPythInstruction(transactionIx)) {
+//    return <PythDetailsCard key={key} {...props} />;
   } else if (ComputeBudgetProgram.programId.equals(transactionIx.programId)) {
     return <ComputeBudgetDetailsCard key={key} {...props} />;
   } else if (anchorProgram) {
