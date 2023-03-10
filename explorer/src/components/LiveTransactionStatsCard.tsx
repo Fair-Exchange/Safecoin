@@ -16,7 +16,7 @@ import {
   PingRollupInfo,
   PingStatus,
   useSafecoinPingInfo,
-} from "providers/stats/SafecoinPingProvider";
+} from "providers/stats/SolanaPingProvider";
 
 type Series = "short" | "medium" | "long";
 type SetSeries = (series: Series) => void;

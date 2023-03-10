@@ -74,7 +74,7 @@ function downsample(points: PingInfo[], bucketSize: number): PingInfo[] {
   return buckets;
 }
 
-export function SafecoinPingProvider({ children }: Props) {
+export function SolanaPingProvider({ children }: Props) {
   const { cluster } = useCluster();
   const { active } = useStatsProvider();
   const [rollup, setRollup] = React.useState<PingRollupInfo | undefined>({
