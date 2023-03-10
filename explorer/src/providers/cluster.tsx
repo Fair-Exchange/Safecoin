@@ -56,18 +56,18 @@ export function clusterName(cluster: Cluster): string {
   }
 }
 
-export const MAINNET_BETA_URL = clusterApiUrl("mainnet-beta");
-export const TESTNET_URL = clusterApiUrl("testnet");
-export const DEVNET_URL = clusterApiUrl("devnet");
+export const MAINNET_BETA_URL = "https://api.mainnet-beta.safecoin.org";
+export const TESTNET_URL = "https://api.testnet.safecoin.org";
+export const DEVNET_URL = "https://api.devnet.safecoin.org";
 
 export function clusterUrl(cluster: Cluster, customUrl: string): string {
   switch (cluster) {
     case Cluster.Devnet:
-      return DEVNET_URL.replace("api", "explorer-api");
+      return DEVNET_URL.replace("api", "api");
     case Cluster.MainnetBeta:
-      return MAINNET_BETA_URL.replace("api", "explorer-api");
+      return MAINNET_BETA_URL.replace("api", "api");
     case Cluster.Testnet:
-      return TESTNET_URL.replace("api", "explorer-api");
+      return TESTNET_URL.replace("api", "api");
     case Cluster.Custom:
       return customUrl;
   }
