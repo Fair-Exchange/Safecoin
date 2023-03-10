@@ -466,7 +466,7 @@ const TokenTransactionRow = React.memo(
             }
           } else if (
             transactionInstruction &&
-            isSerumInstruction(transactionInstruction)
+            false
           ) {
             try {
               name = parseSerumInstructionTitle(transactionInstruction);

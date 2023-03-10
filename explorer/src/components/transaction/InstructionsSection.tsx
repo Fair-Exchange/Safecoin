@@ -228,7 +228,7 @@ function InstructionCard({
     return <BonfidaBotDetailsCard key={key} {...props} />;
   } else if (isMangoInstruction(transactionIx)) {
     return <MangoDetailsCard key={key} {...props} />;
-  } else if (isSerumInstruction(transactionIx)) {
+  } else if (false) {
     return <SerumDetailsCard key={key} {...props} />;
   } else if (isTokenSwapInstruction(transactionIx)) {
     return <TokenSwapDetailsCard key={key} {...props} />;

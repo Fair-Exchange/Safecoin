@@ -573,13 +573,14 @@ export function decodeConsumeEventsPermissioned(
 }
 
 export function isSerumInstruction(instruction: TransactionInstruction) {
-  return (
-    SERUM_PROGRAM_IDS.includes(instruction.programId.toBase58()) ||
-    MARKETS.some(
-      (market) =>
-        market.programId && market.programId.equals(instruction.programId)
-    )
-  );
+//  return (
+//    SERUM_PROGRAM_IDS.includes(instruction.programId.toBase58()) ||
+//    MARKETS.some(
+//      (market) =>
+//        market.programId && market.programId.equals(instruction.programId)
+//    )
+//  );
+return;
 }
 
 export function parseSerumInstructionKey(
