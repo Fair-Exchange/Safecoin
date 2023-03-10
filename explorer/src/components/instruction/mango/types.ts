@@ -37,12 +37,13 @@ function getAccountInfo(
 }
 
 function findGroupConfig(programId: PublicKey): GroupConfig | undefined {
-  const filtered = mangoGroups.filter((group) =>
-    group.mangoProgramId.equals(programId)
-  );
-  if (filtered.length) {
-    return filtered[0];
-  }
+//  const filtered = mangoGroups.filter((group) =>
+//    group.mangoProgramId.equals(programId)
+//  );
+//  if (filtered.length) {
+//    return filtered[0];
+//  }
+return;
 }
 
 export const isMangoInstruction = (instruction: TransactionInstruction) => {
@@ -358,12 +359,13 @@ export async function getSpotMarketFromSpotMarketConfig(
   if (groupConfig === undefined) {
     return;
   }
-  return await Market.load(
-    connection,
-    mangoSpotMarketConfig.publicKey,
-    undefined,
-    groupConfig.serumProgramId
-  );
+//  return await Market.load(
+//    connection,
+//    mangoSpotMarketConfig.publicKey,
+//    undefined,
+//    groupConfig.serumProgramId
+//  );
+return;
 }
 
 export function getPerpMarketFromInstruction(

@@ -1956,7 +1956,7 @@
     estree-walker "^2.0.2"
     picomatch "^2.3.1"
 
-"@safecoin/buffer-layout@^4.0.4":
+"@safecoin/buffer-layout@^3.0.0", "@safecoin/buffer-layout@^4.0.4":
   version "4.0.5"
   resolved "https://registry.yarnpkg.com/@safecoin/buffer-layout/-/buffer-layout-4.0.5.tgz#bf6e4f5f94901894dd7c130236fc05756048f25f"
   integrity sha512-PLb9N7znMx1ssgGORR3vOJGtjAI69Z8dDU0wHlBYwPDaIWaHUYean4+FrrrUqtBhEJzPsXi6HmyitW3Xhof7CA==
@@ -2074,13 +2074,6 @@
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/@socket.io/component-emitter/-/component-emitter-3.1.0.tgz#96116f2a912e0c02817345b3c10751069920d553"
   integrity sha512-+9jVqKhRSpsc591z5vX+X5Yyw+he/HCB4iQ/RYxw35CEPaY1gnsNE43nf9n9AaYjAQrTiI/mOwKUKdUs9vf7Xg==
-
-"@solana/buffer-layout@^3.0.0":
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/@solana/buffer-layout/-/buffer-layout-3.0.0.tgz#b9353caeb9a1589cb77a1b145bcb1a9a93114326"
-  integrity sha512-MVdgAKKL39tEs0l8je0hKaXLQFb7Rdfb0Xg2LjFZd8Lfdazkg6xiS98uAZrEKvaoF3i4M95ei9RydkGIDMeo3w==
-  dependencies:
-    buffer "~6.0.3"
 
 "@solana/buffer-layout@^4.0.0":
   version "4.0.1"

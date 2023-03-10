@@ -16,7 +16,7 @@
     "@safecoin/safe-token-registry": "^0.2.3736",
     "@safecoin/web3.js": "^1.50.0",
     "@sentry/react": "^7.6.0",
-    "@solana/buffer-layout": "^3.0.0",
+    "@safecoin/buffer-layout": "^3.0.0",
     "@testing-library/jest-dom": "^5.16.1",
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^14.2.3",
