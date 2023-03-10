@@ -6,7 +6,7 @@ import {
   getNameOwner,
   NAME_PROGRAM_ID,
   performReverseLookup,
-} from "@bonfida/spl-name-service";
+} from "@safecoin/spl-name-service";
 import { useState, useEffect } from "react";
 import { Cluster, useCluster } from "providers/cluster";
 
