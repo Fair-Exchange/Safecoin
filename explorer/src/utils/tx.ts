@@ -186,7 +186,7 @@ export const PROGRAM_INFO_BY_ID: { [address: string]: ProgramInfo } = {
     name: PROGRAM_NAMES.TOKEN,
     deployments: ALL_CLUSTERS,
   },
-  metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s: {
+  metXT2PkoCBucKkvmeQoYDNmncrPXGVCGacwqEHxcM5: {
     name: PROGRAM_NAMES.TOKEN_METADATA,
     deployments: LIVE_CLUSTERS,
   },
