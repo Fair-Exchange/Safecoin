@@ -70,7 +70,7 @@ impl Default for Config {
     fn default() -> Self {
         let keypair_path = {
             let mut keypair_path = dirs_next::home_dir().expect("home directory");
-            keypair_path.extend([".config", "solana", "id.json"]);
+            keypair_path.extend([".config", "safecoin", "id.json"]);
             keypair_path.to_str().unwrap().to_string()
         };
         let json_rpc_url = "https://api.mainnet-beta.safecoin.org".to_string();
