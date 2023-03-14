@@ -7,7 +7,7 @@ import { useCluster } from "providers/cluster";
 import { Copyable } from "./Copyable";
 import { useTokenRegistry } from "providers/mints/token-registry";
 import { useState, useEffect } from "react";
-import { Connection, programs } from "@safecoin/ledamintjs";
+import { Connection, programs } from "@safecoin/js";
 
 type Props = {
   pubkey: PublicKey;

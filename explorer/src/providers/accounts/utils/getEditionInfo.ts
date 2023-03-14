@@ -1,4 +1,4 @@
-import { programs } from "@safecoin/ledamintjs";
+import { programs } from "@safecoin/js";
 import { Connection } from "@safecoin/web3.js";
 
 const {

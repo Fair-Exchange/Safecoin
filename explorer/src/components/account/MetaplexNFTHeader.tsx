@@ -5,7 +5,7 @@ import {
   useFetchAccountInfo,
   useMintAccountInfo,
 } from "providers/accounts";
-import { programs } from "@safecoin/ledamintjs";
+import { programs } from "@safecoin/js";
 import { ArtContent } from "components/common/NFTArt";
 import { InfoTooltip } from "components/common/InfoTooltip";
 import { clusterPath } from "utils/url";

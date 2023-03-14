@@ -26,7 +26,7 @@ import {
   UpgradeableLoaderAccount,
 } from "validators/accounts/upgradeable-program";
 import { RewardsProvider } from "./rewards";
-import { programs, MetadataJson } from "@safecoin/ledamintjs";
+import { programs, MetadataJson } from "@safecoin/js";
 import getEditionInfo, { EditionInfo } from "./utils/getEditionInfo";
 export { useAccountHistory } from "./history";
 
