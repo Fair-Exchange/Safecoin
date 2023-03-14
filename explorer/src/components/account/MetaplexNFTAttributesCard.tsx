@@ -16,25 +16,25 @@ export function MetaplexNFTAttributesCard({ nftData }: { nftData: NFTData }) {
 
   async function fetchMetadataAttributes() {
     try {
-      const response = await fetch(nftData.metadata.data.uri);
-      const metadata = await response.json();
+      const response = ''; //await fetch(nftData.metadata.data.uri);
+      const metadata = ''; //await response.json();
 
       // Verify if the attributes value is an array
-      if (Array.isArray(metadata.attributes)) {
+      if (false) {
         // Filter attributes to keep objects matching schema
-        const filteredAttributes = metadata.attributes.filter(
-          (attribute: any) => {
-            return (
-              typeof attribute === "object" &&
-              typeof attribute.trait_type === "string" &&
-              (typeof attribute.value === "string" ||
-                typeof attribute.value === "number")
-            );
-          }
-        );
+//        const filteredAttributes = '';metadata.attributes.filter(
+//          (attribute: any) => {
+//            return (
+//              typeof attribute === "object" &&
+//              typeof attribute.trait_type === "string" &&
+ //             (typeof attribute.value === "string" ||
+  //              typeof attribute.value === "number")
+   //         );
+//          }
+//        );
 
-        setAttributes(filteredAttributes);
-        setStatus("success");
+//        setAttributes(filteredAttributes);
+//        setStatus("success");
       } else {
         throw new Error("Attributes is not an array");
       }

@@ -7,7 +7,6 @@ import {
   PerpMarketLayout,
   SpotMarketConfig,
 } from "@blockworks-foundation/mango-client";
-import { Market } from "@safely-project/safely-ts";
 import {
   AccountInfo,
   AccountMeta,
@@ -15,6 +14,8 @@ import {
   PublicKey,
   TransactionInstruction,
 } from "@safecoin/web3.js";
+
+const Markets = '';
 
 // note: mainnet.1 suffices since its a superset of mainnet.0
 const mangoGroups = Config.ids().groups.filter(
@@ -341,19 +342,19 @@ export function getSpotMarketFromInstruction(
   if (groupConfig === undefined) {
     return;
   }
-  const spotMarketConfigs = groupConfig.spotMarkets.filter((mangoSpotMarket) =>
-    spotMarket.pubkey.equals(mangoSpotMarket.publicKey)
-  );
-  if (spotMarketConfigs.length) {
-    return spotMarketConfigs[0];
-  }
+  const spotMarketConfigs = '';  //groupConfig.spotMarkets.filter((mangoSpotMarket) =>
+//    spotMarket.pubkey.equals(mangoSpotMarket.publicKey)
+//  );
+//  if (spotMarketConfigs.length) {
+//    return spotMarketConfigs[0];
+//  }
 }
 
 export async function getSpotMarketFromSpotMarketConfig(
   programId: PublicKey,
   clusterUrl: string,
   mangoSpotMarketConfig: SpotMarketConfig
-): Promise<Market | undefined> {
+): Promise<undefined | undefined> {
   const connection = new Connection(clusterUrl);
   const groupConfig = findGroupConfig(programId);
   if (groupConfig === undefined) {
@@ -376,20 +377,20 @@ export function getPerpMarketFromInstruction(
   if (groupConfig === undefined) {
     return;
   }
-  const perpMarketConfigs = groupConfig.perpMarkets.filter((mangoPerpMarket) =>
-    perpMarket.pubkey.equals(mangoPerpMarket.publicKey)
-  );
-  if (perpMarketConfigs.length) {
-    return perpMarketConfigs[0];
-  }
+  const perpMarketConfigs = ''; //groupConfig.perpMarkets.filter((mangoPerpMarket) =>
+//    perpMarket.pubkey.equals(mangoPerpMarket.publicKey)
+//  );
+//  if (perpMarketConfigs.length) {
+//    return perpMarketConfigs[0];
+//  }
 }
 
 export async function getPerpMarketFromPerpMarketConfig(
   clusterUrl: string,
   mangoPerpMarketConfig: PerpMarketConfig
 ): Promise<PerpMarket> {
-  const acc = await getAccountInfo(clusterUrl, mangoPerpMarketConfig.publicKey);
-  const decoded = PerpMarketLayout.decode(acc?.data);
+  const acc =  ''; //await getAccountInfo(clusterUrl, mangoPerpMarketConfig.publicKey);
+  const decoded = '';  //PerpMarketLayout.decode(acc?.data);
 
   return new PerpMarket(
     mangoPerpMarketConfig.publicKey,

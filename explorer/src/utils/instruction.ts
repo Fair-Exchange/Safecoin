@@ -20,14 +20,14 @@ import {
   isTokenLendingInstruction,
   parseTokenLendingInstructionTitle,
 } from "components/instruction/token-lending/types";
-import {
-  isSerumInstruction,
-  parseSerumInstructionTitle,
-} from "components/instruction/serum/types";
-import {
-  isBonfidaBotInstruction,
-  parseBonfidaBotInstructionTitle,
-} from "components/instruction/bonfida-bot/types";
+//import {
+//  isSerumInstruction,
+//  parseSerumInstructionTitle,
+//} from "components/instruction/serum/types";
+//import {
+//  isBonfidaBotInstruction,
+//  parseBonfidaBotInstructionTitle,
+//} from "components/instruction/bonfida-bot/types";
 import { TOKEN_PROGRAM_ID } from "providers/accounts/tokens";
 
 export type InstructionType = {
@@ -107,26 +107,6 @@ export function getTokenInstructionName(
     if (ix.program === "safe-token") {
       name = getTokenProgramInstructionName(ix, signatureInfo);
     } else {
-      return undefined;
-    }
-  } else if (
-    transactionInstruction &&
-    isBonfidaBotInstruction(transactionInstruction)
-  ) {
-    try {
-      name = parseBonfidaBotInstructionTitle(transactionInstruction);
-    } catch (error) {
-      reportError(error, { signature: signatureInfo.signature });
-      return undefined;
-    }
-  } else if (
-    transactionInstruction &&
-    isSerumInstruction(transactionInstruction)
-  ) {
-    try {
-      name = parseSerumInstructionTitle(transactionInstruction);
-    } catch (error) {
-      reportError(error, { signature: signatureInfo.signature });
       return undefined;
     }
   } else if (

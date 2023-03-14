@@ -407,7 +407,7 @@ export const decodeCollectFees = (ix: TransactionInstruction): CollectFees => {
 export const isBonfidaBotInstruction = (
   instruction: TransactionInstruction
 ) => {
-  return instruction.programId.equals(BONFIDABOT_PROGRAM_ID);
+  return; // instruction.programId.equals(BONFIDABOT_PROGRAM_ID);
 };
 
 export const INSTRUCTION_LOOKUP: { [key: number]: string } = {

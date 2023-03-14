@@ -108,6 +108,8 @@ export async function fetchBlock(
       };
 
       data = {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
         block,
         blockLeader: getLeader(slot),
         childSlot,

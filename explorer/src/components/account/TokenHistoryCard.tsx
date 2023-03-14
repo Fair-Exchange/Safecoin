@@ -35,14 +35,14 @@ import {
   isTokenLendingInstruction,
   parseTokenLendingInstructionTitle,
 } from "components/instruction/token-lending/types";
-import {
-  isSerumInstruction,
-  parseSerumInstructionTitle,
-} from "components/instruction/serum/types";
-import {
-  isBonfidaBotInstruction,
-  parseBonfidaBotInstructionTitle,
-} from "components/instruction/bonfida-bot/types";
+//import {
+//  isSerumInstruction,
+//  parseSerumInstructionTitle,
+//} from "components/instruction/serum/types";
+//import {
+//  isBonfidaBotInstruction,
+//  parseBonfidaBotInstructionTitle,
+//} from "components/instruction/bonfida-bot/types";
 import { INNER_INSTRUCTIONS_START_SLOT } from "pages/TransactionDetailsPage";
 import { useCluster, Cluster } from "providers/cluster";
 import { Link } from "react-router-dom";
@@ -469,7 +469,7 @@ const TokenTransactionRow = React.memo(
             false
           ) {
             try {
-              name = parseSerumInstructionTitle(transactionInstruction);
+              name = '';  //parseSerumInstructionTitle(transactionInstruction);
             } catch (error) {
               reportError(error, { signature: tx.signature });
               return undefined;
@@ -495,41 +495,41 @@ const TokenTransactionRow = React.memo(
               return undefined;
             }
           } else if (
-            transactionInstruction &&
-            isBonfidaBotInstruction(transactionInstruction)
+            transactionInstruction && false
+//            isBonfidaBotInstruction(transactionInstruction)
           ) {
-            try {
-              name = parseBonfidaBotInstructionTitle(transactionInstruction);
-            } catch (error) {
-              reportError(error, { signature: tx.signature });
+//            try {
+//              name = parseBonfidaBotInstructionTitle(transactionInstruction);
+//            } catch (error) {
+//              reportError(error, { signature: tx.signature });
+//              return undefined;
+//            }
+//          } else if (
+//            transactionInstruction &&
+//            isMangoInstruction(transactionInstruction)
+//          ) {
+//            try {
+//              name = parseMangoInstructionTitle(transactionInstruction);
+//            } catch (error) {
+//              reportError(error, { signature: tx.signature });
+//              return undefined;
+//            }
+//          } else {
+//            if (
+//              ix.accounts.findIndex((account) =>
+//                account.equals(TOKEN_PROGRAM_ID)
+//              ) >= 0
+//            ) {
+//              name = "Unknown (Inner)";
+//            } else {
               return undefined;
             }
-          } else if (
-            transactionInstruction &&
-            isMangoInstruction(transactionInstruction)
-          ) {
-            try {
-              name = parseMangoInstructionTitle(transactionInstruction);
-            } catch (error) {
-              reportError(error, { signature: tx.signature });
-              return undefined;
-            }
-          } else {
-            if (
-              ix.accounts.findIndex((account) =>
-                account.equals(TOKEN_PROGRAM_ID)
-              ) >= 0
-            ) {
-              name = "Unknown (Inner)";
-            } else {
-              return undefined;
-            }
-          }
+ //         }
 
-          return {
-            name,
-            innerInstructions,
-          };
+//          return {
+//            name,
+//            innerInstructions,
+//          };
         })
         .filter((name) => name !== undefined) as InstructionType[];
     }

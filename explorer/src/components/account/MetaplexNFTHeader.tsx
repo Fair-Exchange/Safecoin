@@ -10,10 +10,11 @@ import { ArtContent } from "components/common/NFTArt";
 import { InfoTooltip } from "components/common/InfoTooltip";
 import { clusterPath } from "utils/url";
 import { Link } from "react-router-dom";
-import { EditionInfo } from "providers/accounts/utils/getEditionInfo";
+//import { EditionInfo } from "providers/accounts/utils/getEditionInfo";
 import { PublicKey } from "@safecoin/web3.js";
 
 const programs = '';
+const EditionInfo = '';
 
 export function NFTHeader({
   nftData,
@@ -22,7 +23,7 @@ export function NFTHeader({
   nftData: NFTData;
   address: string;
 }) {
-  const collectionAddress = nftData.metadata.collection?.key;
+  const collectionAddress = '';//nftData.metadata.collection?.key;
   const collectionMintInfo = useMintAccountInfo(collectionAddress);
   const fetchAccountInfo = useFetchAccountInfo();
 
@@ -34,52 +35,32 @@ export function NFTHeader({
 
   const metadata = nftData.metadata;
   const data = nftData.json;
-  const isVerifiedCollection =
-    metadata.collection != null &&
-    metadata.collection?.verified &&
-    collectionMintInfo !== undefined;
-  return (
-    <div className="row">
-      <div className="col-auto ms-2 d-flex align-items-center">
-        <ArtContent metadata={metadata} pubkey={address} data={data} />
-      </div>
-      <div className="col mb-3 ms-0.5 mt-3">
-        {<h6 className="header-pretitle ms-1">Metaplex NFT</h6>}
-        <div className="d-flex align-items-center">
-          <h2 className="header-title ms-1 align-items-center no-overflow-with-ellipsis">
-            {metadata.data.name !== ""
-              ? metadata.data.name
-              : "No NFT name was found"}
-          </h2>
-          {getEditionPill(nftData.editionInfo)}
-          {isVerifiedCollection ? getVerifiedCollectionPill() : null}
-        </div>
-        <h4 className="header-pretitle ms-1 mt-1 no-overflow-with-ellipsis">
-          {metadata.data.symbol !== ""
-            ? metadata.data.symbol
-            : "No Symbol was found"}
-        </h4>
-        <div className="mb-2 mt-2">
-          {getSaleTypePill(metadata.primarySaleHappened)}
-        </div>
-        <div className="mb-3 mt-2">{getIsMutablePill(metadata.isMutable)}</div>
-        <div className="btn-group">
-          <button
-            className="btn btn-dark btn-sm dropdown-toggle creators-dropdown-button-width"
-            type="button"
-            data-bs-toggle="dropdown"
-            aria-haspopup="true"
-            aria-expanded="false"
-          >
-            Creators
-          </button>
-          <div className="dropdown-menu mt-2">
-            {getCreatorDropdownItems(metadata.data.creators)}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const isVerifiedCollection = '';
+//    metadata.collection != null &&
+//    metadata.collection?.verified &&
+//    collectionMintInfo !== undefined;
+//false
+//  return (
+//    <div className="row">
+//      <div className="col-auto ms-2 d-flex align-items-center">
+//        <ArtContent metadata={metadata} pubkey={address} data={data} />
+//      </div>
+//      <div className="col mb-3 ms-0.5 mt-3">
+//        {<h6 className="header-pretitle ms-1">Metaplex NFT</h6>}
+
+
+//            {metadata.data.name !== ""
+//              ? metadata.data.name
+//              "No NFT name was found"}
+
+//          {getEditionPill(nftData.editionInfo)}
+//          {isVerifiedCollection ? getVerifiedCollectionPill() : null}
+
+
+
+
+//    </div>
+//  );
 }
 
 type Creator = ''; //  programs.metadata.Creator;
@@ -146,20 +127,12 @@ function getCreatorDropdownItems(creators: Creator[] | null) {
   );
 }
 
-function getEditionPill(editionInfo: EditionInfo) {
-  const masterEdition = editionInfo.masterEdition;
-  const edition = editionInfo.edition;
+function getEditionPill(editionInfo: '') {
+  const masterEdition = '';//editionInfo.masterEdition;
+  const edition = '';//editionInfo.edition;
 
   return (
-    <div className={"d-inline-flex ms-2"}>
-      <span className="badge badge-pill bg-dark">{`${
-        edition && masterEdition
-          ? `Edition ${edition.edition.toNumber()} / ${masterEdition.supply.toNumber()}`
-          : masterEdition
-          ? "Master Edition"
-          : "No Master Edition Information"
-      }`}</span>
-    </div>
+''
   );
 }
 

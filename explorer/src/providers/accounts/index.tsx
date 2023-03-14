@@ -27,13 +27,15 @@ import {
 } from "validators/accounts/upgradeable-program";
 import { RewardsProvider } from "./rewards";
 //import { programs } from "@safecoin/js";
-import getEditionInfo, { EditionInfo } from "./utils/getEditionInfo";
+//import getEditionInfo, { EditionInfo } from "./utils/getEditionInfo";
 export { useAccountHistory } from "./history";
 
 const metadataJson = '';
 const programs = '';
+const getEditionInfo = '';
+const EditionInfo = '';
 
-const Metadata = programs.metadata.Metadata;
+const Metadata = '';  //programs.metadata.Metadata;
 
 export type StakeProgramData = {
   program: "stake";
@@ -48,9 +50,9 @@ export type UpgradeableLoaderAccountData = {
 };
 
 export type NFTData = {
-  metadata: programs.metadata.MetadataData;
-  json: MetadataJson | undefined;
-  editionInfo: EditionInfo;
+  metadata: ''; //programs.metadata.MetadataData;
+  json: undefined | undefined;
+  editionInfo: undefined;
 };
 
 export type TokenProgramData = {
@@ -247,29 +249,6 @@ async function fetchAccountInfo(
 
               try {
                 // Generate a PDA and check for a Metadata Account
-                if (parsed.type === "mint") {
-                  const metadata = await Metadata.load(
-                    connection,
-                    await Metadata.getPDA(pubkey)
-                  );
-                  if (metadata) {
-                    // We have a valid Metadata account. Try and pull edition data.
-                    const editionInfo = await getEditionInfo(
-                      metadata,
-                      connection
-                    );
-                    const id = pubkeyToString(pubkey);
-                    const metadataJSON = await getMetaDataJSON(
-                      id,
-                      metadata.data
-                    );
-                    nftData = {
-                      metadata: metadata.data,
-                      json: metadataJSON,
-                      editionInfo,
-                    };
-                  }
-                }
               } catch (error) {
                 // unable to find NFT metadata account
               }
@@ -324,10 +303,10 @@ const IMAGE_MIME_TYPE_REGEX = /data:image\/(svg\+xml|png|jpeg|gif)/g;
 
 const getMetaDataJSON = async (
   id: string,
-  metadata: programs.metadata.MetadataData
-): Promise<MetadataJson | undefined> => {
+  metadata: ''
+): Promise<undefined | undefined> => {
   return new Promise(async (resolve, reject) => {
-    const uri = metadata.data.uri;
+    const uri = '';//metadata.data.uri;
     if (!uri) return resolve(undefined);
 
     const processJson = (extended: any) => {
@@ -340,7 +319,7 @@ const getMetaDataJSON = async (
           extended.image.startsWith("http") ||
           IMAGE_MIME_TYPE_REGEX.test(extended.image)
             ? extended.image
-            : `${metadata.data.uri}/${extended.image}`;
+            : extended.image;
       }
 
       return extended;

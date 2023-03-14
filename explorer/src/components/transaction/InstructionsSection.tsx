@@ -11,7 +11,7 @@ import {
 } from "@safecoin/web3.js";
 import { BpfLoaderDetailsCard } from "components/instruction/bpf-loader/BpfLoaderDetailsCard";
 import { MemoDetailsCard } from "components/instruction/MemoDetailsCard";
-import { SerumDetailsCard } from "components/instruction/SerumDetailsCard";
+//import { SerumDetailsCard } from "components/instruction/SerumDetailsCard";
 import { StakeDetailsCard } from "components/instruction/stake/StakeDetailsCard";
 import { SystemDetailsCard } from "components/instruction/system/SystemDetailsCard";
 import { TokenDetailsCard } from "components/instruction/token/TokenDetailsCard";
@@ -19,16 +19,16 @@ import { TokenLendingDetailsCard } from "components/instruction/TokenLendingDeta
 import { TokenSwapDetailsCard } from "components/instruction/TokenSwapDetailsCard";
 import { WormholeDetailsCard } from "components/instruction/WormholeDetailsCard";
 import { UnknownDetailsCard } from "components/instruction/UnknownDetailsCard";
-import { BonfidaBotDetailsCard } from "components/instruction/BonfidaBotDetails";
+//import { BonfidaBotDetailsCard } from "components/instruction/BonfidaBotDetails";
 import {
   INNER_INSTRUCTIONS_START_SLOT,
   SignatureProps,
 } from "pages/TransactionDetailsPage";
 import { intoTransactionInstruction } from "utils/tx";
-import { isSerumInstruction } from "components/instruction/serum/types";
+//import { isSerumInstruction } from "components/instruction/serum/types";
 import { isTokenLendingInstruction } from "components/instruction/token-lending/types";
 import { isTokenSwapInstruction } from "components/instruction/token-swap/types";
-import { isBonfidaBotInstruction } from "components/instruction/bonfida-bot/types";
+//import { isBonfidaBotInstruction } from "components/instruction/bonfida-bot/types";
 import { useFetchTransactionDetails } from "providers/transactions/parsed";
 import {
   useTransactionDetails,
@@ -39,12 +39,12 @@ import { BpfUpgradeableLoaderDetailsCard } from "components/instruction/bpf-upgr
 import { VoteDetailsCard } from "components/instruction/vote/VoteDetailsCard";
 import { isWormholeInstruction } from "components/instruction/wormhole/types";
 import { AssociatedTokenDetailsCard } from "components/instruction/AssociatedTokenDetailsCard";
-import { MangoDetailsCard } from "components/instruction/MangoDetails";
+//import { MangoDetailsCard } from "components/instruction/MangoDetails";
 //import { isPythInstruction } from "components/instruction/pyth/types";
 //import { PythDetailsCard } from "components/instruction/pyth/PythDetailsCard";
 import AnchorDetailsCard from "../instruction/AnchorDetailsCard";
-import { isMangoInstruction } from "../instruction/mango/types";
-import { useAnchorProgram } from "providers/anchor";
+//import { isMangoInstruction } from "../instruction/mango/types";
+//import { useAnchorProgram } from "providers/anchor";
 import { LoadingCard } from "components/common/LoadingCard";
 import { ErrorBoundary } from "@sentry/react";
 import { ComputeBudgetDetailsCard } from "components/instruction/ComputeBudgetDetailsCard";
@@ -169,7 +169,7 @@ function InstructionCard({
   url: string;
 }) {
   const key = `${index}-${childIndex}`;
-  const anchorProgram = useAnchorProgram(ix.programId.toString(), url);
+  const anchorProgram = "ancAHhi4TqE5nwR29gPGhGV8CYLgHUFEDfE1q12nRK3";//useAnchorProgram(ix.programId.toString(), url);
 
   if ("parsed" in ix) {
     const props = {
@@ -224,13 +224,13 @@ function InstructionCard({
     childIndex,
   };
 
-  if (isBonfidaBotInstruction(transactionIx)) {
-    return <BonfidaBotDetailsCard key={key} {...props} />;
-  } else if (isMangoInstruction(transactionIx)) {
-    return <MangoDetailsCard key={key} {...props} />;
-  } else if (false) {
-    return <SerumDetailsCard key={key} {...props} />;
-  } else if (isTokenSwapInstruction(transactionIx)) {
+//  if (isBonfidaBotInstruction(transactionIx)) {
+//    return <BonfidaBotDetailsCard key={key} {...props} />;
+//  } else if (isMangoInstruction(transactionIx)) {
+//    return <MangoDetailsCard key={key} {...props} />;
+//  } else if (false) {
+//    return <SerumDetailsCard key={key} {...props} />;
+   if (isTokenSwapInstruction(transactionIx)) {
     return <TokenSwapDetailsCard key={key} {...props} />;
   } else if (isTokenLendingInstruction(transactionIx)) {
     return <TokenLendingDetailsCard key={key} {...props} />;
@@ -243,7 +243,7 @@ function InstructionCard({
   } else if (anchorProgram) {
     return (
       <ErrorBoundary fallback={<UnknownDetailsCard {...props} />}>
-        <AnchorDetailsCard key={key} anchorProgram={anchorProgram} {...props} />
+
       </ErrorBoundary>
     );
   } else {

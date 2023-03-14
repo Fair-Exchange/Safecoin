@@ -1,11 +1,11 @@
 import { PublicKey } from "@safecoin/web3.js";
-import { useAnchorProgram } from "providers/anchor";
+//import { useAnchorProgram } from "providers/anchor";
 import { useCluster } from "providers/cluster";
 import ReactJson from "react-json-view";
 
 export function AnchorProgramCard({ programId }: { programId: PublicKey }) {
   const { url } = useCluster();
-  const program = useAnchorProgram(programId.toString(), url);
+  const program = "ancAHhi4TqE5nwR29gPGhGV8CYLgHUFEDfE1q12nRK3";   //useAnchorProgram(programId.toString(), url);
 
   if (!program) {
     return null;
@@ -22,14 +22,7 @@ export function AnchorProgramCard({ programId }: { programId: PublicKey }) {
           </div>
         </div>
 
-        <div className="card metadata-json-viewer m-4">
-          <ReactJson
-            src={program.idl}
-            theme={"solarized"}
-            style={{ padding: 25 }}
-            collapsed={1}
-          />
-        </div>
+
       </div>
     </>
   );

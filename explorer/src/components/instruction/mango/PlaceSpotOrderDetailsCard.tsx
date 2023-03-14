@@ -43,16 +43,16 @@ export function PlaceSpotOrderDetailsCard(props: {
       if (mangoSpotMarket === undefined) {
         return;
       }
-      const maxBaseQuantity = mangoSpotMarket.baseSizeLotsToNumber(
-        new BN(info.maxBaseQuantity.toString())
-      );
-      const limitPrice = mangoSpotMarket.priceLotsToNumber(
-        new BN(info.limitPrice.toString())
-      );
-      setOrderLotDetails({
-        price: limitPrice,
-        size: maxBaseQuantity,
-      } as OrderLotDetails);
+      const maxBaseQuantity = ''; //mangoSpotMarket.baseSizeLotsToNumber(
+//        new BN(info.maxBaseQuantity.toString())
+//      );
+      const limitPrice = ''; //mangoSpotMarket.priceLotsToNumber(
+//        new BN(info.limitPrice.toString())
+//      );
+//      setOrderLotDetails({
+//        price: limitPrice,
+//        size: maxBaseQuantity,
+//      } as OrderLotDetails);
     }
     getOrderLotDetails();
   }, [

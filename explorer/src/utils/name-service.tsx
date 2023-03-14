@@ -5,6 +5,8 @@ import {
   getNameAccountKey,
   getNameOwner,
   NAME_PROGRAM_ID,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
   performReverseLookup,
 } from "@safecoin/spl-name-service";
 import { useState, useEffect } from "react";
@@ -46,8 +48,12 @@ export async function getDomainInfo(domain: string, connection: Connection) {
   );
   try {
     const registry = await getNameOwner(connection, domainKey);
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     return registry && registry.registry.owner
       ? {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
           owner: registry.registry.owner.toString(),
           address: domainKey.toString(),
         }

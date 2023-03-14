@@ -13,13 +13,7 @@ export function MetaplexMetadataCard({ nftData }: { nftData: NFTData }) {
           </div>
         </div>
 
-        <div className="card metadata-json-viewer m-4">
-          <ReactJson
-            src={nftData.metadata}
-            theme={"solarized"}
-            style={{ padding: 25 }}
-          />
-        </div>
+
       </div>
     </>
   );

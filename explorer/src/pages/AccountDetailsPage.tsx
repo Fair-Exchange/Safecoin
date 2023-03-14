@@ -39,11 +39,11 @@ import { MetaplexMetadataCard } from "components/account/MetaplexMetadataCard";
 import { MetaplexNFTAttributesCard } from "components/account/MetaplexNFTAttributesCard";
 import { NFTHeader } from "components/account/MetaplexNFTHeader";
 import { DomainsCard } from "components/account/DomainsCard";
-import isMetaplexNFT from "providers/accounts/utils/isMetaplexNFT";
+//import isMetaplexNFT from "providers/accounts/utils/isMetaplexNFT";
 import { SecurityCard } from "components/account/SecurityCard";
 import { AnchorAccountCard } from "components/account/AnchorAccountCard";
 import { AnchorProgramCard } from "components/account/AnchorProgramCard";
-import { useAnchorProgram } from "providers/anchor";
+
 
 const IDENTICON_WIDTH = 64;
 
@@ -182,31 +182,17 @@ export function AccountHeader({
   const data = account?.details?.data;
   const isToken = data?.program === "safe-token" && data?.parsed.type === "mint";
 
-  if (isMetaplexNFT(data, mintInfo)) {
-    return (
-      <NFTHeader
-        nftData={(data as TokenProgramData).nftData!}
-        address={address}
-      />
-    );
-  }
 
   if (isToken) {
     let token;
     let unverified = false;
 
     // Fall back to legacy token list when there is stub metadata (blank uri), updatable by default by the mint authority
-    if (!data?.nftData?.metadata.data.uri && tokenDetails) {
-      token = tokenDetails;
-    } else if (data?.nftData) {
-      token = {
-        logoURI: data?.nftData?.json?.image,
-        name: data?.nftData?.json?.name ?? data?.nftData.metadata.data.name,
-      };
-      unverified = true;
-    } else if (tokenDetails) {
+    if (tokenDetails) {
       token = tokenDetails;
     }
+
+
 
     return (
       <div className="row align-items-end">
@@ -581,7 +567,7 @@ function AnchorProgramLink({
   pubkey: PublicKey;
 }) {
   const { url } = useCluster();
-  const anchorProgram = useAnchorProgram(pubkey.toString() ?? "", url);
+  const anchorProgram = "ancAHhi4TqE5nwR29gPGhGV8CYLgHUFEDfE1q12nRK3";//useAnchorProgram(pubkey.toString() ?? "", url);
 
   if (!anchorProgram) {
     return null;
@@ -610,10 +596,7 @@ function AccountDataLink({
   programId: PublicKey | undefined;
 }) {
   const { url } = useCluster();
-  const accountAnchorProgram = useAnchorProgram(
-    programId?.toString() ?? "",
-    url
-  );
+  const accountAnchorProgram = "ancAHhi4TqE5nwR29gPGhGV8CYLgHUFEDfE1q12nRK3";//useAnchorProgram(    programId?.toString() ?? "",    url  );
 
   if (!accountAnchorProgram) {
     return null;

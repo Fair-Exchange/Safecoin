@@ -5,40 +5,18 @@ import { BorshAccountsCoder } from "@safecoin/anchor";
 import { IdlTypeDef } from "@safecoin/anchor/dist/cjs/idl";
 import { getAnchorProgramName, mapAccountToRows } from "utils/anchor";
 import { ErrorCard } from "components/common/ErrorCard";
-import { useAnchorProgram } from "providers/anchor";
+//import { useAnchorProgram } from "providers/anchor";
 
 export function AnchorAccountCard({ account }: { account: Account }) {
   const { lamports } = account;
   const { url } = useCluster();
-  const anchorProgram = useAnchorProgram(
-    account.details?.owner.toString() || "",
-    url
-  );
+  const anchorProgram = "ancAHhi4TqE5nwR29gPGhGV8CYLgHUFEDfE1q12nRK3";//useAnchorProgram(    account.details?.owner.toString() || "",    url  );
   const rawData = account?.details?.rawData;
-  const programName = getAnchorProgramName(anchorProgram) || "Unknown Program";
+  const programName = "Unknown Program";
 
-  const { decodedAccountData, accountDef } = useMemo(() => {
-    let decodedAccountData: any | null = null;
-    let accountDef: IdlTypeDef | undefined = undefined;
-    if (anchorProgram && rawData) {
-      const coder = new BorshAccountsCoder(anchorProgram.idl);
-      const accountDefTmp = anchorProgram.idl.accounts?.find(
-        (accountType: any) =>
-          (rawData as Buffer)
-            .slice(0, 8)
-            .equals(BorshAccountsCoder.accountDiscriminator(accountType.name))
-      );
-      if (accountDefTmp) {
-        accountDef = accountDefTmp;
-        decodedAccountData = coder.decode(accountDef.name, rawData);
-      }
-    }
-
-    return {
-      decodedAccountData,
-      accountDef,
-    };
-  }, [anchorProgram, rawData]);
+  const decodedAccountData = '';
+  const accountDef = '';
+ 
 
   if (lamports === undefined) return null;
   if (!anchorProgram) return <ErrorCard text="No Anchor IDL found" />;
@@ -55,7 +33,7 @@ export function AnchorAccountCard({ account }: { account: Account }) {
           <div className="row align-items-center">
             <div className="col">
               <h3 className="card-header-title">
-                {programName}: {accountDef.name}
+                {programName}: "program"
               </h3>
             </div>
           </div>
@@ -71,11 +49,6 @@ export function AnchorAccountCard({ account }: { account: Account }) {
               </tr>
             </thead>
             <tbody>
-              {mapAccountToRows(
-                decodedAccountData,
-                accountDef as IdlTypeDef,
-                anchorProgram.idl
-              )}
             </tbody>
           </table>
         </div>

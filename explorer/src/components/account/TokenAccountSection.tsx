@@ -25,7 +25,7 @@ import { CoingeckoStatus, useCoinGecko } from "utils/coingecko";
 import { displayTimestampWithoutDate } from "utils/date";
 import { LoadingCard } from "components/common/LoadingCard";
 import { PublicKey } from "@safecoin/web3.js";
-import isMetaplexNFT from "providers/accounts/utils/isMetaplexNFT";
+//import isMetaplexNFT from "providers/accounts/utils/isMetaplexNFT";
 
 const getEthAddress = (link?: string) => {
   let address = "";
@@ -53,16 +53,6 @@ export function TokenAccountSection({
     switch (tokenAccount.type) {
       case "mint": {
         const info = create(tokenAccount.info, MintAccountInfo);
-
-        if (isMetaplexNFT(account.details?.data, info)) {
-          return (
-            <NonFungibleTokenMintAccountCard
-              account={account}
-              nftData={(account.details!.data as TokenProgramData).nftData!}
-              mintInfo={info}
-            />
-          );
-        }
 
         return <FungibleTokenMintAccountCard account={account} info={info} />;
       }
@@ -323,35 +313,23 @@ function NonFungibleTokenMintAccountCard({
             <Address pubkey={account.pubkey} alignRight raw />
           </td>
         </tr>
-        {nftData.editionInfo.masterEdition?.maxSupply && (
+        {false && (
           <tr>
             <td>Max Total Supply</td>
             <td className="text-lg-end">
-              {nftData.editionInfo.masterEdition.maxSupply.toNumber() === 0
+              {false
                 ? 1
-                : nftData.editionInfo.masterEdition.maxSupply.toNumber()}
+                : 1}
             </td>
           </tr>
         )}
-        {nftData?.editionInfo.masterEdition?.supply && (
+        {false && (
           <tr>
             <td>Current Supply</td>
             <td className="text-lg-end">
-              {nftData.editionInfo.masterEdition.supply.toNumber() === 0
+              {false
                 ? 1
-                : nftData.editionInfo.masterEdition.supply.toNumber()}
-            </td>
-          </tr>
-        )}
-        {!!nftData?.metadata.collection?.verified && (
-          <tr>
-            <td>Verified Collection Address</td>
-            <td className="text-lg-end">
-              <Address
-                pubkey={new PublicKey(nftData.metadata.collection.key)}
-                alignRight
-                link
-              />
+                : 1}
             </td>
           </tr>
         )}
@@ -366,33 +344,13 @@ function NonFungibleTokenMintAccountCard({
         <tr>
           <td>Update Authority</td>
           <td className="text-lg-end">
-            <Address
-              pubkey={new PublicKey(nftData.metadata.updateAuthority)}
-              alignRight
-              link
-            />
           </td>
         </tr>
-        {nftData?.json && nftData.json.external_url && (
-          <tr>
-            <td>Website</td>
-            <td className="text-lg-end">
-              <a
-                rel="noopener noreferrer"
-                target="_blank"
-                href={nftData.json.external_url}
-              >
-                {nftData.json.external_url}
-                <span className="fe fe-external-link ms-2"></span>
-              </a>
-            </td>
-          </tr>
-        )}
-        {nftData?.metadata.data && (
+        {false && (
           <tr>
             <td>Seller Fee</td>
             <td className="text-lg-end">
-              {`${nftData?.metadata.data.sellerFeeBasisPoints / 100}%`}
+
             </td>
           </tr>
         )}

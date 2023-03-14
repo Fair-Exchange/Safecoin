@@ -79,8 +79,12 @@ async function fetchRawTransaction(
       const { message, signatures } = response.transaction;
       data = {
         raw: {
+	    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
           message,
           signatures,
+	      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
           transaction: Transaction.populate(message, signatures),
         },
       };
