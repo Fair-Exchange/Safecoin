@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { Account } from "providers/accounts";
 import { useCluster } from "providers/cluster";
-import { BorshAccountsCoder } from "@project-serum/anchor";
-import { IdlTypeDef } from "@project-serum/anchor/dist/cjs/idl";
+import { BorshAccountsCoder } from "@safecoin/anchor";
+import { IdlTypeDef } from "@safecoin/anchor/dist/cjs/idl";
 import { getAnchorProgramName, mapAccountToRows } from "utils/anchor";
 import { ErrorCard } from "components/common/ErrorCard";
 import { useAnchorProgram } from "providers/anchor";

@@ -1,7 +1,7 @@
 import React, { Fragment, ReactNode, useState } from "react";
 import { Cluster } from "providers/cluster";
 import { PublicKey, TransactionInstruction } from "@safecoin/web3.js";
-import { BorshInstructionCoder, Program, Idl } from "@project-serum/anchor";
+import { BorshInstructionCoder, Program, Idl } from "@safecoin/anchor";
 import { useAnchorProgram } from "providers/anchor";
 import { getProgramName } from "utils/tx";
 import { snakeToTitleCase, camelToTitleCase, numberWithSeparator } from "utils";
@@ -9,7 +9,7 @@ import {
   IdlInstruction,
   IdlType,
   IdlTypeDef,
-} from "@project-serum/anchor/dist/cjs/idl";
+} from "@safecoin/anchor/dist/cjs/idl";
 import { Address } from "components/common/Address";
 import ReactJson from "react-json-view";
 

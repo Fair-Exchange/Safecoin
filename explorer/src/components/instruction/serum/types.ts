@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-redeclare */
 
-import { decodeInstruction, MARKETS } from "@project-serum/serum";
+import { decodeInstruction, MARKETS } from "@safecoin/serum";
 import {
   AccountMeta,
   PublicKey,

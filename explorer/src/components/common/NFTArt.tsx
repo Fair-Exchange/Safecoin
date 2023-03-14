@@ -6,7 +6,7 @@ import {
   MetadataJson,
   MetaDataJsonCategory,
   MetadataJsonFile,
-} from "@metaplex/js";
+} from "@safecoin/ledamintjs";
 import ContentLoader from "react-content-loader";
 import ErrorLogo from "img/logos-solana/dark-solana-logo.svg";
 import { getLast } from "utils";

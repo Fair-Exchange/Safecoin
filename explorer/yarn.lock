@@ -1104,11 +1104,11 @@
   resolved "https://registry.yarnpkg.com/@blockworks-foundation/mango-client/-/mango-client-3.6.20.tgz#66ed0ae4545959fdc31ca1918de0f931de579d41"
   integrity sha512-Te0i52KUyp5e8jQQZlIMsTy9fKIfefPHvkA8+NRGIH80kQcnJKKfzw3T1NxaDsc3KFMZwpuN3m4afDNpKTuF0g==
   dependencies:
-    "@project-serum/anchor" "^0.21.0"
-    "@project-serum/serum" "^0.13.65"
-    "@project-serum/sol-wallet-adapter" "^0.2.0"
-    "@solana/spl-token" "^0.1.6"
-    "@solana/web3.js" "^1.43.5"
+    "@safecoin/anchor" "^0.21.0"
+    "@safecoin/serum" "^0.13.65"
+    "@safecoin/sol-wallet-adapter" "^0.2.0"
+    "@safecoin/safe-token" "^0.1.6"
+    "@safecoin/web3.js" "^1.43.5"
     big.js "^6.1.1"
     bn.js "^5.1.0"
     buffer-layout "^1.2.1"
@@ -1123,10 +1123,10 @@
   integrity sha512-h+Twa/8JxgZ7oUzw0sfYoHhSg4IcqaoJxOzmzXJkB5G1PriniOyzK6Qn815e5ea6c8y0sqZrA5WijvlZ/dNhKg==
   dependencies:
     "@dr497/awesome-serum-markets" "^1.1.41"
-    "@project-serum/serum" "^0.13.37"
-    "@project-serum/sol-wallet-adapter" "^0.1.5"
-    "@solana/spl-token" "0.0.13"
-    "@solana/web3.js" "^0.94.2"
+    "@safecoin/serum" "^0.13.37"
+    "@safecoin/sol-wallet-adapter" "^0.1.5"
+    "@safecoin/safe-token" "0.0.13"
+    "@safecoin/web3.js" "^0.94.2"
     bip32 "^2.0.6"
     bn.js "^5.1.3"
     bs58 "4.0.1"
@@ -1161,7 +1161,7 @@
   resolved "https://registry.yarnpkg.com/@dr497/awesome-serum-markets/-/awesome-serum-markets-1.2.3.tgz#aa9c16d988385219acb715b4b0edf912df771400"
   integrity sha512-b3tybwWvXKW8G2X0ujyOLxWO9gmW4fkar1KZp9pW54mj5wog/ll9BpHKAhBQ+gvt3TiQH3xANvbWp8elTDBUJQ==
   dependencies:
-    "@solana/web3.js" "^0.87.1"
+    "@safecoin/web3.js" "^0.87.1"
 
 "@emotion/babel-plugin@^11.10.6":
   version "11.10.6"
@@ -1633,74 +1633,74 @@
     color "^0.11.3"
     mersenne-twister "^1.1.0"
 
-"@metaplex-foundation/mpl-auction@^0.0.2":
+"@safecoin/lpl-auction@^0.0.2":
   version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@metaplex-foundation/mpl-auction/-/mpl-auction-0.0.2.tgz#3de3c982e88d6a88f0ef05be73453cf3cfaccf26"
+  resolved "https://registry.yarnpkg.com/@safecoin/lpl-auction/-/lpl-auction-0.0.2.tgz#3de3c982e88d6a88f0ef05be73453cf3cfaccf26"
   integrity sha512-4UDDi8OiQr+D6KrCNTRrqf/iDD6vi5kzRtMRtuNpywTyhX9hnbr1Zkc6Ncncbh9GZhbhcn+/h5wHgzh+xA6TnQ==
   dependencies:
-    "@metaplex-foundation/mpl-core" "^0.0.2"
-    "@solana/spl-token" "^0.1.8"
-    "@solana/web3.js" "^1.31.0"
+    "@safecoin/lpl-core" "^0.0.2"
+    "@safecoin/safe-token" "^0.1.8"
+    "@safecoin/web3.js" "^1.31.0"
 
-"@metaplex-foundation/mpl-core@^0.0.2":
+"@safecoin/lpl-core@^0.0.2":
   version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@metaplex-foundation/mpl-core/-/mpl-core-0.0.2.tgz#17ee2cc216e17629d6df1dbba75964625ebbd603"
+  resolved "https://registry.yarnpkg.com/@safecoin/lpl-core/-/lpl-core-0.0.2.tgz#17ee2cc216e17629d6df1dbba75964625ebbd603"
   integrity sha512-UUJ4BlYiWdDegAWmjsNQiNehwYU3QfSFWs3sv4VX0J6/ZrQ28zqosGhQ+I2ZCTEy216finJ82sZWNjuwSWCYyQ==
   dependencies:
-    "@solana/web3.js" "^1.31.0"
+    "@safecoin/web3.js" "^1.31.0"
     bs58 "^4.0.1"
 
-"@metaplex-foundation/mpl-metaplex@^0.0.5":
+"@safecoin/lpl-ledamint@^0.0.5":
   version "0.0.5"
-  resolved "https://registry.yarnpkg.com/@metaplex-foundation/mpl-metaplex/-/mpl-metaplex-0.0.5.tgz#f4b94582831824d134337453a8556c6c1ea13642"
+  resolved "https://registry.yarnpkg.com/@safecoin/lpl-ledamint/-/lpl-ledamint-0.0.5.tgz#f4b94582831824d134337453a8556c6c1ea13642"
   integrity sha512-VRt3fiO/7/jcHwN+gWvTtpp+7wYhIcEDzMG1lOeV3yYyhz9fAT0E3LqEl2moifNTAopGCE4zYa84JA/OW+1YvA==
   dependencies:
-    "@metaplex-foundation/mpl-auction" "^0.0.2"
-    "@metaplex-foundation/mpl-core" "^0.0.2"
-    "@metaplex-foundation/mpl-token-metadata" "^0.0.2"
-    "@metaplex-foundation/mpl-token-vault" "^0.0.2"
-    "@solana/spl-token" "^0.1.8"
-    "@solana/web3.js" "^1.31.0"
+    "@safecoin/lpl-auction" "^0.0.2"
+    "@safecoin/lpl-core" "^0.0.2"
+    "@safecoin/lpl-token-metadata" "^0.0.2"
+    "@safecoin/mpl-token-vault" "^0.0.2"
+    "@safecoin/safe-token" "^0.1.8"
+    "@safecoin/web3.js" "^1.31.0"
 
-"@metaplex-foundation/mpl-token-metadata@^0.0.2":
+"@safecoin/lpl-token-metadata@^0.0.2":
   version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@metaplex-foundation/mpl-token-metadata/-/mpl-token-metadata-0.0.2.tgz#02058970320459e2550e90caf54c58bcacbe6bb2"
+  resolved "https://registry.yarnpkg.com/@safecoin/lpl-token-metadata/-/lpl-token-metadata-0.0.2.tgz#02058970320459e2550e90caf54c58bcacbe6bb2"
   integrity sha512-yKJPhFlX8MkNbSCi1iwHn4xKmguLK/xFhYa+RuYdL2seuT4CKXHj2CnR2AkcdQj46Za4/nR3jZcRFKq7QlnvBw==
   dependencies:
-    "@metaplex-foundation/mpl-core" "^0.0.2"
-    "@solana/spl-token" "^0.1.8"
-    "@solana/web3.js" "^1.31.0"
+    "@safecoin/lpl-core" "^0.0.2"
+    "@safecoin/safe-token" "^0.1.8"
+    "@safecoin/web3.js" "^1.31.0"
 
-"@metaplex-foundation/mpl-token-metadata@^1.1.0":
+"@safecoin/lpl-token-metadata@^1.1.0":
   version "1.2.5"
-  resolved "https://registry.yarnpkg.com/@metaplex-foundation/mpl-token-metadata/-/mpl-token-metadata-1.2.5.tgz#1a927b1c7d30cd634a1e4782022712a02f6865c2"
+  resolved "https://registry.yarnpkg.com/@safecoin/lpl-token-metadata/-/lpl-token-metadata-1.2.5.tgz#1a927b1c7d30cd634a1e4782022712a02f6865c2"
   integrity sha512-pxRG53JsTSwXpiJJMHNulJhH8kO3hHztQ3QxslUoKw2hBYKXsg9TGsiHgNIhN2MPZGBJ2pDeK6kNGv0sd54HhA==
   dependencies:
-    "@metaplex-foundation/mpl-core" "^0.0.2"
-    "@solana/spl-token" "^0.1.8"
-    "@solana/web3.js" "^1.31.0"
+    "@safecoin/lpl-core" "^0.0.2"
+    "@safecoin/safe-token" "^0.1.8"
+    "@safecoin/web3.js" "^1.31.0"
 
-"@metaplex-foundation/mpl-token-vault@^0.0.2":
+"@safecoin/mpl-token-vault@^0.0.2":
   version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@metaplex-foundation/mpl-token-vault/-/mpl-token-vault-0.0.2.tgz#84d2fc86f750f8413acd9e9c24f4b3c016a12c47"
+  resolved "https://registry.yarnpkg.com/@safecoin/mpl-token-vault/-/mpl-token-vault-0.0.2.tgz#84d2fc86f750f8413acd9e9c24f4b3c016a12c47"
   integrity sha512-JiVcow8OzUGW0KTs/E1QrAdmYGqE9EGKE6cc2gxNNBYqDeVdjYlgEa64IiGvNF9rvbI2g2Z3jw0mYuA9LD9S/A==
   dependencies:
-    "@metaplex-foundation/mpl-core" "^0.0.2"
-    "@solana/spl-token" "^0.1.8"
-    "@solana/web3.js" "^1.31.0"
+    "@safecoin/lpl-core" "^0.0.2"
+    "@safecoin/safe-token" "^0.1.8"
+    "@safecoin/web3.js" "^1.31.0"
 
-"@metaplex/js@4.12.0":
+"@safecoin/ledamintjs@4.12.0":
   version "4.12.0"
-  resolved "https://registry.yarnpkg.com/@metaplex/js/-/js-4.12.0.tgz#1190767a4e69d4e5613002aab3f4c1fb8de07896"
+  resolved "https://registry.yarnpkg.com/@safecoin/ledamintjs/-/js-4.12.0.tgz#1190767a4e69d4e5613002aab3f4c1fb8de07896"
   integrity sha512-rIUTMXo5gIXFIZt08AEHyqH4oVoLL2dMYiNePQluw9pydesRym4jDayJ5POxEmKmyc6KGqVKw/YWUIivmUY5zg==
   dependencies:
-    "@metaplex-foundation/mpl-auction" "^0.0.2"
-    "@metaplex-foundation/mpl-core" "^0.0.2"
-    "@metaplex-foundation/mpl-metaplex" "^0.0.5"
-    "@metaplex-foundation/mpl-token-metadata" "^1.1.0"
-    "@metaplex-foundation/mpl-token-vault" "^0.0.2"
-    "@solana/spl-token" "^0.1.8"
-    "@solana/web3.js" "^1.30.2"
+    "@safecoin/lpl-auction" "^0.0.2"
+    "@safecoin/lpl-core" "^0.0.2"
+    "@safecoin/lpl-ledamint" "^0.0.5"
+    "@safecoin/lpl-token-metadata" "^1.1.0"
+    "@safecoin/mpl-token-vault" "^0.0.2"
+    "@safecoin/safe-token" "^0.1.8"
+    "@safecoin/web3.js" "^1.30.2"
     "@types/bs58" "^4.0.1"
     axios "^0.25.0"
     bn.js "^5.2.0"
@@ -1792,13 +1792,13 @@
   resolved "https://registry.yarnpkg.com/@popperjs/core/-/core-2.11.6.tgz#cee20bd55e68a1720bdab363ecf0c821ded4cd45"
   integrity sha512-50/17A98tWUfQ176raKiOGXuYpLyyVMkxxG6oylzL3BPOlA6ADGdK7EYunSa4I064xerltq9TGXs8HmOk5E+vw==
 
-"@project-serum/anchor@0.23.0":
+"@safecoin/anchor@0.23.0":
   version "0.23.0"
-  resolved "https://registry.yarnpkg.com/@project-serum/anchor/-/anchor-0.23.0.tgz#2b2eb6b51601b073e8db26663aa2d6c2f2841771"
+  resolved "https://registry.yarnpkg.com/@safecoin/anchor/-/anchor-0.23.0.tgz#2b2eb6b51601b073e8db26663aa2d6c2f2841771"
   integrity sha512-LV2/ifZOJVFTZ4GbEloXln3iVfCvO1YM8i7BBCrUm4tehP7irMx4nr4/IabHWOzrQcQElsxSP/lb1tBp+2ff8A==
   dependencies:
-    "@project-serum/borsh" "^0.2.5"
-    "@solana/web3.js" "^1.36.0"
+    "@safecoin/borsh" "^0.2.5"
+    "@safecoin/web3.js" "^1.36.0"
     base64-js "^1.5.1"
     bn.js "^5.1.2"
     bs58 "^4.0.1"
@@ -1813,13 +1813,13 @@
     snake-case "^3.0.4"
     toml "^3.0.0"
 
-"@project-serum/anchor@^0.11.1":
+"@safecoin/anchor@^0.11.1":
   version "0.11.1"
-  resolved "https://registry.yarnpkg.com/@project-serum/anchor/-/anchor-0.11.1.tgz#155bff2c70652eafdcfd5559c81a83bb19cec9ff"
+  resolved "https://registry.yarnpkg.com/@safecoin/anchor/-/anchor-0.11.1.tgz#155bff2c70652eafdcfd5559c81a83bb19cec9ff"
   integrity sha512-oIdm4vTJkUy6GmE6JgqDAuQPKI7XM4TPJkjtoIzp69RZe0iAD9JP2XHx7lV1jLdYXeYHqDXfBt3zcq7W91K6PA==
   dependencies:
-    "@project-serum/borsh" "^0.2.2"
-    "@solana/web3.js" "^1.17.0"
+    "@safecoin/borsh" "^0.2.2"
+    "@safecoin/web3.js" "^1.17.0"
     base64-js "^1.5.1"
     bn.js "^5.1.2"
     bs58 "^4.0.1"
@@ -1833,13 +1833,13 @@
     snake-case "^3.0.4"
     toml "^3.0.0"
 
-"@project-serum/anchor@^0.21.0":
+"@safecoin/anchor@^0.21.0":
   version "0.21.0"
-  resolved "https://registry.yarnpkg.com/@project-serum/anchor/-/anchor-0.21.0.tgz#ad5fb33744991ec1900cdb2fd22707c908b12b5f"
+  resolved "https://registry.yarnpkg.com/@safecoin/anchor/-/anchor-0.21.0.tgz#ad5fb33744991ec1900cdb2fd22707c908b12b5f"
   integrity sha512-flRuW/F+iC8mitNokx82LOXyND7Dyk6n5UUPJpQv/+NfySFrNFlzuQZaBZJ4CG5g9s8HS/uaaIz1nVkDR8V/QA==
   dependencies:
-    "@project-serum/borsh" "^0.2.4"
-    "@solana/web3.js" "^1.17.0"
+    "@safecoin/borsh" "^0.2.4"
+    "@safecoin/web3.js" "^1.17.0"
     base64-js "^1.5.1"
     bn.js "^5.1.2"
     bs58 "^4.0.1"
@@ -1854,36 +1854,36 @@
     snake-case "^3.0.4"
     toml "^3.0.0"
 
-"@project-serum/borsh@^0.2.2", "@project-serum/borsh@^0.2.4", "@project-serum/borsh@^0.2.5":
+"@safecoin/borsh@^0.2.2", "@safecoin/borsh@^0.2.4", "@safecoin/borsh@^0.2.5":
   version "0.2.5"
-  resolved "https://registry.yarnpkg.com/@project-serum/borsh/-/borsh-0.2.5.tgz#6059287aa624ecebbfc0edd35e4c28ff987d8663"
+  resolved "https://registry.yarnpkg.com/@safecoin/borsh/-/borsh-0.2.5.tgz#6059287aa624ecebbfc0edd35e4c28ff987d8663"
   integrity sha512-UmeUkUoKdQ7rhx6Leve1SssMR/Ghv8qrEiyywyxSWg7ooV7StdpPBhciiy5eB3T0qU1BXvdRNC8TdrkxK7WC5Q==
   dependencies:
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@project-serum/serum@^0.13.37", "@project-serum/serum@^0.13.65":
+"@safecoin/serum@^0.13.37", "@safecoin/serum@^0.13.65":
   version "0.13.65"
-  resolved "https://registry.yarnpkg.com/@project-serum/serum/-/serum-0.13.65.tgz#6d3cf07912f13985765237f053cca716fe84b0b0"
+  resolved "https://registry.yarnpkg.com/@safecoin/serum/-/serum-0.13.65.tgz#6d3cf07912f13985765237f053cca716fe84b0b0"
   integrity sha512-BHRqsTqPSfFB5p+MgI2pjvMBAQtO8ibTK2fYY96boIFkCI3TTwXDt2gUmspeChKO2pqHr5aKevmexzAcXxrSRA==
   dependencies:
-    "@project-serum/anchor" "^0.11.1"
-    "@solana/spl-token" "^0.1.6"
-    "@solana/web3.js" "^1.21.0"
+    "@safecoin/anchor" "^0.11.1"
+    "@safecoin/safe-token" "^0.1.6"
+    "@safecoin/web3.js" "^1.21.0"
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@project-serum/sol-wallet-adapter@^0.1.5":
+"@safecoin/sol-wallet-adapter@^0.1.5":
   version "0.1.8"
-  resolved "https://registry.yarnpkg.com/@project-serum/sol-wallet-adapter/-/sol-wallet-adapter-0.1.8.tgz#90c6c1da793d32ed4ba3c67c5702a5bc804ef197"
+  resolved "https://registry.yarnpkg.com/@safecoin/sol-wallet-adapter/-/sol-wallet-adapter-0.1.8.tgz#90c6c1da793d32ed4ba3c67c5702a5bc804ef197"
   integrity sha512-lKMgp7bsKpkrtBtIaEjtGuUMke0GUqFUL39Z7cjqsQpTVhkU5Ez4zHyjhXqAEORRGLFbwx/+H6HLpwppxpUDMQ==
   dependencies:
     bs58 "^4.0.1"
     eventemitter3 "^4.0.4"
 
-"@project-serum/sol-wallet-adapter@^0.2.0":
+"@safecoin/sol-wallet-adapter@^0.2.0":
   version "0.2.6"
-  resolved "https://registry.yarnpkg.com/@project-serum/sol-wallet-adapter/-/sol-wallet-adapter-0.2.6.tgz#b4cd25a566294354427c97c26d716112b91a0107"
+  resolved "https://registry.yarnpkg.com/@safecoin/sol-wallet-adapter/-/sol-wallet-adapter-0.2.6.tgz#b4cd25a566294354427c97c26d716112b91a0107"
   integrity sha512-cpIb13aWPW8y4KzkZAPDgw+Kb+DXjCC6rZoH74MGm3I/6e/zKyGnfAuW5olb2zxonFqsYgnv7ev8MQnvSgJ3/g==
   dependencies:
     bs58 "^4.0.1"
@@ -1952,7 +1952,7 @@
   integrity sha512-OH7hAZEpXrsW4vy1kbQ6TS51s+6ACQhaZoxJlwm5iX/UvMTlcAz1teA7OO3eQDcWxTWEup1NB3gGO0VCXDI4Gw==
   dependencies:
     "@safecoin/web3.js" "^1.44.3"
-    "@solana/buffer-layout" "^4.0.0"
+    "@safecoin/buffer-layout" "^4.0.0"
     bigint-buffer "^1.1.5"
     bignumber.js "^9.0.1"
 
@@ -2927,40 +2927,40 @@
   resolved "https://registry.yarnpkg.com/@socket.io/component-emitter/-/component-emitter-3.1.0.tgz#96116f2a912e0c02817345b3c10751069920d553"
   integrity sha512-+9jVqKhRSpsc591z5vX+X5Yyw+he/HCB4iQ/RYxw35CEPaY1gnsNE43nf9n9AaYjAQrTiI/mOwKUKdUs9vf7Xg==
 
-"@solana/buffer-layout@^4.0.0":
+"@safecoin/buffer-layout@^4.0.0":
   version "4.0.1"
-  resolved "https://registry.yarnpkg.com/@solana/buffer-layout/-/buffer-layout-4.0.1.tgz#b996235eaec15b1e0b5092a8ed6028df77fa6c15"
+  resolved "https://registry.yarnpkg.com/@safecoin/buffer-layout/-/buffer-layout-4.0.1.tgz#b996235eaec15b1e0b5092a8ed6028df77fa6c15"
   integrity sha512-E1ImOIAD1tBZFRdjeM4/pzTiTApC0AOBGwyAMS4fwIodCWArzJ3DWdoh8cKxeFM2fElkxBh2Aqts1BPC373rHA==
   dependencies:
     buffer "~6.0.3"
 
-"@solana/spl-token@0.0.13":
+"@safecoin/safe-token@0.0.13":
   version "0.0.13"
-  resolved "https://registry.yarnpkg.com/@solana/spl-token/-/spl-token-0.0.13.tgz#5e0b235b1f8b34643280401dbfddeb34d13d1acd"
+  resolved "https://registry.yarnpkg.com/@safecoin/safe-token/-/safe-token-0.0.13.tgz#5e0b235b1f8b34643280401dbfddeb34d13d1acd"
   integrity sha512-WT8M9V/hxURR5jLbhr3zgwVsgcY6m8UhHtK045w7o+jx8FJ9MKARkj387WBFU7mKiFq0k8jw/8YL7XmnIUuH8Q==
   dependencies:
     "@babel/runtime" "^7.10.5"
-    "@solana/web3.js" "^0.86.1"
+    "@safecoin/web3.js" "^0.86.1"
     bn.js "^5.0.0"
     buffer-layout "^1.2.0"
     dotenv "8.2.0"
     mkdirp "1.0.4"
 
-"@solana/spl-token@^0.1.6", "@solana/spl-token@^0.1.8":
+"@safecoin/safe-token@^0.1.6", "@safecoin/safe-token@^0.1.8":
   version "0.1.8"
-  resolved "https://registry.yarnpkg.com/@solana/spl-token/-/spl-token-0.1.8.tgz#f06e746341ef8d04165e21fc7f555492a2a0faa6"
+  resolved "https://registry.yarnpkg.com/@safecoin/safe-token/-/safe-token-0.1.8.tgz#f06e746341ef8d04165e21fc7f555492a2a0faa6"
   integrity sha512-LZmYCKcPQDtJgecvWOgT/cnoIQPWjdH+QVyzPcFvyDUiT0DiRjZaam4aqNUyvchLFhzgunv3d9xOoyE34ofdoQ==
   dependencies:
     "@babel/runtime" "^7.10.5"
-    "@solana/web3.js" "^1.21.0"
+    "@safecoin/web3.js" "^1.21.0"
     bn.js "^5.1.0"
     buffer "6.0.3"
     buffer-layout "^1.2.0"
     dotenv "10.0.0"
 
-"@solana/web3.js@^0.86.1":
+"@safecoin/web3.js@^0.86.1":
   version "0.86.4"
-  resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-0.86.4.tgz#69216d3928ca4727c25a1ea96c405e897156ac3b"
+  resolved "https://registry.yarnpkg.com/@safecoin/web3.js/-/web3.js-0.86.4.tgz#69216d3928ca4727c25a1ea96c405e897156ac3b"
   integrity sha512-FpabDmdyxBN5aHIVUWc9Q6pXJFWiLRm/xeyxFg9O9ICHjiUkd38omds7G0CAmykIccG7zaMziwtkXp+0KvQOhA==
   dependencies:
     "@babel/runtime" "^7.3.1"
@@ -2981,9 +2981,9 @@
     tweetnacl "^1.0.0"
     ws "^7.0.0"
 
-"@solana/web3.js@^0.87.1":
+"@safecoin/web3.js@^0.87.1":
   version "0.87.2"
-  resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-0.87.2.tgz#92c8d344695c6113d4e0eb3339117fbc6b22d0d2"
+  resolved "https://registry.yarnpkg.com/@safecoin/web3.js/-/web3.js-0.87.2.tgz#92c8d344695c6113d4e0eb3339117fbc6b22d0d2"
   integrity sha512-BtrOGfg7zUud/zLL/BxXV3E84qpXK1HknqncNQDNr8JlJ4tGc+Xsip5DzSMP/fNUJgbAWblHqWWJxFdN2mtO6A==
   dependencies:
     "@babel/runtime" "^7.3.1"
@@ -3004,9 +3004,9 @@
     tweetnacl "^1.0.0"
     ws "^7.0.0"
 
-"@solana/web3.js@^0.94.2":
+"@safecoin/web3.js@^0.94.2":
   version "0.94.2"
-  resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-0.94.2.tgz#5e8a873a6041af2c6a2751bd9a5f5b861ab469a2"
+  resolved "https://registry.yarnpkg.com/@safecoin/web3.js/-/web3.js-0.94.2.tgz#5e8a873a6041af2c6a2751bd9a5f5b861ab469a2"
   integrity sha512-enJZ9eVJMvNtpuXdygAZHBlPC+2Q3paLY+KforFhVUpi/bkBADDKJWd90RICyu3sPKiVt8YLAs9cIxriQpQqng==
   dependencies:
     "@babel/runtime" "^7.12.5"
@@ -3023,16 +3023,16 @@
     superstruct "^0.14.2"
     tweetnacl "^1.0.0"
 
-"@solana/web3.js@^1.17.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.30.2", "@solana/web3.js@^1.31.0", "@solana/web3.js@^1.36.0", "@solana/web3.js@^1.43.5":
+"@safecoin/web3.js@^1.17.0", "@safecoin/web3.js@^1.21.0", "@safecoin/web3.js@^1.30.2", "@safecoin/web3.js@^1.31.0", "@safecoin/web3.js@^1.36.0", "@safecoin/web3.js@^1.43.5":
   version "1.73.3"
-  resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.73.3.tgz#60e6bd68f6f364d4be360b1e0a03a0a68468a029"
+  resolved "https://registry.yarnpkg.com/@safecoin/web3.js/-/web3.js-1.73.3.tgz#60e6bd68f6f364d4be360b1e0a03a0a68468a029"
   integrity sha512-vHRMo589XEIpoujpE2sZZ1aMZvfA1ImKfNxobzEFyMb+H5j6mRRUXfdgWD0qJ0sm11e5BcBC7HPeRXJB+7f3Lg==
   dependencies:
     "@babel/runtime" "^7.12.5"
     "@noble/ed25519" "^1.7.0"
     "@noble/hashes" "^1.1.2"
     "@noble/secp256k1" "^1.6.3"
-    "@solana/buffer-layout" "^4.0.0"
+    "@safecoin/buffer-layout" "^4.0.0"
     agentkeepalive "^4.2.1"
     bigint-buffer "^1.1.5"
     bn.js "^5.0.0"

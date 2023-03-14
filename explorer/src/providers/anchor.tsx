@@ -1,6 +1,6 @@
-import { Idl, Program, Provider } from "@project-serum/anchor";
+import { Idl, Program, Provider } from "@safecoin/anchor";
 import { Connection, Keypair } from "@safecoin/web3.js";
-import { NodeWallet } from "@metaplex/js";
+import { NodeWallet } from "@safecoin/ledamintjs";
 
 const cachedAnchorProgramPromises: Record<
   string,

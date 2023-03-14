@@ -5,7 +5,7 @@ import {
   Program,
   BorshInstructionCoder,
   Instruction,
-} from "@project-serum/anchor";
+} from "@safecoin/anchor";
 import {
   getAnchorNameForInstruction,
   getAnchorProgramName,
@@ -14,7 +14,7 @@ import {
 } from "utils/anchor";
 import { Address } from "components/common/Address";
 import { camelToTitleCase } from "utils";
-import { IdlInstruction } from "@project-serum/anchor/dist/cjs/idl";
+import { IdlInstruction } from "@safecoin/anchor/dist/cjs/idl";
 import { useMemo } from "react";
 
 export default function AnchorDetailsCard(props: {
