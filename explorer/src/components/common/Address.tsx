@@ -52,7 +52,7 @@ export function Address({
 
   var metaplexData = useTokenMetadata(useMetadata, address);
   if (metaplexData && metaplexData.data)
-    addressLabel = metaplexData.data.data.name;
+    addressLabel = addressLabel.slice(0, truncateChars) + "…";  // metaplexData.data.data.name;
   if (truncateChars && addressLabel === address) {
     addressLabel = addressLabel.slice(0, truncateChars) + "…";
   }
@@ -97,27 +97,27 @@ export const useTokenMetadata = (
   useMetadata: boolean | undefined,
   pubkey: string
 ) => {
-  const [data, setData] = useState<programs.metadata.MetadataData>();
+  const [data, setData] = '';  //useState<programs.metadata.MetadataData>();
   var { url } = useCluster();
 
   useEffect(() => {
     if (!useMetadata) return;
-    if (pubkey && !data) {
-      programs.metadata.Metadata.getPDA(pubkey)
-        .then((pda) => {
-          const connection = new Connection(url);
-          programs.metadata.Metadata.load(connection, pda)
-            .then((metadata) => {
-              setData(metadata.data);
-            })
-            .catch(() => {
-              setData(undefined);
-            });
-        })
-        .catch(() => {
-          setData(undefined);
-        });
-    }
+//    if (pubkey && !data) {
+//      programs.metadata.Metadata.getPDA(pubkey)
+//        .then((pda) => {
+//          const connection = new Connection(url);
+//          programs.metadata.Metadata.load(connection, pda)
+//            .then((metadata) => {
+//              setData(metadata.data);
+//            })
+//            .catch(() => {
+//              setData(undefined);
+//            });
+//        })
+//        .catch(() => {
+//          setData(undefined);
+//        });
+//    }
   }, [useMetadata, pubkey, url, data, setData]);
   return { data };
 };

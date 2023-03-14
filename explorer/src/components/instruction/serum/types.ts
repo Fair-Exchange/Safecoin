@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-redeclare */
 
-import { decodeInstruction, MARKETS } from "@safecoin/serum";
+//import { decodeInstruction, MARKETS } from "@safely-project/safely-ts";
 import {
   AccountMeta,
   PublicKey,
@@ -8,6 +8,9 @@ import {
 } from "@safecoin/web3.js";
 import { enums, number, type, Infer, create } from "superstruct";
 import { BigNumFromString } from "validators/bignum";
+
+const MARKETS = '';
+const decodeInstruction = '';
 
 const SERUM_PROGRAM_IDS = [
   "4ckmDgGdxQoPDLUkDT3vHgSAkzA3QRdNq5ywwY4sUSJn",

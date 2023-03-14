@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Stream } from "@cloudflare/stream-react";
 import { PublicKey } from "@safecoin/web3.js";
-import {
-  programs,
-  MetadataJson,
-  MetaDataJsonCategory,
-  MetadataJsonFile,
-} from "@safecoin/js";
+//import {
+//  programs,
+//  MetadataJson,
+//  MetaDataJsonCategory,
+//  MetadataJsonFile,
+//} from "@safecoin/js";
 import ContentLoader from "react-content-loader";
 import ErrorLogo from "img/logos-solana/dark-solana-logo.svg";
 import { getLast } from "utils";
@@ -106,7 +106,7 @@ const VideoArtContent = ({
   uri,
   animationURL,
 }: {
-  files?: (MetadataJsonFile | string)[];
+  files?: (string | string)[];
   uri?: string;
   animationURL?: string;
 }) => {
@@ -175,7 +175,7 @@ const HTMLContent = ({
   files,
 }: {
   animationUrl?: string;
-  files?: (MetadataJsonFile | string)[];
+  files?: (string | string)[];
 }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showError, setShowError] = useState<boolean>(false);
@@ -226,23 +226,23 @@ export const ArtContent = ({
   files,
   data,
 }: {
-  metadata: programs.metadata.MetadataData;
-  category?: MetaDataJsonCategory;
-  pubkey?: PublicKey | string;
+  metadata: '';  //programs.metadata.MetadataData;
+  category?: string;
+  pubkey?: string | string;
   uri?: string;
   animationURL?: string;
-  files?: (MetadataJsonFile | string)[];
-  data: MetadataJson | undefined;
+  files?: (string | string)[];
+  data: undefined | undefined;
 }) => {
   if (pubkey && data) {
-    uri = data.image;
-    animationURL = data.animation_url;
+//    uri = '';  data.image;
+//    animationURL = data.animation_url;
   }
 
-  if (pubkey && data?.properties) {
-    files = data.properties.files;
-    category = data.properties.category;
-  }
+//  if (pubkey && data?.properties) {
+//    files = data.properties.files;
+//    category = data.properties.category;
+//  }
 
   animationURL = animationURL || "";
 

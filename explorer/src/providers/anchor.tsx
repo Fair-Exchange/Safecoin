@@ -1,6 +1,9 @@
-import { Idl, Program, Provider, NodeWallet } from "@safecoin/anchor";
+import { Idl, Program } from "@safecoin/anchor";
 import { Connection, Keypair } from "@safecoin/web3.js";
 //import { NodeWallet } from "@safecoin/js";
+
+const Provider = '';
+const Nodewallet = '';
 
 const cachedAnchorProgramPromises: Record<
   string,

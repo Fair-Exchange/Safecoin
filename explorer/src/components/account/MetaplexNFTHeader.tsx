@@ -5,13 +5,15 @@ import {
   useFetchAccountInfo,
   useMintAccountInfo,
 } from "providers/accounts";
-import { programs } from "@safecoin/js";
+//import { programs } from "@safecoin/js";
 import { ArtContent } from "components/common/NFTArt";
 import { InfoTooltip } from "components/common/InfoTooltip";
 import { clusterPath } from "utils/url";
 import { Link } from "react-router-dom";
 import { EditionInfo } from "providers/accounts/utils/getEditionInfo";
 import { PublicKey } from "@safecoin/web3.js";
+
+const programs = '';
 
 export function NFTHeader({
   nftData,
@@ -80,7 +82,7 @@ export function NFTHeader({
   );
 }
 
-type Creator = programs.metadata.Creator;
+type Creator = ''; //  programs.metadata.Creator;
 function getCreatorDropdownItems(creators: Creator[] | null) {
   const CreatorHeader = () => {
     const creatorTooltip =
@@ -118,15 +120,10 @@ function getCreatorDropdownItems(creators: Creator[] | null) {
         className={
           "d-flex align-items-center font-monospace creator-dropdown-entry ms-3 me-3"
         }
-      >
-        {getVerifiedIcon(creator.verified)}
-        <Link
-          className="dropdown-item font-monospace creator-dropdown-entry-address"
-          to={clusterPath(`/address/${creator.address}`)}
+
         >
-          {creator.address}
-        </Link>
-        <div className="me-3"> {`${creator.share}%`}</div>
+
+
       </div>
     );
   };
@@ -136,7 +133,7 @@ function getCreatorDropdownItems(creators: Creator[] | null) {
 
     listOfCreators.push(<CreatorHeader key={"header"} />);
     creators.forEach((creator) => {
-      listOfCreators.push(<CreatorEntry key={creator.address} {...creator} />);
+//      listOfCreators.push(<CreatorEntry key={creator.address} {...creator} />);
     });
 
     return listOfCreators;

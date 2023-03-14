@@ -7,7 +7,7 @@ import {
   PerpMarketLayout,
   SpotMarketConfig,
 } from "@blockworks-foundation/mango-client";
-import { Market } from "@safecoin/serum";
+import { Market } from "@safely-project/safely-ts";
 import {
   AccountInfo,
   AccountMeta,
