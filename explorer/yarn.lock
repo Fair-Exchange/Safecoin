@@ -2341,7 +2341,7 @@
   resolved "https://registry.yarnpkg.com/@safecoin/cusper/-/cusper-0.0.1.tgz#066f75944ab90c78f873f19e56b1be19a8519faa"
   integrity sha512-js0ekLzXzYb47KofwIELB5h4evh5veou7cAm66rXm/4zYH1axs+n3wrmGVli71oE0MN3duo+7bw7n3kvcULhJw==
 
-"@safecoin/js@4.12.0":
+"@safecoin/js@^0.15.0":
   version "0.15.0"
   resolved "https://registry.yarnpkg.com/@safecoin/js/-/js-0.15.0.tgz#22c94628e09ef7591709e22e338539959eaa8058"
   integrity sha512-frMUSAdLHpvzPzoir5Ub72K23Zux/koDDH9INvp1ljJGnoJoBk4pnMk8cV9mwYniNB0Cb1oNQHuBxI2PtW8oVQ==
@@ -4932,9 +4932,9 @@ available-typed-arrays@^1.0.5:
   resolved "https://registry.yarnpkg.com/available-typed-arrays/-/available-typed-arrays-1.0.5.tgz#92f95616501069d07d10edb2fc37d3e1c65123b7"
   integrity sha512-DMD0KiN46eipeziST1LPP/STfDU0sufISXmjSgvVsoU2tqxctQeASejWcfNtxYKqETM1UxQ8sp2OrSBWpHY6sw==
 
-"avsc@git+https://github.com/Bundlr-Network/avsc.git#csp-fixes":
+"avsc@https://github.com/Bundlr-Network/avsc#csp-fixes":
   version "5.4.7"
-  resolved "git+https://github.com/Bundlr-Network/avsc.git#a730cc8018b79e114b6a3381bbb57760a24c6cef"
+  resolved "https://github.com/Bundlr-Network/avsc#a730cc8018b79e114b6a3381bbb57760a24c6cef"
 
 aws-sign2@^0.7.0, aws-sign2@~0.7.0:
   version "0.7.0"

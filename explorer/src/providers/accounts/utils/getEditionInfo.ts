@@ -1,5 +1,7 @@
-import { programs } from "@safecoin/js";
+//import { programs } from "@safecoin/js";
 import { Connection } from "@safecoin/web3.js";
+
+const programs = '';
 
 const {
   metadata: { Metadata, MasterEdition, MetadataKey },

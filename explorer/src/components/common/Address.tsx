@@ -1,13 +1,16 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { PublicKey } from "@safecoin/web3.js";
+import { PublicKey, Connection } from "@safecoin/web3.js";
 import { clusterPath } from "utils/url";
 import { displayAddress } from "utils/tx";
 import { useCluster } from "providers/cluster";
 import { Copyable } from "./Copyable";
 import { useTokenRegistry } from "providers/mints/token-registry";
 import { useState, useEffect } from "react";
-import { Connection, programs } from "@safecoin/js";
+//import { Connection, programs } from "@safecoin/js";
+
+const programs = '';
+
 
 type Props = {
   pubkey: PublicKey;

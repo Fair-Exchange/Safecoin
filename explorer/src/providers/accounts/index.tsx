@@ -26,9 +26,12 @@ import {
   UpgradeableLoaderAccount,
 } from "validators/accounts/upgradeable-program";
 import { RewardsProvider } from "./rewards";
-import { programs, MetadataJson } from "@safecoin/js";
+//import { programs } from "@safecoin/js";
 import getEditionInfo, { EditionInfo } from "./utils/getEditionInfo";
 export { useAccountHistory } from "./history";
+
+const metadataJson = '';
+const programs = '';
 
 const Metadata = programs.metadata.Metadata;
 
