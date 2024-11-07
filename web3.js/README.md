@@ -26,7 +26,7 @@ This is the Safecoin Javascript API built on the Safecoin [JSON RPC API](https:/
 ## Documentation and examples
 
  - [The Safecoin Cookbook](https://solanacookbook.com/) has extensive task-based documentation using this library.
- - For more detail on individual functions, see the [latest API Documentation](https://solana-labs.github.io/solana-web3.js/)
+ - For more detail on individual functions, see the [latest API Documentation](https://solana-labs.github.io/solana-web3.js/v1.x/)
 
 ## Installation
 

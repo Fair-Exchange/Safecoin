@@ -6,7 +6,7 @@ title: Web3 API Reference
 
 The `@safecoin/web3.js` library is a package that has coverage over the [Safecoin JSON RPC API](../clients/jsonrpc-api.md).
 
-You can find the full documentation for the `@safecoin/web3.js` library [here](https://solana-labs.github.io/solana-web3.js/).
+You can find the full documentation for the `@safecoin/web3.js` library [here](https://solana-labs.github.io/solana-web3.js/v1.x/).
 
 ## General
 
