@@ -1598,7 +1598,7 @@ let mixed_int = ( ( ( (slot_hashes[0].1.to_string().chars().nth(0).unwrap() as u
 	   + slot_hashes[0].1.to_string().chars().last().unwrap() as usize ) % 10 as usize;
 
 
-let mut allowed_offset_int = 3;
+let mut allowed_offset_int = 2;
 if (clock.epoch >= 370) {
 allowed_offset_int = 1;
 }

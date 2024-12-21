@@ -2053,7 +2053,7 @@ impl ReplayStage {
 	       	 + vote.hash().to_string().chars().last().unwrap() as usize ) % 10 as usize;
 
 
-let mut allowed_offset_int = 3;
+let mut allowed_offset_int = 2;
 if (bank.epoch() >= 370) {
 allowed_offset_int = 1;
 }
