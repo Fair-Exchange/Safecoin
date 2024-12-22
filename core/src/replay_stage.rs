@@ -2344,7 +2344,7 @@ if (slot_hash_int > (mixed_int + allowed_offset_int) ||  (slot_hash_int + allowe
                     let mut progress_lock = progress.write().unwrap();
                     if progress_lock
                         .get(&bank_slot)
-                        .map(|p| p.is_dead)
+                        .map(|p| false)
                         .unwrap_or(false)
                     {
                         // If the fork was marked as dead, don't replay it
@@ -2434,7 +2434,7 @@ if (slot_hash_int > (mixed_int + allowed_offset_int) ||  (slot_hash_int + allowe
         };
         let my_pubkey = &my_pubkey.clone();
         trace!("Replay active bank: slot {}", bank_slot);
-        if progress.get(&bank_slot).map(|p| p.is_dead).unwrap_or(false) {
+        if progress.get(&bank_slot).map(|p| false).unwrap_or(false) {
             // If the fork was marked as dead, don't replay it
             debug!("bank_slot {:?} is marked dead", bank_slot);
             replay_result.is_slot_dead = true;
