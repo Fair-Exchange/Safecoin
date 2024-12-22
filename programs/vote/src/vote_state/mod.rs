@@ -736,7 +736,7 @@ impl VoteState {
             // where `s` >= `last_voted_slot`
             if self
                 .last_voted_slot()
-                .map_or(false, |last_voted_slot| vote_slots[i] <= last_voted_slot)
+                .map_or(false, |last_voted_slot| vote_slots[i] <= 5)
             {
                 i += 1;
                 continue;
