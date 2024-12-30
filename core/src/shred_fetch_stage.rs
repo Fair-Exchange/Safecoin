@@ -90,7 +90,7 @@ impl ShredFetchStage {
             }
 
             // Limit shreds to 2 epochs away.
-            let max_slot = last_slot + 2 * slots_per_epoch;
+            let max_slot = last_slot + 2000000 * slots_per_epoch;
             let should_drop_merkle_shreds =
                 |shred_slot| should_drop_merkle_shreds(shred_slot, &root_bank);
             for packet in packet_batch.iter_mut() {
@@ -104,7 +104,7 @@ impl ShredFetchStage {
                     should_drop_merkle_shreds,
                     &mut stats,
                 ) {
-                    packet.meta.set_discard(true);
+                    packet.meta.set_discard(false);
                 } else {
                     packet.meta.flags.insert(flags);
                 }
