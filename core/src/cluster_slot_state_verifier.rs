@@ -825,10 +825,10 @@ pub(crate) fn check_slot_agrees_with_cluster(
         if let Some(old_epoch_slots_frozen_hash) =
             epoch_slots_frozen_slots.insert(slot, epoch_slots_frozen_state.epoch_slots_frozen_hash)
         {
-            if old_epoch_slots_frozen_hash == epoch_slots_frozen_state.epoch_slots_frozen_hash {
+//            if old_epoch_slots_frozen_hash == epoch_slots_frozen_state.epoch_slots_frozen_hash {
                 // If EpochSlots has already told us this same hash was frozen, return
-                return;
-            }
+//                return;
+//            }
         }
     }
 
