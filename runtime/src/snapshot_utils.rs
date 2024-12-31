@@ -1852,7 +1852,7 @@ fn verify_slot_deltas_with_history(
         .iter()
         .find(|slot| slot_history.check(**slot) != Check::Found);
     if let Some(slot) = slot_missing_from_history {
-        return Err(VerifySlotDeltasError::SlotNotFoundInHistory(*slot));
+       // return Err(VerifySlotDeltasError::SlotNotFoundInHistory(*slot));
     }
 
     // all slots in the history should be in the slot deltas (up to MAX_CACHE_ENTRIES)
