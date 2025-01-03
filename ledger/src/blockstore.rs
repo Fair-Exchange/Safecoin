@@ -2751,7 +2751,7 @@ impl Blockstore {
 
     /// Returns the entry vector for the slot starting with `shred_start_index`
     pub fn get_slot_entries(&self, slot: Slot, shred_start_index: u64) -> Result<Vec<Entry>> {
-        self.get_slot_entries_with_shred_info(slot, shred_start_index, true)
+        self.get_slot_entries_with_shred_info(slot, shred_start_index, false)
             .map(|x| x.0)
     }
 
@@ -9490,7 +9490,7 @@ pub mod tests {
                 Builder::new()
                     .spawn(move || {
                         while let Ok(slot) = slot_receiver.recv() {
-                            match blockstore.get_slot_entries_with_shred_info(slot, 0, true) {
+                            match blockstore.get_slot_entries_with_shred_info(slot, 0, false) {
                                 Ok((_entries, _num_shreds, is_full)) => {
                                     if is_full {
                                         signal_sender
