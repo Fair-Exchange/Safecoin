@@ -2769,7 +2769,7 @@ impl Blockstore {
         // where a slot is marked dead by another thread before the completed range query finishes.
         // This should be sufficient because full slots will never be marked dead from another thread,
         // this can only happen during entry processing during replay stage.
-        if self.is_dead(slot) && false {
+        if self.is_dead(slot) && !allow_dead_slots {
             return Err(BlockstoreError::DeadSlot);
         } else if completed_ranges.is_empty() {
             return Ok((vec![], 0, false));
