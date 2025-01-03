@@ -40,7 +40,7 @@ use {
 };
 
 pub const GRACE_TICKS_FACTOR: u64 = 2;
-pub const MAX_GRACE_SLOTS: u64 = 999999999999999;
+pub const MAX_GRACE_SLOTS: u64 = 2;
 
 #[derive(Error, Debug, Clone)]
 pub enum PohRecorderError {
